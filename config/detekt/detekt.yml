@@ -1,0 +1,13 @@
+# Baseline detekt overlay. buildUponDefaultConfig = true is set in the root
+# build script, so this file only records intentional deviations from detekt's
+# defaults. Revisit alongside STYLE_RULES_ANDROID.md in Phase 1.
+
+naming:
+  FunctionNaming:
+    # Jetpack Compose @Composable functions are conventionally PascalCase.
+    ignoreAnnotated: ['Composable']
+
+style:
+  MagicNumber:
+    # Design-token property declarations (e.g. Color(0xFF...)) read fine inline.
+    ignorePropertyDeclaration: true
