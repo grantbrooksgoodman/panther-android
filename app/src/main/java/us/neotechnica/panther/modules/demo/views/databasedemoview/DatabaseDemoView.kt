@@ -1,12 +1,12 @@
 //
-//  DatabaseDebugView.kt
+//  DatabaseDemoView.kt
 //  Panther
 //
 //  Created by Grant Brooks Goodman on 19/08/2026.
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
-package us.neotechnica.panther.modules.debug.views.databasedebugview
+package us.neotechnica.panther.modules.demo.views.databasedemoview
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -43,8 +43,8 @@ fun DatabaseDebugView(modifier: Modifier = Modifier) {
     val viewModel =
         remember {
             ViewModel(
-                initialState = DatabaseDebugReducer.State(),
-                reducer = DatabaseDebugReducer(),
+                initialState = DatabaseDemoReducer.State(),
+                reducer = DatabaseDemoReducer(),
             )
         }
 
@@ -73,7 +73,7 @@ fun DatabaseDebugView(modifier: Modifier = Modifier) {
         OutlinedTextField(
             label = { Text("Path (dev environment)") },
             modifier = Modifier.fillMaxWidth(),
-            onValueChange = { viewModel.send(DatabaseDebugReducer.Action.PathChanged(it)) },
+            onValueChange = { viewModel.send(DatabaseDemoReducer.Action.PathChanged(it)) },
             singleLine = true,
             value = state.path,
         )
@@ -81,25 +81,25 @@ fun DatabaseDebugView(modifier: Modifier = Modifier) {
         OutlinedTextField(
             label = { Text("Value") },
             modifier = Modifier.fillMaxWidth(),
-            onValueChange = { viewModel.send(DatabaseDebugReducer.Action.ValueChanged(it)) },
+            onValueChange = { viewModel.send(DatabaseDemoReducer.Action.ValueChanged(it)) },
             singleLine = true,
             value = state.value,
         )
 
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { viewModel.send(DatabaseDebugReducer.Action.WriteButtonTapped) }) {
+            Button(onClick = { viewModel.send(DatabaseDemoReducer.Action.WriteButtonTapped) }) {
                 Text("Write")
             }
 
-            Button(onClick = { viewModel.send(DatabaseDebugReducer.Action.ReadButtonTapped) }) {
+            Button(onClick = { viewModel.send(DatabaseDemoReducer.Action.ReadButtonTapped) }) {
                 Text("Read")
             }
 
-            Button(onClick = { viewModel.send(DatabaseDebugReducer.Action.ObserveToggled) }) {
+            Button(onClick = { viewModel.send(DatabaseDemoReducer.Action.ObserveToggled) }) {
                 Text(if (state.isObserving) "Stop Observing" else "Observe")
             }
 
-            Button(onClick = { viewModel.send(DatabaseDebugReducer.Action.SignInButtonTapped) }) {
+            Button(onClick = { viewModel.send(DatabaseDemoReducer.Action.SignInButtonTapped) }) {
                 Text("Sign In Anonymously")
             }
         }

@@ -1,16 +1,17 @@
 //
-//  DatabaseDebugReducer.kt
+//  DatabaseDemoReducer.kt
 //  Panther
 //
 //  Created by Grant Brooks Goodman on 19/08/2026.
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
-package us.neotechnica.panther.modules.debug.views.databasedebugview
+package us.neotechnica.panther.modules.demo.views.databasedemoview
 
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.subsystem.modules.effect.Effect
+import us.neotechnica.panther.subsystem.modules.effect.Send
 import us.neotechnica.panther.subsystem.modules.effect.cancel
 import us.neotechnica.panther.subsystem.modules.effect.cancellable
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -25,7 +26,7 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
  * an anonymous authentication session – the Phase 2 acceptance
  * surface.
  */
-class DatabaseDebugReducer : Reducer<DatabaseDebugReducer.State, DatabaseDebugReducer.Action> {
+class DatabaseDemoReducer : Reducer<DatabaseDemoReducer.State, DatabaseDemoReducer.Action> {
     // MARK: - Actions
 
     sealed interface Action {
@@ -169,7 +170,7 @@ class DatabaseDebugReducer : Reducer<DatabaseDebugReducer.State, DatabaseDebugRe
 
     private suspend fun runOperation(
         label: String,
-        send: us.neotechnica.panther.subsystem.modules.effect.Send<Action>,
+        send: Send<Action>,
         operation: suspend () -> Action,
     ) {
         try {

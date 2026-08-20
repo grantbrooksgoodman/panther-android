@@ -296,6 +296,84 @@ struct Manifest: Codable {
     let notes: [String]
 }
 
+// MARK: - Fixture: translation reference vectors
+
+// Reproduces the Translator + Networking wire format for hosted
+// translations (translator/.../TranslationReference.swift,
+// networking/.../String+TranslationExtensions.swift):
+//   - archive path:  translations/<from>-<to>/<encodedHash(input)>
+//   - archive value: "<alphaEncoded(input)>–<alphaEncoded(output)>"
+//     (separator is EN DASH, U+2013)
+//   - alphaEncoded:  addingPercentEncoding(.alphanumerics) — Unicode
+//     L*/M*/N* left raw, everything else %XX (uppercase, per UTF-8 byte)
+//   - idempotent:    base64(input); hosted archive is skipped
+//   - hostingKey:    "<pair or 'IDEM <from>'> | <key>"
+
+let idempotentPrefix = "IDEM "
+
+func alphaEncoded(_ string: String) -> String {
+    string.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? string
+}
+
+func base64Encoded(_ string: String) -> String {
+    string.data(using: .utf8)?.base64EncodedString() ?? string
+}
+
+struct TranslationVector: Codable {
+    let from: String
+    let to: String
+    let input: String
+    let output: String
+    let isIdempotent: Bool
+    let languagePairString: String
+    let inputEncodedHash: String
+    let inputAlphaEncoded: String
+    let outputAlphaEncoded: String
+    let archivedValue: String?
+    let idempotentEncodedValue: String?
+    let referenceKey: String
+    let hostingKey: String
+    let archivePathSuffix: String
+}
+
+let translationCases: [(from: String, to: String, input: String, output: String)] = [
+    ("en", "es", "Hello", "Hola"),
+    ("en", "es", "Good morning", "Buenos días"),
+    ("en", "fr", "Thank you", "Merci"),
+    ("en", "ja", "Hello", "こんにちは"),
+    ("en", "es", "Café", "Café"),
+    ("en", "es", "cafe\u{0301}", "cafe\u{0301}"),
+    ("en", "es", "It costs $5 – cheap!", "Cuesta $5 – ¡barato!"),
+    ("en", "es", "🐆 Panther", "🐆 Pantera"),
+    ("en", "en", "Hello", "Hello"),
+]
+
+let translationVectors: [TranslationVector] = translationCases.map { translationCase in
+    let isIdempotent = translationCase.from == translationCase.to
+    let pairString = "\(translationCase.from)-\(translationCase.to)"
+    let hash = encodedHash([translationCase.input])
+    let inputAlpha = alphaEncoded(translationCase.input)
+    let outputAlpha = alphaEncoded(translationCase.output)
+    let referenceKey = isIdempotent ? base64Encoded(translationCase.input) : hash
+
+    return TranslationVector(
+        from: translationCase.from,
+        to: translationCase.to,
+        input: translationCase.input,
+        output: translationCase.output,
+        isIdempotent: isIdempotent,
+        languagePairString: pairString,
+        inputEncodedHash: hash,
+        inputAlphaEncoded: inputAlpha,
+        outputAlphaEncoded: outputAlpha,
+        archivedValue: isIdempotent ? nil : "\(inputAlpha)–\(outputAlpha)",
+        idempotentEncodedValue: isIdempotent ? base64Encoded(translationCase.input) : nil,
+        referenceKey: referenceKey,
+        hostingKey: "\(isIdempotent ? "\(idempotentPrefix)\(translationCase.from)" : pairString) | \(referenceKey)",
+        archivePathSuffix: "translations/\(pairString)/\(hash)"
+    )
+}
+
 let outputDirectory = URL(
     fileURLWithPath: CommandLine.arguments.count > 1
         ? CommandLine.arguments[1]
@@ -325,6 +403,7 @@ func writeEncodable(_ value: some Encodable, to fileName: String) {
 }
 
 writeEncodable(hashVectors, to: "encoded_hash_vectors.json")
+writeEncodable(translationVectors, to: "translation_reference_vectors.json")
 writeEncodable(timestampVectors, to: "timestamp_vectors.json")
 writeEncodable(parseVectors, to: "timestamp_parse_vectors.json")
 writeJSON(userEncoded, to: "user.json")
@@ -353,6 +432,7 @@ writeEncodable(
         swiftVersion: "run `swift --version` on the generating machine",
         notes: [
             "encoded_hash_vectors: byte parity required – Kotlin must reproduce json/sha256 exactly.",
+            "translation_reference_vectors: byte parity required – alphaEncoded (.alphanumerics), the U+2013 archive value, encodedHash keys, hostingKey, and idempotent base64 must match exactly.",
             "timestamp_vectors: byte parity required for `formatted`; reparse must match epochMillis.",
             "timestamp_parse_vectors: parse tolerance – null epochMillis means the iOS formatter rejects the string.",
             "user/conversation/message: structural parity – decode → re-encode must be structurally equal (RTDB carries structure, not bytes).",

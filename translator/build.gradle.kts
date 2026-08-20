@@ -20,10 +20,14 @@ android {
 }
 
 dependencies {
-    implementation(libs.androidx.appcompat)
+    implementation(project(":subsystem"))
     implementation(libs.androidx.core.ktx)
-    implementation(libs.material)
+    implementation(libs.androidx.webkit)
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.mlkit.language.id)
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.kotlinx.serialization.json)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
 }

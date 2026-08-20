@@ -6,7 +6,7 @@
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
-package us.neotechnica.panther.modules.gallery.views.galleryview
+package us.neotechnica.panther.modules.demo.views
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

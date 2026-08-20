@@ -20,6 +20,8 @@ import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDel
 import us.neotechnica.panther.networking.modules.database.services.Database
 import us.neotechnica.panther.networking.modules.storage.interfaces.StorageDelegate
 import us.neotechnica.panther.networking.modules.storage.services.Storage
+import us.neotechnica.panther.networking.modules.translation.interfaces.HostedTranslationDelegate
+import us.neotechnica.panther.networking.modules.translation.services.HostedTranslationService
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import kotlin.math.abs
 import kotlin.time.Duration.Companion.seconds
@@ -145,6 +147,8 @@ object Networking {
         private val auth = LockIsolated<AuthDelegate>(Auth())
         private val database = LockIsolated<DatabaseDelegate>(Database())
         private val environmentDefault = LockIsolated(NetworkEnvironment.PRODUCTION)
+        private val hostedTranslation =
+            LockIsolated<HostedTranslationDelegate>(HostedTranslationService.shared)
         private val storage = LockIsolated<StorageDelegate>(Storage())
 
         // MARK: - Computed Properties
@@ -170,6 +174,10 @@ object Networking {
         val environment: NetworkEnvironment
             get() = persistedEnvironment() ?: environmentDefault.wrappedValue
 
+        /** The delegate that translates against the hosted archive. */
+        val hostedTranslationDelegate: HostedTranslationDelegate
+            get() = hostedTranslation.wrappedValue
+
         /** The delegate that downloads and uploads stored files. */
         val storageDelegate: StorageDelegate
             get() = storage.wrappedValue
@@ -189,6 +197,11 @@ object Networking {
         /** Registers a custom database delegate. */
         fun registerDatabaseDelegate(delegate: DatabaseDelegate) {
             database.wrappedValue = delegate
+        }
+
+        /** Registers a custom hosted-translation delegate. */
+        fun registerHostedTranslationDelegate(delegate: HostedTranslationDelegate) {
+            hostedTranslation.wrappedValue = delegate
         }
 
         /** Registers a custom storage delegate. */

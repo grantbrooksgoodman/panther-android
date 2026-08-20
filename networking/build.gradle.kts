@@ -24,6 +24,7 @@ android {
 
 dependencies {
     api(project(":subsystem"))
+    api(project(":translator"))
     api(platform(libs.firebase.bom))
     api(libs.firebase.auth)
     api(libs.firebase.database)

@@ -9,6 +9,7 @@ package us.neotechnica.panther.subsystem.modules.foundation.services
 
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.StoredItemKey
+import java.util.Locale
 
 /**
  * A thread-safe, in-memory key-value store for data that should
@@ -38,6 +39,23 @@ object RuntimeStorage {
     // MARK: - Properties
 
     private val storedItems = LockIsolated(mapOf<String, Any>())
+    private val currentLanguageCode = LockIsolated(Locale.getDefault().language)
+
+    // MARK: - Computed Properties
+
+    /**
+     * The ISO 639-1 code of the app's active language.
+     *
+     * Defaults to the device language; later phases set it from the
+     * user's stored preference. This is the target of
+     * [LanguagePair.system][us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage]
+     * for display-string translation.
+     */
+    var languageCode: String
+        get() = currentLanguageCode.wrappedValue
+        set(value) {
+            currentLanguageCode.wrappedValue = value
+        }
 
     // MARK: - Methods
 
