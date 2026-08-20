@@ -33,6 +33,9 @@ object LocalizedStringResolver {
     /** The language always used as the final fallback. */
     private const val FALLBACK_LANGUAGE_CODE = "en"
 
+    /** The subsystem table key whose value maps language codes to display names. */
+    private const val LANGUAGE_CODES_KEY = "language_codes"
+
     // MARK: - Properties
 
     /**
@@ -81,6 +84,15 @@ object LocalizedStringResolver {
             ?: translations[FALLBACK_LANGUAGE_CODE]
             ?: MISSING
     }
+
+    // MARK: - Language Names
+
+    /**
+     * The supported languages as a map of ISO 639-1 code to display
+     * name (e.g. `"af" -> "Afrikaans (Afrikaans)"`), from the
+     * subsystem table's `language_codes` entry.
+     */
+    fun languageDisplayNames(): Map<String, String> = table(LocalizationSource.SUBSYSTEM)[LANGUAGE_CODES_KEY] ?: emptyMap()
 
     // MARK: - Tables
 

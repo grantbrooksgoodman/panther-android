@@ -11,9 +11,11 @@ package us.neotechnica.panther
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
+import us.neotechnica.panther.modules.common.services.CommonPropertyLists
 import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkEnvironment
+import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.translator.Translator
 import java.util.concurrent.atomic.AtomicReference
 
@@ -32,6 +34,8 @@ class PantherApplication : Application() {
         super.onCreate()
 
         LocalizedStringResolver.initialize(this)
+        Persistent.initialize(this)
+        CommonPropertyLists.initialize(this)
 
         Networking.initialize(
             context = this,

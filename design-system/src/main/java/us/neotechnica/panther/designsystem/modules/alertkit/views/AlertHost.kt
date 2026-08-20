@@ -13,8 +13,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -55,7 +58,40 @@ fun AlertHost() {
         is PresentedAlert.Confirmation -> ConfirmationDialog(presented)
         is PresentedAlert.ErrorContent -> ErrorDialog(presented)
         is PresentedAlert.TextInput -> TextInputDialog(presented)
+        is PresentedAlert.ActionSheet -> ActionSheetSheet(presented)
         is PresentedAlert.Progress -> ProgressDialog(presented)
+    }
+}
+
+// MARK: - Action Sheet
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ActionSheetSheet(alert: PresentedAlert.ActionSheet) {
+    ModalBottomSheet(onDismissRequest = { alert.onResult(false) }) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            alert.title?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
+            Text(alert.message, style = MaterialTheme.typography.bodyMedium)
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { alert.onResult(true) },
+            ) {
+                Text(alert.confirmButtonTitle)
+            }
+            TextButton(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { alert.onResult(false) },
+            ) {
+                Text(alert.cancelButtonTitle)
+            }
+        }
     }
 }
 

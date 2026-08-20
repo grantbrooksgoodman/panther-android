@@ -7,14 +7,22 @@
 
 package us.neotechnica.panther.designsystem.modules.componentkit
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.SFSymbol
+import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import androidx.compose.material3.Text as Material3Text
 
 /**
@@ -41,6 +49,8 @@ object Components {
      * @param color The color of the text.
      * @param font The font to apply. Defaults to [Font.system].
      * @param modifier The modifier for this component.
+     * @param textAlign The horizontal alignment of the text, or `null`
+     *   to use the default.
      */
     @Composable
     fun Text(
@@ -48,12 +58,14 @@ object Components {
         color: Color,
         font: Font = Font.system,
         modifier: Modifier = Modifier,
+        textAlign: TextAlign? = null,
     ) {
         Material3Text(
             text = text,
             color = color,
             modifier = modifier,
             style = font.textStyle,
+            textAlign = textAlign,
         )
     }
 
@@ -109,6 +121,43 @@ object Components {
         }
     }
 
+    // MARK: - Capsule Button
+
+    /**
+     * A prominent, filled capsule button using the theme's accent fill.
+     *
+     * When disabled, it uses the theme's disabled fill and ignores
+     * taps. The label uses the theme's background color for contrast.
+     *
+     * @param text The label text.
+     * @param onClick The action to perform when tapped.
+     * @param isEnabled Whether the button responds to taps.
+     * @param modifier The modifier for this component.
+     */
+    @Composable
+    fun CapsuleButton(
+        text: String,
+        onClick: () -> Unit,
+        isEnabled: Boolean = true,
+        modifier: Modifier = Modifier,
+    ) {
+        val colors = LocalPantherColors.current
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier =
+                modifier
+                    .clip(RoundedCornerShape(CAPSULE_CORNER_RADIUS))
+                    .background(if (isEnabled) colors.accent else colors.disabled)
+                    .clickable(enabled = isEnabled, onClick = onClick)
+                    .padding(
+                        horizontal = CAPSULE_HORIZONTAL_PADDING,
+                        vertical = CAPSULE_VERTICAL_PADDING,
+                    ),
+        ) {
+            Text(text, color = colors.background, font = Font.systemSemibold())
+        }
+    }
+
     // MARK: - Symbol
 
     /**
@@ -133,3 +182,7 @@ object Components {
         )
     }
 }
+
+private val CAPSULE_CORNER_RADIUS = 24.dp
+private val CAPSULE_HORIZONTAL_PADDING = 28.dp
+private val CAPSULE_VERTICAL_PADDING = 14.dp

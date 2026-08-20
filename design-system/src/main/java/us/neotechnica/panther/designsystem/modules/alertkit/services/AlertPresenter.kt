@@ -60,6 +60,15 @@ sealed interface PresentedAlert {
         val onResult: (String?) -> Unit,
     ) : PresentedAlert
 
+    /** A bottom action sheet resolving to a Boolean. */
+    data class ActionSheet(
+        val title: String?,
+        val message: String,
+        val confirmButtonTitle: String,
+        val cancelButtonTitle: String,
+        val onResult: (Boolean) -> Unit,
+    ) : PresentedAlert
+
     /** A non-dismissable progress indicator with an optional cancel action. */
     data class Progress(
         val title: String?,

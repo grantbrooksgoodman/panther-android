@@ -62,6 +62,12 @@ class PhoneNumber(
     // MARK: - Computed Properties
 
     /**
+     * The number's compiled number string: its calling code followed
+     * by its national number, containing digits only.
+     */
+    val compiledNumberString: String get() = callingCode + nationalNumberString
+
+    /**
      * The serialized representation of the phone number.
      *
      * The [label] and [internalFormattedString] are not

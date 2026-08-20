@@ -28,6 +28,8 @@ import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.content.onboarding.views.OnboardingContainer
+import us.neotechnica.panther.modules.content.shared.views.SplashView
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 
 /**
@@ -57,8 +59,8 @@ fun RootView(modifier: Modifier = Modifier) {
         },
     ) { modal ->
         when (modal) {
-            RootNavigatorState.ModalPath.Onboarding -> PlaceholderScreen("Onboarding", "Phase 5")
-            RootNavigatorState.ModalPath.Splash -> PlaceholderScreen("Splash", "Launching…")
+            RootNavigatorState.ModalPath.Onboarding -> OnboardingContainer(Modifier.fillMaxSize())
+            RootNavigatorState.ModalPath.Splash -> SplashView(Modifier.fillMaxSize())
             RootNavigatorState.ModalPath.UserContent -> PlaceholderScreen("User Content", "Phase 6")
             null -> Box(Modifier.fillMaxSize())
         }
