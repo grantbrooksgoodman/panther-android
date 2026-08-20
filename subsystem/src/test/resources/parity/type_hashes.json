@@ -1,0 +1,48 @@
+{
+  "conversationHash" : "b9839aebc857640a336ef3c2791034fa9498b4a51e1e4125b74bddcd9725e82a",
+  "conversationHashFactorsSorted" : [
+    "!",
+    "!",
+    "!",
+    "-FixtureConversation01",
+    "-FixtureMessage000001",
+    "2025-08-19 22:30:00 GMT",
+    "61551f8492635f34f1c27cc5ad51e1216d3e64dc307e6748cde122aaf68f33f4",
+    "androidFixtureUser0001 | false",
+    "androidFixtureUser0001: !",
+    "androidFixtureUser0001: !",
+    "androidFixtureUser0002 | false",
+    "androidFixtureUser0002: !",
+    "androidFixtureUser0002: false",
+    "e77a5d1eec3442fdbf53a2c4a0b4db710c13c7f1ca558b795cc0dbbf71d023a3",
+    "false"
+  ],
+  "emptyActivityHash" : "e77a5d1eec3442fdbf53a2c4a0b4db710c13c7f1ca558b795cc0dbbf71d023a3",
+  "emptyReactionMetadataHash" : "61551f8492635f34f1c27cc5ad51e1216d3e64dc307e6748cde122aaf68f33f4",
+  "messageHash" : "93f528ab4a842ee68eb33201018124360a976a1e285c6d85fc33a56e9e36acde",
+  "messageHashFactorsSorted" : [
+    "-FixtureMessage000001",
+    "2025-08-19 22:30:00 GMT",
+    "androidFixtureUser0001",
+    "androidFixtureUser0002 | 2025-08-19 22:30:00 GMT",
+    "text"
+  ],
+  "phoneNumberHash" : "4235803d6b794588d48eccccf4feb1fbd3754d9c178a5effd1a36a6515fad118",
+  "phoneNumberHashFactorsSorted" : [
+    "",
+    "",
+    "1",
+    "5551234567",
+    "US"
+  ],
+  "userHash" : "26795c3146c5ced26553bed5555702a8ff14f063b2f17db98eb1c157f9b1cabe",
+  "userHashFactorsSorted" : [
+    "-FixtureConversation01 | b9839aebc857640a336ef3c2791034fa9498b4a51e1e4125b74bddcd9725e82a",
+    "4235803d6b794588d48eccccf4feb1fbd3754d9c178a5effd1a36a6515fad118",
+    "en",
+    "false",
+    "false",
+    "false",
+    "fixture-device-id-0001"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "aiEnhancedTranslationsEnabled" : false,
+  "blockedUserIDs" : {
+
+  },
+  "deviceID" : "fixture-device-id-0001",
+  "id" : "androidFixtureUser0001",
+  "isPenPalsParticipant" : false,
+  "languageCode" : "en",
+  "messageRecipientConsentRequired" : false,
+  "openConversations" : {
+    "-FixtureConversation01" : "b9839aebc857640a336ef3c2791034fa9498b4a51e1e4125b74bddcd9725e82a"
+  },
+  "phoneNumber" : {
+    "callingCode" : "1",
+    "nationalNumberString" : "5551234567",
+    "regionCode" : "US"
+  },
+  "previousLanguageCodes" : [
+    "!"
+  ],
+  "pushTokens" : {
+
+  }
+}

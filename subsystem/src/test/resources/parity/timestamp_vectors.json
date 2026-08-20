@@ -1,0 +1,47 @@
+[
+  {
+    "epochMillis" : 0,
+    "formatted" : "1970-01-01 00:00:00 GMT",
+    "reparsedEpochMillis" : 0
+  },
+  {
+    "epochMillis" : 1000,
+    "formatted" : "1970-01-01 00:00:01 GMT",
+    "reparsedEpochMillis" : 1000
+  },
+  {
+    "epochMillis" : -1000,
+    "formatted" : "1969-12-31 23:59:59 GMT",
+    "reparsedEpochMillis" : -1000
+  },
+  {
+    "epochMillis" : 86399000,
+    "formatted" : "1970-01-01 23:59:59 GMT",
+    "reparsedEpochMillis" : 86399000
+  },
+  {
+    "epochMillis" : 951827696000,
+    "formatted" : "2000-02-29 12:34:56 GMT",
+    "reparsedEpochMillis" : 951827696000
+  },
+  {
+    "epochMillis" : 1234567890000,
+    "formatted" : "2009-02-13 23:31:30 GMT",
+    "reparsedEpochMillis" : 1234567890000
+  },
+  {
+    "epochMillis" : 1755642600000,
+    "formatted" : "2025-08-19 22:30:00 GMT",
+    "reparsedEpochMillis" : 1755642600000
+  },
+  {
+    "epochMillis" : 4102444799000,
+    "formatted" : "2099-12-31 23:59:59 GMT",
+    "reparsedEpochMillis" : 4102444799000
+  },
+  {
+    "epochMillis" : 1755642600999,
+    "formatted" : "2025-08-19 22:30:00 GMT",
+    "reparsedEpochMillis" : 1755642600000
+  }
+]

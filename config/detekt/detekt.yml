@@ -1,6 +1,20 @@
 # Baseline detekt overlay. buildUponDefaultConfig = true is set in the root
 # build script, so this file only records intentional deviations from detekt's
-# defaults. Revisit alongside STYLE_RULES_ANDROID.md in Phase 1.
+# defaults. Size limits encode STYLE_RULES_ANDROID.md §16.
+
+complexity:
+  CyclomaticComplexMethod:
+    threshold: 20
+  LargeClass:
+    threshold: 250
+  LongMethod:
+    threshold: 100
+  LongParameterList:
+    # Kotlin data-class constructors are the analog of Swift's
+    # compiler-generated memberwise initializers, which the iOS
+    # linter does not count; only functions enforce the limit.
+    constructorThreshold: 20
+    functionThreshold: 5
 
 naming:
   FunctionNaming:

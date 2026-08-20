@@ -3,5 +3,14 @@ root = true
 [*.{kt,kts}]
 # Jetpack Compose @Composable functions are conventionally PascalCase, so exempt
 # them from ktlint's function-naming rule (mirrors the detekt config in
-# config/detekt/detekt.yml). Revisit with STYLE_RULES_ANDROID.md in Phase 1.
+# config/detekt/detekt.yml). See STYLE_RULES_ANDROID.md.
 ktlint_function_naming_ignore_when_annotated_with = Composable
+
+# STYLE_RULES_ANDROID.md §2: extension/constants files use iOS-parity names
+# ("String+AppContentExtensions.kt"), which the filename rule rejects.
+ktlint_standard_filename = disabled
+
+# STYLE_RULES_ANDROID.md §9: declarations order by access/static/mutability
+# tiers with blank-line separation, which this rule fights.
+ktlint_standard_property-naming = enabled
+ktlint_standard_no-blank-line-in-list = disabled

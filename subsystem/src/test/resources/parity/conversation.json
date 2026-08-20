@@ -1,0 +1,50 @@
+{
+  "activities" : [
+    {
+      "action" : "LEFT",
+      "date" : "1970-01-01 00:00:00 GMT",
+      "userID" : "!"
+    }
+  ],
+  "hash" : "b9839aebc857640a336ef3c2791034fa9498b4a51e1e4125b74bddcd9725e82a",
+  "id" : "-FixtureConversation01 | b9839aebc857640a336ef3c2791034fa9498b4a51e1e4125b74bddcd9725e82a",
+  "messages" : {
+    "-FixtureMessage000001" : true
+  },
+  "metadata" : {
+    "imageData" : "!",
+    "isPenPalsConversation" : false,
+    "lastModified" : "2025-08-19 22:30:00 GMT",
+    "messageRecipientConsentAcknowledgementData" : [
+      "androidFixtureUser0001: !",
+      "androidFixtureUser0002: false"
+    ],
+    "name" : "!",
+    "penPalsSharingData" : [
+      "androidFixtureUser0001: !",
+      "androidFixtureUser0002: !"
+    ],
+    "requiresConsentFromInitiator" : "!"
+  },
+  "participants" : {
+    "androidFixtureUser0001" : {
+      "hasDeletedConversation" : false,
+      "isTyping" : false
+    },
+    "androidFixtureUser0002" : {
+      "hasDeletedConversation" : false,
+      "isTyping" : true
+    }
+  },
+  "reactionMetadata" : [
+    {
+      "messageID" : "!",
+      "reactions" : [
+        {
+          "style" : "LOVE",
+          "userID" : "!"
+        }
+      ]
+    }
+  ]
+}

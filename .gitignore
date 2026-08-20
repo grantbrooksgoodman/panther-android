@@ -13,6 +13,7 @@
 /captures
 .externalNativeBuild
 .cxx
+AGENTS
 local.properties
 
 # Firebase per-environment config — kept local, like the iOS GoogleService-Info.plist

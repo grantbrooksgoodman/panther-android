@@ -20,10 +20,12 @@ android {
 }
 
 dependencies {
-    implementation(libs.androidx.appcompat)
+    api(libs.kotlinx.coroutines.core)
     implementation(libs.androidx.core.ktx)
-    implementation(libs.material)
+    implementation(libs.kotlinx.coroutines.android)
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.kotlinx.serialization.json)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
 }
