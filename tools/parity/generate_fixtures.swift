@@ -195,7 +195,10 @@ conversationHashFactors.append("\(userID): !")
 conversationHashFactors.append("!") // requiresConsentFromInitiator nil
 conversationHashFactors.append("\(userID) | false")
 conversationHashFactors.append("\(peerUserID) | false")
-conversationHashFactors.append(emptyReactionMetadataHash)
+// reactionMetadata decodes [empty] back to nil, so a round-tripped
+// conversation excludes reaction hashes from its factors. The empty
+// activity placeholder, by contrast, decodes to [emptyActivity] and
+// DOES contribute emptyActivityHash (see Conversation decode).
 let conversationHash = encodedHash(conversationHashFactors.sorted())
 
 let userHashFactors: [String] = [

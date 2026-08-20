@@ -1,0 +1,12 @@
+{
+  "contentType" : "text",
+  "fromAccount" : "androidFixtureUser0001",
+  "id" : "-FixtureMessage000001",
+  "readReceipts" : [
+    "androidFixtureUser0002 | 2025-08-19 22:30:00 GMT"
+  ],
+  "sentDate" : "2025-08-19 22:30:00 GMT",
+  "translations" : [
+    "en-es | -FixtureTranslation01"
+  ]
+}

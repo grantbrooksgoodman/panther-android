@@ -17,13 +17,26 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+    buildFeatures {
+        buildConfig = true
+    }
 }
 
 dependencies {
-    implementation(libs.androidx.appcompat)
+    api(project(":subsystem"))
+    api(platform(libs.firebase.bom))
+    api(libs.firebase.auth)
+    api(libs.firebase.database)
+    api(libs.firebase.storage)
     implementation(libs.androidx.core.ktx)
-    implementation(libs.material)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.firebase.appcheck.debug)
+    implementation(libs.firebase.appcheck.playintegrity)
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.coroutines.play.services)
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.kotlinx.serialization.json)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
 }

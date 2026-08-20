@@ -1,5 +1,5 @@
 {
-  "generatedAt" : "2026-08-19T23:56:24Z",
+  "generatedAt" : "2026-08-20T01:45:04Z",
   "generator" : "generate_fixtures.swift (Panther Android port, Phase 1)",
   "notes" : [
     "encoded_hash_vectors: byte parity required – Kotlin must reproduce json\/sha256 exactly.",

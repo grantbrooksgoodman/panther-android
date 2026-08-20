@@ -1,8 +1,12 @@
 # Baseline detekt overlay. buildUponDefaultConfig = true is set in the root
 # build script, so this file only records intentional deviations from detekt's
-# defaults. Size limits encode STYLE_RULES_ANDROID.md §16.
+# defaults, encoding STYLE_RULES_ANDROID.md §14 and §16.
 
 complexity:
+  ComplexCondition:
+    # §14.1 permits multi-condition guards; the Kotlin equivalent is a
+    # `&&` chain, as in the serializers' structural `canDecode` checks.
+    threshold: 12
   CyclomaticComplexMethod:
     threshold: 20
   LargeClass:
@@ -13,8 +17,22 @@ complexity:
     # Kotlin data-class constructors are the analog of Swift's
     # compiler-generated memberwise initializers, which the iOS
     # linter does not count; only functions enforce the limit.
+    # §16 allows up to five parameters, so six-or-more triggers.
     constructorThreshold: 20
-    functionThreshold: 5
+    functionThreshold: 6
+  TooManyFunctions:
+    # §16 governs type size by body length (LargeClass), not by
+    # function count; the delegate interfaces mirror iOS surfaces.
+    active: false
+
+exceptions:
+  TooGenericExceptionCaught:
+    # The domain error currency is a type named `Exception` (iOS
+    # parity), so catching it is idiomatic here, not a smell.
+    active: false
+  TooGenericExceptionThrown:
+    # As above: `Exception` is the app's structured error type.
+    active: false
 
 naming:
   FunctionNaming:
@@ -25,3 +43,13 @@ style:
   MagicNumber:
     # Design-token property declarations (e.g. Color(0xFF...)) read fine inline.
     ignorePropertyDeclaration: true
+  MaxLineLength:
+    # §16: line-length limit is 160.
+    maxLineLength: 160
+  ReturnCount:
+    # §14 endorses guard-style early returns (`?: return`), which the
+    # structural `canDecode` validators use throughout.
+    active: false
+  ThrowsCount:
+    # §14 endorses early throws; the guarded operations use them.
+    active: false
