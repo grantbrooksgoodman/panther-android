@@ -27,9 +27,11 @@ import us.neotechnica.panther.navigation.RootNavigatorState
 import us.neotechnica.panther.navigation.RootRoute
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.networking.modules.session.services.UserSessionService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
+import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 
 /**
  * The launch splash. Routes to the signed-in content flow when a user
@@ -48,13 +50,18 @@ fun SplashView(modifier: Modifier = Modifier) {
 
     LaunchedEffect(Unit) {
         delay(SPLASH_DELAY_MILLIS)
-        val destination =
-            if (Persistent.string(PersistentStorageKey.currentUserID) != null) {
-                RootNavigatorState.ModalPath.UserContent
-            } else {
-                RootNavigatorState.ModalPath.Onboarding
-            }
-        navigation.navigate(Route.Root(RootRoute.SetModal(destination)))
+
+        if (Persistent.string(PersistentStorageKey.currentUserID) == null) {
+            navigation.navigate(Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.Onboarding)))
+            return@LaunchedEffect
+        }
+
+        runCatching {
+            UserSessionService.resolveCurrentUser(UserSessionService.DataType.entries.toSet())
+            UserSessionService.currentUser?.languageCode?.let { RuntimeStorage.languageCode = it }
+        }
+
+        navigation.navigate(Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.UserContent)))
     }
 
     Column(

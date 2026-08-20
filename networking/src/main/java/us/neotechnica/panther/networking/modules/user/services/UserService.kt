@@ -7,10 +7,14 @@
 
 package us.neotechnica.panther.networking.modules.user.services
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.schema.common.models.PhoneNumber
 import us.neotechnica.panther.networking.modules.schema.user.models.User
+import us.neotechnica.panther.networking.modules.session.services.SessionStore
 import us.neotechnica.panther.networking.modules.user.models.DeviceID
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -27,6 +31,7 @@ object UserService {
     // MARK: - Properties
 
     private val allUsersCoalescer = KeyedCoalescer<String, List<User>>()
+    private val userCoalescer = KeyedCoalescer<String, User>()
 
     private val database get() = Networking.config.databaseDelegate
 
@@ -109,6 +114,29 @@ object UserService {
 
     /** Returns every user in the database. Concurrent calls coalesce. */
     suspend fun getAllUsers(): List<User> = allUsersCoalescer(ALL_USERS_KEY) { fetchAllUsers() }
+
+    /**
+     * Returns the user with the given ID, upserting it into the
+     * [SessionStore]. Concurrent fetches of the same ID coalesce.
+     */
+    suspend fun getUser(id: String): User =
+        userCoalescer(id) {
+            val data: Map<String, Any?> = database.getValues("${NetworkPath.users.rawValue}/$id")
+            val childData = data.toMutableMap().apply { put(ID_KEY, id) }
+            if (!User.canDecode(childData)) {
+                throw Exception("Failed to decode user.", metadata = ExceptionMetadata(this))
+            }
+            User.decode(childData).also { SessionStore.upsertUser(it) }
+        }
+
+    /** Returns the users with the given IDs, upserting them into the store. */
+    suspend fun getUsers(ids: List<String>): List<User> =
+        coroutineScope {
+            ids
+                .map { id -> async { runCatching { getUser(id) }.getOrNull() } }
+                .awaitAll()
+                .filterNotNull()
+        }
 
     // MARK: - Auxiliary
 

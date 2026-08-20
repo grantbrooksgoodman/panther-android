@@ -33,3 +33,15 @@ fun PhoneNumber.partiallyFormatted(regionCode: String? = null): String {
     for (character in national) formatted = formatter.inputDigit(character)
     return formatted.trim()
 }
+
+/**
+ * Returns the number formatted for display, prefixed with `+` and its
+ * calling code, mirroring the iOS `PhoneNumber.formattedString`.
+ *
+ * @param regionCode The region whose conventions to use; defaults to
+ *   the number's own region.
+ */
+fun PhoneNumber.formattedString(regionCode: String? = null): String {
+    val national = partiallyFormatted(regionCode)
+    return "+$callingCode $national".trim()
+}

@@ -13,23 +13,16 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import us.neotechnica.panther.designsystem.modules.componentkit.Components
-import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
-import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
-import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.onboarding.views.OnboardingContainer
 import us.neotechnica.panther.modules.content.shared.views.SplashView
+import us.neotechnica.panther.modules.content.user.views.UserContentContainer
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 
 /**
@@ -37,10 +30,7 @@ import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.Dep
  *
  * [RootView] observes the navigation coordinator and renders the
  * top-level screen for the current [RootNavigatorState.modal] value,
- * crossfading between screens as the modal changes.
- *
- * For this phase the destinations are placeholders; later phases
- * replace them with the onboarding and signed-in content flows.
+ * crossfading between the splash, onboarding, and signed-in flows.
  *
  * @param modifier The modifier for this view.
  */
@@ -61,36 +51,10 @@ fun RootView(modifier: Modifier = Modifier) {
         when (modal) {
             RootNavigatorState.ModalPath.Onboarding -> OnboardingContainer(Modifier.fillMaxSize())
             RootNavigatorState.ModalPath.Splash -> SplashView(Modifier.fillMaxSize())
-            RootNavigatorState.ModalPath.UserContent -> PlaceholderScreen("User Content", "Phase 6")
+            RootNavigatorState.ModalPath.UserContent -> UserContentContainer(Modifier.fillMaxSize())
             null -> Box(Modifier.fillMaxSize())
         }
     }
 }
 
 private const val TRANSITION_MILLIS = 250
-
-@Composable
-private fun PlaceholderScreen(
-    title: String,
-    subtitle: String,
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(LocalPantherColors.current.background),
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Components.Text(
-            title,
-            color = LocalPantherColors.current.titleText,
-            font = Font.systemBold(FontScale.Large),
-        )
-
-        Components.Text(
-            subtitle,
-            color = LocalPantherColors.current.subtitleText,
-        )
-    }
-}
