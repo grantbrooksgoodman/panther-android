@@ -59,6 +59,7 @@ android {
 dependencies {
     implementation(project(":subsystem"))
     implementation(project(":networking"))
+    implementation(project(":design-system"))
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)

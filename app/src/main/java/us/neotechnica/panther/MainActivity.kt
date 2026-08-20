@@ -12,12 +12,15 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.ui.Modifier
-import us.neotechnica.panther.modules.debug.views.databasedebugview.DatabaseDebugView
-import us.neotechnica.panther.ui.theme.PantherTheme
+import us.neotechnica.panther.designsystem.modules.alertkit.views.AlertHost
+import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.designsystem.modules.theming.views.PantherTheme
+import us.neotechnica.panther.modules.gallery.views.galleryview.GalleryView
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,10 +28,19 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             PantherTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    DatabaseDebugView(
-                        modifier = Modifier.padding(innerPadding),
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(LocalPantherColors.current.background),
+                ) {
+                    GalleryView(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .systemBarsPadding(),
                     )
+                    AlertHost()
                 }
             }
         }
