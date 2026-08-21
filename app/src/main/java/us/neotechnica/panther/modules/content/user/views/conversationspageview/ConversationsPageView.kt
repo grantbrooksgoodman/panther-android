@@ -8,21 +8,25 @@
 
 package us.neotechnica.panther.modules.content.user.views.conversationspageview
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -32,6 +36,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
@@ -80,39 +89,32 @@ fun ConversationsPageView(modifier: Modifier = Modifier) {
         Column(modifier = Modifier.fillMaxSize()) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp),
             ) {
-                Components.Text(
-                    state.strings.value(ConversationsPageViewStrings.navigationBarTitle),
-                    color = colors.titleText,
-                    font = Font.systemBold(FontScale.Large),
-                    modifier = Modifier.weight(1f),
-                )
-                IconButton(onClick = {
+                CircleChipButton("gearshape", "Settings") {
                     navigation.navigate(
                         Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePath.Settings)),
                     )
-                }) {
-                    Components.Symbol("gearshape", color = colors.accent, modifier = Modifier.size(24.dp))
                 }
-                IconButton(onClick = {
+                Spacer(modifier = Modifier.weight(1f))
+                CircleChipButton("square.and.pencil", "New conversation") {
                     navigation.navigate(
                         Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePath.NewChat)),
                     )
-                }) {
-                    Components.Symbol("plus", color = colors.accent, modifier = Modifier.size(24.dp))
                 }
             }
 
-            OutlinedTextField(
+            Components.Text(
+                state.strings.value(ConversationsPageViewStrings.navigationBarTitle),
+                color = colors.titleText,
+                font = Font.systemBold(FontScale.Large),
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+            )
+
+            SearchPill(
                 value = state.searchQuery,
+                placeholder = state.strings.value(ConversationsPageViewStrings.searchBarPlaceholder),
                 onValueChange = { viewModel.send(ConversationsPageReducer.Action.SearchQueryChanged(it)) },
-                label = { Material3Text(state.strings.value(ConversationsPageViewStrings.searchBarPlaceholder)) },
-                singleLine = true,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
             )
 
             PullToRefreshBox(
@@ -156,4 +158,53 @@ fun ConversationsPageView(modifier: Modifier = Modifier) {
             }
         }
     }
+}
+
+@Composable
+private fun CircleChipButton(
+    systemName: String,
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    val colors = LocalPantherColors.current
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+            Modifier
+                .size(40.dp)
+                .shadow(2.dp, CircleShape)
+                .clip(CircleShape)
+                .background(colors.background)
+                .clickable(onClick = onClick)
+                .semantics { this.contentDescription = contentDescription },
+    ) {
+        Components.Symbol(systemName, color = colors.accent, modifier = Modifier.size(22.dp))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SearchPill(
+    value: String,
+    placeholder: String,
+    onValueChange: (String) -> Unit,
+) {
+    val colors = LocalPantherColors.current
+    TextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        leadingIcon = { Components.Symbol("magnifyingglass", color = colors.subtitleText, modifier = Modifier.size(20.dp)) },
+        placeholder = { Material3Text(placeholder, color = colors.subtitleText) },
+        shape = RoundedCornerShape(12.dp),
+        colors =
+            TextFieldDefaults.colors(
+                focusedContainerColor = colors.groupedContentBackground,
+                unfocusedContainerColor = colors.groupedContentBackground,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent,
+            ),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+    )
 }

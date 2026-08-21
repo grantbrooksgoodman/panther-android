@@ -39,6 +39,10 @@ data class ConversationCellViewData(
     val dateLabelText: String,
     val isShowingUnreadIndicator: Boolean,
     val initials: String,
+    val hasContactName: Boolean,
+    val isGroup: Boolean,
+    val participantCount: Int,
+    val otherLanguageCode: String?,
 ) {
     companion object {
         /** Builds the cell data for [conversation], resolving text into [languageCode]. */
@@ -48,6 +52,9 @@ data class ConversationCellViewData(
         ): ConversationCellViewData {
             val title = title(conversation)
             val lastMessage = conversation.messages?.maxByOrNull { it.sentDate.time }
+            val users = conversation.users.orEmpty()
+            val isGroup = conversation.participants.size > 2
+            val hasName = title.any { it.isLetter() }
 
             return ConversationCellViewData(
                 title = title,
@@ -57,7 +64,11 @@ data class ConversationCellViewData(
                         ?: relativeDateString(conversation.metadata.lastModifiedDate),
                 isShowingUnreadIndicator =
                     lastMessage != null && !lastMessage.isFromCurrentUser && !lastMessage.isReadByCurrentUser,
-                initials = initials(title),
+                initials = if (hasName) initials(title) else "",
+                hasContactName = hasName,
+                isGroup = isGroup,
+                participantCount = conversation.participants.size,
+                otherLanguageCode = if (!isGroup) users.firstOrNull()?.languageCode else null,
             )
         }
 

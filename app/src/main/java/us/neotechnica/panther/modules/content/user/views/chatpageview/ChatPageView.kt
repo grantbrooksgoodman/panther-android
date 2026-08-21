@@ -8,6 +8,8 @@
 
 package us.neotechnica.panther.modules.content.user.views.chatpageview
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
@@ -31,6 +34,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.ContextMenuHost
@@ -141,24 +148,53 @@ private fun ChatHeader(
     onInfo: () -> Unit,
 ) {
     val colors = LocalPantherColors.current
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp),
-    ) {
-        IconButton(onClick = onBack) {
-            Components.Symbol("chevron.left", color = colors.accent, modifier = Modifier.size(24.dp))
+    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier =
+                Modifier
+                    .align(Alignment.CenterStart)
+                    .size(40.dp)
+                    .shadow(2.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(colors.background)
+                    .clickable(onClick = onBack)
+                    .semantics { contentDescription = "Back" },
+        ) {
+            Components.Symbol("chevron.left", color = colors.accent, modifier = Modifier.size(22.dp))
         }
-        Components.Text(
-            title,
-            color = colors.titleText,
-            font = Font.systemSemibold(),
-            modifier = Modifier.weight(1f).padding(start = 4.dp),
-        )
-        IconButton(onClick = onInfo) {
-            Components.Symbol("ellipsis", color = colors.accent, modifier = Modifier.size(24.dp))
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier =
+                Modifier
+                    .align(Alignment.Center)
+                    .clickable(onClick = onInfo)
+                    .semantics { contentDescription = "Conversation info" },
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(36.dp).clip(CircleShape).background(HEADER_AVATAR_BACKGROUND),
+            ) {
+                Components.Symbol("person", color = colors.background, modifier = Modifier.size(18.dp))
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier =
+                    Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(colors.groupedContentBackground)
+                        .padding(start = 12.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+            ) {
+                Components.Text(title.ifBlank { " " }, color = colors.titleText, font = Font.systemSemibold())
+                Components.Symbol("chevron.right", color = colors.subtitleText, modifier = Modifier.size(14.dp).padding(start = 2.dp))
+            }
         }
     }
 }
+
+private val HEADER_AVATAR_BACKGROUND = Color(0xFFC7C7CC)
 
 @Composable
 private fun MessageList(
@@ -219,7 +255,11 @@ private fun InputBar(
         )
 
         val canSend = text.isNotBlank() && !isSending
-        IconButton(onClick = onSend, enabled = canSend, modifier = Modifier.padding(start = 4.dp)) {
+        IconButton(
+            onClick = onSend,
+            enabled = canSend,
+            modifier = Modifier.padding(start = 4.dp).semantics { contentDescription = "Send" },
+        ) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier.size(40.dp).clip(CircleShape),

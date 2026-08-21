@@ -97,6 +97,7 @@ fun SelectLanguagePageView(modifier: Modifier = Modifier) {
             Components.CapsuleButton(
                 text = state.strings.value(SelectLanguagePageViewStrings.continueButtonText),
                 onClick = { viewModel.send(SelectLanguagePageReducer.Action.ContinueButtonTapped) },
+                primary = true,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
         }

@@ -101,6 +101,7 @@ fun PermissionPageView(modifier: Modifier = Modifier) {
                 text = state.strings.value(PermissionPageViewStrings.finishButtonText),
                 onClick = { viewModel.send(PermissionPageReducer.Action.FinishButtonTapped) },
                 isEnabled = state.isFinishButtonEnabled,
+                primary = true,
             )
         }
     }

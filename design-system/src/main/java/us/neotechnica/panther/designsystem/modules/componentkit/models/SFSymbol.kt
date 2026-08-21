@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.MoreHoriz
@@ -78,6 +79,7 @@ object SFSymbol {
             "paperplane.fill" to Icons.AutoMirrored.Filled.Send,
             "doc.on.doc" to Icons.Filled.ContentCopy,
             "doc.on.doc.fill" to Icons.Filled.ContentCopy,
+            "square.and.pencil" to Icons.Filled.Edit,
             "globe" to Icons.Filled.Language,
             "character.bubble" to Icons.AutoMirrored.Filled.Message,
             "character.bubble.fill" to Icons.AutoMirrored.Filled.Message,

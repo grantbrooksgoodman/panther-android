@@ -94,6 +94,7 @@ fun VerifyNumberPageView(modifier: Modifier = Modifier) {
                 text = state.strings.value(VerifyNumberPageViewStrings.continueButtonText),
                 onClick = { viewModel.send(VerifyNumberPageReducer.Action.ContinueButtonTapped) },
                 isEnabled = state.isContinueButtonEnabled,
+                primary = true,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
         }

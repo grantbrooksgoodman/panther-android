@@ -18,3 +18,8 @@ local.properties
 
 # Firebase per-environment config — kept local, like the iOS GoogleService-Info.plist
 google-services.json
+
+# Release signing — keep secrets local (see keystore.properties.template)
+keystore.properties
+*.jks
+*.keystore

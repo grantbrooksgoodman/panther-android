@@ -8,11 +8,12 @@
 
 package us.neotechnica.panther.modules.content.onboarding.views.welcomepageview
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -21,7 +22,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import us.neotechnica.panther.R
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
@@ -57,7 +61,12 @@ fun WelcomePageView(modifier: Modifier = Modifier) {
                     .padding(32.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterVertically),
         ) {
-            Components.Symbol("message", color = colors.accent, modifier = Modifier.size(96.dp))
+            Image(
+                painter = painterResource(R.drawable.hello_wordmark),
+                contentDescription = null,
+                colorFilter = ColorFilter.tint(colors.titleText),
+                modifier = Modifier.height(72.dp),
+            )
 
             Components.Text(
                 state.welcomeLabelText,
@@ -68,6 +77,7 @@ fun WelcomePageView(modifier: Modifier = Modifier) {
             Components.CapsuleButton(
                 text = state.strings.value(WelcomePageViewStrings.continueButtonText),
                 onClick = { viewModel.send(WelcomePageReducer.Action.ContinueButtonTapped) },
+                primary = true,
             )
 
             Components.Button(

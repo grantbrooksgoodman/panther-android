@@ -33,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
@@ -78,14 +79,31 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
         )
 
-        LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.Top) {
-            items(state.filteredContacts, key = { it.userID }) { contact ->
-                ContactRow(
-                    contact = contact,
-                    isSelected = contact.userID in state.selectedUserIDs,
-                    onClick = { viewModel.send(NewChatPageReducer.Action.ToggleSelected(contact.userID)) },
+        if (state.filteredContacts.isEmpty()) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 40.dp),
+            ) {
+                Components.Text(
+                    if (state.searchQuery.isBlank()) {
+                        "Contacts you know who use Hello will appear here. Make sure contacts access is granted."
+                    } else {
+                        "No matching contacts."
+                    },
+                    color = colors.subtitleText,
+                    textAlign = TextAlign.Center,
                 )
-                HorizontalDivider(color = colors.groupedContentBackground)
+            }
+        } else {
+            LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.Top) {
+                items(state.filteredContacts, key = { it.userID }) { contact ->
+                    ContactRow(
+                        contact = contact,
+                        isSelected = contact.userID in state.selectedUserIDs,
+                        onClick = { viewModel.send(NewChatPageReducer.Action.ToggleSelected(contact.userID)) },
+                    )
+                    HorizontalDivider(color = colors.groupedContentBackground)
+                }
             }
         }
 

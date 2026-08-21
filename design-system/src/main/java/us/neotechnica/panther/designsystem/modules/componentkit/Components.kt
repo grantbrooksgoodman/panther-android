@@ -139,15 +139,22 @@ object Components {
         text: String,
         onClick: () -> Unit,
         isEnabled: Boolean = true,
+        primary: Boolean = false,
         modifier: Modifier = Modifier,
     ) {
         val colors = LocalPantherColors.current
+        val fillColor =
+            when {
+                !isEnabled -> colors.disabled
+                primary -> colors.titleText
+                else -> colors.accent
+            }
         Box(
             contentAlignment = Alignment.Center,
             modifier =
                 modifier
                     .clip(RoundedCornerShape(CAPSULE_CORNER_RADIUS))
-                    .background(if (isEnabled) colors.accent else colors.disabled)
+                    .background(fillColor)
                     .clickable(enabled = isEnabled, onClick = onClick)
                     .padding(
                         horizontal = CAPSULE_HORIZONTAL_PADDING,

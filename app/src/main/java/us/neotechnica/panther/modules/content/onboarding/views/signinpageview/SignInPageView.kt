@@ -108,6 +108,7 @@ fun SignInPageView(modifier: Modifier = Modifier) {
                 text = state.continueButtonText,
                 onClick = { viewModel.send(SignInPageReducer.Action.ContinueButtonTapped) },
                 isEnabled = state.isContinueButtonEnabled,
+                primary = true,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
         }

@@ -87,6 +87,7 @@ fun AuthCodePageView(modifier: Modifier = Modifier) {
                 text = state.strings.value(AuthCodePageViewStrings.continueButtonText),
                 onClick = { viewModel.send(AuthCodePageReducer.Action.ContinueButtonTapped) },
                 isEnabled = state.isContinueButtonEnabled,
+                primary = true,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
         }
