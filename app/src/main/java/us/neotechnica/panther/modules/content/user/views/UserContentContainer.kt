@@ -23,8 +23,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import us.neotechnica.panther.modules.content.user.views.chatinfopageview.ChatInfoPageView
 import us.neotechnica.panther.modules.content.user.views.chatpageview.ChatPageView
 import us.neotechnica.panther.modules.content.user.views.conversationspageview.ConversationsPageView
+import us.neotechnica.panther.modules.content.user.views.newchatpageview.NewChatPageView
+import us.neotechnica.panther.modules.content.user.views.settingspageview.SettingsPageView
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentNavigatorState
 import us.neotechnica.panther.navigation.UserContentRoute
@@ -63,7 +66,16 @@ fun UserContentContainer(modifier: Modifier = Modifier) {
             is UserContentNavigatorState.SeguePath.Chat ->
                 ChatPageView(path.conversationIDKey, Modifier.fillMaxSize())
 
-            else -> ConversationsPageView(Modifier.fillMaxSize())
+            is UserContentNavigatorState.SeguePath.ChatInfo ->
+                ChatInfoPageView(path.conversationIDKey, Modifier.fillMaxSize())
+
+            UserContentNavigatorState.SeguePath.NewChat ->
+                NewChatPageView(Modifier.fillMaxSize())
+
+            UserContentNavigatorState.SeguePath.Settings ->
+                SettingsPageView(Modifier.fillMaxSize())
+
+            null -> ConversationsPageView(Modifier.fillMaxSize())
         }
     }
 }

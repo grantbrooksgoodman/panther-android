@@ -12,13 +12,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -75,12 +78,31 @@ fun ConversationsPageView(modifier: Modifier = Modifier) {
 
     StatefulView(state = state.viewState, modifier = modifier) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Components.Text(
-                state.strings.value(ConversationsPageViewStrings.navigationBarTitle),
-                color = colors.titleText,
-                font = Font.systemBold(FontScale.Large),
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
+            ) {
+                Components.Text(
+                    state.strings.value(ConversationsPageViewStrings.navigationBarTitle),
+                    color = colors.titleText,
+                    font = Font.systemBold(FontScale.Large),
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = {
+                    navigation.navigate(
+                        Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePath.Settings)),
+                    )
+                }) {
+                    Components.Symbol("gearshape", color = colors.accent, modifier = Modifier.size(24.dp))
+                }
+                IconButton(onClick = {
+                    navigation.navigate(
+                        Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePath.NewChat)),
+                    )
+                }) {
+                    Components.Symbol("plus", color = colors.accent, modifier = Modifier.size(24.dp))
+                }
+            }
 
             OutlinedTextField(
                 value = state.searchQuery,

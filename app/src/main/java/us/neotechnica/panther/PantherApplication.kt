@@ -11,16 +11,20 @@ package us.neotechnica.panther
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.services.CommonPropertyLists
 import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
+import us.neotechnica.panther.modules.notifications.services.PantherMessagingService
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkEnvironment
 import us.neotechnica.panther.networking.modules.common.services.ConnectionStatusService
 import us.neotechnica.panther.networking.modules.session.services.MessageOutboxService
+import us.neotechnica.panther.networking.modules.session.services.UserMutationService
 import us.neotechnica.panther.networking.modules.session.services.retryAllEligible
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.translator.Translator
@@ -47,6 +51,7 @@ class PantherApplication : Application() {
         LocalizedStringResolver.initialize(this)
         Persistent.initialize(this)
         CommonPropertyLists.initialize(this)
+        ContactService.initialize(this)
 
         Networking.initialize(
             context = this,
@@ -56,6 +61,16 @@ class PantherApplication : Application() {
 
         registerTranslatorActivityProvider()
         setUpMessageOutboxRetry()
+        setUpPushNotifications()
+    }
+
+    // MARK: - Push Notifications
+
+    private fun setUpPushNotifications() {
+        PantherMessagingService.createChannel(this)
+        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+            UserMutationService.setCurrentToken(token)
+        }
     }
 
     // MARK: - Message Outbox Retry

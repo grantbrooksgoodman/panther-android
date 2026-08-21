@@ -28,6 +28,7 @@ dependencies {
     api(platform(libs.firebase.bom))
     api(libs.firebase.auth)
     api(libs.firebase.database)
+    api(libs.firebase.messaging)
     api(libs.firebase.storage)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.datastore.preferences)

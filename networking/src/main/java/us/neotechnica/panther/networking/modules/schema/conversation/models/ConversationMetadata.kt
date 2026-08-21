@@ -61,12 +61,21 @@ class ConversationMetadata(
     /**
      * Returns a copy of the metadata with the given fields replaced.
      *
-     * @param lastModifiedDate The new last-modified date.
-     * @param isPenPalsConversation The new PenPals flag.
+     * Every parameter defaults to the current value, so unspecified
+     * fields are preserved; pass an explicit `null` to clear a nullable
+     * field (for example, [requiresConsentFromInitiator]).
      */
+    @Suppress("LongParameterList")
     fun copyWith(
-        lastModifiedDate: Date = this.lastModifiedDate,
+        name: String = this.name,
+        imageData: ByteArray? = this.imageData,
+        imageHash: String? = this.imageHash,
         isPenPalsConversation: Boolean = this.isPenPalsConversation,
+        lastModifiedDate: Date = this.lastModifiedDate,
+        messageRecipientConsentAcknowledgementData: List<MessageRecipientConsentAcknowledgementData> =
+            this.messageRecipientConsentAcknowledgementData,
+        penPalsSharingData: List<PenPalsSharingData> = this.penPalsSharingData,
+        requiresConsentFromInitiator: String? = this.requiresConsentFromInitiator,
     ): ConversationMetadata =
         ConversationMetadata(
             name = name,
@@ -109,6 +118,33 @@ class ConversationMetadata(
     // MARK: - Companion
 
     companion object : SerializableDecoder<ConversationMetadata, Map<String, Any?>> {
+        /**
+         * Returns empty metadata for a new conversation among [userIDs].
+         *
+         * @param userIDs The conversation's participant identifiers.
+         * @param isPenPalsConversation Whether the conversation is a PenPals conversation.
+         * @param consentAcknowledged The initial consent-acknowledgement value for every participant.
+         * @param requiresConsentFromInitiator The initiator whose consent the conversation
+         *   requires, or `null` if none.
+         */
+        fun empty(
+            userIDs: List<String>,
+            isPenPalsConversation: Boolean,
+            consentAcknowledged: Boolean,
+            requiresConsentFromInitiator: String?,
+        ): ConversationMetadata =
+            ConversationMetadata(
+                name = BANG_QUALIFIED_EMPTY,
+                imageData = null,
+                imageHash = null,
+                isPenPalsConversation = isPenPalsConversation,
+                lastModifiedDate = Date(0),
+                messageRecipientConsentAcknowledgementData =
+                    MessageRecipientConsentAcknowledgementData.prepopulated(userIDs, consentAcknowledged),
+                penPalsSharingData = PenPalsSharingData.empty(userIDs),
+                requiresConsentFromInitiator = requiresConsentFromInitiator,
+            )
+
         override fun canDecode(data: Map<String, Any?>): Boolean {
             if (data[Keys.NAME.rawValue] !is String) return false
             val imageDataString = data[Keys.IMAGE_DATA.rawValue] as? String ?: return false

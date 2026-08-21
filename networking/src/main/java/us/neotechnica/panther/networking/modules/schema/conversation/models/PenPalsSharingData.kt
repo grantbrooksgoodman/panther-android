@@ -41,6 +41,10 @@ data class PenPalsSharingData(
     // MARK: - Companion
 
     companion object : SerializableDecoder<PenPalsSharingData, String> {
+        /** Returns a sharing record for each user, sharing with no one. */
+        fun empty(userIDs: List<String>): List<PenPalsSharingData> =
+            userIDs.map { PenPalsSharingData(userID = it, sharesDataWithUserIDs = null) }
+
         override fun canDecode(data: String): Boolean {
             val components = data.split(": ")
             return components.size == 2 && components.all { it.isNotBlank() }

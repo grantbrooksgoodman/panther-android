@@ -11,8 +11,11 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.conversation.services.ConversationService
 import us.neotechnica.panther.networking.modules.message.services.MessageService
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
+import us.neotechnica.panther.networking.modules.schema.conversation.models.Participant
+import us.neotechnica.panther.networking.modules.schema.message.models.Message
 import us.neotechnica.panther.networking.modules.schema.user.models.User
 import us.neotechnica.panther.networking.modules.translation.models.ArchiveStrategy
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -26,9 +29,9 @@ import us.neotechnica.panther.networking.modules.translation.models.TranslationR
 /**
  * Sends text messages, translating them into each recipient's language.
  *
- * **Note:** this Phase 7 port sends text into existing conversations
- * only; new-conversation creation, audio, media, and push notification
- * of recipients arrive with later phases.
+ * Sends into an existing conversation or creates a new one, then
+ * notifies recipients. Audio and media messages arrive with later
+ * phases.
  */
 object MessageSessionService {
     // MARK: - Properties
@@ -38,13 +41,13 @@ object MessageSessionService {
     // MARK: - Send Text Message
 
     /**
-     * Sends a text message to [users] in [conversation].
+     * Sends a text message to [users], appending it to [conversation]
+     * or creating a new conversation when [conversation] is `null`.
      *
-     * The text is translated into each recipient's language, archived
-     * atomically with the message commit, and appended to the
-     * conversation.
+     * The text is translated into each recipient's language and archived
+     * atomically with the message commit.
      *
-     * @return The updated conversation.
+     * @return The updated (or newly created) conversation.
      *
      * @throws Exception if the current user is unavailable, translation
      *   fails, or the message cannot be sent.
@@ -53,7 +56,8 @@ object MessageSessionService {
         text: String,
         presetID: String?,
         users: List<User>,
-        conversation: Conversation,
+        conversation: Conversation?,
+        isPenPalsConversation: Boolean = false,
     ): Conversation {
         val currentUser =
             UserSessionService.currentUser
@@ -77,11 +81,44 @@ object MessageSessionService {
         }
 
         val message = MessageService.buildTextMessage(currentUser.id, presetID, translations)
-        // NOTE: push notification of recipients is deferred to Phase 8.
-        return ConversationSessionService.addMessages(listOf(message), conversation)
+        return createMessageAndAddToConversation(
+            conversation = conversation,
+            initiatingUser = currentUser,
+            otherUsers = recipients,
+            message = message,
+            isPenPalsConversation = isPenPalsConversation,
+        )
     }
 
     // MARK: - Auxiliary
+
+    private suspend fun createMessageAndAddToConversation(
+        conversation: Conversation?,
+        initiatingUser: User,
+        otherUsers: List<User>,
+        message: Message,
+        isPenPalsConversation: Boolean,
+    ): Conversation {
+        val resolvedConversation =
+            if (conversation != null) {
+                ConversationSessionService.addMessages(listOf(message), conversation)
+            } else {
+                val participants = (listOf(initiatingUser) + otherUsers).map { Participant(userID = it.id) }
+                ConversationService.createConversation(
+                    firstMessage = message,
+                    isPenPalsConversation = isPenPalsConversation,
+                    participants = participants,
+                )
+            }
+
+        NotificationSessionService.notify(
+            users = otherUsers,
+            message = message,
+            conversationIDKey = resolvedConversation.id.key,
+        )
+
+        return resolvedConversation
+    }
 
     private suspend fun translate(
         text: String,

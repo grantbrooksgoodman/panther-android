@@ -7,6 +7,7 @@
 
 package us.neotechnica.panther.networking.modules.schema.conversation.models
 
+import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.common.interfaces.Serializable
 
 /**
@@ -20,10 +21,16 @@ data class Participant(
     /** The identifier of the participating user. */
     val userID: String,
     /** A Boolean value that indicates whether the user has deleted the conversation. */
-    val hasDeletedConversation: Boolean,
+    val hasDeletedConversation: Boolean = false,
     /** A Boolean value that indicates whether the user is currently typing. */
-    val isTyping: Boolean,
+    val isTyping: Boolean = false,
 ) : Serializable<Map<String, Any?>> {
+    // MARK: - Computed Properties
+
+    /** Whether the participant is well-formed (has a usable user ID). */
+    val isWellFormed: Boolean
+        get() = userID.isNotBlank() && !userID.isBangQualifiedEmpty
+
     // MARK: - Type Aliases
 
     internal enum class Keys(

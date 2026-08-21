@@ -42,6 +42,7 @@ import us.neotechnica.panther.modules.content.user.components.ChatMessageRowData
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.navigation.Route
+import us.neotechnica.panther.navigation.UserContentNavigatorState
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.modules.session.extensions.currentConversationDidBecomeUnavailable
@@ -99,9 +100,21 @@ fun ChatPageView(
     StatefulView(state = state.viewState, modifier = modifier) {
         ContextMenuHost(Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ChatHeader(title = state.title) {
-                    DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
-                }
+                ChatHeader(
+                    title = state.title,
+                    onBack = {
+                        DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
+                    },
+                    onInfo = {
+                        DependencyValues.current.navigation.navigate(
+                            Route.UserContent(
+                                UserContentRoute.Push(
+                                    UserContentNavigatorState.SeguePath.ChatInfo(state.conversationIDKey),
+                                ),
+                            ),
+                        )
+                    },
+                )
 
                 MessageList(
                     state = state,
@@ -125,6 +138,7 @@ fun ChatPageView(
 private fun ChatHeader(
     title: String,
     onBack: () -> Unit,
+    onInfo: () -> Unit,
 ) {
     val colors = LocalPantherColors.current
     Row(
@@ -138,8 +152,11 @@ private fun ChatHeader(
             title,
             color = colors.titleText,
             font = Font.systemSemibold(),
-            modifier = Modifier.padding(start = 4.dp),
+            modifier = Modifier.weight(1f).padding(start = 4.dp),
         )
+        IconButton(onClick = onInfo) {
+            Components.Symbol("ellipsis", color = colors.accent, modifier = Modifier.size(24.dp))
+        }
     }
 }
 

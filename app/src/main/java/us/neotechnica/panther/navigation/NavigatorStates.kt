@@ -67,6 +67,11 @@ data class UserContentNavigatorState(
             val conversationIDKey: String,
         ) : SeguePath
 
+        /** The chat-info page for the conversation with the given key. */
+        data class ChatInfo(
+            val conversationIDKey: String,
+        ) : SeguePath
+
         data object NewChat : SeguePath
 
         data object Settings : SeguePath

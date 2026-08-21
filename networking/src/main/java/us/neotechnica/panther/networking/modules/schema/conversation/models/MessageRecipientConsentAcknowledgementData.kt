@@ -34,6 +34,16 @@ data class MessageRecipientConsentAcknowledgementData(
     // MARK: - Companion
 
     companion object : SerializableDecoder<MessageRecipientConsentAcknowledgementData, String> {
+        /**
+         * Returns an acknowledgement record for each of the given users,
+         * all seeded to [consentAcknowledged].
+         */
+        fun prepopulated(
+            userIDs: List<String>,
+            consentAcknowledged: Boolean,
+        ): List<MessageRecipientConsentAcknowledgementData> =
+            userIDs.map { MessageRecipientConsentAcknowledgementData(userID = it, consentAcknowledged = consentAcknowledged) }
+
         override fun canDecode(data: String): Boolean {
             val components = data.split(": ")
             if (components.size != 2) return false

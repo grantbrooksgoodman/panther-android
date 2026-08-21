@@ -28,5 +28,8 @@ value class PersistentStorageKey(
 
         /** The persisted message outbox archive (JSON). */
         val messageOutbox = PersistentStorageKey("messageOutbox")
+
+        /** The persisted contact-match archive (JSON). */
+        val contactArchive = PersistentStorageKey("contactArchive")
     }
 }

@@ -106,15 +106,13 @@ object ConversationSessionService {
     fun setCurrentConversation(conversation: Conversation?) {
         if (conversation == null) return clearPointer()
 
-        val previous = reference.wrappedValue
         if (conversation.isDraft) {
             reference.wrappedValue = CurrentConversationReference.Draft(conversation)
         } else {
             SessionStore.upsertConversation(conversation)
             reference.wrappedValue = CurrentConversationReference.Stored(conversation.id.key)
-            if (previous is CurrentConversationReference.Draft) {
-                ConversationObserverService.startObserving(conversation.id.key)
-            }
+            // Live-observe the open conversation (iOS starts this on view-appear).
+            ConversationObserverService.startObserving(conversation.id.key)
         }
 
         ensureObserving()
@@ -195,6 +193,50 @@ object ConversationSessionService {
         SessionStore.upsertMessages(newMessages.toSet())
         SessionStore.upsertConversation(updated)
         return updated
+    }
+
+    // MARK: - Deletion
+
+    /**
+     * Deletes or hides [conversation].
+     *
+     * When not [forced] and the other participants have not all deleted
+     * the conversation, it is hidden for the current user; otherwise the
+     * conversation, its messages, and every participant's reference to it
+     * are removed in a single atomic fan-out.
+     *
+     * @throws Exception if the current user ID is unset or the write fails.
+     */
+    suspend fun deleteConversation(
+        conversation: Conversation,
+        forced: Boolean = false,
+    ) {
+        val currentUserID =
+            User.currentUserID
+                ?: throw Exception("Current user ID has not been set.", metadata = ExceptionMetadata(this))
+
+        if (!forced) {
+            val othersAllDeleted =
+                conversation.participants
+                    .filter { it.userID != currentUserID }
+                    .all { it.hasDeletedConversation }
+            if (!othersAllDeleted) return hideConversation(conversation, currentUserID)
+        }
+
+        val key = conversation.id.key
+        val updates = mutableMapOf<String, Any?>()
+        for (participant in conversation.participants) {
+            updates["$PATH_USERS/${participant.userID}/$KEY_OPEN_CONVERSATIONS/$key"] = null
+        }
+        for (messageID in conversation.messageIDs) {
+            updates["$PATH_MESSAGES/$messageID"] = null
+        }
+        updates["$PATH_CONVERSATIONS/$key"] = null
+
+        SelfWriteRegistry.record(conversation.id)
+        database.commit(updates)
+        SessionStore.removeConversation(key)
+        if (currentConversation?.id?.key == key) setCurrentConversation(null)
     }
 
     // MARK: - Read Receipts
@@ -290,6 +332,31 @@ object ConversationSessionService {
         }
 
         return updates
+    }
+
+    private suspend fun hideConversation(
+        conversation: Conversation,
+        userID: String,
+    ) {
+        val updatedParticipants =
+            conversation.participants.map {
+                if (it.userID == userID) it.copy(hasDeletedConversation = true) else it
+            }
+        val updated = conversation.copy(participants = updatedParticipants)
+        val newHash = updated.encodedHash
+        val key = conversation.id.key
+
+        val updates = mutableMapOf<String, Any?>()
+        updates["$PATH_CONVERSATIONS/$key/$KEY_PARTICIPANTS/$userID/$KEY_HAS_DELETED"] = true
+        updates["$PATH_CONVERSATIONS/$key/$KEY_HASH"] = newHash
+        for (participant in conversation.participants) {
+            updates["$PATH_USERS/${participant.userID}/$KEY_OPEN_CONVERSATIONS/$key"] = newHash
+        }
+
+        SelfWriteRegistry.record(conversation.id)
+        database.commit(updates)
+        SessionStore.upsertConversation(updated.copy(id = ConversationID(key = key, hash = newHash)))
+        if (currentConversation?.id?.key == key) setCurrentConversation(null)
     }
 
     private fun clearPointer() {

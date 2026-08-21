@@ -23,10 +23,15 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.common.contacts.services.ContactService
+import us.neotechnica.panther.navigation.PendingChatNavigation
 import us.neotechnica.panther.navigation.RootNavigatorState
 import us.neotechnica.panther.navigation.RootRoute
 import us.neotechnica.panther.navigation.Route
+import us.neotechnica.panther.navigation.UserContentNavigatorState
+import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.networking.modules.session.services.UserMutationService
 import us.neotechnica.panther.networking.modules.session.services.UserSessionService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
@@ -59,9 +64,18 @@ fun SplashView(modifier: Modifier = Modifier) {
         runCatching {
             UserSessionService.resolveCurrentUser(UserSessionService.DataType.entries.toSet())
             UserSessionService.currentUser?.languageCode?.let { RuntimeStorage.languageCode = it }
+            runCatching { UserMutationService.updatePushTokensForCurrentUser() }
+            runCatching { ContactService.syncIfNeeded() }
         }
 
         navigation.navigate(Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.UserContent)))
+
+        // Open a conversation deep-linked from a tapped push notification.
+        PendingChatNavigation.consume()?.let { conversationIDKey ->
+            navigation.navigate(
+                Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePath.Chat(conversationIDKey))),
+            )
+        }
     }
 
     Column(
