@@ -19,8 +19,10 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import us.neotechnica.panther.modules.content.onboarding.views.authcodepageview.AuthCodePageView
@@ -54,16 +56,24 @@ fun OnboardingContainer(modifier: Modifier = Modifier) {
         navigation.navigate(Route.Onboarding(OnboardingRoute.Pop))
     }
 
+    val stackDepth = state.onboarding.stack.size
+    val previousStackDepth = remember { mutableIntStateOf(stackDepth) }
+    val isPush = stackDepth >= previousStackDepth.intValue
+    SideEffect { previousStackDepth.intValue = stackDepth }
+
     AnimatedContent(
         contentKey = { it?.let { path -> path::class } },
         label = "OnboardingContainer",
         modifier = modifier.fillMaxSize(),
         targetState = topPath,
         transitionSpec = {
-            (slideInHorizontally(tween(TRANSITION_MILLIS)) { it } + fadeIn(tween(TRANSITION_MILLIS)))
-                .togetherWith(
-                    slideOutHorizontally(tween(TRANSITION_MILLIS)) { -it } + fadeOut(tween(TRANSITION_MILLIS)),
-                ).using(SizeTransform(clip = false))
+            val enter =
+                slideInHorizontally(tween(TRANSITION_MILLIS)) { width -> if (isPush) width else -width } +
+                    fadeIn(tween(TRANSITION_MILLIS))
+            val exit =
+                slideOutHorizontally(tween(TRANSITION_MILLIS)) { width -> if (isPush) -width else width } +
+                    fadeOut(tween(TRANSITION_MILLIS))
+            enter.togetherWith(exit).using(SizeTransform(clip = false))
         },
     ) { path ->
         when (path) {

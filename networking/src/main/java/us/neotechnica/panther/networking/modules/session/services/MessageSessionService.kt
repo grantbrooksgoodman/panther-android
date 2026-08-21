@@ -7,9 +7,13 @@
 
 package us.neotechnica.panther.networking.modules.session.services
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.conversation.services.ConversationService
 import us.neotechnica.panther.networking.modules.message.services.MessageService
@@ -20,6 +24,7 @@ import us.neotechnica.panther.networking.modules.schema.user.models.User
 import us.neotechnica.panther.networking.modules.translation.models.ArchiveStrategy
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.Translation
 import us.neotechnica.panther.translator.models.TranslationInput
@@ -37,6 +42,8 @@ object MessageSessionService {
     // MARK: - Properties
 
     private val hostedTranslation get() = Networking.config.hostedTranslationDelegate
+
+    private val notificationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // MARK: - Send Text Message
 
@@ -111,11 +118,18 @@ object MessageSessionService {
                 )
             }
 
-        NotificationSessionService.notify(
-            users = otherUsers,
-            message = message,
-            conversationIDKey = resolvedConversation.id.key,
-        )
+        // Push is fire-and-forget and best-effort: a slow or failed push
+        // must never block the send or strand the outbox entry, which would
+        // otherwise leave a mock lingering beside the committed message.
+        notificationScope.launch {
+            runCatching {
+                NotificationSessionService.notify(
+                    users = otherUsers,
+                    message = message,
+                    conversationIDKey = resolvedConversation.id.key,
+                )
+            }.onFailure { Logger.log("Push notification failed: $it") }
+        }
 
         return resolvedConversation
     }

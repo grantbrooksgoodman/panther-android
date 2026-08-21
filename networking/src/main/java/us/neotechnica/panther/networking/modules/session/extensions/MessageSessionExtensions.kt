@@ -82,19 +82,13 @@ private fun Message.pickInlineTranslation(
 /**
  * The message's text resolved into [languageCode], for previews.
  *
- * Chooses the translation targeting [languageCode], falling back to
- * the first available reference, and returns its output. Returns an
- * empty string when the message carries no resolvable text.
+ * Mirrors the chat bubble: for a message the current user sent, the text
+ * in their language is the translation's input (its output is the
+ * recipient's language); for a received message it is the output
+ * translated into [languageCode]. Returns an empty string when the
+ * message carries no resolvable text.
  */
 suspend fun Message.resolvedText(languageCode: String): String {
-    val parsed =
-        translationReferences
-            .orEmpty()
-            .mapNotNull { HostedTranslationReference.fromString(it.hostingKey) }
-    val reference =
-        parsed.firstOrNull { it.languagePair.to == languageCode }
-            ?: parsed.firstOrNull()
-            ?: return ""
-
-    return runCatching { TranslationResolver.resolve(reference).output }.getOrDefault("")
+    val translation = resolvedTranslation(languageCode) ?: return ""
+    return if (isFromCurrentUser) translation.input.value else translation.output
 }

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -48,6 +49,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.user.components.ConversationCell
+import us.neotechnica.panther.modules.content.user.components.ConversationCellTextInset
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentNavigatorState
 import us.neotechnica.panther.navigation.UserContentRoute
@@ -117,6 +119,8 @@ fun ConversationsPageView(modifier: Modifier = Modifier) {
                 onValueChange = { viewModel.send(ConversationsPageReducer.Action.SearchQueryChanged(it)) },
             )
 
+            Spacer(modifier = Modifier.height(8.dp))
+
             PullToRefreshBox(
                 isRefreshing = state.isRefreshing,
                 onRefresh = { viewModel.send(ConversationsPageReducer.Action.PulledToRefresh) },
@@ -135,6 +139,12 @@ fun ConversationsPageView(modifier: Modifier = Modifier) {
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.Top,
                     ) {
+                        item {
+                            HorizontalDivider(
+                                color = colors.groupedContentBackground,
+                                modifier = Modifier.padding(start = ConversationCellTextInset),
+                            )
+                        }
                         items(conversations, key = { it.id.key }) { conversation ->
                             ConversationCell(
                                 conversation = conversation,
@@ -151,7 +161,10 @@ fun ConversationsPageView(modifier: Modifier = Modifier) {
                                         )
                                     },
                             )
-                            HorizontalDivider(color = colors.groupedContentBackground)
+                            HorizontalDivider(
+                                color = colors.groupedContentBackground,
+                                modifier = Modifier.padding(start = ConversationCellTextInset),
+                            )
                         }
                     }
                 }

@@ -8,8 +8,8 @@
 package us.neotechnica.panther.designsystem.modules.componentkit.models
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
@@ -73,8 +73,8 @@ object SFSymbol {
             "gearshape.fill" to Icons.Filled.Settings,
             "star" to Icons.Filled.Star,
             "star.fill" to Icons.Filled.Star,
-            "chevron.left" to Icons.AutoMirrored.Filled.ArrowBack,
-            "chevron.right" to Icons.AutoMirrored.Filled.ArrowForward,
+            "chevron.left" to Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+            "chevron.right" to Icons.AutoMirrored.Filled.KeyboardArrowRight,
             "paperplane" to Icons.AutoMirrored.Filled.Send,
             "paperplane.fill" to Icons.AutoMirrored.Filled.Send,
             "doc.on.doc" to Icons.Filled.ContentCopy,
