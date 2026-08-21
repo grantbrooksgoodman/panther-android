@@ -62,7 +62,10 @@ data class UserContentNavigatorState(
     val stack: List<SeguePath> = emptyList(),
 ) {
     sealed interface SeguePath : Paths {
-        data object Chat : SeguePath
+        /** The chat page for the conversation with the given key. */
+        data class Chat(
+            val conversationIDKey: String,
+        ) : SeguePath
 
         data object NewChat : SeguePath
 

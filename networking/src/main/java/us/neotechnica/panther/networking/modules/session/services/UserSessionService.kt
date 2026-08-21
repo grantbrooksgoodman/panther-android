@@ -19,6 +19,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.conversation.services.ConversationService
+import us.neotechnica.panther.networking.modules.schema.conversation.models.ConversationID
 import us.neotechnica.panther.networking.modules.schema.user.models.User
 import us.neotechnica.panther.networking.modules.session.extensions.conversations
 import us.neotechnica.panther.networking.modules.session.extensions.currentUserID
@@ -152,14 +153,28 @@ object UserSessionService {
     private fun conversationsDidChange(snapshot: Map<String, Any?>): Boolean {
         @Suppress("UNCHECKED_CAST")
         val updatedMap = snapshot[CONVERSATION_IDS_KEY] as? Map<String, Any?> ?: return false
-        val updated = updatedMap.map { "${it.key} | ${it.value}" }.sorted()
-        val current = currentUser?.conversationIDs?.map { it.encoded }?.sorted() ?: return true
+        val updated = updatedMap.mapValues { it.value.toString() }
+        val current =
+            currentUser?.conversationIDs?.associate { it.key to it.hash }
+                ?: return updated.isNotEmpty()
 
-        val currentKeys = current.map { it.substringBefore(" | ") }.toSet()
-        val updatedKeys = updated.map { it.substringBefore(" | ") }.toSet()
-        for (removedKey in currentKeys - updatedKeys) SessionStore.removeConversation(removedKey)
+        for (removedKey in current.keys - updated.keys) SessionStore.removeConversation(removedKey)
 
-        return current != updated
+        // A changed entry is a new key or a differing hash token.
+        val changedKeys = updated.filterKeys { current[it] != updated[it] }.keys
+        if (changedKeys.isEmpty()) return false
+
+        // Skip re-resolving changes that are the app's own writes, are
+        // already applied to the store, or are being live-observed.
+        val allKnown =
+            changedKeys.all { key ->
+                val id = ConversationID(key = key, hash = updated.getValue(key))
+                SelfWriteRegistry.contains(id) ||
+                    SessionStore.getConversation(id) != null ||
+                    ConversationObserverService.isActivelyObserving(key)
+            }
+
+        return !allKnown
     }
 
     private fun updateCurrentUser() {

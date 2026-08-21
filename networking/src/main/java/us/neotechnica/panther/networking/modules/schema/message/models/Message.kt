@@ -15,6 +15,7 @@ import us.neotechnica.panther.networking.modules.common.interfaces.SerializableD
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestampDateFormatter
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.EncodedHashable
+import us.neotechnica.panther.translator.models.Translation
 import java.util.Date
 
 /**
@@ -40,6 +41,16 @@ data class Message(
     val readReceipts: List<ReadReceipt>?,
     /** The date the message was sent. */
     val sentDate: Date,
+    /**
+     * The message's resolved translations, or `null` if unresolved.
+     *
+     * This is a transient, display-only field: it is never encoded or
+     * hashed (the wire format carries only [translationReferences]).
+     * Locally built, outbox, and mock messages carry their freshly
+     * computed translations here so they render immediately; messages
+     * decoded from the wire leave it `null` and resolve on demand.
+     */
+    val translations: List<Translation>? = null,
 ) : Serializable<Map<String, Any?>>,
     EncodedHashable {
     // MARK: - Type Aliases

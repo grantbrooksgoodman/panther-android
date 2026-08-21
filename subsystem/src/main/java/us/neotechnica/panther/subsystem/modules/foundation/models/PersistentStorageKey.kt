@@ -25,5 +25,8 @@ value class PersistentStorageKey(
     companion object {
         /** The signed-in user's identifier. */
         val currentUserID = PersistentStorageKey("currentUserID")
+
+        /** The persisted message outbox archive (JSON). */
+        val messageOutbox = PersistentStorageKey("messageOutbox")
     }
 }

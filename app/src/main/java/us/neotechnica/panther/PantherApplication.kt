@@ -11,10 +11,17 @@ package us.neotechnica.panther
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import us.neotechnica.panther.modules.common.services.CommonPropertyLists
 import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkEnvironment
+import us.neotechnica.panther.networking.modules.common.services.ConnectionStatusService
+import us.neotechnica.panther.networking.modules.session.services.MessageOutboxService
+import us.neotechnica.panther.networking.modules.session.services.retryAllEligible
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.translator.Translator
 import java.util.concurrent.atomic.AtomicReference
@@ -28,6 +35,10 @@ import java.util.concurrent.atomic.AtomicReference
  * translator's web-view harness a way to reach the current activity.
  */
 class PantherApplication : Application() {
+    // MARK: - Properties
+
+    private val outboxScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     // MARK: - Application
 
     override fun onCreate() {
@@ -44,6 +55,21 @@ class PantherApplication : Application() {
         )
 
         registerTranslatorActivityProvider()
+        setUpMessageOutboxRetry()
+    }
+
+    // MARK: - Message Outbox Retry
+
+    private fun setUpMessageOutboxRetry() {
+        ConnectionStatusService.initialize(this)
+
+        // Retry eligible entries on launch.
+        outboxScope.launch { MessageOutboxService.retryAllEligible() }
+
+        // Retry eligible entries when connectivity is restored.
+        ConnectionStatusService.addEffectUponConnectivityRestored(RETRY_OUTBOX_EFFECT_ID) {
+            outboxScope.launch { MessageOutboxService.retryAllEligible() }
+        }
     }
 
     // MARK: - Translator Wiring
@@ -80,5 +106,11 @@ class PantherApplication : Application() {
         )
 
         Translator.config.registerCurrentActivityProvider { currentActivity.get() }
+    }
+
+    // MARK: - Companion
+
+    private companion object {
+        const val RETRY_OUTBOX_EFFECT_ID = "retryMessageOutbox"
     }
 }

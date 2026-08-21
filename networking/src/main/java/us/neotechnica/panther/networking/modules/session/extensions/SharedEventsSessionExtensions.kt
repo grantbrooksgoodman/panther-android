@@ -17,3 +17,17 @@ import us.neotechnica.panther.subsystem.modules.shared.models.SharedEvents
  */
 val SharedEvents.sessionStoreDidChange: EventStream<SessionStoreChange>
     get() = event("sessionStoreDidChange")
+
+/**
+ * An event that fires whenever the message outbox changes – an entry
+ * is enqueued, claimed for retry, marked failed, or removed.
+ */
+val SharedEvents.messageOutboxDidChange: EventStream<Unit>
+    get() = event("messageOutboxDidChange")
+
+/**
+ * An event that fires when the current conversation is removed from the
+ * store (for example, deleted remotely), so open chat UI can dismiss.
+ */
+val SharedEvents.currentConversationDidBecomeUnavailable: EventStream<Unit>
+    get() = event("currentConversationDidBecomeUnavailable")

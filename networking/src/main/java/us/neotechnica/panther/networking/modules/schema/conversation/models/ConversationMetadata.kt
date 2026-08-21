@@ -56,6 +56,29 @@ class ConversationMetadata(
         REQUIRES_CONSENT_FROM_INITIATOR("requiresConsentFromInitiator"),
     }
 
+    // MARK: - Methods
+
+    /**
+     * Returns a copy of the metadata with the given fields replaced.
+     *
+     * @param lastModifiedDate The new last-modified date.
+     * @param isPenPalsConversation The new PenPals flag.
+     */
+    fun copyWith(
+        lastModifiedDate: Date = this.lastModifiedDate,
+        isPenPalsConversation: Boolean = this.isPenPalsConversation,
+    ): ConversationMetadata =
+        ConversationMetadata(
+            name = name,
+            imageData = imageData,
+            imageHash = imageHash,
+            isPenPalsConversation = isPenPalsConversation,
+            lastModifiedDate = lastModifiedDate,
+            messageRecipientConsentAcknowledgementData = messageRecipientConsentAcknowledgementData,
+            penPalsSharingData = penPalsSharingData,
+            requiresConsentFromInitiator = requiresConsentFromInitiator,
+        )
+
     // MARK: - Computed Properties
 
     /** The serialized representation of the conversation metadata. */

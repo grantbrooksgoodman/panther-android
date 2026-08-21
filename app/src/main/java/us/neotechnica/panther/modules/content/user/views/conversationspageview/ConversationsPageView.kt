@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.views.conversationspageview
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,10 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.user.components.ConversationCell
+import us.neotechnica.panther.navigation.Route
+import us.neotechnica.panther.navigation.UserContentNavigatorState
+import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.modules.session.extensions.sessionStoreDidChange
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
@@ -66,6 +71,7 @@ fun ConversationsPageView(modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
     val languageCode = RuntimeStorage.languageCode
+    val navigation = remember { DependencyValues.current.navigation }
 
     StatefulView(state = state.viewState, modifier = modifier) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -110,6 +116,16 @@ fun ConversationsPageView(modifier: Modifier = Modifier) {
                                 conversation = conversation,
                                 languageCode = languageCode,
                                 changeToken = state.changeToken,
+                                modifier =
+                                    Modifier.clickable {
+                                        navigation.navigate(
+                                            Route.UserContent(
+                                                UserContentRoute.Push(
+                                                    UserContentNavigatorState.SeguePath.Chat(conversation.id.key),
+                                                ),
+                                            ),
+                                        )
+                                    },
                             )
                             HorizontalDivider(color = colors.groupedContentBackground)
                         }
