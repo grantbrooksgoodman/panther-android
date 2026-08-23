@@ -16,9 +16,14 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import us.neotechnica.panther.designsystem.modules.alertkit.views.AlertHost
+import us.neotechnica.panther.designsystem.modules.foundation.overlay.BuildInfoOverlayView
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.OverlayHost
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.designsystem.modules.theming.views.PantherTheme
@@ -41,6 +46,13 @@ class MainActivity : ComponentActivity() {
                     RootView(modifier = Modifier.systemBarsPadding())
                     AlertHost()
                     OverlayHost()
+                    BuildInfoOverlayView(
+                        modifier =
+                            Modifier
+                                .zIndex(1f)
+                                .align(Alignment.BottomEnd)
+                                .padding(end = 20.dp, bottom = 32.dp),
+                    )
                 }
             }
         }

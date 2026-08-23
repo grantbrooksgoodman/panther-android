@@ -44,6 +44,10 @@ class Auth : AuthDelegate {
         return try {
             val credential = PhoneAuthProvider.getCredential(authID, verificationCode)
             signInOrLink(credential)
+        } catch (throwable: Throwable) {
+            // Guards against malformed input (e.g. a missing session ID),
+            // which `getCredential` reports as a raw IllegalArgumentException.
+            throw wrap(throwable)
         } finally {
             Networking.config.activityIndicatorDelegate.hide()
         }

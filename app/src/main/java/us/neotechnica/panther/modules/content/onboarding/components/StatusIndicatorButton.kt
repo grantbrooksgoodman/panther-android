@@ -9,25 +9,34 @@
 package us.neotechnica.panther.modules.content.onboarding.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
+import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.content.onboarding.constants.StatusIndicatorButtonColors
+import us.neotechnica.panther.modules.content.onboarding.constants.StatusIndicatorButtonFloats
 
 /**
  * A capsule button that requests a permission and reflects its
  * granted/denied status, ported from the iOS `StatusIndicatorButton`.
+ *
+ * While undetermined ([isGranted] `null`) the button is a blue,
+ * tappable capsule with a white label and an orange "?" status circle.
+ * Once resolved it is disabled: a light-gray capsule with a gray label
+ * and a green check (granted) or red cross (denied) status circle.
  *
  * @param label The button label.
  * @param isGranted `true` if granted, `false` if denied, `null` if not
@@ -43,27 +52,47 @@ fun StatusIndicatorButton(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalPantherColors.current
+    val isDetermined = isGranted != null
 
     Row(
-        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
         modifier =
             modifier
-                .clip(RoundedCornerShape(CORNER_RADIUS))
-                .background(colors.groupedContentBackground)
-                .border(1.dp, colors.disabled, RoundedCornerShape(CORNER_RADIUS))
-                .clickable(onClick = onClick)
-                .padding(horizontal = 20.dp, vertical = 14.dp),
+                .clip(CircleShape)
+                .background(if (isDetermined) colors.groupedContentBackground else StatusIndicatorButtonColors.foreground)
+                .then(if (isDetermined) Modifier else Modifier.clickable(onClick = onClick))
+                .padding(
+                    horizontal = StatusIndicatorButtonFloats.horizontalPadding,
+                    vertical = StatusIndicatorButtonFloats.verticalPadding,
+                ),
     ) {
-        Components.Text(label, color = colors.titleText, font = Font.systemMedium())
-
-        when (isGranted) {
-            true -> Components.Symbol("checkmark", color = colors.accent, modifier = Modifier.size(INDICATOR_SIZE))
-            false -> Components.Symbol("xmark", color = colors.disabled, modifier = Modifier.size(INDICATOR_SIZE))
-            null -> Unit
-        }
+        StatusCircle(isGranted)
+        Spacer(Modifier.width(StatusIndicatorButtonFloats.iconTrailingPadding))
+        Components.Text(
+            label,
+            color = if (isDetermined) colors.subtitleText else Color.White,
+            font = Font.systemBold(FontScale.Custom(StatusIndicatorButtonFloats.LABEL_FONT_SIZE)),
+        )
     }
 }
 
-private val CORNER_RADIUS = 12.dp
-private val INDICATOR_SIZE = 20.dp
+@Composable
+private fun StatusCircle(isGranted: Boolean?) {
+    val fillColor =
+        when (isGranted) {
+            true -> StatusIndicatorButtonColors.grantedStatusForeground
+            false -> StatusIndicatorButtonColors.deniedStatusForeground
+            null -> StatusIndicatorButtonColors.undeterminedStatusForeground
+        }
+    val glyphSize = StatusIndicatorButtonFloats.glyphSize
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.size(StatusIndicatorButtonFloats.circleSize).clip(CircleShape).background(fillColor),
+    ) {
+        when (isGranted) {
+            true -> Components.Symbol("checkmark", color = Color.White, modifier = Modifier.size(glyphSize))
+            false -> Components.Symbol("xmark", color = Color.White, modifier = Modifier.size(glyphSize))
+            null -> Components.Text("?", color = Color.White, font = Font.systemBold())
+        }
+    }
+}

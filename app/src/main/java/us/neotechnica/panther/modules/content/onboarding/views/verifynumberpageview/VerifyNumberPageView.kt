@@ -8,13 +8,11 @@
 
 package us.neotechnica.panther.modules.content.onboarding.views.verifynumberpageview
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -23,17 +21,24 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
+import us.neotechnica.panther.BuildConfig
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
+import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.onboarding.components.InstructionView
-import us.neotechnica.panther.modules.content.onboarding.components.OnboardingBackButton
-import us.neotechnica.panther.modules.content.shared.components.RegionMenu
+import us.neotechnica.panther.modules.content.onboarding.components.PhoneNumberEntry
+import us.neotechnica.panther.modules.content.onboarding.constants.VerifyNumberPageViewColors
+import us.neotechnica.panther.modules.content.onboarding.constants.VerifyNumberPageViewFloats
+import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
-import androidx.compose.material3.Text as Material3Text
+
+// MARK: - Constants Accessors
+
+private typealias Colors = VerifyNumberPageViewColors
+private typealias Floats = VerifyNumberPageViewFloats
 
 /**
  * The onboarding page for entering a phone number during sign-up.
@@ -54,49 +59,57 @@ fun VerifyNumberPageView(modifier: Modifier = Modifier) {
         modifier = modifier,
         onRetry = { viewModel.send(VerifyNumberPageReducer.Action.ViewAppeared) },
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            OnboardingBackButton(
-                text = state.strings.value(VerifyNumberPageViewStrings.backButtonText),
-                isEnabled = state.isBackButtonEnabled,
-                onClick = { viewModel.send(VerifyNumberPageReducer.Action.BackButtonTapped) },
-            )
+        Column(modifier = Modifier.fillMaxSize()) {
+            InstructionView(state.instructionViewStrings)
 
-            InstructionView(state.instructionViewStrings, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.weight(1f))
 
-            Components.Text(
-                state.strings.value(VerifyNumberPageViewStrings.instructionLabelText),
-                color = colors.subtitleText,
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth().padding(bottom = Floats.innerVStackBottomPadding),
+            ) {
+                Components.Text(
+                    state.strings.value(VerifyNumberPageViewStrings.instructionLabelText),
+                    color = colors.subtitleText,
+                    font = Font.systemSemibold(),
+                    modifier = Modifier.padding(vertical = Floats.instructionLabelVerticalPadding),
+                )
 
-            RegionMenu(
-                selectedRegionCode = state.selectedRegionCode,
-                onRegionCodeSelected = {
-                    viewModel.send(VerifyNumberPageReducer.Action.SelectedRegionCodeChanged(it))
-                },
-            )
+                PhoneNumberEntry(
+                    selectedRegionCode = state.selectedRegionCode,
+                    phoneNumber = state.phoneNumberString.digits,
+                    onRegionCodeSelected = { viewModel.send(VerifyNumberPageReducer.Action.SelectedRegionCodeChanged(it)) },
+                    onPhoneNumberChange = { viewModel.send(VerifyNumberPageReducer.Action.PhoneNumberStringChanged(it)) },
+                )
 
-            OutlinedTextField(
-                value = state.phoneNumberString,
-                onValueChange = { viewModel.send(VerifyNumberPageReducer.Action.PhoneNumberStringChanged(it)) },
-                label = { Material3Text("Phone number") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
+                Components.CapsuleButton(
+                    text = state.strings.value(VerifyNumberPageViewStrings.continueButtonText),
+                    onClick = { viewModel.send(VerifyNumberPageReducer.Action.ContinueButtonTapped) },
+                    isEnabled = state.isContinueButtonEnabled,
+                    primary = true,
+                    modifier = Modifier.padding(vertical = Floats.continueButtonVerticalPadding),
+                )
 
-            Components.CapsuleButton(
-                text = state.strings.value(VerifyNumberPageViewStrings.continueButtonText),
-                onClick = { viewModel.send(VerifyNumberPageReducer.Action.ContinueButtonTapped) },
-                isEnabled = state.isContinueButtonEnabled,
-                primary = true,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-            )
+                Components.Button(
+                    text = state.strings.value(VerifyNumberPageViewStrings.backButtonText),
+                    color = if (state.isBackButtonEnabled) colors.titleText else colors.disabled,
+                    onClick = { if (state.isBackButtonEnabled) viewModel.send(VerifyNumberPageReducer.Action.BackButtonTapped) },
+                    font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),
+                    modifier = Modifier.padding(top = Floats.backButtonTopPadding),
+                )
+
+                if (BuildConfig.DEBUG && state.hasError) {
+                    Components.Button(
+                        text = "Force Continue (Debug)",
+                        color = Colors.debugForeground,
+                        onClick = { viewModel.send(VerifyNumberPageReducer.Action.DebugForceContinueTapped) },
+                        font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),
+                        modifier = Modifier.padding(top = Floats.backButtonTopPadding),
+                    )
+                }
+            }
+
+            Spacer(Modifier.weight(1f))
         }
     }
 }

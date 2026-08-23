@@ -8,20 +8,26 @@
 
 package us.neotechnica.panther.modules.content.shared.views
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
-import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.R
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.navigation.PendingChatNavigation
@@ -86,8 +92,19 @@ fun SplashView(modifier: Modifier = Modifier) {
                 .background(colors.background),
         verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
     ) {
-        Components.Symbol("message", color = colors.accent, modifier = Modifier.size(96.dp))
-        CircularProgressIndicator(color = colors.accent)
+        Image(
+            painter = painterResource(R.drawable.hello_wordmark),
+            contentDescription = null,
+            colorFilter = ColorFilter.tint(colors.titleText),
+            contentScale = ContentScale.FillBounds,
+            modifier =
+                Modifier
+                    .width(150.dp)
+                    .height(70.dp)
+                    .padding(bottom = 5.dp),
+        )
+
+        CircularProgressIndicator(color = colors.titleText)
     }
 }
 

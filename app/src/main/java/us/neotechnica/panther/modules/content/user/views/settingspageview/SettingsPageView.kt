@@ -33,6 +33,9 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
+import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
+import us.neotechnica.panther.subsystem.modules.foundation.services.Build
+import us.neotechnica.panther.subsystem.modules.foundation.services.BuildInfoOverlay
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 
 /**
@@ -73,6 +76,20 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
         HorizontalDivider(color = colors.groupedContentBackground)
         SettingsRow("Delete Account", DESTRUCTIVE_COLOR, enabled = !state.isBusy) {
             viewModel.send(SettingsPageReducer.Action.DeleteAccountTapped)
+        }
+
+        // Prerelease-only affordance to restore the build-info overlay after
+        // it has been long-press–dismissed (mirrors iOS Developer Mode).
+        if (Build.isConfigured && Build.milestone != Milestone.GENERAL_RELEASE) {
+            val isOverlayHidden by BuildInfoOverlay.isHidden.collectAsState()
+            HorizontalDivider(color = colors.groupedContentBackground)
+            SettingsRow(
+                if (isOverlayHidden) "Show Build Info Overlay" else "Hide Build Info Overlay",
+                colors.titleText,
+                enabled = !state.isBusy,
+            ) {
+                if (isOverlayHidden) BuildInfoOverlay.show() else BuildInfoOverlay.hide()
+            }
         }
     }
 }

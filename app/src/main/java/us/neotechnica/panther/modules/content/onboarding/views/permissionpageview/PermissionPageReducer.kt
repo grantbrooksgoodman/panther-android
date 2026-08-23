@@ -145,6 +145,11 @@ class PermissionPageReducer : Reducer<PermissionPageReducer.State, PermissionPag
                     Logger.log(exception)
                     ReduceResult(state.copy(isBackButtonEnabled = true, isFinishButtonEnabled = true))
                 } else {
+                    // Clear the onboarding stack so a later sign-out returns to
+                    // the welcome page rather than a stale onboarding page.
+                    DependencyValues.current.navigation.navigate(
+                        Route.Onboarding(OnboardingRoute.Stack(emptyList())),
+                    )
                     DependencyValues.current.navigation.navigate(
                         Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.Splash)),
                     )

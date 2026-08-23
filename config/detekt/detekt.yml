@@ -38,6 +38,11 @@ naming:
   FunctionNaming:
     # Jetpack Compose @Composable functions are conventionally PascalCase.
     ignoreAnnotated: ['Composable']
+  MatchingDeclarationName:
+    # Per-consumer constants files use the AppConstants+(Consumer).kt
+    # naming convention (STYLE_RULES_ANDROID §2/§6), so a single top-level
+    # (Consumer)Floats object need not match its file name.
+    active: false
 
 style:
   MagicNumber:

@@ -70,6 +70,7 @@ fun StatefulView(
 
 @Composable
 private fun ProgressPage() {
+    val colors = LocalPantherColors.current
     Box(
         contentAlignment = Alignment.Center,
         modifier =
@@ -77,7 +78,7 @@ private fun ProgressPage() {
                 .fillMaxSize()
                 .background(LocalPantherColors.current.background),
     ) {
-        CircularProgressIndicator()
+        CircularProgressIndicator(color = colors.titleText)
     }
 }
 

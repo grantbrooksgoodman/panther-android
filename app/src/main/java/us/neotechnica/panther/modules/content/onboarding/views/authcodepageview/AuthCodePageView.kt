@@ -8,13 +8,11 @@
 
 package us.neotechnica.panther.modules.content.onboarding.views.authcodepageview
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -24,15 +22,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
+import us.neotechnica.panther.BuildConfig
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
+import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.onboarding.components.InstructionView
-import us.neotechnica.panther.modules.content.onboarding.components.OnboardingBackButton
+import us.neotechnica.panther.modules.content.onboarding.constants.AuthCodePageViewColors
+import us.neotechnica.panther.modules.content.onboarding.constants.AuthCodePageViewFloats
+import us.neotechnica.panther.modules.content.shared.components.UnderlinedTextField
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
-import androidx.compose.material3.Text as Material3Text
+
+// MARK: - Constants Accessors
+
+private typealias Colors = AuthCodePageViewColors
+private typealias Floats = AuthCodePageViewFloats
+private typealias Strings = us.neotechnica.panther.modules.content.onboarding.constants.AuthCodePageViewStrings
 
 /**
  * The onboarding page for entering the verification code during
@@ -54,42 +61,63 @@ fun AuthCodePageView(modifier: Modifier = Modifier) {
         modifier = modifier,
         onRetry = { viewModel.send(AuthCodePageReducer.Action.ViewAppeared) },
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            OnboardingBackButton(
-                text = state.strings.value(AuthCodePageViewStrings.backButtonText),
-                isEnabled = state.isBackButtonEnabled,
-                onClick = { viewModel.send(AuthCodePageReducer.Action.BackButtonTapped) },
-            )
+        Column(modifier = Modifier.fillMaxSize()) {
+            InstructionView(state.instructionViewStrings)
 
-            InstructionView(state.instructionViewStrings, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.weight(1f))
 
-            Components.Text(
-                state.strings.value(AuthCodePageViewStrings.instructionLabelText),
-                color = colors.subtitleText,
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth().padding(bottom = Floats.innerVStackBottomPadding),
+            ) {
+                Components.Text(
+                    state.strings.value(AuthCodePageViewStrings.instructionLabelText),
+                    color = colors.subtitleText,
+                    font = Font.systemSemibold(),
+                    modifier = Modifier.padding(vertical = Floats.instructionLabelVerticalPadding),
+                )
 
-            OutlinedTextField(
-                value = state.verificationCode,
-                onValueChange = { viewModel.send(AuthCodePageReducer.Action.VerificationCodeChanged(it)) },
-                label = { Material3Text("Verification code") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
+                UnderlinedTextField(
+                    value = state.verificationCode,
+                    placeholder = Strings.TEXT_FIELD_PLACEHOLDER,
+                    onValueChange = { viewModel.send(AuthCodePageReducer.Action.VerificationCodeChanged(it)) },
+                    keyboardType = KeyboardType.Number,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Floats.textFieldHorizontalPadding)
+                            .padding(top = Floats.textFieldTopPadding)
+                            .padding(bottom = Floats.textFieldBottomPadding),
+                )
 
-            Components.CapsuleButton(
-                text = state.strings.value(AuthCodePageViewStrings.continueButtonText),
-                onClick = { viewModel.send(AuthCodePageReducer.Action.ContinueButtonTapped) },
-                isEnabled = state.isContinueButtonEnabled,
-                primary = true,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-            )
+                Components.CapsuleButton(
+                    text = state.strings.value(AuthCodePageViewStrings.continueButtonText),
+                    onClick = { viewModel.send(AuthCodePageReducer.Action.ContinueButtonTapped) },
+                    isEnabled = state.isContinueButtonEnabled,
+                    primary = true,
+                    modifier = Modifier.padding(vertical = Floats.continueButtonVerticalPadding),
+                )
+
+                Components.Button(
+                    text = state.strings.value(AuthCodePageViewStrings.backButtonText),
+                    color = if (state.isBackButtonEnabled) colors.titleText else colors.disabled,
+                    onClick = { if (state.isBackButtonEnabled) viewModel.send(AuthCodePageReducer.Action.BackButtonTapped) },
+                    font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),
+                    modifier = Modifier.padding(top = Floats.backButtonTopPadding),
+                )
+
+                if (BuildConfig.DEBUG && state.hasError) {
+                    Components.Button(
+                        text = "Force Continue (Debug)",
+                        color = Colors.debugForeground,
+                        onClick = { viewModel.send(AuthCodePageReducer.Action.DebugForceContinueTapped) },
+                        font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),
+                        modifier = Modifier.padding(top = Floats.backButtonTopPadding),
+                    )
+                }
+            }
+
+            Spacer(Modifier.weight(1f))
         }
     }
 }

@@ -224,6 +224,9 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
             is Action.AuthenticateUserReturned -> {
                 Overlay.hide()
                 Persistent.setString(PersistentStorageKey.currentUserID, action.userID)
+                // Clear the onboarding stack so a later sign-out returns to
+                // the welcome page rather than this stale sign-in page.
+                navigate(OnboardingRoute.Stack(emptyList()))
                 navigate(RootRoute.SetModal(RootNavigatorState.ModalPath.Splash))
                 ReduceResult(state)
             }

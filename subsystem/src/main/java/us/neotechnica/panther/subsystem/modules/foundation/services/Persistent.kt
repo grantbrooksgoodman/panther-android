@@ -52,6 +52,20 @@ object Persistent {
         editor.apply()
     }
 
+    /** The stored boolean for [key], or [default] if unset. */
+    fun boolean(
+        key: PersistentStorageKey,
+        default: Boolean = false,
+    ): Boolean = preferences()?.getBoolean(key.rawValue, default) ?: default
+
+    /** Stores [value] for [key]. */
+    fun setBoolean(
+        key: PersistentStorageKey,
+        value: Boolean,
+    ) {
+        preferences()?.edit()?.putBoolean(key.rawValue, value)?.apply()
+    }
+
     // MARK: - Auxiliary
 
     private fun preferences() = appContext?.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)

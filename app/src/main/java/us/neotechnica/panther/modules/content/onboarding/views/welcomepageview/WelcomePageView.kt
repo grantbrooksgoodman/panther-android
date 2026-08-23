@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -23,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.R
@@ -31,8 +33,13 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.content.onboarding.constants.WelcomePageViewFloats
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
+
+// MARK: - Constants Accessors
+
+private typealias Floats = WelcomePageViewFloats
 
 /**
  * The onboarding welcome page: greeting, "Get Started", and "Sign In".
@@ -55,35 +62,44 @@ fun WelcomePageView(modifier: Modifier = Modifier) {
     StatefulView(state = state.viewState, modifier = modifier) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(32.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterVertically),
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
         ) {
             Image(
                 painter = painterResource(R.drawable.hello_wordmark),
                 contentDescription = null,
                 colorFilter = ColorFilter.tint(colors.titleText),
-                modifier = Modifier.height(72.dp),
+                contentScale = ContentScale.FillBounds,
+                modifier =
+                    Modifier
+                        .width(Floats.imageFrameWidth)
+                        .height(Floats.imageFrameHeight)
+                        .padding(bottom = Floats.imageBottomPadding),
             )
 
             Components.Text(
                 state.welcomeLabelText,
                 color = colors.titleText,
                 font = Font.systemBold(FontScale.Large),
+                modifier =
+                    Modifier.padding(
+                        horizontal = Floats.instructionLabelHorizontalPadding,
+                        vertical = Floats.instructionLabelVerticalPadding,
+                    ),
             )
 
             Components.CapsuleButton(
                 text = state.strings.value(WelcomePageViewStrings.continueButtonText),
                 onClick = { viewModel.send(WelcomePageReducer.Action.ContinueButtonTapped) },
                 primary = true,
+                modifier = Modifier.padding(vertical = Floats.continueButtonVerticalPadding),
             )
 
             Components.Button(
                 text = state.strings.value(WelcomePageViewStrings.signInButtonText),
-                color = colors.accent,
+                color = colors.titleText,
                 onClick = { viewModel.send(WelcomePageReducer.Action.SignInButtonTapped) },
+                font = Font.system(FontScale.Custom(Floats.SIGN_IN_BUTTON_LABEL_FONT_SIZE)),
             )
         }
     }

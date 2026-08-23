@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -153,6 +154,7 @@ object Components {
             contentAlignment = Alignment.Center,
             modifier =
                 modifier
+                    .shadow(CAPSULE_SHADOW_ELEVATION, RoundedCornerShape(CAPSULE_CORNER_RADIUS))
                     .clip(RoundedCornerShape(CAPSULE_CORNER_RADIUS))
                     .background(fillColor)
                     .clickable(enabled = isEnabled, onClick = onClick)
@@ -191,5 +193,6 @@ object Components {
 }
 
 private val CAPSULE_CORNER_RADIUS = 24.dp
-private val CAPSULE_HORIZONTAL_PADDING = 28.dp
-private val CAPSULE_VERTICAL_PADDING = 14.dp
+private val CAPSULE_HORIZONTAL_PADDING = 18.dp
+private val CAPSULE_VERTICAL_PADDING = 8.dp
+private val CAPSULE_SHADOW_ELEVATION = 6.dp

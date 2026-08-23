@@ -1,3 +1,9 @@
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
 import java.io.FileInputStream
 import java.util.Properties
 
@@ -82,6 +88,57 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+}
+
+// --- Per-compile build-number stamp (mirrors the iOS Run Script phase) ---
+// On every compile this increments version.properties and writes a
+// build_info.properties asset (wired into each variant's generated
+// assets) that the app reads at runtime through Build.initialize, so the
+// build number, build date, and first-compile date advance exactly as
+// they do on iOS via the Run Script build phase.
+abstract class StampBuildInfoTask : DefaultTask() {
+    @get:Internal
+    abstract val versionPropertiesFile: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+
+    @TaskAction
+    fun stamp() {
+        val file = versionPropertiesFile.get().asFile
+        val properties = Properties()
+        if (file.exists()) file.inputStream().use { properties.load(it) }
+
+        val placeholderFirstCompileDate = 1183100400L
+        val buildNumber = (properties.getProperty("buildNumber") ?: "0").toInt() + 1
+        val buildDate = System.currentTimeMillis() / 1000L
+        val storedFirstCompileDate =
+            (properties.getProperty("firstCompileDate") ?: placeholderFirstCompileDate.toString()).toLong()
+        val firstCompileDate =
+            if (storedFirstCompileDate == placeholderFirstCompileDate) buildDate else storedFirstCompileDate
+
+        properties.setProperty("buildNumber", buildNumber.toString())
+        properties.setProperty("buildDate", buildDate.toString())
+        properties.setProperty("firstCompileDate", firstCompileDate.toString())
+        file.outputStream().use {
+            properties.store(it, "Auto-incremented per compile (mirrors the iOS Run Script build-number bump).")
+        }
+
+        val assetFile = outputDirectory.get().asFile.resolve("build_info.properties")
+        assetFile.parentFile.mkdirs()
+        assetFile.writeText("buildNumber=$buildNumber\nbuildDate=$buildDate\nfirstCompileDate=$firstCompileDate\n")
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        val stampTask =
+            tasks.register<StampBuildInfoTask>("stamp${variant.name.replaceFirstChar { it.uppercase() }}BuildInfo") {
+                versionPropertiesFile.set(layout.projectDirectory.file("version.properties"))
+                outputs.upToDateWhen { false }
+            }
+        variant.sources.assets?.addGeneratedSourceDirectory(stampTask, StampBuildInfoTask::outputDirectory)
     }
 }
 

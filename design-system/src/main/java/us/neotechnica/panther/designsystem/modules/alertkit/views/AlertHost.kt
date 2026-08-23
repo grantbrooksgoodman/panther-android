@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -80,6 +81,7 @@ private fun ActionSheetSheet(alert: PresentedAlert.ActionSheet) {
             alert.title?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
             Text(alert.message, style = MaterialTheme.typography.bodyMedium)
             Button(
+                colors = ButtonDefaults.buttonColors(contentColor = Color.White),
                 modifier = Modifier.fillMaxWidth(),
                 onClick = { alert.onResult(true) },
             ) {

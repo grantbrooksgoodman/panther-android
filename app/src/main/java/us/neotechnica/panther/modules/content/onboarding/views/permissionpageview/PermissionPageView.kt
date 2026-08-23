@@ -14,6 +14,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -25,14 +26,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
+import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
+import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.onboarding.components.InstructionView
-import us.neotechnica.panther.modules.content.onboarding.components.OnboardingBackButton
 import us.neotechnica.panther.modules.content.onboarding.components.StatusIndicatorButton
+import us.neotechnica.panther.modules.content.onboarding.constants.PermissionPageViewFloats
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
+
+// MARK: - Constants Accessors
+
+private typealias Floats = PermissionPageViewFloats
 
 /**
  * The final onboarding page: granting notification and contact
@@ -47,6 +54,7 @@ fun PermissionPageView(modifier: Modifier = Modifier) {
     LaunchedEffect(Unit) { viewModel.send(PermissionPageReducer.Action.ViewAppeared) }
 
     val state by viewModel.state.collectAsState()
+    val colors = LocalPantherColors.current
 
     val contactLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -62,47 +70,57 @@ fun PermissionPageView(modifier: Modifier = Modifier) {
         modifier = modifier,
         onRetry = { viewModel.send(PermissionPageReducer.Action.ViewAppeared) },
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            OnboardingBackButton(
-                text = state.strings.value(PermissionPageViewStrings.backButtonText),
-                isEnabled = state.isBackButtonEnabled,
-                onClick = { viewModel.send(PermissionPageReducer.Action.BackButtonTapped) },
-                modifier = Modifier.align(Alignment.Start),
-            )
+        Column(modifier = Modifier.fillMaxSize()) {
+            InstructionView(state.instructionViewStrings)
 
-            InstructionView(state.instructionViewStrings, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.weight(1f))
 
-            StatusIndicatorButton(
-                label = state.strings.value(PermissionPageViewStrings.notificationPermissionCapsuleButtonText),
-                isGranted = state.isNotificationPermissionGranted,
-                onClick = {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    } else {
-                        viewModel.send(PermissionPageReducer.Action.RequestNotificationPermissionReturned(true))
-                    }
-                },
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth().padding(bottom = Floats.innerVStackBottomPadding),
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(Floats.buttonSpacing),
+                    modifier = Modifier.padding(bottom = Floats.buttonVStackBottomPadding),
+                ) {
+                    StatusIndicatorButton(
+                        label = state.strings.value(PermissionPageViewStrings.contactPermissionCapsuleButtonText),
+                        isGranted = state.isContactPermissionGranted,
+                        onClick = { contactLauncher.launch(Manifest.permission.READ_CONTACTS) },
+                    )
 
-            StatusIndicatorButton(
-                label = state.strings.value(PermissionPageViewStrings.contactPermissionCapsuleButtonText),
-                isGranted = state.isContactPermissionGranted,
-                onClick = { contactLauncher.launch(Manifest.permission.READ_CONTACTS) },
-            )
+                    StatusIndicatorButton(
+                        label = state.strings.value(PermissionPageViewStrings.notificationPermissionCapsuleButtonText),
+                        isGranted = state.isNotificationPermissionGranted,
+                        onClick = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                viewModel.send(PermissionPageReducer.Action.RequestNotificationPermissionReturned(true))
+                            }
+                        },
+                    )
+                }
 
-            Components.CapsuleButton(
-                text = state.strings.value(PermissionPageViewStrings.finishButtonText),
-                onClick = { viewModel.send(PermissionPageReducer.Action.FinishButtonTapped) },
-                isEnabled = state.isFinishButtonEnabled,
-                primary = true,
-            )
+                Components.CapsuleButton(
+                    text = state.strings.value(PermissionPageViewStrings.finishButtonText),
+                    onClick = { viewModel.send(PermissionPageReducer.Action.FinishButtonTapped) },
+                    isEnabled = state.isFinishButtonEnabled,
+                    primary = true,
+                    modifier = Modifier.padding(vertical = Floats.finishButtonVerticalPadding),
+                )
+
+                Components.Button(
+                    text = state.strings.value(PermissionPageViewStrings.backButtonText),
+                    color = if (state.isBackButtonEnabled) colors.titleText else colors.disabled,
+                    onClick = { if (state.isBackButtonEnabled) viewModel.send(PermissionPageReducer.Action.BackButtonTapped) },
+                    font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),
+                    modifier = Modifier.padding(top = Floats.backButtonTopPadding),
+                )
+            }
+
+            Spacer(Modifier.weight(1f))
         }
     }
 }

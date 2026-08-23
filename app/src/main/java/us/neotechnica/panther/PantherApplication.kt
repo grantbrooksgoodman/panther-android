@@ -26,8 +26,12 @@ import us.neotechnica.panther.networking.modules.common.services.ConnectionStatu
 import us.neotechnica.panther.networking.modules.session.services.MessageOutboxService
 import us.neotechnica.panther.networking.modules.session.services.UserMutationService
 import us.neotechnica.panther.networking.modules.session.services.retryAllEligible
+import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
+import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.translator.Translator
+import java.util.Date
+import java.util.Properties
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -52,6 +56,7 @@ class PantherApplication : Application() {
         Persistent.initialize(this)
         CommonPropertyLists.initialize(this)
         ContactService.initialize(this)
+        configureBuild()
 
         Networking.initialize(
             context = this,
@@ -63,6 +68,39 @@ class PantherApplication : Application() {
         setUpMessageOutboxRetry()
         setUpPushNotifications()
     }
+
+    // MARK: - Build Configuration
+
+    /**
+     * Populates [Build] from the per-compile `build_info.properties`
+     * asset (stamped by the app module's Gradle script, the analog of
+     * the iOS Run Script build-number bump).
+     */
+    private fun configureBuild() {
+        val (buildNumber, buildDate, firstCompileDate) = readBuildInfo()
+        Build.initialize(
+            appStoreBuildNumber = APP_STORE_BUILD_NUMBER,
+            buildNumber = buildNumber,
+            codeName = CODE_NAME,
+            finalName = FINAL_NAME,
+            bundleVersion = BuildConfig.VERSION_NAME,
+            milestone = if (BuildConfig.DEBUG) Milestone.ALPHA else Milestone.GENERAL_RELEASE,
+            buildDate = Date(buildDate * MILLIS_PER_SECOND),
+            firstCompileDate = Date(firstCompileDate * MILLIS_PER_SECOND),
+        )
+    }
+
+    private fun readBuildInfo(): Triple<Int, Long, Long> =
+        runCatching {
+            assets.open(BUILD_INFO_ASSET).use { stream ->
+                val properties = Properties().apply { load(stream) }
+                Triple(
+                    properties.getProperty("buildNumber", "0").toInt(),
+                    properties.getProperty("buildDate", "0").toLong(),
+                    properties.getProperty("firstCompileDate", "0").toLong(),
+                )
+            }
+        }.getOrDefault(Triple(0, 0L, 0L))
 
     // MARK: - Push Notifications
 
@@ -127,5 +165,11 @@ class PantherApplication : Application() {
 
     private companion object {
         const val RETRY_OUTBOX_EFFECT_ID = "retryMessageOutbox"
+
+        const val BUILD_INFO_ASSET = "build_info.properties"
+        const val CODE_NAME = "Panther"
+        const val FINAL_NAME = "Hello"
+        const val APP_STORE_BUILD_NUMBER = 0
+        const val MILLIS_PER_SECOND = 1_000L
     }
 }

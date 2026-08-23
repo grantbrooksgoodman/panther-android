@@ -8,16 +8,11 @@
 
 package us.neotechnica.panther.modules.content.onboarding.views.selectlanguagepageview
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -26,17 +21,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.onboarding.components.InstructionView
-import us.neotechnica.panther.modules.content.onboarding.components.OnboardingBackButton
+import us.neotechnica.panther.modules.content.onboarding.components.WheelPicker
+import us.neotechnica.panther.modules.content.onboarding.constants.SelectLanguagePageViewFloats
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
+
+// MARK: - Constants Accessors
+
+private typealias Floats = SelectLanguagePageViewFloats
 
 /**
  * The onboarding page for selecting the user's native language.
@@ -57,49 +55,50 @@ fun SelectLanguagePageView(modifier: Modifier = Modifier) {
         modifier = modifier,
         onRetry = { viewModel.send(SelectLanguagePageReducer.Action.ViewAppeared) },
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            OnboardingBackButton(
-                text = state.strings.value(SelectLanguagePageViewStrings.backButtonText),
-                isEnabled = true,
-                onClick = { viewModel.send(SelectLanguagePageReducer.Action.BackButtonTapped) },
-            )
+        Column(modifier = Modifier.fillMaxSize()) {
+            InstructionView(state.instructionViewStrings)
 
-            InstructionView(state.instructionViewStrings, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.weight(1f))
 
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth().padding(bottom = Floats.innerVStackBottomPadding),
             ) {
-                items(state.languages) { language ->
-                    val isSelected = language == state.selectedLanguageName
-                    Components.Text(
-                        language,
-                        color = if (isSelected) colors.background else colors.titleText,
-                        font = Font.systemMedium(FontScale.Small),
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSelected) colors.accent else colors.groupedContentBackground)
-                                .clickable {
-                                    viewModel.send(SelectLanguagePageReducer.Action.SelectedLanguageNameChanged(language))
-                                }.padding(horizontal = 14.dp, vertical = 12.dp),
-                    )
-                }
+                Components.Text(
+                    state.strings.value(SelectLanguagePageViewStrings.instructionLabelText),
+                    color = colors.subtitleText,
+                    font = Font.systemSemibold(),
+                    modifier = Modifier.padding(vertical = Floats.instructionLabelVerticalPadding),
+                )
+
+                WheelPicker(
+                    items = state.languages,
+                    selectedIndex = state.languages.indexOf(state.selectedLanguageName),
+                    onSelectedIndexChange = { index ->
+                        state.languages.getOrNull(index)?.let {
+                            viewModel.send(SelectLanguagePageReducer.Action.SelectedLanguageNameChanged(it))
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = Floats.pickerHorizontalPadding),
+                )
+
+                Components.CapsuleButton(
+                    text = state.strings.value(SelectLanguagePageViewStrings.continueButtonText),
+                    onClick = { viewModel.send(SelectLanguagePageReducer.Action.ContinueButtonTapped) },
+                    primary = true,
+                    modifier = Modifier.padding(vertical = Floats.continueButtonVerticalPadding),
+                )
+
+                Components.Button(
+                    text = state.strings.value(SelectLanguagePageViewStrings.backButtonText),
+                    color = colors.titleText,
+                    onClick = { viewModel.send(SelectLanguagePageReducer.Action.BackButtonTapped) },
+                    font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),
+                    modifier = Modifier.padding(top = Floats.backButtonTopPadding),
+                )
             }
 
-            Components.CapsuleButton(
-                text = state.strings.value(SelectLanguagePageViewStrings.continueButtonText),
-                onClick = { viewModel.send(SelectLanguagePageReducer.Action.ContinueButtonTapped) },
-                primary = true,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-            )
+            Spacer(Modifier.weight(1f))
         }
     }
 }

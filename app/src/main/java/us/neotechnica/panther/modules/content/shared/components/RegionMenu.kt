@@ -8,12 +8,14 @@
 
 package us.neotechnica.panther.modules.content.shared.components
 
-import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,22 +27,27 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.services.RegionDetailService
+import us.neotechnica.panther.modules.content.onboarding.constants.RegionMenuFloats
+import us.neotechnica.panther.modules.content.onboarding.constants.RegionMenuStrings
 import androidx.compose.material3.Text as Material3Text
 
 /**
- * A searchable region picker, ported from the iOS `RegionMenu`.
+ * A region picker, ported from the iOS `RegionMenu`.
  *
- * Tapping the current region opens a bottom sheet listing every region
- * with its emoji flag and calling code; selecting one reports its
- * region code.
+ * The button is a white, rounded, shadowed pill stacking the selected
+ * region's emoji flag over its calling code. Tapping it opens a
+ * searchable bottom sheet listing every region; selecting one reports
+ * its region code.
  *
  * @param selectedRegionCode The currently selected region code.
  * @param onRegionCodeSelected Called with the newly selected region code.
@@ -56,17 +63,31 @@ fun RegionMenu(
     val colors = LocalPantherColors.current
     var isExpanded by remember { mutableStateOf(false) }
 
-    Components.Button(
-        text = RegionDetailService.regionTitle(selectedRegionCode),
-        color = colors.accent,
-        onClick = { isExpanded = true },
-        font = Font.systemMedium(FontScale.Small),
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
         modifier =
             modifier
-                .clip(RoundedCornerShape(CORNER_RADIUS))
-                .border(1.dp, colors.disabled, RoundedCornerShape(CORNER_RADIUS))
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-    )
+                .shadow(RegionMenuFloats.buttonShadowElevation, RoundedCornerShape(RegionMenuFloats.buttonCornerRadius))
+                .clip(RoundedCornerShape(RegionMenuFloats.buttonCornerRadius))
+                .background(colors.background)
+                .clickable { isExpanded = true }
+                .widthIn(min = RegionMenuFloats.buttonMinWidth)
+                .heightIn(min = RegionMenuFloats.buttonMinHeight)
+                .padding(horizontal = RegionMenuFloats.buttonHorizontalPadding, vertical = RegionMenuFloats.buttonVerticalPadding),
+    ) {
+        Components.Text(
+            RegionDetailService.emojiFlag(selectedRegionCode),
+            color = colors.titleText,
+            font = Font.system(FontScale.Custom(RegionMenuFloats.FLAG_FONT_SIZE)),
+        )
+        Components.Text(
+            "+${RegionDetailService.callingCode(selectedRegionCode) ?: RegionMenuStrings.DEFAULT_CALLING_CODE}",
+            color = colors.titleText,
+            font = Font.system,
+            modifier = Modifier.padding(top = RegionMenuFloats.callingCodeTopPadding),
+        )
+    }
 
     if (isExpanded) {
         ModalBottomSheet(onDismissRequest = { isExpanded = false }) {
@@ -102,7 +123,7 @@ private fun RegionList(onRegionCodeSelected: (String) -> Unit) {
             singleLine = true,
         )
 
-        LazyColumn(modifier = Modifier.heightIn(max = LIST_MAX_HEIGHT)) {
+        LazyColumn(modifier = Modifier.heightIn(max = RegionMenuFloats.listMaxHeight)) {
             items(regionCodes) { code ->
                 Components.Text(
                     RegionDetailService.regionTitle(code),
@@ -117,6 +138,3 @@ private fun RegionList(onRegionCodeSelected: (String) -> Unit) {
         }
     }
 }
-
-private val CORNER_RADIUS = 10.dp
-private val LIST_MAX_HEIGHT = 420.dp
