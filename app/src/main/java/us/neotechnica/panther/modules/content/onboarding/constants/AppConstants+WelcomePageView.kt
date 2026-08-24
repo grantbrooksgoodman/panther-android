@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 // MARK: - Float
 
 object WelcomePageViewFloats {
+    val columnSpacing: Dp = 8.dp
     val continueButtonVerticalPadding: Dp = 5.dp
     val imageBottomPadding: Dp = 5.dp
     val imageFrameHeight: Dp = 70.dp

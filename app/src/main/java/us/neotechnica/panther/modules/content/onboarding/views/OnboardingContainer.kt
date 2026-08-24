@@ -25,6 +25,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import us.neotechnica.panther.modules.content.onboarding.constants.OnboardingContainerFloats
+import us.neotechnica.panther.modules.content.onboarding.constants.OnboardingContainerStrings
 import us.neotechnica.panther.modules.content.onboarding.views.authcodepageview.AuthCodePageView
 import us.neotechnica.panther.modules.content.onboarding.views.permissionpageview.PermissionPageView
 import us.neotechnica.panther.modules.content.onboarding.views.selectlanguagepageview.SelectLanguagePageView
@@ -36,6 +38,11 @@ import us.neotechnica.panther.navigation.OnboardingRoute
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+
+// MARK: - Constants Accessors
+
+private typealias Floats = OnboardingContainerFloats
+private typealias Strings = OnboardingContainerStrings
 
 /**
  * Hosts the onboarding navigation stack.
@@ -63,16 +70,16 @@ fun OnboardingContainer(modifier: Modifier = Modifier) {
 
     AnimatedContent(
         contentKey = { it?.let { path -> path::class } },
-        label = "OnboardingContainer",
+        label = Strings.ANIMATION_LABEL,
         modifier = modifier.fillMaxSize(),
         targetState = topPath,
         transitionSpec = {
             val enter =
-                slideInHorizontally(tween(TRANSITION_MILLIS)) { width -> if (isPush) width else -width } +
-                    fadeIn(tween(TRANSITION_MILLIS))
+                slideInHorizontally(tween(Floats.TRANSITION_MILLIS)) { width -> if (isPush) width else -width } +
+                    fadeIn(tween(Floats.TRANSITION_MILLIS))
             val exit =
-                slideOutHorizontally(tween(TRANSITION_MILLIS)) { width -> if (isPush) -width else width } +
-                    fadeOut(tween(TRANSITION_MILLIS))
+                slideOutHorizontally(tween(Floats.TRANSITION_MILLIS)) { width -> if (isPush) -width else width } +
+                    fadeOut(tween(Floats.TRANSITION_MILLIS))
             enter.togetherWith(exit).using(SizeTransform(clip = false))
         },
     ) { path ->
@@ -86,5 +93,3 @@ fun OnboardingContainer(modifier: Modifier = Modifier) {
         }
     }
 }
-
-private const val TRANSITION_MILLIS = 250

@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -34,12 +33,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
 import us.neotechnica.panther.designsystem.modules.componentkit.components.MessageContextMenu
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAction
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAlignment
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellColors
+import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellFloats
+import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellStrings
 import us.neotechnica.panther.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
@@ -72,9 +75,18 @@ fun ChatMessageCell(
     val clipboard = LocalClipboardManager.current
     val message = row.message
 
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)) {
+    Column(
+        modifier =
+            Modifier.fillMaxWidth().padding(
+                horizontal = ChatMessageCellFloats.rowHorizontalPadding,
+                vertical = ChatMessageCellFloats.rowVerticalPadding,
+            ),
+    ) {
         if (message.isSystemMessage) {
-            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(vertical = ChatMessageCellFloats.separatorVerticalPadding),
+                contentAlignment = Alignment.Center,
+            ) {
                 Material3Text(
                     text = systemMessageString(row.translation?.output ?: "", message.sentDate),
                     color = colors.subtitleText,
@@ -86,7 +98,10 @@ fun ChatMessageCell(
         }
 
         separatorDate(message, row.previousMessage)?.let { date ->
-            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(vertical = ChatMessageCellFloats.separatorVerticalPadding),
+                contentAlignment = Alignment.Center,
+            ) {
                 Material3Text(
                     text = separatorAnnotatedString(date),
                     color = colors.subtitleText,
@@ -117,7 +132,11 @@ fun ChatMessageCell(
                             row.senderName,
                             color = colors.subtitleText,
                             font = Font.systemMedium(FontScale.Small),
-                            modifier = Modifier.padding(start = 12.dp, bottom = 2.dp),
+                            modifier =
+                                Modifier.padding(
+                                    start = ChatMessageCellFloats.senderNameStartPadding,
+                                    bottom = ChatMessageCellFloats.senderNameBottomPadding,
+                                ),
                         )
                     }
                     MessageBubble(
@@ -148,19 +167,14 @@ private fun SenderAvatar(
     show: Boolean,
     initials: String,
 ) {
-    val colors = LocalPantherColors.current
-    Box(modifier = Modifier.padding(end = SENDER_AVATAR_SPACING).size(SENDER_AVATAR_SIZE)) {
+    Box(modifier = Modifier.padding(end = ChatMessageCellFloats.senderAvatarSpacing).size(ChatMessageCellFloats.senderAvatarSize)) {
         if (!show) return@Box
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.fillMaxSize().clip(CircleShape).background(SENDER_AVATAR_BACKGROUND),
-        ) {
-            if (initials.isNotBlank()) {
-                Components.Text(initials, color = colors.background, font = Font.systemSemibold(FontScale.Small))
-            } else {
-                Components.Symbol("person", color = colors.background, modifier = Modifier.size(SENDER_AVATAR_GLYPH_SIZE))
-            }
-        }
+        AvatarImageView(
+            modifier = Modifier.fillMaxSize(),
+            initials = initials,
+            glyphSize = ChatMessageCellFloats.senderAvatarGlyphSize,
+            initialsFont = Font.systemSemibold(FontScale.Small),
+        )
     }
 }
 
@@ -181,27 +195,41 @@ private fun BottomLabel(
 
     // Align the label to the message bubble, not the screen edge: group
     // received bubbles are indented past the sender avatar column.
-    val leadingInset = if (row.isGroup && !isOwn) SENDER_AVATAR_SIZE + SENDER_AVATAR_SPACING else 0.dp
+    val leadingInset =
+        if (row.isGroup &&
+            !isOwn
+        ) {
+            ChatMessageCellFloats.senderAvatarSize + ChatMessageCellFloats.senderAvatarSpacing
+        } else {
+            0.dp
+        }
 
     Row(
         horizontalArrangement = if (isOwn) Arrangement.End else Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(top = 2.dp, start = 4.dp + leadingInset, end = 4.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(
+                    top = ChatMessageCellFloats.bottomLabelTopPadding,
+                    start = ChatMessageCellFloats.bottomLabelStartPadding + leadingInset,
+                    end = ChatMessageCellFloats.bottomLabelEndPadding,
+                ),
     ) {
         if (row.reactionsText.isNotEmpty()) {
             Components.Text(
                 row.reactionsText,
                 color = colors.subtitleText,
-                font = Font.system(FontScale.Custom(REACTION_FONT_SIZE)),
+                font = Font.system(FontScale.Custom(ChatMessageCellFloats.REACTION_FONT_SIZE)),
             )
         }
         if (status != null) {
             if (row.reactionsText.isNotEmpty()) {
-                Components.Text(" | ", color = colors.subtitleText, font = Font.system(FontScale.Small))
+                Components.Text(ChatMessageCellStrings.STATUS_SEPARATOR, color = colors.subtitleText, font = Font.system(FontScale.Small))
             }
             Components.Text(
                 status.first,
-                color = if (status.second) ERROR_COLOR else colors.subtitleText,
+                color = if (status.second) ChatMessageCellColors.error else colors.subtitleText,
                 font = Font.system(FontScale.Small),
             )
         }
@@ -220,19 +248,22 @@ private fun MessageBubble(
 ) {
     val shape =
         RoundedCornerShape(
-            topStart = BUBBLE_RADIUS,
-            topEnd = BUBBLE_RADIUS,
-            bottomStart = if (isOwn) BUBBLE_RADIUS else BUBBLE_TAIL_RADIUS,
-            bottomEnd = if (isOwn) BUBBLE_TAIL_RADIUS else BUBBLE_RADIUS,
+            topStart = ChatMessageCellFloats.bubbleRadius,
+            topEnd = ChatMessageCellFloats.bubbleRadius,
+            bottomStart = if (isOwn) ChatMessageCellFloats.bubbleRadius else ChatMessageCellFloats.bubbleTailRadius,
+            bottomEnd = if (isOwn) ChatMessageCellFloats.bubbleTailRadius else ChatMessageCellFloats.bubbleRadius,
         )
 
     Box(
         modifier =
             Modifier
-                .widthIn(max = BUBBLE_MAX_WIDTH)
+                .widthIn(max = ChatMessageCellFloats.bubbleMaxWidth)
                 .clip(shape)
                 .background(if (isOwn) senderBubble else receiverBubble)
-                .padding(horizontal = 14.dp, vertical = 9.dp),
+                .padding(
+                    horizontal = ChatMessageCellFloats.bubbleHorizontalPadding,
+                    vertical = ChatMessageCellFloats.bubbleVerticalPadding,
+                ),
     ) {
         Components.Text(
             text.ifBlank { " " },
@@ -296,7 +327,7 @@ private fun separatorDate(
 ): Date? {
     val show =
         previousMessage == null ||
-            (message.sentDate.time - previousMessage.sentDate.time) > DAY_SEPARATOR_GAP_MILLIS
+            (message.sentDate.time - previousMessage.sentDate.time) > ChatMessageCellFloats.DAY_SEPARATOR_GAP_MILLIS
     if (!show) return null
     return message.sentDate
 }
@@ -362,14 +393,18 @@ private fun dayWord(key: LocalizedStringKey): String {
 private fun separatorParts(date: Date): SeparatorParts {
     val messageDay = Calendar.getInstance().apply { time = date }
     val today = Calendar.getInstance()
-    val time = SimpleDateFormat("h:mm a", Locale.getDefault()).format(date)
-    val daysApart = (today.timeInMillis - messageDay.timeInMillis) / MILLIS_PER_DAY
+    val time = SimpleDateFormat(ChatMessageCellStrings.TIME_FORMAT, Locale.getDefault()).format(date)
+    val daysApart = (today.timeInMillis - messageDay.timeInMillis) / ChatMessageCellFloats.MILLIS_PER_DAY
     val prefix =
         when {
             isSameDay(messageDay, today) -> dayWord(LocalizedStringKey.Today)
             isYesterday(messageDay, today) -> dayWord(LocalizedStringKey.Yesterday)
-            daysApart < DAYS_IN_WEEK -> SimpleDateFormat("EEEE", Locale.getDefault()).format(date)
-            else -> SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(date)
+            daysApart < ChatMessageCellFloats.DAYS_IN_WEEK ->
+                SimpleDateFormat(
+                    ChatMessageCellStrings.DAY_OF_WEEK_FORMAT,
+                    Locale.getDefault(),
+                ).format(date)
+            else -> SimpleDateFormat(ChatMessageCellStrings.FULL_DATE_FORMAT, Locale.getDefault()).format(date)
         }
     return SeparatorParts(prefix, time)
 }
@@ -390,7 +425,7 @@ private fun statusText(
     if (isFailed) return LocalizedStringKey.NotDelivered.localized() to true
     val readReceipt = message.otherParticipantReadReceipt
     return if (readReceipt != null) {
-        val time = SimpleDateFormat("h:mm a", Locale.getDefault()).format(readReceipt.readDate)
+        val time = SimpleDateFormat(ChatMessageCellStrings.TIME_FORMAT, Locale.getDefault()).format(readReceipt.readDate)
         "${LocalizedStringKey.Read.localized()} $time" to false
     } else {
         LocalizedStringKey.Delivered.localized() to false
@@ -405,16 +440,3 @@ private fun isSameDay(
         left.get(Calendar.DAY_OF_YEAR) == right.get(Calendar.DAY_OF_YEAR)
 
 private fun sanitized(value: String): String = value.replace("⁂", "").replace("⌘", "").replace("※", "")
-
-private const val DAY_SEPARATOR_GAP_MILLIS = 5_400_000L
-private const val MILLIS_PER_DAY = 24L * 60 * 60 * 1000
-private const val DAYS_IN_WEEK = 7
-private const val REACTION_FONT_SIZE = 14f
-private val BUBBLE_RADIUS = 18.dp
-private val BUBBLE_TAIL_RADIUS = 4.dp
-private val BUBBLE_MAX_WIDTH = 280.dp
-private val ERROR_COLOR = Color(0xFFFF3B30)
-private val SENDER_AVATAR_SIZE = 30.dp
-private val SENDER_AVATAR_GLYPH_SIZE = 18.dp
-private val SENDER_AVATAR_SPACING = 6.dp
-private val SENDER_AVATAR_BACKGROUND = Color(0xFFC7C7CC)

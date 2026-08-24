@@ -25,7 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.content.onboarding.constants.UnderlinedTextFieldFloats
+import us.neotechnica.panther.modules.content.shared.constants.UnderlinedTextFieldFloats
 
 /**
  * A single-line, center-aligned text field with a gray placeholder and

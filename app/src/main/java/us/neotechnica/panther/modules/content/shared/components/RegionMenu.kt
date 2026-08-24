@@ -31,14 +31,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.services.RegionDetailService
-import us.neotechnica.panther.modules.content.onboarding.constants.RegionMenuFloats
-import us.neotechnica.panther.modules.content.onboarding.constants.RegionMenuStrings
+import us.neotechnica.panther.modules.content.shared.constants.RegionMenuFloats
+import us.neotechnica.panther.modules.content.shared.constants.RegionMenuStrings
 import androidx.compose.material3.Text as Material3Text
 
 /**
@@ -114,11 +113,11 @@ private fun RegionList(onRegionCodeSelected: (String) -> Unit) {
             }
         }
 
-    Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+    Column(modifier = Modifier.padding(horizontal = RegionMenuFloats.searchHorizontalPadding)) {
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
-            label = { Material3Text("Search regions") },
+            label = { Material3Text(RegionMenuStrings.SEARCH_REGIONS) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )
@@ -132,7 +131,7 @@ private fun RegionList(onRegionCodeSelected: (String) -> Unit) {
                         Modifier
                             .fillMaxWidth()
                             .clickable { onRegionCodeSelected(code) }
-                            .padding(vertical = 14.dp),
+                            .padding(vertical = RegionMenuFloats.listItemVerticalPadding),
                 )
             }
         }

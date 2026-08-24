@@ -2,11 +2,11 @@
 //  AppConstants+RegionMenu.kt
 //  Panther
 //
-//  Created by Grant Brooks Goodman on 23/08/2026.
+//  Created by Grant Brooks Goodman on 24/08/2026.
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
-package us.neotechnica.panther.modules.content.onboarding.constants
+package us.neotechnica.panther.modules.content.shared.constants
 
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -21,7 +21,9 @@ object RegionMenuFloats {
     val buttonShadowElevation: Dp = 2.dp
     val buttonVerticalPadding: Dp = 8.dp
     val callingCodeTopPadding: Dp = 2.dp
+    val listItemVerticalPadding: Dp = 14.dp
     val listMaxHeight: Dp = 420.dp
+    val searchHorizontalPadding: Dp = 20.dp
 
     const val FLAG_FONT_SIZE = 30f
 }
@@ -30,4 +32,5 @@ object RegionMenuFloats {
 
 object RegionMenuStrings {
     const val DEFAULT_CALLING_CODE = "1"
+    const val SEARCH_REGIONS = "Search regions"
 }

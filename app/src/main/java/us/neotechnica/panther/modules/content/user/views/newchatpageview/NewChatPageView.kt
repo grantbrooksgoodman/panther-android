@@ -39,21 +39,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
 import us.neotechnica.panther.designsystem.modules.componentkit.components.MessageInputBar
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.user.components.ContactRow
+import us.neotechnica.panther.modules.content.user.constants.NewChatPageViewFloats
+import us.neotechnica.panther.modules.content.user.constants.NewChatPageViewStrings
 import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageView
 import us.neotechnica.panther.modules.content.user.views.newchatpageview.NewChatPageReducer.Action
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
+
+// MARK: - Constants Accessors
+
+private typealias Floats = NewChatPageViewFloats
+private typealias Strings = NewChatPageViewStrings
 
 /**
  * The new-conversation page: add recipients via the recipient bar (typing
@@ -120,26 +126,26 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
 @Composable
 private fun Header(onClose: () -> Unit) {
     val colors = LocalPantherColors.current
-    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Floats.headerHorizontalPadding, vertical = Floats.headerVerticalPadding),
+    ) {
         Components.Text(
-            "New Message",
+            Strings.TITLE,
             color = colors.titleText,
             font = Font.systemBold(FontScale.Large),
             modifier = Modifier.align(Alignment.Center),
         )
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier =
-                Modifier
-                    .align(Alignment.CenterEnd)
-                    .size(40.dp)
-                    .shadow(2.dp, CircleShape)
-                    .clip(CircleShape)
-                    .background(colors.background)
-                    .clickable(onClick = onClose),
-        ) {
-            Components.Symbol("xmark", color = colors.titleText, modifier = Modifier.size(18.dp))
-        }
+        CircleChipButton(
+            systemName = "xmark",
+            contentDescription = Strings.CLOSE,
+            onClick = onClose,
+            modifier = Modifier.align(Alignment.CenterEnd),
+            tint = colors.titleText,
+            glyphSize = Floats.closeButtonGlyphSize,
+        )
     }
 }
 
@@ -161,12 +167,23 @@ private fun RecipientBar(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp)
-                .clip(RoundedCornerShape(RECIPIENT_BAR_RADIUS))
+                .padding(
+                    horizontal = Floats.recipientBarHorizontalPadding,
+                    vertical = Floats.recipientBarVerticalPadding,
+                ).clip(RoundedCornerShape(Floats.recipientBarCornerRadius))
                 .background(colors.background)
-                .padding(start = 14.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
+                .padding(
+                    start = Floats.recipientBarStartPadding,
+                    end = Floats.recipientBarEndPadding,
+                    top = Floats.recipientBarTopPadding,
+                    bottom = Floats.recipientBarBottomPadding,
+                ),
     ) {
-        Components.Text("To:", color = colors.subtitleText, modifier = Modifier.padding(end = 6.dp))
+        Components.Text(
+            Strings.TO_LABEL,
+            color = colors.subtitleText,
+            modifier = Modifier.padding(end = Floats.toLabelEndPadding),
+        )
 
         RecipientBarContent(
             recipients = recipients,
@@ -181,13 +198,13 @@ private fun RecipientBar(
             contentAlignment = Alignment.Center,
             modifier =
                 Modifier
-                    .padding(start = 6.dp)
-                    .size(28.dp)
+                    .padding(start = Floats.addButtonStartPadding)
+                    .size(Floats.addButtonSize)
                     .clip(CircleShape)
                     .background(colors.groupedContentBackground)
                     .clickable(onClick = onAdd),
         ) {
-            Components.Symbol("plus", color = colors.accent, modifier = Modifier.size(18.dp))
+            Components.Symbol("plus", color = colors.accent, modifier = Modifier.size(Floats.addButtonGlyphSize))
         }
     }
 }
@@ -205,8 +222,8 @@ private fun RecipientBarContent(
 ) {
     val colors = LocalPantherColors.current
     FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(Floats.chipSpacing),
+        verticalArrangement = Arrangement.spacedBy(Floats.chipSpacing),
         modifier = modifier,
     ) {
         recipients.forEach { recipient ->
@@ -220,7 +237,10 @@ private fun RecipientBarContent(
             cursorBrush = SolidColor(colors.accent),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { onSubmit() }),
-            modifier = Modifier.defaultMinSize(minWidth = RECIPIENT_FIELD_MIN_WIDTH).padding(vertical = 4.dp),
+            modifier =
+                Modifier
+                    .defaultMinSize(minWidth = Floats.fieldMinWidth)
+                    .padding(vertical = Floats.fieldVerticalPadding),
         )
     }
 }
@@ -236,15 +256,23 @@ private fun RecipientChip(
         modifier =
             Modifier
                 .clip(CircleShape)
-                .background(colors.accent.copy(alpha = CHIP_BACKGROUND_ALPHA))
+                .background(colors.accent.copy(alpha = Floats.CHIP_BACKGROUND_ALPHA))
                 .clickable(onClick = onRemove)
-                .padding(start = 10.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
+                .padding(
+                    start = Floats.recipientChipStartPadding,
+                    end = Floats.recipientChipEndPadding,
+                    top = Floats.recipientChipVerticalPadding,
+                    bottom = Floats.recipientChipVerticalPadding,
+                ),
     ) {
         Components.Text(recipient.displayName, color = colors.accent, font = Font.systemMedium(FontScale.Small))
-        Components.Symbol("xmark", color = colors.accent, modifier = Modifier.padding(start = 4.dp).size(12.dp))
+        Components.Symbol(
+            "xmark",
+            color = colors.accent,
+            modifier =
+                Modifier
+                    .padding(start = Floats.chipRemoveIconStartPadding)
+                    .size(Floats.chipRemoveIconSize),
+        )
     }
 }
-
-private val RECIPIENT_BAR_RADIUS = 20.dp
-private val RECIPIENT_FIELD_MIN_WIDTH = 120.dp
-private const val CHIP_BACKGROUND_ALPHA = 0.15f

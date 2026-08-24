@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
@@ -31,16 +30,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
+import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.formattedString
+import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewColors
+import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewFloats
+import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewStrings
 import us.neotechnica.panther.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
@@ -49,6 +51,12 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.BuildInfoOverlay
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
+
+// MARK: - Constants Accessors
+
+private typealias Floats = SettingsPageViewFloats
+private typealias Colors = SettingsPageViewColors
+private typealias Strings = SettingsPageViewStrings
 
 /**
  * The settings page: the current user's contact header followed by
@@ -86,16 +94,16 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
             SettingsCard {
                 SettingsIconRow(
                     symbol = "trash.fill",
-                    iconColor = ICON_ORANGE,
-                    title = "Delete account",
+                    iconColor = Colors.iconOrange,
+                    title = Strings.DELETE_ACCOUNT,
                     enabled = !state.isBusy,
                     onClick = { viewModel.send(SettingsPageReducer.Action.DeleteAccountTapped) },
                 )
                 SettingsRowDivider()
                 SettingsIconRow(
                     symbol = "hand.raised.fill",
-                    iconColor = ICON_RED,
-                    title = "Sign out",
+                    iconColor = Colors.iconRed,
+                    title = Strings.SIGN_OUT,
                     enabled = !state.isBusy,
                     onClick = { viewModel.send(SettingsPageReducer.Action.SignOutTapped) },
                 )
@@ -108,8 +116,13 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
                 SettingsCard {
                     SettingsIconRow(
                         symbol = "gearshape.fill",
-                        iconColor = ICON_GRAY,
-                        title = if (isOverlayHidden) "Show Build Info Overlay" else "Hide Build Info Overlay",
+                        iconColor = Colors.iconGray,
+                        title =
+                            if (isOverlayHidden) {
+                                Strings.SHOW_BUILD_INFO_OVERLAY
+                            } else {
+                                Strings.HIDE_BUILD_INFO_OVERLAY
+                            },
                         enabled = !state.isBusy,
                         onClick = { if (isOverlayHidden) BuildInfoOverlay.show() else BuildInfoOverlay.hide() },
                     )
@@ -122,7 +135,10 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
                     color = colors.subtitleText,
                     font = Font.system(FontScale.Small),
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 24.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = Floats.versionTopPadding, bottom = Floats.versionBottomPadding),
                 )
             }
         }
@@ -137,26 +153,27 @@ private fun Header(
     enabled: Boolean,
 ) {
     val colors = LocalPantherColors.current
-    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Floats.headerHorizontalPadding, vertical = Floats.headerVerticalPadding),
+    ) {
         Components.Text(
             LocalizedStringKey.Settings.localized(LocalizationSource.SUBSYSTEM).dropLast(1),
             color = colors.titleText,
             font = Font.systemBold(FontScale.Large),
             modifier = Modifier.align(Alignment.Center),
         )
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier =
-                Modifier
-                    .align(Alignment.CenterEnd)
-                    .size(40.dp)
-                    .shadow(2.dp, CircleShape)
-                    .clip(CircleShape)
-                    .background(colors.background)
-                    .clickable(enabled = enabled, onClick = onDone),
-        ) {
-            Components.Symbol("checkmark", color = colors.titleText, modifier = Modifier.size(20.dp))
-        }
+        CircleChipButton(
+            systemName = "checkmark",
+            contentDescription = Strings.DONE,
+            onClick = onDone,
+            modifier = Modifier.align(Alignment.CenterEnd),
+            tint = colors.titleText,
+            glyphSize = Floats.doneButtonGlyphSize,
+            enabled = enabled,
+        )
     }
 }
 
@@ -168,7 +185,7 @@ private fun ContactDetailCard() {
     val currentUser = UserSessionService.currentUser
     val number = currentUser?.phoneNumber?.formattedString()
     val contactName = currentUser?.id?.let { ContactService.match(it)?.fullName }
-    val title = contactName ?: number ?: "You"
+    val title = contactName ?: number ?: Strings.DEFAULT_TITLE
     val subtitle = if (contactName != null) number else null
 
     Row(
@@ -176,25 +193,24 @@ private fun ContactDetailCard() {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = CARD_MARGIN, vertical = 8.dp)
-                .clip(RoundedCornerShape(CONTACT_CORNER))
-                .background(colors.background.copy(alpha = CONTACT_BACKGROUND_ALPHA))
-                .padding(CARD_PADDING),
+                .padding(horizontal = Floats.cardHorizontalMargin, vertical = Floats.cardVerticalMargin)
+                .clip(RoundedCornerShape(Floats.contactCornerRadius))
+                .background(colors.background.copy(alpha = Floats.CONTACT_BACKGROUND_ALPHA))
+                .padding(Floats.cardPadding),
     ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.size(AVATAR_SIZE).clip(CircleShape).background(AVATAR_BACKGROUND),
-        ) {
-            Components.Symbol("person", color = colors.background, modifier = Modifier.size(AVATAR_GLYPH_SIZE))
-        }
-        Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
+        AvatarImageView(modifier = Modifier.size(Floats.avatarSize), glyphSize = Floats.avatarGlyphSize)
+        Column(modifier = Modifier.weight(1f).padding(start = Floats.contactNameStartPadding)) {
             Components.Text(title, color = colors.titleText, font = Font.systemSemibold())
             subtitle?.let {
                 Components.Text(it, color = colors.subtitleText, font = Font.system(FontScale.Small))
             }
         }
         if (subtitle != null) {
-            Components.Symbol("chevron.right", color = colors.subtitleText, modifier = Modifier.size(18.dp))
+            Components.Symbol(
+                "chevron.right",
+                color = colors.subtitleText,
+                modifier = Modifier.size(Floats.contactChevronSize),
+            )
         }
     }
 }
@@ -208,8 +224,8 @@ private fun SettingsCard(content: @Composable () -> Unit) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = CARD_MARGIN, vertical = 8.dp)
-                .clip(RoundedCornerShape(CARD_CORNER))
+                .padding(horizontal = Floats.cardHorizontalMargin, vertical = Floats.cardVerticalMargin)
+                .clip(RoundedCornerShape(Floats.cardCornerRadius))
                 .background(colors.background),
     ) {
         content()
@@ -231,15 +247,19 @@ private fun SettingsIconRow(
             Modifier
                 .fillMaxWidth()
                 .clickable(enabled = enabled) { onClick() }
-                .padding(horizontal = CARD_PADDING, vertical = 10.dp),
+                .padding(horizontal = Floats.cardPadding, vertical = Floats.iconRowVerticalPadding),
     ) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(ICON_SIZE).clip(RoundedCornerShape(ICON_CORNER)).background(iconColor),
+            modifier =
+                Modifier
+                    .size(Floats.iconSize)
+                    .clip(RoundedCornerShape(Floats.iconCornerRadius))
+                    .background(iconColor),
         ) {
-            Components.Symbol(symbol, color = Color.White, modifier = Modifier.size(ICON_GLYPH_SIZE))
+            Components.Symbol(symbol, color = Color.White, modifier = Modifier.size(Floats.iconGlyphSize))
         }
-        Components.Text(title, color = colors.titleText, modifier = Modifier.padding(start = 12.dp))
+        Components.Text(title, color = colors.titleText, modifier = Modifier.padding(start = Floats.iconTitleStartPadding))
     }
 }
 
@@ -248,27 +268,12 @@ private fun SettingsRowDivider() {
     val colors = LocalPantherColors.current
     HorizontalDivider(
         color = colors.groupedContentBackground,
-        modifier = Modifier.padding(start = CARD_PADDING + ICON_SIZE + 12.dp),
+        modifier = Modifier.padding(start = Floats.cardPadding + Floats.iconSize + Floats.iconTitleStartPadding),
     )
 }
 
 // MARK: - Auxiliary
 
 private fun versionString(): String =
-    "Version ${Build.bundleVersion} " +
+    "${Strings.VERSION_PREFIX}${Build.bundleVersion} " +
         "(${Build.buildNumber}${Build.milestone.shortString}/${Build.bundleRevision.lowercase()})"
-
-private val CARD_MARGIN = 16.dp
-private val CARD_CORNER = 16.dp
-private val CARD_PADDING = 16.dp
-private val CONTACT_CORNER = 28.dp
-private const val CONTACT_BACKGROUND_ALPHA = 0.55f
-private val AVATAR_SIZE = 44.dp
-private val AVATAR_GLYPH_SIZE = 24.dp
-private val ICON_SIZE = 30.dp
-private val ICON_CORNER = 7.dp
-private val ICON_GLYPH_SIZE = 17.dp
-private val AVATAR_BACKGROUND = Color(0xFFC7C7CC)
-private val ICON_ORANGE = Color(0xFFFF9500)
-private val ICON_RED = Color(0xFFFF3B30)
-private val ICON_GRAY = Color(0xFF8E8E93)

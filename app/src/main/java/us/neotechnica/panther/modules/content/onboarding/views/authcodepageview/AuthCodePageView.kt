@@ -108,7 +108,7 @@ fun AuthCodePageView(modifier: Modifier = Modifier) {
 
                 if (BuildConfig.DEBUG && state.hasError) {
                     Components.Button(
-                        text = "Force Continue (Debug)",
+                        text = Strings.FORCE_CONTINUE_DEBUG,
                         color = Colors.debugForeground,
                         onClick = { viewModel.send(AuthCodePageReducer.Action.DebugForceContinueTapped) },
                         font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),

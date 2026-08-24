@@ -39,6 +39,7 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 
 private typealias Colors = VerifyNumberPageViewColors
 private typealias Floats = VerifyNumberPageViewFloats
+private typealias Strings = us.neotechnica.panther.modules.content.onboarding.constants.VerifyNumberPageViewStrings
 
 /**
  * The onboarding page for entering a phone number during sign-up.
@@ -100,7 +101,7 @@ fun VerifyNumberPageView(modifier: Modifier = Modifier) {
 
                 if (BuildConfig.DEBUG && state.hasError) {
                     Components.Button(
-                        text = "Force Continue (Debug)",
+                        text = Strings.FORCE_CONTINUE_DEBUG,
                         color = Colors.debugForeground,
                         onClick = { viewModel.send(VerifyNumberPageReducer.Action.DebugForceContinueTapped) },
                         font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),

@@ -8,8 +8,6 @@
 
 package us.neotechnica.panther.modules.content.user.views.chatpageview
 
-import android.graphics.BitmapFactory
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -25,7 +23,6 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -36,16 +33,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
+import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
 import us.neotechnica.panther.designsystem.modules.componentkit.components.ContextMenuHost
 import us.neotechnica.panther.designsystem.modules.componentkit.components.MessageInputBar
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
@@ -56,6 +49,7 @@ import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.content.user.components.ChatMessageCell
 import us.neotechnica.panther.modules.content.user.components.ChatMessageRowData
+import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.navigation.Route
@@ -78,6 +72,10 @@ import us.neotechnica.panther.networking.modules.session.services.SessionStore
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
+
+// MARK: - Constants Accessors
+
+private typealias Floats = ChatPageViewFloats
 
 /**
  * The chat page for a single conversation.
@@ -164,21 +162,19 @@ private fun ChatHeader(
     onInfo: () -> Unit,
 ) {
     val colors = LocalPantherColors.current
-    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier =
-                Modifier
-                    .align(Alignment.CenterStart)
-                    .size(40.dp)
-                    .shadow(2.dp, CircleShape)
-                    .clip(CircleShape)
-                    .background(colors.background)
-                    .clickable(onClick = onBack)
-                    .semantics { contentDescription = "Back" },
-        ) {
-            Components.Symbol("chevron.left", color = colors.titleText, modifier = Modifier.size(22.dp))
-        }
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Floats.headerHorizontalPadding, vertical = Floats.headerVerticalPadding),
+    ) {
+        CircleChipButton(
+            systemName = "chevron.left",
+            contentDescription = "Back",
+            onClick = onBack,
+            modifier = Modifier.align(Alignment.CenterStart),
+            tint = colors.titleText,
+        )
 
         val conversation = ConversationSessionService.currentConversation
         val isGroup = (conversation?.participants?.size ?: 2) > 2
@@ -190,73 +186,36 @@ private fun ChatHeader(
                     .clickable(onClick = onInfo)
                     .semantics { contentDescription = "Conversation info" },
         ) {
-            HeaderAvatar(
+            AvatarImageView(
+                modifier = Modifier.size(Floats.headerAvatarSize).zIndex(1f),
                 imageData = conversation?.metadata?.imageData,
-                isGroup = isGroup,
-                glyphColor = colors.background,
-                modifier = Modifier.zIndex(1f),
+                fallbackSymbol = if (isGroup) "person.2" else "person",
+                glyphSize = Floats.headerAvatarGlyphSize,
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier =
                     Modifier
-                        .offset(y = -HEADER_AVATAR_PILL_OVERLAP)
-                        .clip(RoundedCornerShape(16.dp))
+                        .offset(y = -Floats.headerAvatarPillOverlap)
+                        .clip(RoundedCornerShape(Floats.pillCornerRadius))
                         .background(colors.groupedContentBackground)
-                        .padding(start = 12.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+                        .padding(
+                            start = Floats.pillStartPadding,
+                            end = Floats.pillEndPadding,
+                            top = Floats.pillVerticalPadding,
+                            bottom = Floats.pillVerticalPadding,
+                        ),
             ) {
                 Components.Text(title.ifBlank { " " }, color = colors.titleText, font = Font.systemSemibold())
-                Components.Symbol("chevron.right", color = colors.subtitleText, modifier = Modifier.size(14.dp).padding(start = 2.dp))
+                Components.Symbol(
+                    "chevron.right",
+                    color = colors.subtitleText,
+                    modifier = Modifier.size(Floats.pillChevronSize).padding(start = Floats.pillChevronStartPadding),
+                )
             }
         }
     }
 }
-
-@Composable
-private fun HeaderAvatar(
-    imageData: ByteArray?,
-    isGroup: Boolean,
-    glyphColor: Color,
-    modifier: Modifier = Modifier,
-) {
-    val image =
-        remember(imageData) {
-            imageData?.takeIf { it.isNotEmpty() }?.let { bytes ->
-                runCatching { BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap() }.getOrNull()
-            }
-        }
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = modifier.size(HEADER_AVATAR_SIZE).clip(CircleShape).background(HEADER_AVATAR_BACKGROUND),
-    ) {
-        HeaderAvatarContent(image, isGroup, glyphColor)
-    }
-}
-
-@Composable
-private fun HeaderAvatarContent(
-    image: ImageBitmap?,
-    isGroup: Boolean,
-    glyphColor: Color,
-) {
-    when {
-        image != null ->
-            Image(
-                bitmap = image,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-
-        isGroup -> Components.Symbol("person.2", color = glyphColor, modifier = Modifier.size(HEADER_AVATAR_GLYPH_SIZE))
-        else -> Components.Symbol("person", color = glyphColor, modifier = Modifier.size(HEADER_AVATAR_GLYPH_SIZE))
-    }
-}
-
-private val HEADER_AVATAR_BACKGROUND = Color(0xFFC7C7CC)
-private val HEADER_AVATAR_SIZE = 44.dp
-private val HEADER_AVATAR_GLYPH_SIZE = 22.dp
-private val HEADER_AVATAR_PILL_OVERLAP = 3.dp
 
 @Composable
 private fun MessageList(

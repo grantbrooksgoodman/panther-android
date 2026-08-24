@@ -25,11 +25,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import us.neotechnica.panther.R
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
+import us.neotechnica.panther.modules.content.shared.constants.SplashViewFloats
 import us.neotechnica.panther.navigation.PendingChatNavigation
 import us.neotechnica.panther.navigation.RootNavigatorState
 import us.neotechnica.panther.navigation.RootRoute
@@ -43,6 +43,10 @@ import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.Dep
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
+
+// MARK: - Constants Accessors
+
+private typealias Floats = SplashViewFloats
 
 /**
  * The launch splash. Routes to the signed-in content flow when a user
@@ -60,7 +64,7 @@ fun SplashView(modifier: Modifier = Modifier) {
     val navigation = remember { DependencyValues.current.navigation }
 
     LaunchedEffect(Unit) {
-        delay(SPLASH_DELAY_MILLIS)
+        delay(Floats.SPLASH_DELAY_MILLIS)
 
         if (Persistent.string(PersistentStorageKey.currentUserID) == null) {
             navigation.navigate(Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.Onboarding)))
@@ -90,7 +94,7 @@ fun SplashView(modifier: Modifier = Modifier) {
             modifier
                 .fillMaxSize()
                 .background(colors.background),
-        verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
+        verticalArrangement = Arrangement.spacedBy(Floats.columnSpacing, Alignment.CenterVertically),
     ) {
         Image(
             painter = painterResource(R.drawable.hello_wordmark),
@@ -99,13 +103,11 @@ fun SplashView(modifier: Modifier = Modifier) {
             contentScale = ContentScale.FillBounds,
             modifier =
                 Modifier
-                    .width(150.dp)
-                    .height(70.dp)
-                    .padding(bottom = 5.dp),
+                    .width(Floats.wordmarkWidth)
+                    .height(Floats.wordmarkHeight)
+                    .padding(bottom = Floats.wordmarkBottomPadding),
         )
 
         CircularProgressIndicator(color = colors.titleText)
     }
 }
-
-private const val SPLASH_DELAY_MILLIS = 400L

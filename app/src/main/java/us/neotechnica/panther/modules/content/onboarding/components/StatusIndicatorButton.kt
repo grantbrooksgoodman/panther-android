@@ -28,6 +28,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.onboarding.constants.StatusIndicatorButtonColors
 import us.neotechnica.panther.modules.content.onboarding.constants.StatusIndicatorButtonFloats
+import us.neotechnica.panther.modules.content.onboarding.constants.StatusIndicatorButtonStrings
 
 /**
  * A capsule button that requests a permission and reflects its
@@ -92,7 +93,12 @@ private fun StatusCircle(isGranted: Boolean?) {
         when (isGranted) {
             true -> Components.Symbol("checkmark", color = Color.White, modifier = Modifier.size(glyphSize))
             false -> Components.Symbol("xmark", color = Color.White, modifier = Modifier.size(glyphSize))
-            null -> Components.Text("?", color = Color.White, font = Font.systemBold())
+            null ->
+                Components.Text(
+                    StatusIndicatorButtonStrings.UNDETERMINED_GLYPH,
+                    color = Color.White,
+                    font = Font.systemBold(),
+                )
         }
     }
 }

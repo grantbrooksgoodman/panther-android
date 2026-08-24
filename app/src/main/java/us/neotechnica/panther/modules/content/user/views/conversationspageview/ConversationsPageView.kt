@@ -8,7 +8,6 @@
 
 package us.neotechnica.panther.modules.content.user.views.conversationspageview
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,11 +18,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -35,19 +31,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
+import us.neotechnica.panther.designsystem.modules.componentkit.components.SearchBar
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.user.components.ConversationCell
-import us.neotechnica.panther.modules.content.user.components.ConversationCellTextInset
+import us.neotechnica.panther.modules.content.user.constants.ConversationCellFloats
+import us.neotechnica.panther.modules.content.user.constants.ConversationsPageViewFloats
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentNavigatorState
 import us.neotechnica.panther.navigation.UserContentRoute
@@ -58,6 +51,10 @@ import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.Dep
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
+
+// MARK: - Constants Accessors
+
+private typealias Floats = ConversationsPageViewFloats
 
 /**
  * The conversations list page. Renders the current user's
@@ -86,37 +83,34 @@ fun ConversationsPageView(modifier: Modifier = Modifier) {
 
     StatefulView(state = state.viewState, modifier = modifier) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp),
-            ) {
-                CircleChipButton("gearshape", "Settings") {
+            Header(
+                onSettings = {
                     navigation.navigate(
                         Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePath.Settings)),
                     )
-                }
-                Spacer(modifier = Modifier.weight(1f))
-                CircleChipButton("square.and.pencil", "New conversation") {
+                },
+                onNewChat = {
                     navigation.navigate(
                         Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePath.NewChat)),
                     )
-                }
-            }
+                },
+            )
 
             Components.Text(
                 state.strings.value(ConversationsPageViewStrings.navigationBarTitle),
                 color = colors.titleText,
                 font = Font.systemBold(FontScale.Large),
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = Floats.titleHorizontalPadding, vertical = Floats.titleVerticalPadding),
             )
 
-            SearchPill(
+            SearchBar(
                 value = state.searchQuery,
                 placeholder = state.strings.value(ConversationsPageViewStrings.searchBarPlaceholder),
                 onValueChange = { viewModel.send(ConversationsPageReducer.Action.SearchQueryChanged(it)) },
+                modifier = Modifier.padding(horizontal = Floats.searchHorizontalPadding),
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Floats.searchBottomSpacing))
 
             PullToRefreshBox(
                 isRefreshing = state.isRefreshing,
@@ -139,7 +133,7 @@ fun ConversationsPageView(modifier: Modifier = Modifier) {
                         item {
                             HorizontalDivider(
                                 color = colors.groupedContentBackground,
-                                modifier = Modifier.padding(start = ConversationCellTextInset),
+                                modifier = Modifier.padding(start = ConversationCellFloats.textInset),
                             )
                         }
                         items(conversations, key = { it.id.key }) { conversation ->
@@ -160,7 +154,7 @@ fun ConversationsPageView(modifier: Modifier = Modifier) {
                             )
                             HorizontalDivider(
                                 color = colors.groupedContentBackground,
-                                modifier = Modifier.padding(start = ConversationCellTextInset),
+                                modifier = Modifier.padding(start = ConversationCellFloats.textInset),
                             )
                         }
                     }
@@ -171,60 +165,23 @@ fun ConversationsPageView(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun CircleChipButton(
-    systemName: String,
-    contentDescription: String,
-    onClick: () -> Unit,
+private fun Header(
+    onSettings: () -> Unit,
+    onNewChat: () -> Unit,
 ) {
-    val colors = LocalPantherColors.current
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier =
-            Modifier
-                .size(40.dp)
-                .shadow(2.dp, CircleShape)
-                .clip(CircleShape)
-                .background(colors.background)
-                .clickable(onClick = onClick)
-                .semantics { this.contentDescription = contentDescription },
-    ) {
-        Components.Symbol(systemName, color = colors.accent, modifier = Modifier.size(22.dp))
-    }
-}
-
-@Composable
-private fun SearchPill(
-    value: String,
-    placeholder: String,
-    onValueChange: (String) -> Unit,
-) {
-    val colors = LocalPantherColors.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .height(SEARCH_BAR_HEIGHT)
-                .clip(CircleShape)
-                .background(colors.groupedContentBackground)
-                .padding(horizontal = 10.dp),
+                .padding(
+                    start = Floats.headerHorizontalPadding,
+                    end = Floats.headerHorizontalPadding,
+                    top = Floats.headerTopPadding,
+                ),
     ) {
-        Components.Symbol("magnifyingglass", color = colors.subtitleText, modifier = Modifier.size(18.dp))
-        Box(modifier = Modifier.weight(1f).padding(start = 6.dp)) {
-            if (value.isEmpty()) {
-                Components.Text(placeholder, color = colors.subtitleText)
-            }
-            BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
-                singleLine = true,
-                textStyle = Font.system.textStyle.copy(color = colors.titleText),
-                cursorBrush = SolidColor(colors.accent),
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
+        CircleChipButton(systemName = "gearshape", contentDescription = "Settings", onClick = onSettings)
+        Spacer(modifier = Modifier.weight(1f))
+        CircleChipButton(systemName = "square.and.pencil", contentDescription = "New conversation", onClick = onNewChat)
     }
 }
-
-private val SEARCH_BAR_HEIGHT = 38.dp

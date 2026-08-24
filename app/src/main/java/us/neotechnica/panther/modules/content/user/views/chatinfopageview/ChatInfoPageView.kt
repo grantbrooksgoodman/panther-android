@@ -8,8 +8,6 @@
 
 package us.neotechnica.panther.modules.content.user.views.chatinfopageview
 
-import android.graphics.BitmapFactory
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -37,21 +35,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
+import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.services.RegionDetailService
+import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewColors
+import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewFloats
+import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewStrings
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
@@ -62,6 +59,12 @@ import us.neotechnica.panther.networking.modules.session.extensions.users
 import us.neotechnica.panther.networking.modules.session.services.SessionStore
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import androidx.compose.material3.Text as Material3Text
+
+// MARK: - Constants Accessors
+
+private typealias Floats = ChatInfoPageViewFloats
+private typealias Colors = ChatInfoPageViewColors
+private typealias Strings = ChatInfoPageViewStrings
 
 /**
  * A conversation's info page: a large avatar, the conversation title, and
@@ -100,27 +103,53 @@ fun ChatInfoPageView(
         ) {
             Row(
                 horizontalArrangement = Arrangement.End,
-                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            start = Floats.headerHorizontalPadding,
+                            end = Floats.headerHorizontalPadding,
+                            top = Floats.headerTopPadding,
+                        ),
             ) {
-                DoneButton(onClick = { viewModel.send(ChatInfoPageReducer.Action.BackTapped) })
+                CircleChipButton(
+                    systemName = "checkmark",
+                    contentDescription = Strings.DONE,
+                    onClick = { viewModel.send(ChatInfoPageReducer.Action.BackTapped) },
+                    tint = colors.titleText,
+                    glyphSize = Floats.doneButtonGlyphSize,
+                )
             }
 
-            InfoAvatar(imageData = conversation?.metadata?.imageData, isGroup = state.isGroup)
+            AvatarImageView(
+                modifier = Modifier.padding(top = Floats.avatarTopPadding).size(Floats.avatarSize),
+                imageData = conversation?.metadata?.imageData,
+                fallbackSymbol = if (state.isGroup) "person.2" else "person",
+                glyphSize = Floats.avatarGlyphSize,
+            )
 
             Components.Text(
                 conversation?.let { infoTitle(it) }.orEmpty(),
                 color = colors.titleText,
                 font = Font.systemBold(FontScale.Large),
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 12.dp, start = 24.dp, end = 24.dp),
+                modifier =
+                    Modifier.padding(
+                        top = Floats.titleTopPadding,
+                        start = Floats.titleHorizontalPadding,
+                        end = Floats.titleHorizontalPadding,
+                    ),
             )
 
             if (state.isGroup && conversation != null) {
                 Components.CapsuleButton(
-                    "Change name and photo",
+                    Strings.CHANGE_NAME_AND_PHOTO,
                     onClick = { viewModel.send(ChatInfoPageReducer.Action.ChangeMetadataTapped) },
                     primary = true,
-                    modifier = Modifier.padding(top = 12.dp).padding(bottom = 5.dp),
+                    modifier =
+                        Modifier
+                            .padding(top = Floats.changeNameTopPadding)
+                            .padding(bottom = Floats.changeNameBottomPadding),
                 )
 
                 ParticipantsCard(
@@ -142,74 +171,8 @@ fun ChatInfoPageView(
                 )
             }
 
-            Spacer(modifier = Modifier.padding(bottom = 24.dp))
+            Spacer(modifier = Modifier.padding(bottom = Floats.bottomSpacerPadding))
         }
-    }
-}
-
-// MARK: - Header
-
-@Composable
-private fun DoneButton(onClick: () -> Unit) {
-    val colors = LocalPantherColors.current
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier =
-            Modifier
-                .size(40.dp)
-                .shadow(2.dp, CircleShape)
-                .clip(CircleShape)
-                .background(colors.background)
-                .clickable(onClick = onClick),
-    ) {
-        Components.Symbol("checkmark", color = colors.titleText, modifier = Modifier.size(20.dp))
-    }
-}
-
-// MARK: - Avatar
-
-@Composable
-private fun InfoAvatar(
-    imageData: ByteArray?,
-    isGroup: Boolean,
-) {
-    val colors = LocalPantherColors.current
-    val image =
-        remember(imageData) {
-            imageData?.takeIf { it.isNotEmpty() }?.let { bytes ->
-                runCatching { BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap() }.getOrNull()
-            }
-        }
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier =
-            Modifier
-                .padding(top = 20.dp)
-                .size(AVATAR_SIZE)
-                .clip(CircleShape)
-                .background(AVATAR_BACKGROUND),
-    ) {
-        AvatarContent(image, isGroup, colors.background)
-    }
-}
-
-@Composable
-private fun AvatarContent(
-    image: ImageBitmap?,
-    isGroup: Boolean,
-    glyphColor: Color,
-) {
-    when {
-        image != null ->
-            Image(
-                bitmap = image,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-
-        isGroup -> Components.Symbol("person.2", color = glyphColor, modifier = Modifier.size(AVATAR_GLYPH_SIZE))
-        else -> Components.Symbol("person", color = glyphColor, modifier = Modifier.size(AVATAR_GLYPH_SIZE))
     }
 }
 
@@ -225,7 +188,7 @@ private fun ParticipantsCard(
     InfoCard {
         ParticipantsHeaderRow(
             count = participants.size,
-            subtitle = participants.joinToString(", ") { it.displayName },
+            subtitle = participants.joinToString(Strings.PARTICIPANTS_SEPARATOR) { it.displayName },
             isExpanded = isExpanded,
             onToggle = onToggle,
         )
@@ -250,32 +213,36 @@ private fun ParticipantsHeaderRow(
     val colors = LocalPantherColors.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(CARD_PADDING),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(Floats.cardPadding),
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Components.Text("$count ${LocalizedStringKey.People.localized()}", color = colors.titleText, font = Font.systemBold())
+            Components.Text(
+                "$count ${LocalizedStringKey.People.localized()}",
+                color = colors.titleText,
+                font = Font.systemBold(),
+            )
             Material3Text(
                 subtitle,
                 color = colors.subtitleText,
                 style = Font.system(FontScale.Small).textStyle,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 2.dp),
+                modifier = Modifier.padding(top = Floats.subtitleTopPadding),
             )
         }
         Box(
             contentAlignment = Alignment.Center,
             modifier =
                 Modifier
-                    .padding(start = 8.dp)
-                    .size(24.dp)
+                    .padding(start = Floats.chevronBoxStartPadding)
+                    .size(Floats.chevronBoxSize)
                     .clip(CircleShape)
-                    .border(1.dp, colors.subtitleText, CircleShape),
+                    .border(Floats.chevronBoxBorderWidth, colors.subtitleText, CircleShape),
         ) {
             Components.Symbol(
                 if (isExpanded) "chevron.down" else "chevron.right",
                 color = colors.subtitleText,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(Floats.chevronGlyphSize),
             )
         }
     }
@@ -286,27 +253,26 @@ private fun ParticipantRow(participant: ParticipantRowData) {
     val colors = LocalPantherColors.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = CARD_HORIZONTAL_PADDING, vertical = 10.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Floats.cardHorizontalPadding, vertical = Floats.rowVerticalPadding),
     ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.size(ROW_AVATAR_SIZE).clip(CircleShape).background(AVATAR_BACKGROUND),
-        ) {
-            if (participant.initials.isNotBlank()) {
-                Components.Text(participant.initials, color = colors.background, font = Font.systemSemibold(FontScale.Small))
-            } else {
-                Components.Symbol("person", color = colors.background, modifier = Modifier.size(ROW_AVATAR_GLYPH_SIZE))
-            }
-        }
+        AvatarImageView(
+            modifier = Modifier.size(Floats.rowAvatarSize),
+            initials = participant.initials,
+            glyphSize = Floats.rowAvatarGlyphSize,
+            initialsFont = Font.systemSemibold(FontScale.Small),
+        )
         Components.Text(
             participant.displayName,
             color = colors.titleText,
             font = Font.systemSemibold(),
-            modifier = Modifier.padding(start = 12.dp),
+            modifier = Modifier.padding(start = Floats.rowTextStartPadding),
         )
         participant.languageCode?.let { LanguageBadge(it, participant.regionCode) }
         Spacer(modifier = Modifier.weight(1f))
-        Components.Symbol("chevron.right", color = colors.subtitleText, modifier = Modifier.size(16.dp))
+        Components.Symbol("chevron.right", color = colors.subtitleText, modifier = Modifier.size(Floats.chevronGlyphSize))
     }
 }
 
@@ -321,10 +287,13 @@ private fun LanguageBadge(
     Box(
         modifier =
             Modifier
-                .padding(start = 8.dp)
-                .clip(RoundedCornerShape(4.dp))
+                .padding(start = Floats.languageBadgeStartPadding)
+                .clip(RoundedCornerShape(Floats.languageBadgeCornerRadius))
                 .background(colors.groupedContentBackground)
-                .padding(horizontal = 6.dp, vertical = 2.dp),
+                .padding(
+                    horizontal = Floats.languageBadgeHorizontalPadding,
+                    vertical = Floats.languageBadgeVerticalPadding,
+                ),
     ) {
         Components.Text(label, color = colors.subtitleText, font = Font.systemMedium(FontScale.Small))
     }
@@ -335,15 +304,19 @@ private fun AddContactRow(onClick: () -> Unit) {
     val colors = LocalPantherColors.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = CARD_HORIZONTAL_PADDING, vertical = 10.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = Floats.cardHorizontalPadding, vertical = Floats.rowVerticalPadding),
     ) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(ROW_AVATAR_SIZE).clip(CircleShape).background(colors.groupedContentBackground),
+            modifier = Modifier.size(Floats.rowAvatarSize).clip(CircleShape).background(colors.groupedContentBackground),
         ) {
-            Components.Symbol("plus", color = colors.accent, modifier = Modifier.size(ROW_AVATAR_GLYPH_SIZE))
+            Components.Symbol("plus", color = colors.accent, modifier = Modifier.size(Floats.rowAvatarGlyphSize))
         }
-        Components.Text("Add Contact", color = colors.accent, modifier = Modifier.padding(start = 12.dp))
+        Components.Text(Strings.ADD_CONTACT, color = colors.accent, modifier = Modifier.padding(start = Floats.rowTextStartPadding))
     }
 }
 
@@ -360,15 +333,15 @@ private fun LeaveRow(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = CARD_MARGIN, vertical = 8.dp)
-                .clip(RoundedCornerShape(CARD_CORNER))
+                .padding(horizontal = Floats.cardHorizontalMargin, vertical = Floats.cardVerticalMargin)
+                .clip(RoundedCornerShape(Floats.cardCornerRadius))
                 .background(colors.background)
                 .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier)
-                .padding(CARD_PADDING),
+                .padding(Floats.cardPadding),
     ) {
         Components.Text(
-            "Leave this Conversation",
-            color = if (enabled) DESTRUCTIVE_COLOR else colors.subtitleText,
+            Strings.LEAVE_CONVERSATION,
+            color = if (enabled) Colors.destructive else colors.subtitleText,
         )
     }
 }
@@ -380,11 +353,11 @@ private fun OneToOneActionsCard(
     onDelete: () -> Unit,
 ) {
     InfoCard {
-        ActionCardRow("Block", onBlock)
+        ActionCardRow(Strings.BLOCK, onBlock)
         CardDivider()
-        ActionCardRow("Report", onReport)
+        ActionCardRow(Strings.REPORT, onReport)
         CardDivider()
-        ActionCardRow("Delete this Conversation", onDelete)
+        ActionCardRow(Strings.DELETE_CONVERSATION, onDelete)
     }
 }
 
@@ -394,9 +367,9 @@ private fun ActionCardRow(
     onClick: () -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(CARD_PADDING),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(Floats.cardPadding),
     ) {
-        Components.Text(title, color = DESTRUCTIVE_COLOR)
+        Components.Text(title, color = Colors.destructive)
     }
 }
 
@@ -409,8 +382,8 @@ private fun InfoCard(content: @Composable () -> Unit) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = CARD_MARGIN, vertical = 8.dp)
-                .clip(RoundedCornerShape(CARD_CORNER))
+                .padding(horizontal = Floats.cardHorizontalMargin, vertical = Floats.cardVerticalMargin)
+                .clip(RoundedCornerShape(Floats.cardCornerRadius))
                 .background(colors.background),
     ) {
         content()
@@ -422,7 +395,7 @@ private fun CardDivider() {
     val colors = LocalPantherColors.current
     HorizontalDivider(
         color = colors.groupedContentBackground,
-        modifier = Modifier.padding(start = CARD_HORIZONTAL_PADDING),
+        modifier = Modifier.padding(start = Floats.cardHorizontalPadding),
     )
 }
 
@@ -456,18 +429,7 @@ private fun infoTitle(conversation: Conversation): String {
     if (!name.isBangQualifiedEmpty && name.isNotBlank()) return name
 
     val users = conversation.users.orEmpty()
-    val first = users.firstOrNull() ?: return "Unknown"
+    val first = users.firstOrNull() ?: return Strings.UNKNOWN
     val base = ContactService.match(first.id)?.fullName ?: first.phoneNumber.formattedString()
-    return if (users.size > 1) "$base + ${users.size - 1}" else base
+    return if (users.size > 1) "$base${Strings.TITLE_ADDITIONAL_SEPARATOR}${users.size - 1}" else base
 }
-
-private val AVATAR_SIZE = 100.dp
-private val AVATAR_GLYPH_SIZE = 52.dp
-private val ROW_AVATAR_SIZE = 40.dp
-private val ROW_AVATAR_GLYPH_SIZE = 22.dp
-private val CARD_MARGIN = 16.dp
-private val CARD_CORNER = 16.dp
-private val CARD_PADDING = 16.dp
-private val CARD_HORIZONTAL_PADDING = 16.dp
-private val AVATAR_BACKGROUND = Color(0xFFC7C7CC)
-private val DESTRUCTIVE_COLOR = Color(0xFFFF3B30)

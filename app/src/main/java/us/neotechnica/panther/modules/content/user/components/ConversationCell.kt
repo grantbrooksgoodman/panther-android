@@ -8,8 +8,6 @@
 
 package us.neotechnica.panther.modules.content.user.components
 
-import android.graphics.BitmapFactory
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -27,21 +25,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.services.RegionDetailService
+import us.neotechnica.panther.modules.content.user.constants.ConversationCellColors
+import us.neotechnica.panther.modules.content.user.constants.ConversationCellFloats
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
 import androidx.compose.material3.Text as Material3Text
@@ -78,19 +73,36 @@ fun ConversationCell(
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier.fillMaxWidth().padding(start = 12.dp, end = 16.dp, top = 14.dp, bottom = 14.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(
+                    start = ConversationCellFloats.rowStartPadding,
+                    end = ConversationCellFloats.rowEndPadding,
+                    top = ConversationCellFloats.rowTopPadding,
+                    bottom = ConversationCellFloats.rowBottomPadding,
+                ),
     ) {
-        Box(modifier = Modifier.width(20.dp), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.width(ConversationCellFloats.unreadSlotWidth), contentAlignment = Alignment.Center) {
             if (data.isShowingUnreadIndicator) {
-                Box(modifier = Modifier.size(9.dp).clip(CircleShape).background(colors.accent))
+                Box(
+                    modifier =
+                        Modifier
+                            .size(ConversationCellFloats.unreadIndicatorSize)
+                            .clip(CircleShape)
+                            .background(colors.accent),
+                )
             }
         }
 
-        Avatar(data, colors.background, conversation.metadata.imageData)
+        Avatar(data, conversation.metadata.imageData)
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(ConversationCellFloats.titleAvatarSpacing))
 
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(ConversationCellFloats.subtitleSpacing),
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                     Material3Text(
@@ -103,12 +115,15 @@ fun ConversationCell(
                     )
                     data.otherLanguageCode?.let { LanguageChip(it, data.otherRegionCode) }
                 }
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(ConversationCellFloats.dateSpacerWidth))
                 Components.Text(data.dateLabelText, color = colors.subtitleText, font = Font.system(FontScale.Small))
                 Components.Symbol(
                     "chevron.right",
                     color = colors.subtitleText,
-                    modifier = Modifier.padding(start = 4.dp).size(14.dp),
+                    modifier =
+                        Modifier
+                            .padding(start = ConversationCellFloats.chevronStartPadding)
+                            .size(ConversationCellFloats.chevronSize),
                 )
             }
             Material3Text(
@@ -125,26 +140,19 @@ fun ConversationCell(
 @Composable
 private fun Avatar(
     data: ConversationCellViewData,
-    glyphColor: Color,
     imageData: ByteArray?,
 ) {
     val colors = LocalPantherColors.current
-    val image =
-        remember(imageData) {
-            imageData?.takeIf { it.isNotEmpty() }?.let { bytes ->
-                runCatching { BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap() }.getOrNull()
-            }
-        }
 
     // The badge lives in an unclipped outer box; only the inner disc is
     // circle-clipped, so the count badge is never cut off at the corner.
-    Box(modifier = Modifier.size(48.dp)) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.fillMaxSize().clip(CircleShape).background(AVATAR_BACKGROUND),
-        ) {
-            AvatarContent(data, glyphColor, image)
-        }
+    Box(modifier = Modifier.size(ConversationCellFloats.avatarSize)) {
+        AvatarImageView(
+            modifier = Modifier.fillMaxSize(),
+            imageData = imageData,
+            initials = if (!data.isGroup && data.hasContactName) data.initials else "",
+            fallbackSymbol = if (data.isGroup) "person.2" else "person",
+        )
 
         if (data.isGroup) {
             Box(
@@ -152,10 +160,10 @@ private fun Avatar(
                 modifier =
                     Modifier
                         .align(Alignment.BottomEnd)
-                        .size(18.dp)
+                        .size(ConversationCellFloats.badgeSize)
                         .clip(CircleShape)
                         .background(colors.background)
-                        .border(1.dp, AVATAR_BACKGROUND, CircleShape),
+                        .border(ConversationCellFloats.badgeBorderWidth, ConversationCellColors.badgeBorder, CircleShape),
             ) {
                 Components.Text(
                     data.participantCount.toString(),
@@ -164,31 +172,6 @@ private fun Avatar(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun AvatarContent(
-    data: ConversationCellViewData,
-    glyphColor: Color,
-    image: ImageBitmap?,
-) {
-    when {
-        image != null ->
-            Image(
-                bitmap = image,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-
-        data.isGroup ->
-            Components.Symbol("person.2", color = glyphColor, modifier = Modifier.size(24.dp))
-
-        data.hasContactName ->
-            Components.Text(data.initials, color = glyphColor, font = Font.systemSemibold())
-
-        else -> Components.Symbol("person", color = glyphColor, modifier = Modifier.size(24.dp))
     }
 }
 
@@ -205,10 +188,13 @@ private fun LanguageChip(
     Box(
         modifier =
             Modifier
-                .padding(start = 6.dp)
-                .clip(RoundedCornerShape(4.dp))
+                .padding(start = ConversationCellFloats.languageChipStartPadding)
+                .clip(RoundedCornerShape(ConversationCellFloats.languageChipCornerRadius))
                 .background(colors.groupedContentBackground)
-                .padding(horizontal = 5.dp, vertical = 1.dp),
+                .padding(
+                    horizontal = ConversationCellFloats.languageChipHorizontalPadding,
+                    vertical = ConversationCellFloats.languageChipVerticalPadding,
+                ),
     ) {
         Components.Text(label, color = colors.subtitleText, font = Font.systemMedium(FontScale.Small))
     }
@@ -234,12 +220,3 @@ private fun flagFor(languageCode: String): String? =
         "hi" -> "🇮🇳"
         else -> null
     }
-
-private val AVATAR_BACKGROUND = Color(0xFFC7C7CC)
-
-/**
- * The left inset at which a conversation cell's text begins (row start +
- * unread-dot slot + avatar + spacing). Row separators align to this so
- * they sit under the text, matching the iOS list.
- */
-internal val ConversationCellTextInset = 92.dp

@@ -35,5 +35,6 @@ object AuthCodePageViewColors {
 // MARK: - String
 
 object AuthCodePageViewStrings {
+    const val FORCE_CONTINUE_DEBUG = "Force Continue (Debug)"
     const val TEXT_FIELD_PLACEHOLDER = "000000"
 }

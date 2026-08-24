@@ -14,6 +14,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.content.onboarding.constants.OnboardingBackButtonStrings
 
 /**
  * The back affordance shown atop onboarding pages.
@@ -32,7 +33,7 @@ fun OnboardingBackButton(
 ) {
     val colors = LocalPantherColors.current
     Components.Button(
-        text = "‹ $text",
+        text = "${OnboardingBackButtonStrings.CHEVRON_PREFIX}$text",
         color = if (isEnabled) colors.accent else colors.disabled,
         onClick = { if (isEnabled) onClick() },
         font = Font.systemMedium(FontScale.Small),

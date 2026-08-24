@@ -12,17 +12,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,13 +27,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
+import us.neotechnica.panther.designsystem.modules.componentkit.components.SearchBar
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
@@ -48,11 +41,18 @@ import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.services.PhoneNumberService
 import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.content.user.components.ContactRow
+import us.neotechnica.panther.modules.content.user.constants.ContactSelectorPageViewFloats
+import us.neotechnica.panther.modules.content.user.constants.ContactSelectorPageViewStrings
 import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.schema.common.models.PhoneNumber
 import us.neotechnica.panther.networking.modules.user.services.UserService
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+
+// MARK: - Constants Accessors
+
+private typealias Floats = ContactSelectorPageViewFloats
+private typealias Strings = ContactSelectorPageViewStrings
 
 /**
  * A contact picker presented over the new-chat page: search the device's
@@ -82,7 +82,13 @@ fun ContactSelectorPageView(
     Box(modifier = modifier.fillMaxSize().background(colors.groupedContentBackground)) {
         Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
             Header(onDismiss = onDismiss)
-            SearchField(query = query, onQueryChange = { query = it })
+            SearchBar(
+                value = query,
+                placeholder = Strings.SEARCH_PLACEHOLDER,
+                onValueChange = { query = it },
+                modifier = Modifier.padding(horizontal = Floats.searchHorizontalPadding, vertical = Floats.searchVerticalPadding),
+                containerColor = colors.background,
+            )
 
             LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 items(filtered, key = { it.userID }) { contact ->
@@ -112,62 +118,21 @@ fun ContactSelectorPageView(
 @Composable
 private fun Header(onDismiss: () -> Unit) {
     val colors = LocalPantherColors.current
-    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = Floats.headerHorizontalPadding, vertical = Floats.headerVerticalPadding)) {
         Components.Text(
-            "Contacts",
+            Strings.TITLE,
             color = colors.titleText,
             font = Font.systemBold(FontScale.Large),
             modifier = Modifier.align(Alignment.Center),
         )
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier =
-                Modifier
-                    .align(Alignment.CenterEnd)
-                    .size(40.dp)
-                    .shadow(2.dp, CircleShape)
-                    .clip(CircleShape)
-                    .background(colors.background)
-                    .clickable(onClick = onDismiss),
-        ) {
-            Components.Symbol("xmark", color = colors.titleText, modifier = Modifier.size(18.dp))
-        }
-    }
-}
-
-// MARK: - Search
-
-@Composable
-private fun SearchField(
-    query: String,
-    onQueryChange: (String) -> Unit,
-) {
-    val colors = LocalPantherColors.current
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp)
-                .height(SEARCH_BAR_HEIGHT)
-                .clip(CircleShape)
-                .background(colors.background)
-                .padding(horizontal = 10.dp),
-    ) {
-        Components.Symbol("magnifyingglass", color = colors.subtitleText, modifier = Modifier.size(18.dp))
-        Box(modifier = Modifier.weight(1f).padding(start = 6.dp)) {
-            if (query.isEmpty()) {
-                Components.Text("Search contacts or enter phone number", color = colors.subtitleText)
-            }
-            BasicTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                singleLine = true,
-                textStyle = Font.system.textStyle.copy(color = colors.titleText),
-                cursorBrush = SolidColor(colors.accent),
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
+        CircleChipButton(
+            systemName = "xmark",
+            contentDescription = Strings.CLOSE,
+            onClick = onDismiss,
+            modifier = Modifier.align(Alignment.CenterEnd),
+            tint = colors.titleText,
+            glyphSize = Floats.doneButtonGlyphSize,
+        )
     }
 }
 
@@ -182,10 +147,14 @@ private fun NoResultsRow(
     if (isPhoneNumber) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.fillMaxWidth().clickable(onClick = onFindByPhone).padding(horizontal = 40.dp, vertical = 24.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onFindByPhone)
+                    .padding(horizontal = Floats.emptyStateHorizontalPadding, vertical = Floats.emptyStateVerticalPadding),
         ) {
             Components.Text(
-                "No contacts found.\nTap to search for users with this phone number.",
+                Strings.NO_CONTACTS_FOUND,
                 color = colors.accent,
                 textAlign = TextAlign.Center,
             )
@@ -193,9 +162,12 @@ private fun NoResultsRow(
     } else {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 40.dp, vertical = 24.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Floats.emptyStateHorizontalPadding, vertical = Floats.emptyStateVerticalPadding),
         ) {
-            Components.Text("No Results", color = colors.subtitleText, textAlign = TextAlign.Center)
+            Components.Text(Strings.NO_RESULTS, color = colors.subtitleText, textAlign = TextAlign.Center)
         }
     }
 }
@@ -236,5 +208,3 @@ private suspend fun resolveByPhone(
         Logger.log(exception)
     }
 }
-
-private val SEARCH_BAR_HEIGHT = 38.dp

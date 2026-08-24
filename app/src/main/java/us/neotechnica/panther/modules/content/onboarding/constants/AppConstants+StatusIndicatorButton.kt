@@ -32,3 +32,9 @@ object StatusIndicatorButtonColors {
     val grantedStatusForeground = Color(0xFF34C759)
     val undeterminedStatusForeground = Color(0xFFFF9500)
 }
+
+// MARK: - String
+
+object StatusIndicatorButtonStrings {
+    const val UNDETERMINED_GLYPH = "?"
+}

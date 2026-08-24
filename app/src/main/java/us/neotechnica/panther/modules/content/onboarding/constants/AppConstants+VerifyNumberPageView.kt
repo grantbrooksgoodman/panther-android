@@ -28,3 +28,9 @@ object VerifyNumberPageViewFloats {
 object VerifyNumberPageViewColors {
     val debugForeground = Color(0xFFFF9500)
 }
+
+// MARK: - String
+
+object VerifyNumberPageViewStrings {
+    const val FORCE_CONTINUE_DEBUG = "Force Continue (Debug)"
+}
