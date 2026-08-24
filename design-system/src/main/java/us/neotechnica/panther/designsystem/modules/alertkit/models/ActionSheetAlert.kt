@@ -24,9 +24,10 @@ import kotlin.coroutines.resume
  */
 class ActionSheetAlert(
     private val title: String? = null,
-    private val message: String,
+    private val message: String? = null,
     private val confirmButtonTitle: String,
     private val cancelButtonTitle: String = "Cancel",
+    private val isDestructive: Boolean = false,
 ) {
     // MARK: - Methods
 
@@ -43,6 +44,7 @@ class ActionSheetAlert(
                     message = message,
                     confirmButtonTitle = confirmButtonTitle,
                     cancelButtonTitle = cancelButtonTitle,
+                    isDestructive = isDestructive,
                 ) { result ->
                     AlertPresenter.dismiss()
                     if (continuation.isActive) continuation.resume(result)

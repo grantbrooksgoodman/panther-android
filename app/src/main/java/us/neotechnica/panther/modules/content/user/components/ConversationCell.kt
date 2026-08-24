@@ -8,6 +8,8 @@
 
 package us.neotechnica.panther.modules.content.user.components
 
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -25,16 +27,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
 import androidx.compose.material3.Text as Material3Text
@@ -79,7 +86,7 @@ fun ConversationCell(
             }
         }
 
-        Avatar(data, colors.background)
+        Avatar(data, colors.background, conversation.metadata.imageData)
 
         Spacer(modifier = Modifier.width(12.dp))
 
@@ -94,7 +101,7 @@ fun ConversationCell(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                     )
-                    data.otherLanguageCode?.let { LanguageChip(it) }
+                    data.otherLanguageCode?.let { LanguageChip(it, data.otherRegionCode) }
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Components.Text(data.dateLabelText, color = colors.subtitleText, font = Font.system(FontScale.Small))
@@ -119,8 +126,16 @@ fun ConversationCell(
 private fun Avatar(
     data: ConversationCellViewData,
     glyphColor: Color,
+    imageData: ByteArray?,
 ) {
     val colors = LocalPantherColors.current
+    val image =
+        remember(imageData) {
+            imageData?.takeIf { it.isNotEmpty() }?.let { bytes ->
+                runCatching { BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap() }.getOrNull()
+            }
+        }
+
     // The badge lives in an unclipped outer box; only the inner disc is
     // circle-clipped, so the count badge is never cut off at the corner.
     Box(modifier = Modifier.size(48.dp)) {
@@ -128,12 +143,7 @@ private fun Avatar(
             contentAlignment = Alignment.Center,
             modifier = Modifier.fillMaxSize().clip(CircleShape).background(AVATAR_BACKGROUND),
         ) {
-            when {
-                data.hasContactName && !data.isGroup ->
-                    Components.Text(data.initials, color = glyphColor, font = Font.systemSemibold())
-
-                else -> Components.Symbol("person", color = glyphColor, modifier = Modifier.size(24.dp))
-            }
+            AvatarContent(data, glyphColor, image)
         }
 
         if (data.isGroup) {
@@ -158,9 +168,39 @@ private fun Avatar(
 }
 
 @Composable
-private fun LanguageChip(languageCode: String) {
+private fun AvatarContent(
+    data: ConversationCellViewData,
+    glyphColor: Color,
+    image: ImageBitmap?,
+) {
+    when {
+        image != null ->
+            Image(
+                bitmap = image,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+
+        data.isGroup ->
+            Components.Symbol("person.2", color = glyphColor, modifier = Modifier.size(24.dp))
+
+        data.hasContactName ->
+            Components.Text(data.initials, color = glyphColor, font = Font.systemSemibold())
+
+        else -> Components.Symbol("person", color = glyphColor, modifier = Modifier.size(24.dp))
+    }
+}
+
+@Composable
+private fun LanguageChip(
+    languageCode: String,
+    regionCode: String?,
+) {
     val colors = LocalPantherColors.current
-    val flag = flagFor(languageCode)
+    // Prefer the flag of the user's phone-number region (e.g. +1 → 🇺🇸), falling back to the
+    // language code's flag, mirroring the iOS `UserInfoBadgeView`.
+    val flag = regionCode?.let { RegionDetailService.emojiFlag(it) }?.ifBlank { null } ?: flagFor(languageCode)
     val label = languageCode.uppercase() + if (flag != null) " $flag" else ""
     Box(
         modifier =

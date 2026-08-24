@@ -39,15 +39,15 @@ val Activity.description: String
         val actor = "⌘${displayName(userID)}⌘"
         return when (val action = action) {
             is ActivityAction.AddedToConversation ->
-                "$actor added ⌘${displayName(action.userID)}⌘"
-            ActivityAction.ChangedGroupPhoto -> "$actor changed the group photo"
-            ActivityAction.LeftConversation -> "$actor left"
+                "$actor added ⌘${displayName(action.userID)}⌘ to the conversation."
+            ActivityAction.ChangedGroupPhoto -> "$actor changed the group photo."
+            ActivityAction.LeftConversation -> "$actor left the conversation."
             is ActivityAction.RemovedFromConversation ->
-                "$actor removed ⌘${displayName(action.userID)}⌘"
-            ActivityAction.RemovedGroupPhoto -> "$actor removed the group photo"
-            ActivityAction.RemovedName -> "$actor removed the conversation name"
+                "$actor removed ⌘${displayName(action.userID)}⌘ from the conversation."
+            ActivityAction.RemovedGroupPhoto -> "$actor removed the group photo."
+            ActivityAction.RemovedName -> "$actor removed the conversation name."
             is ActivityAction.RenamedConversation ->
-                "$actor renamed the conversation to ⌘\"${action.name}\"⌘"
+                "$actor named the conversation ⌘“${action.name}”⌘."
         }
     }
 

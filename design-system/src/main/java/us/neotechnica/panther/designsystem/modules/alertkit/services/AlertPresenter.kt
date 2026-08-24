@@ -63,9 +63,10 @@ sealed interface PresentedAlert {
     /** A bottom action sheet resolving to a Boolean. */
     data class ActionSheet(
         val title: String?,
-        val message: String,
+        val message: String?,
         val confirmButtonTitle: String,
         val cancelButtonTitle: String,
+        val isDestructive: Boolean,
         val onResult: (Boolean) -> Unit,
     ) : PresentedAlert
 

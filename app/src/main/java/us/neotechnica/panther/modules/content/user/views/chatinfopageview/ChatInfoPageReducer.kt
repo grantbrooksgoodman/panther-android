@@ -8,11 +8,14 @@
 
 package us.neotechnica.panther.modules.content.user.views.chatinfopageview
 
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
+import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAlert
 import us.neotechnica.panther.modules.common.contacts.models.ContactMatch
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
 import us.neotechnica.panther.networking.modules.schema.user.models.User
 import us.neotechnica.panther.networking.modules.session.extensions.currentUserID
@@ -43,11 +46,9 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
 
         data object Reload : Action
 
-        data class RenameChanged(
-            val text: String,
-        ) : Action
+        data object ChangeMetadataTapped : Action
 
-        data object RenameSubmitted : Action
+        data object ToggleExpanded : Action
 
         data class AddParticipant(
             val userID: String,
@@ -77,7 +78,7 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
     data class State(
         val conversationIDKey: String = "",
         val conversation: Conversation? = null,
-        val renameText: String = "",
+        val isExpanded: Boolean = true,
         val isBusy: Boolean = false,
     ) {
         val isGroup: Boolean
@@ -102,30 +103,17 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         when (action) {
             is Action.ViewFirstAppeared -> {
                 val conversation = SessionStore.getConversation(action.conversationIDKey)
-                ReduceResult(
-                    state.copy(
-                        conversationIDKey = action.conversationIDKey,
-                        conversation = conversation,
-                        renameText =
-                            conversation
-                                ?.metadata
-                                ?.name
-                                ?.takeUnless { it == "!" }
-                                .orEmpty(),
-                    ),
-                )
+                ReduceResult(state.copy(conversationIDKey = action.conversationIDKey, conversation = conversation))
             }
 
             Action.Reload ->
                 ReduceResult(state.copy(conversation = SessionStore.getConversation(state.conversationIDKey)))
 
-            is Action.RenameChanged ->
-                ReduceResult(state.copy(renameText = action.text))
+            Action.ToggleExpanded ->
+                ReduceResult(state.copy(isExpanded = !state.isExpanded))
 
-            Action.RenameSubmitted ->
-                mutation(state) { conversation ->
-                    ActivitySessionService.renameConversation(conversation, state.renameText)
-                }
+            Action.ChangeMetadataTapped ->
+                ReduceResult(state, changeMetadataEffect(state))
 
             is Action.AddParticipant ->
                 mutation(state) { conversation ->
@@ -144,10 +132,7 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
                 moderation(state) { ModerationSessionService.reportUsers(state.otherParticipantIDs) }
 
             Action.LeaveTapped ->
-                leaveOrDelete(state) { conversation ->
-                    val currentUserID = User.currentUserID ?: return@leaveOrDelete
-                    ActivitySessionService.removeFromConversation(currentUserID, conversation)
-                }
+                ReduceResult(state, leaveConversationEffect(state))
 
             Action.DeleteTapped ->
                 leaveOrDelete(state) { conversation -> ConversationSessionService.deleteConversation(conversation) }
@@ -164,6 +149,53 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         }
 
     // MARK: - Auxiliary
+
+    private fun changeMetadataEffect(state: State): Effect<Action> =
+        Effect.run { send ->
+            val conversation = state.conversation ?: return@run
+            val current =
+                conversation.metadata.name
+                    .takeUnless { it.isBangQualifiedEmpty }
+                    .orEmpty()
+            val name =
+                TextInputAlert(
+                    message = "Choose a new name for this conversation:",
+                    initialText = current,
+                    confirmButtonTitle = "Done",
+                ).present() ?: return@run
+            try {
+                ActivitySessionService.renameConversation(conversation, name)
+                send(Action.Reload)
+            } catch (exception: Exception) {
+                send(Action.Failed(exception))
+            }
+        }
+
+    private fun leaveConversationEffect(state: State): Effect<Action> =
+        Effect.run { send ->
+            val conversation = state.conversation ?: return@run
+            val currentUserID = User.currentUserID ?: return@run
+            val name =
+                conversation.metadata.name
+                    .takeUnless { it.isBangQualifiedEmpty }
+                    ?.ifBlank { null } ?: "Conversation"
+
+            val confirmed =
+                ActionSheetAlert(
+                    title = "Leave $name",
+                    message = "Are you sure you'd like to leave this conversation?",
+                    confirmButtonTitle = "Confirm",
+                    isDestructive = true,
+                ).present()
+            if (!confirmed) return@run
+
+            try {
+                ActivitySessionService.removeFromConversation(currentUserID, conversation)
+                DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
+            } catch (exception: Exception) {
+                send(Action.Failed(exception))
+            }
+        }
 
     private fun mutation(
         state: State,

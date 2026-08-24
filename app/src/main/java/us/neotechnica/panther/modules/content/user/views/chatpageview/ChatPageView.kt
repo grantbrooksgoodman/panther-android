@@ -8,6 +8,8 @@
 
 package us.neotechnica.panther.modules.content.user.views.chatpageview
 
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,15 +18,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -36,14 +38,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.ContextMenuHost
+import us.neotechnica.panther.designsystem.modules.componentkit.components.MessageInputBar
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.common.contacts.models.ContactMatch
+import us.neotechnica.panther.modules.common.contacts.services.ContactService
+import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.content.user.components.ChatMessageCell
 import us.neotechnica.panther.modules.content.user.components.ChatMessageRowData
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
@@ -52,17 +62,22 @@ import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentNavigatorState
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.networking.modules.schema.message.models.Message
+import us.neotechnica.panther.networking.modules.schema.user.models.User
 import us.neotechnica.panther.networking.modules.session.extensions.currentConversationDidBecomeUnavailable
 import us.neotechnica.panther.networking.modules.session.extensions.isFromCurrentUser
 import us.neotechnica.panther.networking.modules.session.extensions.isOutboxMessage
+import us.neotechnica.panther.networking.modules.session.extensions.isSystemMessage
+import us.neotechnica.panther.networking.modules.session.extensions.reactions
 import us.neotechnica.panther.networking.modules.session.extensions.sessionStoreDidChange
+import us.neotechnica.panther.networking.modules.session.extensions.users
 import us.neotechnica.panther.networking.modules.session.models.OutboxEntry
 import us.neotechnica.panther.networking.modules.session.services.ConversationSessionService
 import us.neotechnica.panther.networking.modules.session.services.MessageOutboxService
+import us.neotechnica.panther.networking.modules.session.services.SessionStore
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
-import androidx.compose.material3.Text as Material3Text
 
 /**
  * The chat page for a single conversation.
@@ -106,7 +121,7 @@ fun ChatPageView(
 
     StatefulView(state = state.viewState, modifier = modifier) {
         ContextMenuHost(Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
                 ChatHeader(
                     title = state.title,
                     onBack = {
@@ -129,12 +144,13 @@ fun ChatPageView(
                     onToggleAlternate = { viewModel.send(ChatPageReducer.Action.ToggleAlternate(it)) },
                 )
 
-                InputBar(
+                MessageInputBar(
                     text = state.inputText,
+                    placeholder = LocalizedStringKey.NewMessage.localized(),
                     isSending = state.isSending,
                     onTextChange = { viewModel.send(ChatPageReducer.Action.InputChanged(it)) },
                     onSend = { viewModel.send(ChatPageReducer.Action.SendTapped) },
-                    accent = colors.accent,
+                    onAttach = {},
                 )
             }
         }
@@ -161,28 +177,30 @@ private fun ChatHeader(
                     .clickable(onClick = onBack)
                     .semantics { contentDescription = "Back" },
         ) {
-            Components.Symbol("chevron.left", color = colors.accent, modifier = Modifier.size(22.dp))
+            Components.Symbol("chevron.left", color = colors.titleText, modifier = Modifier.size(22.dp))
         }
 
+        val conversation = ConversationSessionService.currentConversation
+        val isGroup = (conversation?.participants?.size ?: 2) > 2
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
             modifier =
                 Modifier
                     .align(Alignment.Center)
                     .clickable(onClick = onInfo)
                     .semantics { contentDescription = "Conversation info" },
         ) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.size(36.dp).clip(CircleShape).background(HEADER_AVATAR_BACKGROUND),
-            ) {
-                Components.Symbol("person", color = colors.background, modifier = Modifier.size(18.dp))
-            }
+            HeaderAvatar(
+                imageData = conversation?.metadata?.imageData,
+                isGroup = isGroup,
+                glyphColor = colors.background,
+                modifier = Modifier.zIndex(1f),
+            )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier =
                     Modifier
+                        .offset(y = -HEADER_AVATAR_PILL_OVERLAP)
                         .clip(RoundedCornerShape(16.dp))
                         .background(colors.groupedContentBackground)
                         .padding(start = 12.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
@@ -194,7 +212,51 @@ private fun ChatHeader(
     }
 }
 
+@Composable
+private fun HeaderAvatar(
+    imageData: ByteArray?,
+    isGroup: Boolean,
+    glyphColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val image =
+        remember(imageData) {
+            imageData?.takeIf { it.isNotEmpty() }?.let { bytes ->
+                runCatching { BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap() }.getOrNull()
+            }
+        }
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier.size(HEADER_AVATAR_SIZE).clip(CircleShape).background(HEADER_AVATAR_BACKGROUND),
+    ) {
+        HeaderAvatarContent(image, isGroup, glyphColor)
+    }
+}
+
+@Composable
+private fun HeaderAvatarContent(
+    image: ImageBitmap?,
+    isGroup: Boolean,
+    glyphColor: Color,
+) {
+    when {
+        image != null ->
+            Image(
+                bitmap = image,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+
+        isGroup -> Components.Symbol("person.2", color = glyphColor, modifier = Modifier.size(HEADER_AVATAR_GLYPH_SIZE))
+        else -> Components.Symbol("person", color = glyphColor, modifier = Modifier.size(HEADER_AVATAR_GLYPH_SIZE))
+    }
+}
+
 private val HEADER_AVATAR_BACKGROUND = Color(0xFFC7C7CC)
+private val HEADER_AVATAR_SIZE = 44.dp
+private val HEADER_AVATAR_GLYPH_SIZE = 22.dp
+private val HEADER_AVATAR_PILL_OVERLAP = 3.dp
 
 @Composable
 private fun MessageList(
@@ -204,10 +266,11 @@ private fun MessageList(
 ) {
     val listState = rememberLazyListState()
     val messages = state.messages
+    val users = ConversationSessionService.currentConversation?.users.orEmpty()
     val isGroup = (ConversationSessionService.currentConversation?.participants?.size ?: 2) > 2
     val lastConfirmedOwnIndex = messages.indexOfLast { it.isFromCurrentUser && !it.isOutboxMessage }
 
-    LaunchedEffect(messages.size, state.changeToken) {
+    LaunchedEffect(messages.size, state.changeToken, state.translationsByID.size) {
         if (messages.isNotEmpty()) listState.scrollToItem(messages.lastIndex)
     }
 
@@ -216,6 +279,11 @@ private fun MessageList(
             val isFailed =
                 message.isOutboxMessage &&
                     MessageOutboxService.entry(message.id)?.state == OutboxEntry.State.FAILED
+
+            val showSender = isGroup && !message.isFromCurrentUser && !message.isSystemMessage
+            val firstOfRun = messages.getOrNull(index - 1)?.fromAccountID != message.fromAccountID
+            val lastOfRun = messages.getOrNull(index + 1)?.fromAccountID != message.fromAccountID
+            val senderMatch = if (showSender) ContactService.match(message.fromAccountID) else null
 
             ChatMessageCell(
                 row =
@@ -227,7 +295,15 @@ private fun MessageList(
                         isLastConfirmedOwnMessage = index == lastConfirmedOwnIndex,
                         isGroup = isGroup,
                         isFailed = isFailed,
-                        senderName = null,
+                        senderName = if (showSender && firstOfRun) senderName(message, senderMatch, users) else null,
+                        senderInitials = senderMatch?.initials ?: "",
+                        showSenderAvatar = showSender && lastOfRun,
+                        reactionsText =
+                            message.reactions
+                                .orEmpty()
+                                .map { it.style }
+                                .sortedBy { it.orderValue }
+                                .joinToString(separator = "") { it.emojiValue },
                     ),
                 onToggleAlternate = onToggleAlternate,
             )
@@ -235,41 +311,12 @@ private fun MessageList(
     }
 }
 
-@Composable
-private fun InputBar(
-    text: String,
-    isSending: Boolean,
-    onTextChange: (String) -> Unit,
-    onSend: () -> Unit,
-    accent: androidx.compose.ui.graphics.Color,
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-    ) {
-        OutlinedTextField(
-            value = text,
-            onValueChange = onTextChange,
-            placeholder = { Material3Text(LocalizedStringKey.NewMessage.localized()) },
-            modifier = Modifier.weight(1f),
-        )
-
-        val canSend = text.isNotBlank() && !isSending
-        IconButton(
-            onClick = onSend,
-            enabled = canSend,
-            modifier = Modifier.padding(start = 4.dp).semantics { contentDescription = "Send" },
-        ) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.size(40.dp).clip(CircleShape),
-            ) {
-                Components.Symbol(
-                    "paperplane.fill",
-                    color = if (canSend) accent else accent.copy(alpha = 0.4f),
-                    modifier = Modifier.size(22.dp),
-                )
-            }
-        }
-    }
+private fun senderName(
+    message: Message,
+    match: ContactMatch?,
+    users: List<User>,
+): String {
+    match?.let { return it.fullName }
+    val user = users.firstOrNull { it.id == message.fromAccountID } ?: SessionStore.users[message.fromAccountID]
+    return user?.phoneNumber?.formattedString() ?: message.fromAccountID
 }

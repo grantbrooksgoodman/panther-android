@@ -10,7 +10,7 @@ package us.neotechnica.panther.modules.content.onboarding.views.authcodepageview
 
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
-import us.neotechnica.panther.modules.content.onboarding.components.InstructionViewStrings
+import us.neotechnica.panther.modules.content.onboarding.models.InstructionViewStrings
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
 import us.neotechnica.panther.navigation.OnboardingNavigatorState
 import us.neotechnica.panther.navigation.OnboardingRoute

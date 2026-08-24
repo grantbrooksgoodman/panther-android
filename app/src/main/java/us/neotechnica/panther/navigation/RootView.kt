@@ -15,6 +15,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,8 +50,8 @@ fun RootView(modifier: Modifier = Modifier) {
         },
     ) { modal ->
         when (modal) {
-            RootNavigatorState.ModalPath.Onboarding -> OnboardingContainer(Modifier.fillMaxSize())
-            RootNavigatorState.ModalPath.Splash -> SplashView(Modifier.fillMaxSize())
+            RootNavigatorState.ModalPath.Onboarding -> OnboardingContainer(Modifier.fillMaxSize().systemBarsPadding())
+            RootNavigatorState.ModalPath.Splash -> SplashView(Modifier.fillMaxSize().systemBarsPadding())
             RootNavigatorState.ModalPath.UserContent -> UserContentContainer(Modifier.fillMaxSize())
             null -> Box(Modifier.fillMaxSize())
         }

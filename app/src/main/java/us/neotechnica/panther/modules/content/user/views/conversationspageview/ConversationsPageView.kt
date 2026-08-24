@@ -23,11 +23,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -39,7 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -60,7 +58,6 @@ import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.Dep
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
-import androidx.compose.material3.Text as Material3Text
 
 /**
  * The conversations list page. Renders the current user's
@@ -195,7 +192,6 @@ private fun CircleChipButton(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SearchPill(
     value: String,
@@ -203,21 +199,32 @@ private fun SearchPill(
     onValueChange: (String) -> Unit,
 ) {
     val colors = LocalPantherColors.current
-    TextField(
-        value = value,
-        onValueChange = onValueChange,
-        singleLine = true,
-        leadingIcon = { Components.Symbol("magnifyingglass", color = colors.subtitleText, modifier = Modifier.size(20.dp)) },
-        placeholder = { Material3Text(placeholder, color = colors.subtitleText) },
-        shape = RoundedCornerShape(12.dp),
-        colors =
-            TextFieldDefaults.colors(
-                focusedContainerColor = colors.groupedContentBackground,
-                unfocusedContainerColor = colors.groupedContentBackground,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent,
-            ),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-    )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .height(SEARCH_BAR_HEIGHT)
+                .clip(CircleShape)
+                .background(colors.groupedContentBackground)
+                .padding(horizontal = 10.dp),
+    ) {
+        Components.Symbol("magnifyingglass", color = colors.subtitleText, modifier = Modifier.size(18.dp))
+        Box(modifier = Modifier.weight(1f).padding(start = 6.dp)) {
+            if (value.isEmpty()) {
+                Components.Text(placeholder, color = colors.subtitleText)
+            }
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                textStyle = Font.system.textStyle.copy(color = colors.titleText),
+                cursorBrush = SolidColor(colors.accent),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
 }
+
+private val SEARCH_BAR_HEIGHT = 38.dp

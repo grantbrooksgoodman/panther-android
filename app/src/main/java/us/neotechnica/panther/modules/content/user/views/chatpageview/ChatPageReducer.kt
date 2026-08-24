@@ -9,6 +9,7 @@
 package us.neotechnica.panther.modules.content.user.views.chatpageview
 
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
+import us.neotechnica.panther.modules.content.user.extensions.chatPageHeaderLabelText
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentRoute
@@ -165,7 +166,10 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
 
             ConversationSessionService.setCurrentConversation(conversation)
             runCatching {
-                send(Action.TitleResolved(ConversationCellViewData.build(conversation, RuntimeStorage.languageCode).title))
+                val title =
+                    conversation.chatPageHeaderLabelText
+                        ?: ConversationCellViewData.build(conversation, RuntimeStorage.languageCode).title
+                send(Action.TitleResolved(title))
             }
             markCurrentConversationAsRead()
         }

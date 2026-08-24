@@ -172,8 +172,8 @@ private fun ContextMenuOverlay(
 
     Box(
         Modifier
-            .fillMaxSize()
             .background(Color.Black.copy(alpha = SCRIM_ALPHA * progress.value))
+            .fillMaxSize()
             .pointerInput(Unit) { detectTapGestures { onDismiss() } },
     ) {
         // Lifted bubble copy, anchored exactly over its origin.

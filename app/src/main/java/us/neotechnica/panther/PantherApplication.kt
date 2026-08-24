@@ -84,6 +84,7 @@ class PantherApplication : Application() {
             codeName = CODE_NAME,
             finalName = FINAL_NAME,
             bundleVersion = BuildConfig.VERSION_NAME,
+            environment = BuildConfig.NETWORK_ENVIRONMENT,
             milestone = if (BuildConfig.DEBUG) Milestone.ALPHA else Milestone.GENERAL_RELEASE,
             buildDate = Date(buildDate * MILLIS_PER_SECOND),
             firstCompileDate = Date(firstCompileDate * MILLIS_PER_SECOND),

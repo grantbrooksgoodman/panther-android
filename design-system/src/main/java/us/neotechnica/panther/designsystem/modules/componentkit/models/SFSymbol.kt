@@ -10,15 +10,19 @@ package us.neotechnica.panther.designsystem.modules.componentkit.models
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Notifications
@@ -57,9 +61,12 @@ object SFSymbol {
     private val SYMBOLS: Map<String, ImageVector> =
         mapOf(
             "plus" to Icons.Filled.Add,
+            "arrow.up" to Icons.Filled.ArrowUpward,
             "checkmark" to Icons.Filled.Check,
             "xmark" to Icons.Filled.Close,
             "trash" to Icons.Filled.Delete,
+            "trash.fill" to Icons.Filled.Delete,
+            "hand.raised.fill" to Icons.AutoMirrored.Filled.Logout,
             "heart" to Icons.Filled.Favorite,
             "heart.fill" to Icons.Filled.Favorite,
             "ellipsis" to Icons.Filled.MoreHoriz,
@@ -67,6 +74,8 @@ object SFSymbol {
             "bell.fill" to Icons.Filled.Notifications,
             "person" to Icons.Filled.Person,
             "person.fill" to Icons.Filled.Person,
+            "person.2" to Icons.Filled.Group,
+            "person.2.fill" to Icons.Filled.Group,
             "magnifyingglass" to Icons.Filled.Search,
             "gear" to Icons.Filled.Settings,
             "gearshape" to Icons.Filled.Settings,
@@ -75,6 +84,7 @@ object SFSymbol {
             "star.fill" to Icons.Filled.Star,
             "chevron.left" to Icons.AutoMirrored.Filled.KeyboardArrowLeft,
             "chevron.right" to Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            "chevron.down" to Icons.Filled.KeyboardArrowDown,
             "paperplane" to Icons.AutoMirrored.Filled.Send,
             "paperplane.fill" to Icons.AutoMirrored.Filled.Send,
             "doc.on.doc" to Icons.Filled.ContentCopy,

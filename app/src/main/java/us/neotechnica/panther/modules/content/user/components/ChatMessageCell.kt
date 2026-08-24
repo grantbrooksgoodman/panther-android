@@ -13,9 +13,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,6 +27,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.MessageContextMenu
@@ -38,10 +46,12 @@ import us.neotechnica.panther.networking.modules.schema.message.models.Message
 import us.neotechnica.panther.networking.modules.session.extensions.isFromCurrentUser
 import us.neotechnica.panther.networking.modules.session.extensions.isSystemMessage
 import us.neotechnica.panther.networking.modules.session.extensions.otherParticipantReadReceipt
+import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import androidx.compose.material3.Text as Material3Text
 
 /**
  * A single chat row: an optional day separator, the message bubble
@@ -61,21 +71,27 @@ fun ChatMessageCell(
     val message = row.message
 
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)) {
-        separatorText(message, row.previousMessage)?.let { separator ->
-            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
-                Components.Text(separator, color = colors.subtitleText, font = Font.systemMedium(FontScale.Small))
-            }
-        }
-
         if (message.isSystemMessage) {
-            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), contentAlignment = Alignment.Center) {
-                Components.Text(
-                    sanitized(row.translation?.output ?: ""),
+            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+                Material3Text(
+                    text = systemMessageString(row.translation?.output ?: "", message.sentDate),
                     color = colors.subtitleText,
-                    font = Font.system(FontScale.Small),
+                    style = Font.system(FontScale.Small).textStyle,
+                    textAlign = TextAlign.Center,
                 )
             }
             return@Column
+        }
+
+        separatorDate(message, row.previousMessage)?.let { date ->
+            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+                Material3Text(
+                    text = separatorAnnotatedString(date),
+                    color = colors.subtitleText,
+                    style = Font.system(FontScale.Small).textStyle,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
 
         val isOwn = message.isFromCurrentUser
@@ -83,8 +99,12 @@ fun ChatMessageCell(
 
         Row(
             horizontalArrangement = if (isOwn) Arrangement.End else Arrangement.Start,
+            verticalAlignment = Alignment.Bottom,
             modifier = Modifier.fillMaxWidth(),
         ) {
+            if (row.isGroup && !isOwn) {
+                SenderAvatar(show = row.showSenderAvatar, initials = row.senderInitials)
+            }
             MessageContextMenu(
                 actions = actionsFor(row, onToggleAlternate) { clipboard.setText(AnnotatedString(displayText)) },
                 alignment = if (isOwn) ContextMenuAlignment.TRAILING else ContextMenuAlignment.LEADING,
@@ -98,32 +118,103 @@ fun ChatMessageCell(
                             modifier = Modifier.padding(start = 12.dp, bottom = 2.dp),
                         )
                     }
-                    MessageBubble(displayText, isOwn, colors.senderBubble, colors.receiverBubble, colors.titleText)
+                    MessageBubble(
+                        displayText,
+                        isOwn,
+                        colors.senderBubble,
+                        colors.receiverBubble,
+                        colors.titleText,
+                        isAlternate = row.showAlternate,
+                    )
                 }
             }
         }
 
-        if (isOwn && row.isLastConfirmedOwnMessage && !row.isGroup) {
-            statusText(message, row.isFailed)?.let { (text, isError) ->
-                Box(modifier = Modifier.fillMaxWidth().padding(top = 2.dp, end = 4.dp), contentAlignment = Alignment.CenterEnd) {
-                    Components.Text(
-                        text,
-                        color = if (isError) ERROR_COLOR else colors.subtitleText,
-                        font = Font.system(FontScale.Small),
-                    )
-                }
+        BottomLabel(row = row, isOwn = isOwn)
+    }
+}
+
+/**
+ * The sender's avatar shown to the leading edge of a received group
+ * message, aligned to the bubble's bottom. Renders the sender's initials
+ * when a contact match exists, otherwise a generic person glyph. When
+ * [show] is `false`, it reserves the same width so consecutive bubbles
+ * stay aligned.
+ */
+@Composable
+private fun SenderAvatar(
+    show: Boolean,
+    initials: String,
+) {
+    val colors = LocalPantherColors.current
+    Box(modifier = Modifier.padding(end = SENDER_AVATAR_SPACING).size(SENDER_AVATAR_SIZE)) {
+        if (!show) return@Box
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.fillMaxSize().clip(CircleShape).background(SENDER_AVATAR_BACKGROUND),
+        ) {
+            if (initials.isNotBlank()) {
+                Components.Text(initials, color = colors.background, font = Font.systemSemibold(FontScale.Small))
+            } else {
+                Components.Symbol("person", color = colors.background, modifier = Modifier.size(SENDER_AVATAR_GLYPH_SIZE))
             }
         }
     }
 }
 
+/**
+ * The label below a message bubble: its reactions (as emoji) and, for the
+ * last confirmed own message in a one-to-one chat, its delivery status.
+ * Aligns to the message's side, matching iOS's cell bottom label.
+ */
 @Composable
+private fun BottomLabel(
+    row: ChatMessageRowData,
+    isOwn: Boolean,
+) {
+    val colors = LocalPantherColors.current
+    val status =
+        if (isOwn && row.isLastConfirmedOwnMessage && !row.isGroup) statusText(row.message, row.isFailed) else null
+    if (row.reactionsText.isEmpty() && status == null) return
+
+    // Align the label to the message bubble, not the screen edge: group
+    // received bubbles are indented past the sender avatar column.
+    val leadingInset = if (row.isGroup && !isOwn) SENDER_AVATAR_SIZE + SENDER_AVATAR_SPACING else 0.dp
+
+    Row(
+        horizontalArrangement = if (isOwn) Arrangement.End else Arrangement.Start,
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(top = 2.dp, start = 4.dp + leadingInset, end = 4.dp),
+    ) {
+        if (row.reactionsText.isNotEmpty()) {
+            Components.Text(
+                row.reactionsText,
+                color = colors.subtitleText,
+                font = Font.system(FontScale.Custom(REACTION_FONT_SIZE)),
+            )
+        }
+        if (status != null) {
+            if (row.reactionsText.isNotEmpty()) {
+                Components.Text(" | ", color = colors.subtitleText, font = Font.system(FontScale.Small))
+            }
+            Components.Text(
+                status.first,
+                color = if (status.second) ERROR_COLOR else colors.subtitleText,
+                font = Font.system(FontScale.Small),
+            )
+        }
+    }
+}
+
+@Composable
+@Suppress("LongParameterList")
 private fun MessageBubble(
     text: String,
     isOwn: Boolean,
     senderBubble: Color,
     receiverBubble: Color,
     receivedTextColor: Color,
+    isAlternate: Boolean,
 ) {
     val shape =
         RoundedCornerShape(
@@ -144,6 +235,7 @@ private fun MessageBubble(
         Components.Text(
             text.ifBlank { " " },
             color = if (isOwn) Color.White else receivedTextColor,
+            font = if (isAlternate) Font.systemItalic() else Font.system,
         )
     }
 }
@@ -158,8 +250,7 @@ private fun actionsFor(
     val actions = mutableListOf<ContextMenuAction>()
     actions.add(ContextMenuAction(LocalizedStringKey.Copy.localized(), "doc.on.doc") { onCopy() })
 
-    val translation = row.translation
-    if (translation != null && translation.input.value != translation.output) {
+    if (shouldShowAlternateAction(row)) {
         val title =
             if (row.message.isFromCurrentUser) {
                 if (row.showAlternate) LocalizedStringKey.ViewOriginal else LocalizedStringKey.ViewTranslation
@@ -172,6 +263,24 @@ private fun actionsFor(
     return actions
 }
 
+/**
+ * Whether the view-original/translation toggle should be offered, lifted
+ * from the iOS `getViewAlternateAction`: available in one-to-one chats or
+ * for messages not from the current user (so in group chats only on
+ * received messages), and only when the translation is not idempotent
+ * (e.g. `en`→`en`), has letters, and its counterpart language differs
+ * from the current user's.
+ */
+private fun shouldShowAlternateAction(row: ChatMessageRowData): Boolean {
+    if (row.isGroup && row.message.isFromCurrentUser) return false
+    val translation = row.translation ?: return false
+    val pair = translation.languagePair
+    if (pair.isIdempotent) return false
+    if (translation.input.value.none { it.isLetter() }) return false
+    val relevantLanguageCode = if (row.message.isFromCurrentUser) pair.to else pair.from
+    return relevantLanguageCode != RuntimeStorage.languageCode
+}
+
 private fun displayText(row: ChatMessageRowData): String {
     val translation = row.translation ?: return ""
     val primary = if (row.message.isFromCurrentUser) translation.input.value else translation.output
@@ -179,29 +288,87 @@ private fun displayText(row: ChatMessageRowData): String {
     return sanitized(if (row.showAlternate) alternate else primary)
 }
 
-private fun separatorText(
+private fun separatorDate(
     message: Message,
     previousMessage: Message?,
-): String? {
+): Date? {
     val show =
         previousMessage == null ||
             (message.sentDate.time - previousMessage.sentDate.time) > DAY_SEPARATOR_GAP_MILLIS
     if (!show) return null
-    return formatSeparator(message.sentDate)
+    return message.sentDate
 }
 
-private fun formatSeparator(date: Date): String {
+/**
+ * The attributed day-separator string (`Today 9:26 PM`), with the day
+ * prefix rendered bold, matching the iOS message separator.
+ */
+private fun separatorAnnotatedString(date: Date): AnnotatedString =
+    buildAnnotatedString {
+        val parts = separatorParts(date)
+        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(parts.prefix) }
+        append(" ${parts.time}")
+    }
+
+/**
+ * The attributed string for a system message: a bold date-separator line
+ * (`Today 13:35`) followed by the activity text, with participant names
+ * (wrapped in `⌘…⌘` sentinels) rendered bold. Mirrors the iOS
+ * `Message.attributedSystemString`.
+ */
+private fun systemMessageString(
+    output: String,
+    date: Date,
+): AnnotatedString =
+    buildAnnotatedString {
+        val parts = separatorParts(date)
+        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(parts.prefix) }
+        append(" ${parts.time}\n")
+        appendActivity(output)
+    }
+
+private fun AnnotatedString.Builder.appendActivity(text: String) {
+    val cleaned = text.replace("⁂", "").replace("※", "")
+    var isBold = false
+    for (segment in cleaned.split("⌘")) {
+        if (segment.isNotEmpty()) {
+            if (isBold) {
+                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(segment) }
+            } else {
+                append(segment)
+            }
+        }
+        isBold = !isBold
+    }
+}
+
+private data class SeparatorParts(
+    val prefix: String,
+    val time: String,
+)
+
+private fun separatorParts(date: Date): SeparatorParts {
     val messageDay = Calendar.getInstance().apply { time = date }
     val today = Calendar.getInstance()
     val time = SimpleDateFormat("h:mm a", Locale.getDefault()).format(date)
-
     val daysApart = (today.timeInMillis - messageDay.timeInMillis) / MILLIS_PER_DAY
-    return when {
-        isSameDay(messageDay, today) -> time
-        daysApart < 2 -> "${SimpleDateFormat("EEEE", Locale.getDefault()).format(date)} $time"
-        daysApart < DAYS_IN_WEEK -> "${SimpleDateFormat("EEE", Locale.getDefault()).format(date)} $time"
-        else -> "${SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(date)} $time"
-    }
+    val prefix =
+        when {
+            isSameDay(messageDay, today) -> LocalizedStringKey.Today.localized()
+            isYesterday(messageDay, today) -> LocalizedStringKey.Yesterday.localized()
+            daysApart < DAYS_IN_WEEK -> SimpleDateFormat("EEEE", Locale.getDefault()).format(date)
+            else -> SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(date)
+        }
+    return SeparatorParts(prefix, time)
+}
+
+private fun isYesterday(
+    day: Calendar,
+    today: Calendar,
+): Boolean {
+    val yesterday = today.clone() as Calendar
+    yesterday.add(Calendar.DAY_OF_YEAR, -1)
+    return isSameDay(day, yesterday)
 }
 
 private fun statusText(
@@ -230,7 +397,12 @@ private fun sanitized(value: String): String = value.replace("⁂", "").replace(
 private const val DAY_SEPARATOR_GAP_MILLIS = 5_400_000L
 private const val MILLIS_PER_DAY = 24L * 60 * 60 * 1000
 private const val DAYS_IN_WEEK = 7
+private const val REACTION_FONT_SIZE = 14f
 private val BUBBLE_RADIUS = 18.dp
 private val BUBBLE_TAIL_RADIUS = 4.dp
 private val BUBBLE_MAX_WIDTH = 280.dp
 private val ERROR_COLOR = Color(0xFFFF3B30)
+private val SENDER_AVATAR_SIZE = 30.dp
+private val SENDER_AVATAR_GLYPH_SIZE = 18.dp
+private val SENDER_AVATAR_SPACING = 6.dp
+private val SENDER_AVATAR_BACKGROUND = Color(0xFFC7C7CC)

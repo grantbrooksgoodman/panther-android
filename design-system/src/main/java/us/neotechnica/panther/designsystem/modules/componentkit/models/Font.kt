@@ -30,13 +30,14 @@ class Font(
     // MARK: - Computed Properties
 
     /**
-     * The Compose text style for this font. Custom typefaces fall back
-     * to Inter until additional fonts are shipped.
+     * The Compose text style for this font. Uses the build's
+     * [SystemFontFamily] — the real San Francisco typeface in debug
+     * builds, Inter in release builds.
      */
     val textStyle: TextStyle
         get() =
             TextStyle(
-                fontFamily = InterFontFamily,
+                fontFamily = SystemFontFamily,
                 fontSize = scale.points.sp,
                 fontWeight = weight,
                 fontStyle = if (isItalic) ComposeFontStyle.Italic else ComposeFontStyle.Normal,

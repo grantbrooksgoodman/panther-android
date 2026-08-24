@@ -23,6 +23,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.onboarding.constants.InstructionViewFloats
+import us.neotechnica.panther.modules.content.onboarding.models.InstructionViewStrings
 
 /**
  * A leading-aligned title-and-subtitle header shown atop onboarding

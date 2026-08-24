@@ -79,9 +79,14 @@ private fun ActionSheetSheet(alert: PresentedAlert.ActionSheet) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             alert.title?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
-            Text(alert.message, style = MaterialTheme.typography.bodyMedium)
+            alert.message?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
             Button(
-                colors = ButtonDefaults.buttonColors(contentColor = Color.White),
+                colors =
+                    if (alert.isDestructive) {
+                        ButtonDefaults.buttonColors(containerColor = ACTION_SHEET_DESTRUCTIVE_COLOR, contentColor = Color.White)
+                    } else {
+                        ButtonDefaults.buttonColors(contentColor = Color.White)
+                    },
                 modifier = Modifier.fillMaxWidth(),
                 onClick = { alert.onResult(true) },
             ) {
@@ -243,3 +248,5 @@ private fun ActionButton(
         )
     }
 }
+
+private val ACTION_SHEET_DESTRUCTIVE_COLOR = Color(0xFFFF3B30)

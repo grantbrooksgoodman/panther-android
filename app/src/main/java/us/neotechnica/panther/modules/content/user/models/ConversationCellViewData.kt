@@ -43,6 +43,7 @@ data class ConversationCellViewData(
     val isGroup: Boolean,
     val participantCount: Int,
     val otherLanguageCode: String?,
+    val otherRegionCode: String?,
 ) {
     companion object {
         /** Builds the cell data for [conversation], resolving text into [languageCode]. */
@@ -67,8 +68,9 @@ data class ConversationCellViewData(
                 initials = if (hasName) initials(title) else "",
                 hasContactName = hasName,
                 isGroup = isGroup,
-                participantCount = conversation.participants.size,
+                participantCount = users.size,
                 otherLanguageCode = if (!isGroup) users.firstOrNull()?.languageCode else null,
+                otherRegionCode = if (!isGroup) users.firstOrNull()?.phoneNumber?.regionCode else null,
             )
         }
 

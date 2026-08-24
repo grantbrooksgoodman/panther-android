@@ -6,7 +6,7 @@
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
-package us.neotechnica.panther.modules.content.onboarding.components
+package us.neotechnica.panther.modules.content.onboarding.models
 
 /**
  * The resolved title and subtitle strings for an

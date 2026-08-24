@@ -18,6 +18,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
@@ -73,19 +74,27 @@ fun UserContentContainer(modifier: Modifier = Modifier) {
         },
     ) { path ->
         when (path) {
+            // Drawn edge-to-edge so the context-menu scrim covers the system bars; the page insets
+            // its own content.
             is UserContentNavigatorState.SeguePath.Chat ->
                 ChatPageView(path.conversationIDKey, Modifier.fillMaxSize())
 
+            // Drawn edge-to-edge so its grouped background bleeds past the system bars, matching
+            // iOS; the page insets its own content.
             is UserContentNavigatorState.SeguePath.ChatInfo ->
                 ChatInfoPageView(path.conversationIDKey, Modifier.fillMaxSize())
 
+            // Drawn edge-to-edge so its grouped background bleeds past the system bars, matching
+            // iOS; the page insets its own content.
             UserContentNavigatorState.SeguePath.NewChat ->
                 NewChatPageView(Modifier.fillMaxSize())
 
+            // Drawn edge-to-edge so its grouped background bleeds past the system bars, matching
+            // iOS; the page insets its own content.
             UserContentNavigatorState.SeguePath.Settings ->
                 SettingsPageView(Modifier.fillMaxSize())
 
-            null -> ConversationsPageView(Modifier.fillMaxSize())
+            null -> ConversationsPageView(Modifier.fillMaxSize().systemBarsPadding())
         }
     }
 }

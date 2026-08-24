@@ -42,8 +42,12 @@ object Build {
     var finalName: String = "Template"
         private set
 
-    /** The short bundle version string (for example, `"1.0"`). */
+    /** The short bundle version string (for example, `"1.0.0"`). */
     var bundleVersion: String = "0.0.0"
+        private set
+
+    /** The network environment this build targets (for example, `"development"`). */
+    var environment: String = "production"
         private set
 
     /** The release-cycle stage of this build. */
@@ -97,6 +101,7 @@ object Build {
         codeName: String,
         finalName: String,
         bundleVersion: String,
+        environment: String,
         milestone: Milestone,
         buildDate: Date,
         firstCompileDate: Date,
@@ -106,6 +111,7 @@ object Build {
         this.codeName = codeName
         this.finalName = finalName
         this.bundleVersion = bundleVersion
+        this.environment = environment
         this.milestone = milestone
         this.buildDate = buildDate
         this.firstCompileDate = firstCompileDate

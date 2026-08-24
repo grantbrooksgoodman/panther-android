@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.views.settingspageview
 
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationAlert
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
@@ -76,6 +77,17 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
 
     private fun signOutEffect(): Effect<Action> =
         Effect.run { send ->
+            val confirmed =
+                ActionSheetAlert(
+                    confirmButtonTitle = "Sign Out",
+                    isDestructive = true,
+                ).present()
+
+            if (!confirmed) {
+                send(Action.Finished)
+                return@run
+            }
+
             runCatching { SignOutService.signOut() }.onFailure { Logger.log(it.toException()) }
             returnToOnboarding()
             send(Action.Finished)
@@ -86,8 +98,10 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
             val confirmed =
                 ConfirmationAlert(
                     title = "Delete Account",
-                    message = "This permanently deletes your account and cannot be undone.",
-                    confirmButtonTitle = "Delete",
+                    message =
+                        "Are you sure you'd like to delete your account? All user data will be deleted.\n\n" +
+                            "If you wish to continue using Hello, you will need to create a new account.\n\n" +
+                            "An app restart is required for this process to complete.",
                     confirmButtonStyle = ActionStyle.DESTRUCTIVE_PREFERRED,
                 ).present()
 

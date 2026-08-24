@@ -8,10 +8,12 @@
 package us.neotechnica.panther.networking.modules.session.extensions
 
 import us.neotechnica.panther.networking.modules.common.models.CommonConstants
+import us.neotechnica.panther.networking.modules.schema.conversation.models.Reaction
 import us.neotechnica.panther.networking.modules.schema.message.models.Message
 import us.neotechnica.panther.networking.modules.schema.message.models.ReadReceipt
 import us.neotechnica.panther.networking.modules.schema.user.models.User
 import us.neotechnica.panther.networking.modules.session.models.OutboxEntry
+import us.neotechnica.panther.networking.modules.session.services.ConversationSessionService
 import us.neotechnica.panther.networking.modules.translation.services.TranslationResolver
 import us.neotechnica.panther.translator.models.Translation
 import us.neotechnica.panther.networking.modules.translation.models.TranslationReference as HostedTranslationReference
@@ -39,6 +41,19 @@ val Message.isSystemMessage: Boolean
 /** The other participant's read receipt, if any (for delivery status). */
 val Message.otherParticipantReadReceipt: ReadReceipt?
     get() = readReceipts?.firstOrNull { it.userID != User.currentUserID }
+
+/**
+ * The reactions applied to this message, or `null` when none.
+ *
+ * Resolved from the current conversation's reaction metadata, mirroring
+ * the iOS `Message.reactions`.
+ */
+val Message.reactions: List<Reaction>?
+    get() =
+        ConversationSessionService.currentConversation
+            ?.reactionMetadata
+            ?.firstOrNull { it.messageID == id }
+            ?.reactions
 
 /**
  * The message's full translation resolved for display in [languageCode].

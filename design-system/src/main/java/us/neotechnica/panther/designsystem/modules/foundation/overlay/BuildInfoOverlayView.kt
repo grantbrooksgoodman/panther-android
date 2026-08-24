@@ -10,8 +10,12 @@ package us.neotechnica.panther.designsystem.modules.foundation.overlay
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -23,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
@@ -79,15 +84,27 @@ fun BuildInfoOverlayView(modifier: Modifier = Modifier) {
         Components.Text(
             statsText,
             color = Color.White,
-            font = Font.system(FontScale.Custom(STATS_FONT_SIZE)),
-            modifier = Modifier.background(Color.Black).padding(horizontal = 4.dp, vertical = 1.dp),
+            font = Font.system(FontScale.Small),
+            modifier = Modifier.background(Color.Black).padding(horizontal = OVERLAY_HORIZONTAL_PADDING),
         )
-        Components.Text(
-            Build.buildInfoString,
-            color = Color.White,
-            font = Font.systemBold(FontScale.Custom(BUILD_INFO_FONT_SIZE)),
-            modifier = Modifier.background(Color.Black).padding(horizontal = 4.dp, vertical = 1.dp),
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.background(Color.Black).padding(horizontal = OVERLAY_HORIZONTAL_PADDING),
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .padding(end = ENVIRONMENT_DOT_END_PADDING)
+                        .size(ENVIRONMENT_DOT_SIZE)
+                        .clip(CircleShape)
+                        .background(environmentColor(Build.environment)),
+            )
+            Components.Text(
+                Build.buildInfoString,
+                color = Color.White,
+                font = Font.systemBold(FontScale.Small),
+            )
+        }
     }
 
     if (showDetails) {
@@ -132,8 +149,20 @@ private fun BuildInfoDetailsDialog(onDismiss: () -> Unit) {
     )
 }
 
+/** The dot color signalling the build's network environment, mirroring the iOS indicator dot. */
+private fun environmentColor(environment: String): Color =
+    when (environment) {
+        "development" -> ENVIRONMENT_COLOR_DEVELOPMENT
+        "staging" -> ENVIRONMENT_COLOR_STAGING
+        else -> ENVIRONMENT_COLOR_PRODUCTION
+    }
+
 private const val CALCULATING_TEXT = "Calculating…"
 private const val BYTES_PER_MEGABYTE = 1_048_576L
 private const val STATS_REFRESH_MILLIS = 1_000L
-private const val STATS_FONT_SIZE = 10f
-private const val BUILD_INFO_FONT_SIZE = 11f
+private val OVERLAY_HORIZONTAL_PADDING = 3.dp
+private val ENVIRONMENT_DOT_SIZE = 7.dp
+private val ENVIRONMENT_DOT_END_PADDING = 4.dp
+private val ENVIRONMENT_COLOR_DEVELOPMENT = Color(0xFF34C759)
+private val ENVIRONMENT_COLOR_STAGING = Color(0xFFFF9500)
+private val ENVIRONMENT_COLOR_PRODUCTION = Color(0xFFFF3B30)
