@@ -30,6 +30,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStora
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
 import us.neotechnica.panther.translator.models.TranslationInput
+import java.util.Locale
 
 /**
  * The reducer for the native-language selection page.
@@ -87,9 +88,20 @@ class SelectLanguagePageReducer : Reducer<SelectLanguagePageReducer.State, Selec
     ): ReduceResult<State, Action> =
         when (action) {
             Action.ViewAppeared -> {
+                // The selector always displays in the device language, never the language the user
+                // tentatively picked, so returning to it after Continue does not translate it into
+                // that selection. iOS keeps this page's original resolution because it never
+                // rebuilds the view; on Android the page is recreated on pop, so we reset the active
+                // language here instead. The wheel still reflects the prior selection.
+                RuntimeStorage.languageCode = Locale.getDefault().language
                 val displayNames = LocalizedStringResolver.languageDisplayNames()
                 val languages = displayNames.values.sorted()
-                val selected = displayNames[RuntimeStorage.languageCode] ?: languages.firstOrNull() ?: ""
+                val selectedCode = OnboardingService.languageCode ?: RuntimeStorage.languageCode
+                val selected =
+                    displayNames[selectedCode]
+                        ?: displayNames[RuntimeStorage.languageCode]
+                        ?: languages.firstOrNull()
+                        ?: ""
                 ReduceResult(
                     state.copy(
                         languages = languages,

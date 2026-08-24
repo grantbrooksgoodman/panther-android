@@ -40,8 +40,10 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMe
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
+import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
 import us.neotechnica.panther.networking.modules.schema.message.models.Message
 import us.neotechnica.panther.networking.modules.session.extensions.isFromCurrentUser
 import us.neotechnica.panther.networking.modules.session.extensions.isSystemMessage
@@ -347,6 +349,16 @@ private data class SeparatorParts(
     val time: String,
 )
 
+/**
+ * Resolves a day-separator word (e.g. `Today`, `Yesterday`), which live
+ * in different localization tables, preferring the app table and falling
+ * back to the subsystem table before the missing placeholder.
+ */
+private fun dayWord(key: LocalizedStringKey): String {
+    val appValue = key.localized(LocalizationSource.APP)
+    return if (appValue != LocalizedStringResolver.MISSING) appValue else key.localized(LocalizationSource.SUBSYSTEM)
+}
+
 private fun separatorParts(date: Date): SeparatorParts {
     val messageDay = Calendar.getInstance().apply { time = date }
     val today = Calendar.getInstance()
@@ -354,8 +366,8 @@ private fun separatorParts(date: Date): SeparatorParts {
     val daysApart = (today.timeInMillis - messageDay.timeInMillis) / MILLIS_PER_DAY
     val prefix =
         when {
-            isSameDay(messageDay, today) -> LocalizedStringKey.Today.localized()
-            isYesterday(messageDay, today) -> LocalizedStringKey.Yesterday.localized()
+            isSameDay(messageDay, today) -> dayWord(LocalizedStringKey.Today)
+            isYesterday(messageDay, today) -> dayWord(LocalizedStringKey.Yesterday)
             daysApart < DAYS_IN_WEEK -> SimpleDateFormat("EEEE", Locale.getDefault()).format(date)
             else -> SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(date)
         }
