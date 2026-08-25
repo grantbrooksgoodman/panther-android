@@ -49,6 +49,7 @@ import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
 import us.neotechnica.panther.networking.modules.schema.message.models.Message
 import us.neotechnica.panther.networking.modules.session.extensions.isFromCurrentUser
+import us.neotechnica.panther.networking.modules.session.extensions.isMediaMessage
 import us.neotechnica.panther.networking.modules.session.extensions.isSystemMessage
 import us.neotechnica.panther.networking.modules.session.extensions.otherParticipantReadReceipt
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
@@ -65,11 +66,13 @@ import androidx.compose.material3.Text as Material3Text
  *
  * @param row The row's display inputs.
  * @param onToggleAlternate Toggles the alternate text for a message ID.
+ * @param onTapMedia Opens the media preview for the given media message ID.
  */
 @Composable
 fun ChatMessageCell(
     row: ChatMessageRowData,
     onToggleAlternate: (String) -> Unit,
+    onTapMedia: (String) -> Unit,
 ) {
     val colors = LocalPantherColors.current
     val clipboard = LocalClipboardManager.current
@@ -122,37 +125,57 @@ fun ChatMessageCell(
             if (row.isGroup && !isOwn) {
                 SenderAvatar(show = row.showSenderAvatar, initials = row.senderInitials)
             }
-            MessageContextMenu(
-                actions = actionsFor(row, onToggleAlternate) { clipboard.setText(AnnotatedString(displayText)) },
-                alignment = if (isOwn) ContextMenuAlignment.TRAILING else ContextMenuAlignment.LEADING,
-            ) {
+            if (message.isMediaMessage) {
                 Column(horizontalAlignment = if (isOwn) Alignment.End else Alignment.Start) {
-                    if (row.isGroup && !isOwn && row.senderName != null) {
-                        Components.Text(
-                            row.senderName,
-                            color = colors.subtitleText,
-                            font = Font.systemMedium(FontScale.Small),
-                            modifier =
-                                Modifier.padding(
-                                    start = ChatMessageCellFloats.senderNameStartPadding,
-                                    bottom = ChatMessageCellFloats.senderNameBottomPadding,
-                                ),
+                    SenderNameLabel(row)
+                    MediaMessageBubble(
+                        mediaFile = row.mediaFile,
+                        isOwn = isOwn,
+                        onTap = { onTapMedia(message.id) },
+                    )
+                }
+            } else {
+                MessageContextMenu(
+                    actions = actionsFor(row, onToggleAlternate) { clipboard.setText(AnnotatedString(displayText)) },
+                    alignment = if (isOwn) ContextMenuAlignment.TRAILING else ContextMenuAlignment.LEADING,
+                ) {
+                    Column(horizontalAlignment = if (isOwn) Alignment.End else Alignment.Start) {
+                        SenderNameLabel(row)
+                        MessageBubble(
+                            displayText,
+                            isOwn,
+                            colors.senderBubble,
+                            colors.receiverBubble,
+                            colors.titleText,
+                            isAlternate = row.showAlternate,
                         )
                     }
-                    MessageBubble(
-                        displayText,
-                        isOwn,
-                        colors.senderBubble,
-                        colors.receiverBubble,
-                        colors.titleText,
-                        isAlternate = row.showAlternate,
-                    )
                 }
             }
         }
 
         BottomLabel(row = row, isOwn = isOwn)
     }
+}
+
+/**
+ * The sender's display name shown above the first message in a run from
+ * a group participant, or nothing when it should be hidden.
+ */
+@Composable
+private fun SenderNameLabel(row: ChatMessageRowData) {
+    if (!row.isGroup || row.message.isFromCurrentUser || row.senderName == null) return
+    val colors = LocalPantherColors.current
+    Components.Text(
+        row.senderName,
+        color = colors.subtitleText,
+        font = Font.systemMedium(FontScale.Small),
+        modifier =
+            Modifier.padding(
+                start = ChatMessageCellFloats.senderNameStartPadding,
+                bottom = ChatMessageCellFloats.senderNameBottomPadding,
+            ),
+    )
 }
 
 /**

@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.components
 
+import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
 import us.neotechnica.panther.networking.modules.schema.message.models.Message
 import us.neotechnica.panther.translator.models.Translation
 
@@ -31,6 +32,8 @@ import us.neotechnica.panther.translator.models.Translation
  *   this row (the last message in a run from a group participant).
  * @property reactionsText The message's reaction emoji, joined in display
  *   order, or an empty string when the message has no reactions.
+ * @property mediaFile The message's resolved media file, or `null` if the
+ *   message is not media or its media has not yet downloaded.
  */
 data class ChatMessageRowData(
     val message: Message,
@@ -44,4 +47,5 @@ data class ChatMessageRowData(
     val senderInitials: String = "",
     val showSenderAvatar: Boolean = false,
     val reactionsText: String = "",
+    val mediaFile: MediaFile? = null,
 )

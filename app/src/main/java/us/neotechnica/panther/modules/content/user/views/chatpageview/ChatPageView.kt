@@ -29,7 +29,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,6 +51,7 @@ import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.content.user.components.ChatMessageCell
 import us.neotechnica.panther.modules.content.user.components.ChatMessageRowData
+import us.neotechnica.panther.modules.content.user.components.MediaPreviewOverlay
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
@@ -60,6 +63,7 @@ import us.neotechnica.panther.networking.modules.schema.message.models.Message
 import us.neotechnica.panther.networking.modules.schema.user.models.User
 import us.neotechnica.panther.networking.modules.session.extensions.currentConversationDidBecomeUnavailable
 import us.neotechnica.panther.networking.modules.session.extensions.isFromCurrentUser
+import us.neotechnica.panther.networking.modules.session.extensions.isMediaMessage
 import us.neotechnica.panther.networking.modules.session.extensions.isOutboxMessage
 import us.neotechnica.panther.networking.modules.session.extensions.isSystemMessage
 import us.neotechnica.panther.networking.modules.session.extensions.reactions
@@ -115,40 +119,55 @@ fun ChatPageView(
     }
 
     val state by viewModel.state.collectAsState()
-    val colors = LocalPantherColors.current
+    var previewMessageID by remember { mutableStateOf<String?>(null) }
+
+    val mediaMessages = state.messages.filter { it.isMediaMessage && state.mediaByID[it.id] != null }
+    val previewMediaFiles = mediaMessages.mapNotNull { state.mediaByID[it.id] }
+    val previewStartIndex = mediaMessages.indexOfFirst { it.id == previewMessageID }
 
     StatefulView(state = state.viewState, modifier = modifier) {
-        ContextMenuHost(Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
-                ChatHeader(
-                    title = state.title,
-                    onBack = {
-                        DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
-                    },
-                    onInfo = {
-                        DependencyValues.current.navigation.navigate(
-                            Route.UserContent(
-                                UserContentRoute.Push(
-                                    UserContentNavigatorState.SeguePath.ChatInfo(state.conversationIDKey),
+        Box(modifier = Modifier.fillMaxSize()) {
+            ContextMenuHost(Modifier.fillMaxSize()) {
+                Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
+                    ChatHeader(
+                        title = state.title,
+                        onBack = {
+                            DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
+                        },
+                        onInfo = {
+                            DependencyValues.current.navigation.navigate(
+                                Route.UserContent(
+                                    UserContentRoute.Push(
+                                        UserContentNavigatorState.SeguePath.ChatInfo(state.conversationIDKey),
+                                    ),
                                 ),
-                            ),
-                        )
-                    },
-                )
+                            )
+                        },
+                    )
 
-                MessageList(
-                    state = state,
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    onToggleAlternate = { viewModel.send(ChatPageReducer.Action.ToggleAlternate(it)) },
-                )
+                    MessageList(
+                        state = state,
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        onToggleAlternate = { viewModel.send(ChatPageReducer.Action.ToggleAlternate(it)) },
+                        onTapMedia = { previewMessageID = it },
+                    )
 
-                MessageInputBar(
-                    text = state.inputText,
-                    placeholder = LocalizedStringKey.NewMessage.localized(),
-                    isSending = state.isSending,
-                    onTextChange = { viewModel.send(ChatPageReducer.Action.InputChanged(it)) },
-                    onSend = { viewModel.send(ChatPageReducer.Action.SendTapped) },
-                    onAttach = {},
+                    MessageInputBar(
+                        text = state.inputText,
+                        placeholder = LocalizedStringKey.NewMessage.localized(),
+                        isSending = state.isSending,
+                        onTextChange = { viewModel.send(ChatPageReducer.Action.InputChanged(it)) },
+                        onSend = { viewModel.send(ChatPageReducer.Action.SendTapped) },
+                        onAttach = {},
+                    )
+                }
+            }
+
+            if (previewMessageID != null && previewStartIndex >= 0) {
+                MediaPreviewOverlay(
+                    mediaFiles = previewMediaFiles,
+                    startIndex = previewStartIndex,
+                    onDismiss = { previewMessageID = null },
                 )
             }
         }
@@ -222,6 +241,7 @@ private fun MessageList(
     state: ChatPageReducer.State,
     modifier: Modifier,
     onToggleAlternate: (String) -> Unit,
+    onTapMedia: (String) -> Unit,
 ) {
     val listState = rememberLazyListState()
     val messages = state.messages
@@ -229,7 +249,7 @@ private fun MessageList(
     val isGroup = (ConversationSessionService.currentConversation?.participants?.size ?: 2) > 2
     val lastConfirmedOwnIndex = messages.indexOfLast { it.isFromCurrentUser && !it.isOutboxMessage }
 
-    LaunchedEffect(messages.size, state.changeToken, state.translationsByID.size) {
+    LaunchedEffect(messages.size, state.changeToken, state.translationsByID.size, state.mediaByID.size) {
         if (messages.isNotEmpty()) listState.scrollToItem(messages.lastIndex)
     }
 
@@ -263,8 +283,10 @@ private fun MessageList(
                                 .map { it.style }
                                 .sortedBy { it.orderValue }
                                 .joinToString(separator = "") { it.emojiValue },
+                        mediaFile = state.mediaByID[message.id],
                     ),
                 onToggleAlternate = onToggleAlternate,
+                onTapMedia = onTapMedia,
             )
         }
     }

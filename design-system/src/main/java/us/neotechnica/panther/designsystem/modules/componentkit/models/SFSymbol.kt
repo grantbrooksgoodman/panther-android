@@ -15,18 +15,24 @@ import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -89,6 +95,18 @@ object SFSymbol {
             "paperplane.fill" to Icons.AutoMirrored.Filled.Send,
             "doc.on.doc" to Icons.Filled.ContentCopy,
             "doc.on.doc.fill" to Icons.Filled.ContentCopy,
+            "doc" to Icons.Filled.Description,
+            "doc.fill" to Icons.Filled.Description,
+            "doc.text" to Icons.Filled.Description,
+            "doc.text.fill" to Icons.Filled.Description,
+            "paperclip" to Icons.Filled.AttachFile,
+            "photo" to Icons.Filled.Image,
+            "photo.fill" to Icons.Filled.Image,
+            "film" to Icons.Filled.Movie,
+            "film.fill" to Icons.Filled.Movie,
+            "play.fill" to Icons.Filled.PlayArrow,
+            "play.circle.fill" to Icons.Filled.PlayArrow,
+            "square.and.arrow.down" to Icons.Filled.Download,
             "square.and.pencil" to Icons.Filled.Edit,
             "globe" to Icons.Filled.Language,
             "character.bubble" to Icons.AutoMirrored.Filled.Message,

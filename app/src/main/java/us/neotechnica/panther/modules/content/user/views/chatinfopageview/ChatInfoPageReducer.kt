@@ -12,13 +12,25 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAl
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAlert
 import us.neotechnica.panther.modules.common.contacts.models.ContactMatch
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
+import us.neotechnica.panther.modules.common.extensions.formattedString
+import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewStrings
+import us.neotechnica.panther.modules.content.user.models.MediaItemViewData
+import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
+import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
+import us.neotechnica.panther.networking.modules.schema.message.models.Message
 import us.neotechnica.panther.networking.modules.schema.user.models.User
+import us.neotechnica.panther.networking.modules.session.extensions.cachedMediaFile
 import us.neotechnica.panther.networking.modules.session.extensions.currentUserID
+import us.neotechnica.panther.networking.modules.session.extensions.isFromCurrentUser
+import us.neotechnica.panther.networking.modules.session.extensions.isMediaMessage
+import us.neotechnica.panther.networking.modules.session.extensions.messages
+import us.neotechnica.panther.networking.modules.session.extensions.users
 import us.neotechnica.panther.networking.modules.session.services.ActivitySessionService
 import us.neotechnica.panther.networking.modules.session.services.ConversationSessionService
 import us.neotechnica.panther.networking.modules.session.services.ModerationSessionService
@@ -29,6 +41,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 /**
  * The reducer for a conversation's info page.
@@ -66,6 +80,10 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
 
         data object DeleteTapped : Action
 
+        data class SegmentChanged(
+            val index: Int,
+        ) : Action
+
         data class Failed(
             val exception: Exception,
         ) : Action
@@ -78,6 +96,8 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
     data class State(
         val conversationIDKey: String = "",
         val conversation: Conversation? = null,
+        val mediaItems: List<MediaItemViewData> = emptyList(),
+        val selectedSegment: Int = 0,
         val isExpanded: Boolean = true,
         val isBusy: Boolean = false,
     ) {
@@ -103,14 +123,25 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         when (action) {
             is Action.ViewFirstAppeared -> {
                 val conversation = SessionStore.getConversation(action.conversationIDKey)
-                ReduceResult(state.copy(conversationIDKey = action.conversationIDKey, conversation = conversation))
+                ReduceResult(
+                    state.copy(
+                        conversationIDKey = action.conversationIDKey,
+                        conversation = conversation,
+                        mediaItems = buildMediaItems(conversation),
+                    ),
+                )
             }
 
-            Action.Reload ->
-                ReduceResult(state.copy(conversation = SessionStore.getConversation(state.conversationIDKey)))
+            Action.Reload -> {
+                val conversation = SessionStore.getConversation(state.conversationIDKey)
+                ReduceResult(state.copy(conversation = conversation, mediaItems = buildMediaItems(conversation)))
+            }
 
             Action.ToggleExpanded ->
                 ReduceResult(state.copy(isExpanded = !state.isExpanded))
+
+            is Action.SegmentChanged ->
+                ReduceResult(state.copy(selectedSegment = action.index))
 
             Action.ChangeMetadataTapped ->
                 ReduceResult(state, changeMetadataEffect(state))
@@ -147,6 +178,54 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
                 ReduceResult(state)
             }
         }
+
+    // MARK: - Media Items
+
+    private fun buildMediaItems(conversation: Conversation?): List<MediaItemViewData> {
+        conversation ?: return emptyList()
+        val users = conversation.users.orEmpty()
+        return conversation.messages
+            .orEmpty()
+            .filter { it.isMediaMessage }
+            .sortedByDescending { it.sentDate }
+            .mapNotNull { message ->
+                val mediaFile = message.cachedMediaFile ?: return@mapNotNull null
+                val user = users.firstOrNull { it.id == message.fromAccountID } ?: SessionStore.users[message.fromAccountID]
+                MediaItemViewData(
+                    file = mediaFile,
+                    mediaTypeLabelText = mediaTypeLabel(mediaFile),
+                    senderLabelText = senderLabel(message, user),
+                    timestampLabelText =
+                        SimpleDateFormat(ChatInfoPageViewStrings.TIMESTAMP_FORMAT, Locale.getDefault())
+                            .format(message.sentDate),
+                )
+            }
+    }
+
+    private fun mediaTypeLabel(mediaFile: MediaFile): String {
+        val fileExtension = mediaFile.fileExtension
+        return when {
+            fileExtension.isDocument ->
+                "${LocalizedStringKey.File.localized()}${ChatInfoPageViewStrings.FILE_TYPE_SEPARATOR}${fileExtension.rawValue}"
+            fileExtension.isImage -> LocalizedStringKey.Image.localized()
+            fileExtension.isVideo -> LocalizedStringKey.Video.localized()
+            else -> LocalizedStringKey.Attachment.localized()
+        }
+    }
+
+    private fun senderLabel(
+        message: Message,
+        user: User?,
+    ): String {
+        if (message.isFromCurrentUser) {
+            return LocalizedStringKey.FromYou.localized().replaceFirstChar { it.lowercase() }
+        }
+        val displayName =
+            ContactService.match(message.fromAccountID)?.fullName
+                ?: user?.phoneNumber?.formattedString()
+                ?: message.fromAccountID
+        return LocalizedStringKey.FromUser.localized().replace("⌘", displayName)
+    }
 
     // MARK: - Auxiliary
 

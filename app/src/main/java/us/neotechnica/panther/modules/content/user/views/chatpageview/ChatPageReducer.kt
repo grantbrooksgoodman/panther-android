@@ -14,7 +14,10 @@ import us.neotechnica.panther.modules.content.user.models.ConversationCellViewDa
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
 import us.neotechnica.panther.networking.modules.schema.message.models.Message
+import us.neotechnica.panther.networking.modules.session.extensions.isMediaMessage
+import us.neotechnica.panther.networking.modules.session.extensions.resolvedMediaFile
 import us.neotechnica.panther.networking.modules.session.extensions.resolvedTranslation
 import us.neotechnica.panther.networking.modules.session.services.ConversationSessionService
 import us.neotechnica.panther.networking.modules.session.services.MessageDeliveryService
@@ -53,6 +56,10 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             val translations: Map<String, Translation>,
         ) : Action
 
+        data class MediaResolved(
+            val media: Map<String, MediaFile>,
+        ) : Action
+
         data class TitleResolved(
             val title: String,
         ) : Action
@@ -82,6 +89,7 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         val conversationIDKey: String = "",
         val messages: List<Message> = emptyList(),
         val translationsByID: Map<String, Translation> = emptyMap(),
+        val mediaByID: Map<String, MediaFile> = emptyMap(),
         val alternateTextMessageIDs: Set<String> = emptySet(),
         val inputText: String = "",
         val isSending: Boolean = false,
@@ -107,11 +115,16 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             is Action.MessagesUpdated ->
                 ReduceResult(
                     state.copy(messages = action.messages, viewState = ViewState.Loaded, changeToken = UUID.randomUUID()),
-                    resolveEffect(action.messages, state.languageCode, state.translationsByID),
+                    resolveEffect(action.messages, state.languageCode, state.translationsByID, state.mediaByID),
                 )
 
             is Action.TranslationsResolved ->
                 ReduceResult(state.copy(translationsByID = state.translationsByID + action.translations))
+
+            is Action.MediaResolved ->
+                ReduceResult(
+                    state.copy(mediaByID = state.mediaByID + action.media, changeToken = UUID.randomUUID()),
+                )
 
             is Action.TitleResolved ->
                 ReduceResult(state.copy(title = action.title))
@@ -178,16 +191,40 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         messages: List<Message>,
         languageCode: String,
         existing: Map<String, Translation>,
+        existingMedia: Map<String, MediaFile>,
     ): Effect<Action> =
         Effect.run { send ->
-            val resolved = mutableMapOf<String, Translation>()
-            for (message in messages) {
-                if (message.id in existing) continue
-                message.resolvedTranslation(languageCode)?.let { resolved[message.id] = it }
-            }
+            val resolved = resolveTranslations(messages, languageCode, existing)
+            val resolvedMedia = resolveMedia(messages, existingMedia)
             if (resolved.isNotEmpty()) send(Action.TranslationsResolved(resolved))
+            if (resolvedMedia.isNotEmpty()) send(Action.MediaResolved(resolvedMedia))
             markCurrentConversationAsRead()
         }
+
+    private suspend fun resolveTranslations(
+        messages: List<Message>,
+        languageCode: String,
+        existing: Map<String, Translation>,
+    ): Map<String, Translation> {
+        val resolved = mutableMapOf<String, Translation>()
+        for (message in messages) {
+            if (message.id in existing) continue
+            message.resolvedTranslation(languageCode)?.let { resolved[message.id] = it }
+        }
+        return resolved
+    }
+
+    private suspend fun resolveMedia(
+        messages: List<Message>,
+        existingMedia: Map<String, MediaFile>,
+    ): Map<String, MediaFile> {
+        val resolved = mutableMapOf<String, MediaFile>()
+        for (message in messages) {
+            if (!message.isMediaMessage || message.id in existingMedia) continue
+            message.resolvedMediaFile()?.let { resolved[message.id] = it }
+        }
+        return resolved
+    }
 
     private fun sendEffect(text: String): Effect<Action> =
         Effect.run { send ->

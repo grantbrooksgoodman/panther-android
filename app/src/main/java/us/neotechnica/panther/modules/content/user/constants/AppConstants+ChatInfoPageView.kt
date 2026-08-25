@@ -41,6 +41,12 @@ object ChatInfoPageViewFloats {
     val rowAvatarSize: Dp = 40.dp
     val rowTextStartPadding: Dp = 12.dp
     val rowVerticalPadding: Dp = 10.dp
+    val segmentCornerRadius: Dp = 7.dp
+    val segmentVerticalPadding: Dp = 6.dp
+    val segmentedControlCornerRadius: Dp = 9.dp
+    val segmentedControlHorizontalPadding: Dp = 16.dp
+    val segmentedControlTopPadding: Dp = 12.dp
+    val segmentedControlTrackPadding: Dp = 2.dp
     val subtitleTopPadding: Dp = 2.dp
     val titleHorizontalPadding: Dp = 24.dp
     val titleTopPadding: Dp = 12.dp
@@ -50,19 +56,24 @@ object ChatInfoPageViewFloats {
 
 object ChatInfoPageViewColors {
     val destructive = Color(0xFFFF3B30)
+    val segmentedControlTrack = Color(0x1F787880)
 }
 
 // MARK: - String
 
 object ChatInfoPageViewStrings {
     const val ADD_CONTACT = "Add Contact"
+    const val ATTACHMENTS_SEGMENT = "Attachments"
     const val BLOCK = "Block"
     const val CHANGE_NAME_AND_PHOTO = "Change name and photo"
     const val DELETE_CONVERSATION = "Delete this Conversation"
     const val DONE = "Done"
+    const val FILE_TYPE_SEPARATOR = " • "
     const val LEAVE_CONVERSATION = "Leave this Conversation"
+    const val PARTICIPANTS_SEGMENT = "Participants"
     const val PARTICIPANTS_SEPARATOR = ", "
     const val REPORT = "Report"
+    const val TIMESTAMP_FORMAT = "MMM d, yyyy"
     const val TITLE_ADDITIONAL_SEPARATOR = " + "
     const val UNKNOWN = "Unknown"
 }

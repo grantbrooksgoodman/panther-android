@@ -28,6 +28,7 @@ import us.neotechnica.panther.networking.modules.session.services.UserMutationSe
 import us.neotechnica.panther.networking.modules.session.services.retryAllEligible
 import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
+import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.translator.Translator
 import java.util.Date
@@ -54,6 +55,7 @@ class PantherApplication : Application() {
 
         LocalizedStringResolver.initialize(this)
         Persistent.initialize(this)
+        FileStore.initialize(this)
         CommonPropertyLists.initialize(this)
         ContactService.initialize(this)
         configureBuild()

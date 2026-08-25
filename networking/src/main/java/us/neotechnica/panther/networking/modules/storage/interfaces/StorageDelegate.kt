@@ -7,6 +7,8 @@
 
 package us.neotechnica.panther.networking.modules.storage.interfaces
 
+import java.io.File
+
 /**
  * An interface for reading and writing binary files in remote
  * storage.
@@ -48,6 +50,22 @@ interface StorageDelegate {
         path: String,
         maxBytes: Long,
     ): ByteArray
+
+    /**
+     * Downloads the file at the specified storage path to [toFile],
+     * streaming to disk rather than into memory.
+     *
+     * @param path The storage path to download from.
+     * @param toFile The local destination file. Parent directories are
+     *   created as needed.
+     *
+     * @throws us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+     *   if the download fails.
+     */
+    suspend fun download(
+        path: String,
+        toFile: File,
+    )
 
     /**
      * Uploads the given bytes to the specified storage path.

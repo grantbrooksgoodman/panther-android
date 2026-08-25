@@ -8,7 +8,10 @@
 package us.neotechnica.panther.networking.modules.session.extensions
 
 import us.neotechnica.panther.networking.modules.common.models.CommonConstants
+import us.neotechnica.panther.networking.modules.message.services.MediaMessageService
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Reaction
+import us.neotechnica.panther.networking.modules.schema.message.models.LocalMediaFilePath
+import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
 import us.neotechnica.panther.networking.modules.schema.message.models.Message
 import us.neotechnica.panther.networking.modules.schema.message.models.ReadReceipt
 import us.neotechnica.panther.networking.modules.schema.user.models.User
@@ -21,6 +24,31 @@ import us.neotechnica.panther.networking.modules.translation.models.TranslationR
 /** Whether the message was sent by the current user. */
 val Message.isFromCurrentUser: Boolean
     get() = fromAccountID == User.currentUserID
+
+/** Whether the message carries media content (an image, video, or document). */
+val Message.isMediaMessage: Boolean
+    get() = contentType.isMedia
+
+/**
+ * Resolves the message's media file, using the local copy when
+ * available and downloading it otherwise, or `null` if the message is
+ * not media or the resolution fails.
+ */
+suspend fun Message.resolvedMediaFile(): MediaFile? {
+    val localMediaFilePath = LocalMediaFilePath.from(this) ?: return null
+    return runCatching { MediaMessageService.getMediaComponent(id, localMediaFilePath) }.getOrNull()
+}
+
+/**
+ * The message's already-downloaded media file, or `null` if the message
+ * is not media or its media has not yet been downloaded. Does not
+ * trigger a download.
+ */
+val Message.cachedMediaFile: MediaFile?
+    get() {
+        val localMediaFilePath = LocalMediaFilePath.from(this) ?: return null
+        return MediaFile.from(localMediaFilePath.relativePathString)
+    }
 
 /** Whether the current user has read the message. */
 val Message.isReadByCurrentUser: Boolean
