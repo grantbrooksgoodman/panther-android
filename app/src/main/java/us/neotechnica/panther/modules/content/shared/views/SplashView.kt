@@ -69,8 +69,8 @@ fun SplashView(modifier: Modifier = Modifier) {
         delay(Floats.SPLASH_DELAY_MILLIS)
 
         UpdateService.incrementRelaunchCountIfNeeded()
-        runCatching { UpdateService.promptToUpdateIfNeeded() }
-        UpdateService.startObservingForcedUpdateChanges()
+//        runCatching { UpdateService.promptToUpdateIfNeeded() }
+//        UpdateService.startObservingForcedUpdateChanges()
 
         if (Persistent.string(PersistentStorageKey.currentUserID) == null) {
             navigation.navigate(Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.Onboarding)))

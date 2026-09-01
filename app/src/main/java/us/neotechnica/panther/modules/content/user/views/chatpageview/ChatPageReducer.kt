@@ -147,8 +147,13 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
                 ReduceResult(state.copy(isSending = false))
 
             is Action.ToggleAlternate -> {
+                val isDisplayingAlternateText = action.messageID in state.alternateTextMessageIDs
+                if (!isDisplayingAlternateText) {
+                    AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.VIEW_ALTERNATE)
+                }
+
                 val updated =
-                    if (action.messageID in state.alternateTextMessageIDs) {
+                    if (isDisplayingAlternateText) {
                         state.alternateTextMessageIDs - action.messageID
                     } else {
                         state.alternateTextMessageIDs + action.messageID

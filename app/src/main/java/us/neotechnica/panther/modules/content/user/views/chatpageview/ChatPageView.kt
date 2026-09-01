@@ -250,8 +250,26 @@ private fun MessageList(
     val isGroup = (ConversationSessionService.currentConversation?.participants?.size ?: 2) > 2
     val lastConfirmedOwnIndex = messages.indexOfLast { it.isFromCurrentUser && !it.isOutboxMessage }
 
-    LaunchedEffect(messages.size, state.changeToken, state.translationsByID.size, state.mediaByID.size) {
-        if (messages.isNotEmpty()) listState.scrollToItem(messages.lastIndex)
+    // Auto-scroll to the newest message only on initial load, when the user
+    // sends a message, or when they are already at the bottom — never yanking
+    // them away while they read earlier messages. Mirrors the iOS chat page.
+    var previousMessageCount by remember { mutableStateOf(0) }
+    LaunchedEffect(messages.size, state.translationsByID.size, state.mediaByID.size) {
+        if (messages.isEmpty()) {
+            previousMessageCount = 0
+            return@LaunchedEffect
+        }
+
+        val didAppendMessages = messages.size > previousMessageCount
+        val isInitialLoad = previousMessageCount == 0
+        val newestMessageIsOwn = didAppendMessages && messages.last().isFromCurrentUser
+        val lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
+        val wasAtBottom = lastVisibleIndex == null || lastVisibleIndex >= messages.lastIndex - 1
+
+        if (isInitialLoad || newestMessageIsOwn || wasAtBottom) {
+            listState.scrollToItem(messages.lastIndex)
+        }
+        previousMessageCount = messages.size
     }
 
     LazyColumn(state = listState, modifier = modifier, verticalArrangement = Arrangement.Top) {
