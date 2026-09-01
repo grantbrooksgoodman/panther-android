@@ -61,16 +61,14 @@ object ChatInfoPageViewColors {
 
 // MARK: - String
 
-object ChatInfoPageViewStrings {
-    const val ADD_CONTACT = "Add Contact"
-    const val ATTACHMENTS_SEGMENT = "Attachments"
+// Non-translated per-screen constants. The `ChatInfoPageViewStrings`
+// name is reserved for the translated-label-strings object (mirroring
+// iOS); these format, separator, and Android-specific labels live here.
+object ChatInfoPageViewConstants {
     const val BLOCK = "Block"
-    const val CHANGE_NAME_AND_PHOTO = "Change name and photo"
     const val DELETE_CONVERSATION = "Delete this Conversation"
     const val DONE = "Done"
     const val FILE_TYPE_SEPARATOR = " • "
-    const val LEAVE_CONVERSATION = "Leave this Conversation"
-    const val PARTICIPANTS_SEGMENT = "Participants"
     const val PARTICIPANTS_SEPARATOR = ", "
     const val REPORT = "Report"
     const val TIMESTAMP_FORMAT = "MMM d, yyyy"

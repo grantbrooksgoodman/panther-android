@@ -53,17 +53,17 @@ import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.content.user.components.MediaItemView
 import us.neotechnica.panther.modules.content.user.components.MediaPreviewOverlay
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewColors
+import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewConstants
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewFloats
-import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewStrings
 import us.neotechnica.panther.modules.content.user.models.MediaItemViewData
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
 import us.neotechnica.panther.networking.modules.schema.user.models.User
 import us.neotechnica.panther.networking.modules.session.extensions.currentUserID
 import us.neotechnica.panther.networking.modules.session.extensions.users
 import us.neotechnica.panther.networking.modules.session.services.SessionStore
+import us.neotechnica.panther.networking.modules.translation.extensions.value
+import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import androidx.compose.material3.Text as Material3Text
 
@@ -71,7 +71,7 @@ import androidx.compose.material3.Text as Material3Text
 
 private typealias Floats = ChatInfoPageViewFloats
 private typealias Colors = ChatInfoPageViewColors
-private typealias Strings = ChatInfoPageViewStrings
+private typealias Strings = ChatInfoPageViewConstants
 
 /**
  * A conversation's info page: a large avatar, the conversation title, and
@@ -118,7 +118,7 @@ fun ChatInfoPageView(
 
             if (state.isGroup && conversation != null) {
                 Components.CapsuleButton(
-                    Strings.CHANGE_NAME_AND_PHOTO,
+                    state.strings.value(ChatInfoPageViewStrings.changeMetadataButtonText),
                     onClick = { viewModel.send(ChatInfoPageReducer.Action.ChangeMetadataTapped) },
                     primary = true,
                     modifier =
@@ -130,7 +130,11 @@ fun ChatInfoPageView(
 
             if (state.mediaItems.isNotEmpty()) {
                 SegmentedControl(
-                    titles = listOf(Strings.PARTICIPANTS_SEGMENT, Strings.ATTACHMENTS_SEGMENT),
+                    titles =
+                        listOf(
+                            state.strings.value(ChatInfoPageViewStrings.segmentedControlParticipantsOptionText),
+                            state.strings.value(ChatInfoPageViewStrings.segmentedControlMediaOptionText),
+                        ),
                     selectedIndex = state.selectedSegment,
                     onSelect = { viewModel.send(ChatInfoPageReducer.Action.SegmentChanged(it)) }
                 )
@@ -142,12 +146,14 @@ fun ChatInfoPageView(
                 ParticipantsCard(
                     participants = otherParticipants(conversation),
                     isExpanded = state.isExpanded,
+                    strings = state.strings,
                     onToggle = { viewModel.send(ChatInfoPageReducer.Action.ToggleExpanded) },
                     onAddContact = { /* Deferred: needs the contact selector page. */ },
                 )
 
                 LeaveRow(
                     enabled = otherParticipants(conversation).size > 2,
+                    text = state.strings.value(ChatInfoPageViewStrings.leaveConversation),
                     onClick = { viewModel.send(ChatInfoPageReducer.Action.LeaveTapped) },
                 )
             } else if (conversation != null) {
@@ -284,12 +290,14 @@ private fun MediaList(
 private fun ParticipantsCard(
     participants: List<ParticipantRowData>,
     isExpanded: Boolean,
+    strings: List<TranslationOutputMap>,
     onToggle: () -> Unit,
     onAddContact: () -> Unit,
 ) {
     InfoCard {
         ParticipantsHeaderRow(
             count = participants.size,
+            peopleText = strings.value(ChatInfoPageViewStrings.participantCountLabelText),
             subtitle = participants.joinToString(Strings.PARTICIPANTS_SEPARATOR) { it.displayName },
             isExpanded = isExpanded,
             onToggle = onToggle,
@@ -300,7 +308,7 @@ private fun ParticipantsCard(
                 ParticipantRow(participant)
             }
             CardDivider()
-            AddContactRow(onAddContact)
+            AddContactRow(strings.value(ChatInfoPageViewStrings.addContactButtonText), onAddContact)
         }
     }
 }
@@ -308,6 +316,7 @@ private fun ParticipantsCard(
 @Composable
 private fun ParticipantsHeaderRow(
     count: Int,
+    peopleText: String,
     subtitle: String,
     isExpanded: Boolean,
     onToggle: () -> Unit,
@@ -319,7 +328,7 @@ private fun ParticipantsHeaderRow(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Components.Text(
-                "$count ${LocalizedStringKey.People.localized()}",
+                "$count $peopleText",
                 color = colors.titleText,
                 font = Font.systemBold(),
             )
@@ -402,7 +411,10 @@ private fun LanguageBadge(
 }
 
 @Composable
-private fun AddContactRow(onClick: () -> Unit) {
+private fun AddContactRow(
+    text: String,
+    onClick: () -> Unit,
+) {
     val colors = LocalPantherColors.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -418,7 +430,7 @@ private fun AddContactRow(onClick: () -> Unit) {
         ) {
             Components.Symbol("plus", color = colors.accent, modifier = Modifier.size(Floats.rowAvatarGlyphSize))
         }
-        Components.Text(Strings.ADD_CONTACT, color = colors.accent, modifier = Modifier.padding(start = Floats.rowTextStartPadding))
+        Components.Text(text, color = colors.accent, modifier = Modifier.padding(start = Floats.rowTextStartPadding))
     }
 }
 
@@ -427,6 +439,7 @@ private fun AddContactRow(onClick: () -> Unit) {
 @Composable
 private fun LeaveRow(
     enabled: Boolean,
+    text: String,
     onClick: () -> Unit,
 ) {
     val colors = LocalPantherColors.current
@@ -442,7 +455,7 @@ private fun LeaveRow(
                 .padding(Floats.cardPadding),
     ) {
         Components.Text(
-            Strings.LEAVE_CONVERSATION,
+            text,
             color = if (enabled) Colors.destructive else colors.subtitleText,
         )
     }

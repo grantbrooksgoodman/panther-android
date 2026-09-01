@@ -13,13 +13,14 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAler
 import us.neotechnica.panther.modules.common.contacts.models.ContactMatch
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.formattedString
-import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewStrings
+import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewConstants
 import us.neotechnica.panther.modules.content.user.models.MediaItemViewData
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
 import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
@@ -35,6 +36,11 @@ import us.neotechnica.panther.networking.modules.session.services.ActivitySessio
 import us.neotechnica.panther.networking.modules.session.services.ConversationSessionService
 import us.neotechnica.panther.networking.modules.session.services.ModerationSessionService
 import us.neotechnica.panther.networking.modules.session.services.SessionStore
+import us.neotechnica.panther.networking.modules.translation.extensions.value
+import us.neotechnica.panther.networking.modules.translation.interfaces.TranslatedLabelStrings
+import us.neotechnica.panther.networking.modules.translation.models.TranslatedLabelStringCollection
+import us.neotechnica.panther.networking.modules.translation.models.TranslationInputMap
+import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
@@ -42,6 +48,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
+import us.neotechnica.panther.translator.models.TranslationInput
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -89,6 +96,14 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
             val exception: Exception,
         ) : Action
 
+        data class ResolveFailed(
+            val exception: Exception,
+        ) : Action
+
+        data class ResolveReturned(
+            val strings: List<TranslationOutputMap>,
+        ) : Action
+
         data object BackTapped : Action
     }
 
@@ -101,6 +116,7 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         val selectedSegment: Int = 0,
         val isExpanded: Boolean = true,
         val isBusy: Boolean = false,
+        val strings: List<TranslationOutputMap> = ChatInfoPageViewStrings.defaultOutputMap,
     ) {
         val isGroup: Boolean
             get() = (conversation?.participants?.size ?: 0) > 2
@@ -130,6 +146,7 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
                         conversation = conversation,
                         mediaItems = buildMediaItems(conversation),
                     ),
+                    resolveEffect(),
                 )
             }
 
@@ -186,6 +203,14 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
                 ReduceResult(state.copy(isBusy = false))
             }
 
+            is Action.ResolveReturned ->
+                ReduceResult(state.copy(strings = action.strings))
+
+            is Action.ResolveFailed -> {
+                Logger.log(action.exception)
+                ReduceResult(state)
+            }
+
             Action.BackTapped -> {
                 DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
                 ReduceResult(state)
@@ -209,7 +234,7 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
                     mediaTypeLabelText = mediaTypeLabel(mediaFile),
                     senderLabelText = senderLabel(message, user),
                     timestampLabelText =
-                        SimpleDateFormat(ChatInfoPageViewStrings.TIMESTAMP_FORMAT, Locale.getDefault())
+                        SimpleDateFormat(ChatInfoPageViewConstants.TIMESTAMP_FORMAT, Locale.getDefault())
                             .format(message.sentDate),
                 )
             }
@@ -219,7 +244,7 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         val fileExtension = mediaFile.fileExtension
         return when {
             fileExtension.isDocument ->
-                "${LocalizedStringKey.File.localized()}${ChatInfoPageViewStrings.FILE_TYPE_SEPARATOR}${fileExtension.rawValue}"
+                "${LocalizedStringKey.File.localized()}${ChatInfoPageViewConstants.FILE_TYPE_SEPARATOR}${fileExtension.rawValue}"
             fileExtension.isImage -> LocalizedStringKey.Image.localized()
             fileExtension.isVideo -> LocalizedStringKey.Video.localized()
             else -> LocalizedStringKey.Attachment.localized()
@@ -241,6 +266,15 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
     }
 
     // MARK: - Auxiliary
+
+    private fun resolveEffect(): Effect<Action> =
+        Effect.run { send ->
+            try {
+                send(Action.ResolveReturned(Networking.config.hostedTranslationDelegate.resolve(ChatInfoPageViewStrings)))
+            } catch (exception: Exception) {
+                send(Action.ResolveFailed(exception))
+            }
+        }
 
     private fun changeMetadataEffect(state: State): Effect<Action> =
         Effect.run { send ->
@@ -362,4 +396,30 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
             },
         )
     }
+}
+
+/** The translated label strings for the chat info page. */
+object ChatInfoPageViewStrings : TranslatedLabelStrings {
+    val addContactButtonText = TranslatedLabelStringCollection("chatInfoPageView.addContactButtonText")
+    val changeMetadataButtonText = TranslatedLabelStringCollection("chatInfoPageView.changeMetadataButtonText")
+    val leaveConversation = TranslatedLabelStringCollection("chatInfoPageView.leaveConversation")
+    val participantCountLabelText = TranslatedLabelStringCollection("chatInfoPageView.participantCountLabelText")
+    val segmentedControlMediaOptionText = TranslatedLabelStringCollection("chatInfoPageView.segmentedControlMediaOptionText")
+    val segmentedControlParticipantsOptionText =
+        TranslatedLabelStringCollection("chatInfoPageView.segmentedControlParticipantsOptionText")
+    val sharePhoneNumberListRowText = TranslatedLabelStringCollection("chatInfoPageView.sharePhoneNumberListRowText")
+
+    override val keyPairs: List<TranslationInputMap> =
+        listOf(
+            TranslationInputMap(addContactButtonText, TranslationInput("Add Contact")),
+            TranslationInputMap(changeMetadataButtonText, TranslationInput("Change name and photo")),
+            TranslationInputMap(leaveConversation, TranslationInput("Leave this Conversation")),
+            TranslationInputMap(participantCountLabelText, TranslationInput("people", alternate = "persons")),
+            TranslationInputMap(
+                segmentedControlMediaOptionText,
+                TranslationInput("Attachments", alternate = "Shared Media"),
+            ),
+            TranslationInputMap(segmentedControlParticipantsOptionText, TranslationInput("Participants")),
+            TranslationInputMap(sharePhoneNumberListRowText, TranslationInput("Share Phone Number")),
+        )
 }
