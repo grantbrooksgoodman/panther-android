@@ -7,6 +7,7 @@
 
 package us.neotechnica.panther.networking.modules.session.services
 
+import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
 import us.neotechnica.panther.networking.modules.session.extensions.users
 import us.neotechnica.panther.networking.modules.session.models.OutboxEntry
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -63,6 +64,7 @@ object MessageDeliveryService {
                 )
             MessageOutboxService.remove(entry.id)
             ConversationSessionService.setCurrentConversation(updated)
+            AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.SEND_TEXT_MESSAGE)
         } catch (exception: Exception) {
             MessageOutboxService.markFailed(entry.id)
             Logger.log(exception)

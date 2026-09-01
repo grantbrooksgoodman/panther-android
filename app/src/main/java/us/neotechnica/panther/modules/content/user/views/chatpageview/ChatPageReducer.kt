@@ -14,6 +14,7 @@ import us.neotechnica.panther.modules.content.user.models.ConversationCellViewDa
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
 import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
 import us.neotechnica.panther.networking.modules.schema.message.models.Message
 import us.neotechnica.panther.networking.modules.session.extensions.isMediaMessage
@@ -106,11 +107,13 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         action: Action,
     ): ReduceResult<State, Action> =
         when (action) {
-            is Action.ViewFirstAppeared ->
+            is Action.ViewFirstAppeared -> {
+                AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.ACCESS_CHAT)
                 ReduceResult(
                     state.copy(conversationIDKey = action.conversationIDKey, languageCode = RuntimeStorage.languageCode),
                     startEffect(action.conversationIDKey),
                 )
+            }
 
             is Action.MessagesUpdated ->
                 ReduceResult(

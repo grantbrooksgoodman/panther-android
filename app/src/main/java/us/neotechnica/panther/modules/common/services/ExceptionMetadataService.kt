@@ -25,9 +25,15 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 object ExceptionMetadataService : ExceptionMetadataDelegate {
     // MARK: - ExceptionMetadataDelegate Conformance
 
-    override fun isReportable(errorCode: String): Boolean =
-        errorCode != AppException.cannotSendTextMessages.errorCode &&
-            errorCode != AppException.observerRegistrationMisuse.errorCode
+    override fun isReportable(errorCode: String): Boolean {
+        if (errorCode == AppException.cannotSendTextMessages.errorCode ||
+            errorCode == AppException.observerRegistrationMisuse.errorCode
+        ) {
+            return false
+        }
+
+        return errorCode !in ErrorReportingService.reportedErrorCodes
+    }
 
     override fun userFacingDescriptor(descriptor: String): String? =
         when (descriptor) {

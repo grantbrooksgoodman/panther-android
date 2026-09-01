@@ -12,6 +12,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.interfaces.LoggerPres
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
+import java.io.File
+import java.util.UUID
 
 /**
  * The subsystem's logging façade.
@@ -38,7 +40,22 @@ object Logger {
 
     private const val TAG = "AppSubsystem"
 
+    private val sessionID = UUID.randomUUID().toString()
+
     private var presentationDelegate: LoggerPresentationDelegate? = null
+
+    // MARK: - Computed Properties
+
+    /**
+     * The file of the on-disk session record for the current
+     * launch.
+     *
+     * A new file is created for each launch and is not persisted
+     * across sessions. Returns `null` before
+     * [FileStore.initialize][FileStore] has run.
+     */
+    val sessionRecordFilePath: File?
+        get() = FileStore.resolve("$sessionID.txt")
 
     // MARK: - Delegate Registration
 
@@ -103,6 +120,17 @@ object Logger {
         runCatching { Log.d(TAG, composed) }
             .onFailure { println("$TAG: $composed") }
 
+        appendToSessionRecord(composed)
         with?.let { presentationDelegate?.present(it, null, message) }
+    }
+
+    // MARK: - Auxiliary
+
+    private fun appendToSessionRecord(line: String) {
+        runCatching {
+            val file = sessionRecordFilePath ?: return
+            file.parentFile?.mkdirs()
+            file.appendText("$line\n")
+        }
     }
 }

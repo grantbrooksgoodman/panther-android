@@ -61,7 +61,9 @@ object LoggerPresentationService : LoggerPresentationDelegate {
         text: String?,
     ) {
         val exception = exception ?: return presentNormalAlert(null, text)
-        scope.launch { ErrorAlert(exception).present() }
+        scope.launch {
+            ErrorAlert(exception, onSendReport = { ErrorReportingService.fileReport(exception) }).present()
+        }
     }
 
     private fun presentNormalAlert(
@@ -77,7 +79,7 @@ object LoggerPresentationService : LoggerPresentationDelegate {
         exception: Exception?,
         text: String?,
     ) {
-        val message = exception?.userFacingDescriptor ?: text ?: return
+        val descriptor = exception?.userFacingDescriptor ?: text ?: return
         val style = alertType.style ?: if (exception == null) ToastStyle.INFO else ToastStyle.ERROR
 
         val type =
@@ -94,7 +96,17 @@ object LoggerPresentationService : LoggerPresentationDelegate {
                 Toast.Perpetuation.Ephemeral(TOAST_EPHEMERAL_DURATION_SECONDS.seconds)
             }
 
-        Toast.show(Toast(type, message = message, perpetuation = perpetuation))
+        // Reportable exceptions invite the user to file a report by tapping.
+        val reportableException = exception?.takeIf { it.isReportable }
+        Toast.show(
+            Toast(
+                type,
+                title = reportableException?.let { descriptor },
+                message = if (reportableException != null) "Tap to report" else descriptor,
+                perpetuation = perpetuation,
+            ),
+            onTap = reportableException?.let { ex -> { ErrorReportingService.fileReport(ex) } },
+        )
     }
 }
 

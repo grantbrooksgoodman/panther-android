@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.conversation.services.ConversationService
 import us.neotechnica.panther.networking.modules.message.services.MessageService
+import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Participant
 import us.neotechnica.panther.networking.modules.schema.message.models.Message
@@ -111,6 +112,7 @@ object MessageSessionService {
                 ConversationSessionService.addMessages(listOf(message), conversation)
             } else {
                 val participants = (listOf(initiatingUser) + otherUsers).map { Participant(userID = it.id) }
+                AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.CREATE_NEW_CONVERSATION)
                 ConversationService.createConversation(
                     firstMessage = message,
                     isPenPalsConversation = isPenPalsConversation,

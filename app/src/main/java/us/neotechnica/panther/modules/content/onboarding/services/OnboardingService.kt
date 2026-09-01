@@ -11,6 +11,7 @@ package us.neotechnica.panther.modules.content.onboarding.services
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationAlert
+import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
 import us.neotechnica.panther.networking.modules.schema.common.models.PhoneNumber
 import us.neotechnica.panther.networking.modules.user.services.UserService
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -29,8 +30,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
  * restarts.
  *
  * **Note:** push-token registration is deferred to a later phase, so
- * created users carry no push tokens yet; analytics events are
- * likewise deferred.
+ * created users carry no push tokens yet.
  */
 object OnboardingService {
     // MARK: - Properties
@@ -101,6 +101,7 @@ object OnboardingService {
             )
         Persistent.setString(PersistentStorageKey.currentUserID, user.id)
         createdUserInCurrentAppSession = true
+        AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.SIGN_UP)
     }
 
     // MARK: - Alert Presentation

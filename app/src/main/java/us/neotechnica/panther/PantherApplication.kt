@@ -24,6 +24,7 @@ import us.neotechnica.panther.modules.localization.services.LocalizedStringResol
 import us.neotechnica.panther.modules.notifications.services.PantherMessagingService
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkEnvironment
+import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
 import us.neotechnica.panther.networking.modules.common.services.ConnectionStatusService
 import us.neotechnica.panther.networking.modules.session.services.MessageOutboxService
 import us.neotechnica.panther.networking.modules.session.services.UserMutationService
@@ -76,6 +77,8 @@ class PantherApplication : Application() {
         registerTranslatorActivityProvider()
         setUpMessageOutboxRetry()
         setUpPushNotifications()
+
+        AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.OPEN_APP)
     }
 
     // MARK: - Build Configuration

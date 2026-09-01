@@ -23,6 +23,8 @@ import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.auth.extensions.notReportableForAuthCodes
+import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
+import us.neotechnica.panther.networking.modules.common.services.AnalyticsService.AnalyticsEvent
 import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.schema.common.models.PhoneNumber
 import us.neotechnica.panther.networking.modules.translation.extensions.value
@@ -229,6 +231,7 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
             is Action.AuthenticateUserReturned -> {
                 Overlay.hide()
                 Persistent.setString(PersistentStorageKey.currentUserID, action.userID)
+                AnalyticsService.logEvent(AnalyticsEvent.LOG_IN)
                 // Clear the onboarding stack so a later sign-out returns to
                 // the welcome page rather than this stale sign-in page.
                 navigate(OnboardingRoute.Stack(emptyList()))

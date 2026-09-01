@@ -18,6 +18,7 @@ import us.neotechnica.panther.navigation.UserContentNavigatorState
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.modules.common.extensions.digits
+import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
 import us.neotechnica.panther.networking.modules.schema.common.models.PhoneNumber
 import us.neotechnica.panther.networking.modules.session.services.MessageSessionService
 import us.neotechnica.panther.networking.modules.user.services.UserService
@@ -130,8 +131,10 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
         action: Action,
     ): ReduceResult<State, Action> =
         when (action) {
-            Action.ViewFirstAppeared ->
+            Action.ViewFirstAppeared -> {
+                AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.ACCESS_NEW_CHAT_PAGE)
                 ReduceResult(state.copy(contacts = ContactService.matches()))
+            }
 
             is Action.RecipientQueryChanged ->
                 ReduceResult(state.copy(recipientQuery = action.query))

@@ -17,6 +17,8 @@ import us.neotechnica.panther.navigation.RootRoute
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
+import us.neotechnica.panther.networking.modules.common.services.AnalyticsService.AnalyticsEvent
 import us.neotechnica.panther.networking.modules.session.services.AccountDeletionService
 import us.neotechnica.panther.networking.modules.session.services.SignOutService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
@@ -88,6 +90,7 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
                 return@run
             }
 
+            AnalyticsService.logEvent(AnalyticsEvent.LOG_OUT)
             runCatching { SignOutService.signOut() }.onFailure { Logger.log(it.toException()) }
             returnToOnboarding()
             send(Action.Finished)
@@ -110,6 +113,7 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
                 return@run
             }
 
+            AnalyticsService.logEvent(AnalyticsEvent.DELETE_ACCOUNT)
             Overlay.show()
             runCatching { AccountDeletionService.deleteAccount() }.onFailure { Logger.log(it.toException()) }
             Overlay.hide()

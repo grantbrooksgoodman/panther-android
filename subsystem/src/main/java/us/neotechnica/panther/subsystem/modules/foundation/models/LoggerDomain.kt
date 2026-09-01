@@ -25,6 +25,9 @@ value class LoggerDomain(
     // MARK: - Companion
 
     companion object {
+        /** The domain for analytics event logging. */
+        val analytics = LoggerDomain("analytics")
+
         /** The domain for caught exceptions. */
         val exception = LoggerDomain("exception")
 

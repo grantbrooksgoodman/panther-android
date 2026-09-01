@@ -26,6 +26,7 @@ dependencies {
     api(project(":subsystem"))
     api(project(":translator"))
     api(platform(libs.firebase.bom))
+    api(libs.firebase.analytics)
     api(libs.firebase.auth)
     api(libs.firebase.database)
     api(libs.firebase.messaging)
