@@ -12,14 +12,19 @@ import android.app.Activity
 import android.app.Application
 import android.os.Bundle
 import com.google.firebase.messaging.FirebaseMessaging
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.services.CommonPropertyLists
 import us.neotechnica.panther.modules.common.services.ExceptionMetadataService
 import us.neotechnica.panther.modules.common.services.LoggerPresentationService
+import us.neotechnica.panther.modules.common.services.UpdateService
+import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
 import us.neotechnica.panther.modules.notifications.services.PantherMessagingService
 import us.neotechnica.panther.networking.Networking
@@ -30,6 +35,7 @@ import us.neotechnica.panther.networking.modules.session.services.MessageOutboxS
 import us.neotechnica.panther.networking.modules.session.services.UserMutationService
 import us.neotechnica.panther.networking.modules.session.services.retryAllEligible
 import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
+import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.AppSubsystem
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
@@ -75,7 +81,7 @@ class PantherApplication : Application() {
         )
 
         registerTranslatorActivityProvider()
-        setUpMessageOutboxRetry()
+        setUpConnectionStatusEffects()
         setUpPushNotifications()
 
         AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.OPEN_APP)
@@ -124,18 +130,40 @@ class PantherApplication : Application() {
         }
     }
 
-    // MARK: - Message Outbox Retry
+    // MARK: - Connection Status Effects
 
-    private fun setUpMessageOutboxRetry() {
+    private fun setUpConnectionStatusEffects() {
         ConnectionStatusService.initialize(this)
 
         // Retry eligible entries on launch.
         outboxScope.launch { MessageOutboxService.retryAllEligible() }
 
         // Retry eligible entries when connectivity is restored.
-        ConnectionStatusService.addEffectUponConnectivityRestored(RETRY_OUTBOX_EFFECT_ID) {
-            outboxScope.launch { MessageOutboxService.retryAllEligible() }
+        ConnectionStatusService.addEffectUponConnectionChanged(RETRY_OUTBOX_EFFECT_ID) {
+            if (ConnectionStatusService.isOnline) outboxScope.launch { MessageOutboxService.retryAllEligible() }
         }
+
+        // Show an offline toast when connectivity is lost.
+        ConnectionStatusService.addEffectUponConnectionChanged(SHOW_OFFLINE_MODE_TOAST_EFFECT_ID) {
+            if (!ConnectionStatusService.isOnline) showOfflineModeToast()
+        }
+
+        // Re-check for available updates when connectivity is restored.
+        ConnectionStatusService.addEffectUponConnectionChanged(CHECK_FOR_UPDATES_EFFECT_ID) {
+            if (ConnectionStatusService.isOnline) outboxScope.launch { runCatching { UpdateService.promptToUpdateIfNeeded() } }
+        }
+
+        if (!ConnectionStatusService.isOnline) showOfflineModeToast()
+    }
+
+    private fun showOfflineModeToast() {
+        Toast.show(
+            Toast(
+                Toast.Type.Capsule(ToastStyle.WARNING),
+                message = LocalizedStringKey.OfflineMode.localized(),
+                perpetuation = Toast.Perpetuation.Ephemeral(OFFLINE_TOAST_SECONDS.seconds),
+            ),
+        )
     }
 
     // MARK: - Translator Wiring
@@ -177,7 +205,11 @@ class PantherApplication : Application() {
     // MARK: - Companion
 
     private companion object {
+        const val CHECK_FOR_UPDATES_EFFECT_ID = "checkForUpdates"
         const val RETRY_OUTBOX_EFFECT_ID = "retryMessageOutbox"
+        const val SHOW_OFFLINE_MODE_TOAST_EFFECT_ID = "showOfflineModeToast"
+
+        const val OFFLINE_TOAST_SECONDS = 10L
 
         const val BUILD_INFO_ASSET = "build_info.properties"
         const val CODE_NAME = "Panther"

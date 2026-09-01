@@ -15,17 +15,21 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 
 /**
- * Tracks network reachability and notifies registered effects when
- * connectivity is restored.
+ * Tracks network reachability and runs registered effects when
+ * network connectivity changes.
  *
- * The outbox retry pipeline registers an effect here so failed sends are
- * retried the moment the device comes back online.
+ * Registered effects run both when connectivity is lost and when it
+ * is restored; guard on [isOnline] within the effect to react to a
+ * single direction. The outbox retry pipeline registers an effect
+ * here so failed sends are retried the moment the device comes back
+ * online, and the offline-mode toast registers one so it appears the
+ * moment connectivity drops.
  */
 object ConnectionStatusService {
     // MARK: - Properties
 
     private val online = LockIsolated(true)
-    private val restoredEffects = LockIsolated(mapOf<String, () -> Unit>())
+    private val uponConnectionChanged = LockIsolated(mapOf<String, () -> Unit>())
 
     private var connectivityManager: ConnectivityManager? = null
 
@@ -65,16 +69,30 @@ object ConnectionStatusService {
     // MARK: - Effects
 
     /**
-     * Registers an effect to run whenever connectivity is restored.
+     * Registers an effect to run whenever connection status changes.
      *
      * Registering a new effect with the same identifier replaces the
      * existing one.
+     *
+     * **Warning:** the effect runs perpetually, upon each change in
+     * connection status. Call [removeEffect] or [clearAllEffects] if
+     * this is not the desired behavior.
      */
-    fun addEffectUponConnectivityRestored(
+    fun addEffectUponConnectionChanged(
         id: String,
         effect: () -> Unit,
     ) {
-        restoredEffects.withValue { it.value = it.value + (id to effect) }
+        uponConnectionChanged.withValue { it.value = it.value + (id to effect) }
+    }
+
+    /** Removes every registered effect. */
+    fun clearAllEffects() {
+        uponConnectionChanged.wrappedValue = emptyMap()
+    }
+
+    /** Removes the effect registered under the given identifier. */
+    fun removeEffect(id: String) {
+        uponConnectionChanged.withValue { it.value = it.value - id }
     }
 
     // MARK: - Auxiliary
@@ -82,9 +100,9 @@ object ConnectionStatusService {
     private fun setOnline(value: Boolean) {
         val wasOnline = online.wrappedValue
         online.wrappedValue = value
-        if (value && !wasOnline) {
-            Logger.log("Connectivity restored; running restored effects.")
-            restoredEffects.wrappedValue.values.forEach { it() }
+        if (value != wasOnline) {
+            Logger.log("Connection status changed (online: $value); running effects.")
+            uponConnectionChanged.wrappedValue.values.forEach { it() }
         }
     }
 
