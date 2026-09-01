@@ -8,6 +8,8 @@
 package us.neotechnica.panther.subsystem.modules.foundation.services
 
 import android.util.Log
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.LoggerPresentationDelegate
+import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 
@@ -36,31 +38,63 @@ object Logger {
 
     private const val TAG = "AppSubsystem"
 
+    private var presentationDelegate: LoggerPresentationDelegate? = null
+
+    // MARK: - Delegate Registration
+
+    /**
+     * Registers the delegate that presents the logger's
+     * user-visible alerts.
+     *
+     * Call this once at launch, before any log entry requests an
+     * alert. The subsystem cannot reach the design system's alert
+     * and toast components directly, so it forwards presentation
+     * requests through this delegate.
+     *
+     * @param delegate The delegate to register, or `null` to
+     *   suppress alert presentation.
+     */
+    fun setPresentationDelegate(delegate: LoggerPresentationDelegate?) {
+        presentationDelegate = delegate
+    }
+
     // MARK: - Methods
 
     /**
-     * Logs the given exception under the exception domain.
+     * Logs the given exception under the exception domain, then
+     * presents the given alert.
      *
      * @param exception The exception to log.
+     * @param with The alert to present after logging, or `null` to
+     *   log silently.
      */
-    fun log(exception: Exception) {
+    fun log(
+        exception: Exception,
+        with: AlertType? = null,
+    ) {
         log(
             "${exception.descriptor} (${exception.code}) " +
                 "[${exception.metadata.fileName}:${exception.metadata.line}]",
             domain = LoggerDomain.exception,
         )
+
+        with?.let { presentationDelegate?.present(it, exception, null) }
     }
 
     /**
-     * Logs the given message under the specified domain.
+     * Logs the given message under the specified domain, then
+     * presents the given alert.
      *
      * @param message The message to log.
      * @param domain The domain to classify the output under.
      *   Defaults to the general domain.
+     * @param with The alert to present after logging, or `null` to
+     *   log silently.
      */
     fun log(
         message: String,
         domain: LoggerDomain = LoggerDomain.general,
+        with: AlertType? = null,
     ) {
         val composed = "[${domain.rawValue}] $message"
 
@@ -68,5 +102,7 @@ object Logger {
         // fall back to standard output.
         runCatching { Log.d(TAG, composed) }
             .onFailure { println("$TAG: $composed") }
+
+        with?.let { presentationDelegate?.present(it, null, message) }
     }
 }

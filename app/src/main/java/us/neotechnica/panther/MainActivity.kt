@@ -24,6 +24,7 @@ import androidx.compose.ui.zIndex
 import us.neotechnica.panther.designsystem.modules.alertkit.views.AlertHost
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.BuildInfoOverlayView
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.OverlayHost
+import us.neotechnica.panther.designsystem.modules.foundation.toast.ToastHost
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.designsystem.modules.theming.views.PantherTheme
 import us.neotechnica.panther.navigation.PendingChatNavigation
@@ -44,6 +45,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     RootView()
                     AlertHost()
+                    ToastHost()
                     OverlayHost()
                     BuildInfoOverlayView(
                         modifier =

@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -78,7 +79,7 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
     val colors = LocalPantherColors.current
 
     Box(modifier = modifier.fillMaxSize().background(colors.groupedContentBackground)) {
-        Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
+        Column(modifier = Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
             Header(onClose = { viewModel.send(Action.BackTapped) })
 
             RecipientBar(

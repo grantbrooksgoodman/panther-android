@@ -18,6 +18,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.services.CommonPropertyLists
+import us.neotechnica.panther.modules.common.services.LoggerPresentationService
 import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
 import us.neotechnica.panther.modules.notifications.services.PantherMessagingService
 import us.neotechnica.panther.networking.Networking
@@ -29,6 +30,7 @@ import us.neotechnica.panther.networking.modules.session.services.retryAllEligib
 import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.translator.Translator
 import java.util.Date
@@ -59,6 +61,8 @@ class PantherApplication : Application() {
         CommonPropertyLists.initialize(this)
         ContactService.initialize(this)
         configureBuild()
+
+        Logger.setPresentationDelegate(LoggerPresentationService)
 
         Networking.initialize(
             context = this,

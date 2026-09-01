@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -128,7 +129,7 @@ fun ChatPageView(
     StatefulView(state = state.viewState, modifier = modifier) {
         Box(modifier = Modifier.fillMaxSize()) {
             ContextMenuHost(Modifier.fillMaxSize()) {
-                Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
+                Column(modifier = Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
                     ChatHeader(
                         title = state.title,
                         onBack = {
