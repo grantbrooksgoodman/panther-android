@@ -7,6 +7,8 @@
 
 package us.neotechnica.panther.subsystem.modules.foundation.models
 
+import us.neotechnica.panther.subsystem.AppSubsystem
+import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import java.security.MessageDigest
 
 /**
@@ -34,6 +36,15 @@ import java.security.MessageDigest
  * descriptor string. You can also supply a static code through
  * the `userInfo` map's `"StaticErrorCode"` key.
  *
+ * ## User-Facing Descriptors
+ *
+ * The [userFacingDescriptor] property returns a localized,
+ * end-user-appropriate message. On general-release builds, if no
+ * user-facing descriptor has been registered through the
+ * [ExceptionMetadataDelegate][us.neotechnica.panther.subsystem.modules.foundation.interfaces.ExceptionMetadataDelegate],
+ * a generic "something went wrong" string is returned instead of
+ * the developer-facing descriptor.
+ *
  * ## Underlying Exceptions
  *
  * Exceptions can form a chain through [underlyingExceptions].
@@ -43,21 +54,22 @@ import java.security.MessageDigest
 class Exception(
     /** A developer-facing description of what went wrong. */
     val descriptor: String = "An unknown error occurred.",
-    /**
-     * A Boolean value that indicates whether this exception
-     * should be reported to crash-reporting or analytics
-     * infrastructure.
-     */
-    val isReportable: Boolean = true,
-    /**
-     * An optional map of supplementary information attached to
-     * the exception.
-     */
-    val userInfo: Map<String, Any>? = null,
+    isReportable: Boolean? = null,
+    userInfo: Map<String, Any>? = null,
     underlyingExceptions: List<Exception>? = null,
     /** The source-location metadata captured at creation. */
     val metadata: ExceptionMetadata,
 ) : kotlin.Exception(descriptor) {
+    // MARK: - Types
+
+    /** The reserved keys the exception recognizes in its user info. */
+    enum class UserInfo(
+        val rawValue: String,
+    ) {
+        STATIC_ERROR_CODE("StaticErrorCode"),
+        USER_FACING_DESCRIPTOR("UserFacingDescriptor"),
+    }
+
     // MARK: - Companion
 
     companion object {
@@ -95,6 +107,24 @@ class Exception(
      */
     val code: String
 
+    /**
+     * A Boolean value that indicates whether this exception should
+     * be reported to crash-reporting or analytics infrastructure.
+     *
+     * When the initializer's `isReportable` argument is `null`, the
+     * value is resolved through the registered
+     * [ExceptionMetadataDelegate][us.neotechnica.panther.subsystem.modules.foundation.interfaces.ExceptionMetadataDelegate],
+     * falling back to `true` when no delegate is registered.
+     */
+    val isReportable: Boolean
+
+    /**
+     * An optional map of supplementary information attached to the
+     * exception. Keys are normalized to begin with an uppercase
+     * character.
+     */
+    val userInfo: Map<String, Any>?
+
     private val storedUnderlyingExceptions: List<Exception>?
 
     // MARK: - Computed Properties
@@ -118,10 +148,36 @@ class Exception(
             return all
         }
 
+    /**
+     * A localized, end-user-appropriate description of the error.
+     *
+     * The value is resolved in the following order:
+     * 1. A `"UserFacingDescriptor"` entry in [userInfo].
+     * 2. A mapping provided by the
+     *    [ExceptionMetadataDelegate][us.neotechnica.panther.subsystem.modules.foundation.interfaces.ExceptionMetadataDelegate].
+     * 3. On general-release builds, a generic string. On
+     *    pre-release builds, the raw [descriptor].
+     */
+    val userFacingDescriptor: String
+        get() {
+            val resolved =
+                userInfo?.get(UserInfo.USER_FACING_DESCRIPTOR.rawValue) as? String
+                    ?: AppSubsystem.delegates.exceptionMetadata?.userFacingDescriptor(descriptor)
+            if (resolved != null) return resolved
+
+            return if (Build.milestone == Milestone.GENERAL_RELEASE) {
+                SOMETHING_WENT_WRONG
+            } else {
+                descriptor
+            }
+        }
+
     // MARK: - Init
 
     init {
-        code = (userInfo?.get("StaticErrorCode") as? String) ?: descriptor.errorCode
+        code = (userInfo?.get(UserInfo.STATIC_ERROR_CODE.rawValue) as? String) ?: descriptor.errorCode
+        this.isReportable = isReportable ?: AppSubsystem.delegates.exceptionMetadata?.isReportable(code) ?: true
+        this.userInfo = if (userInfo?.isNotEmpty() == true) userInfo.withCapitalizedKeys() else null
         storedUnderlyingExceptions =
             underlyingExceptions
                 ?.takeIf { it.isNotEmpty() }
@@ -170,14 +226,45 @@ class Exception(
         )
     }
 
+    // MARK: - AppException Equality Comparison
+
+    /**
+     * Returns a Boolean value indicating whether this exception's
+     * error code matches a catalogued [AppException].
+     *
+     * @param to The catalogued exception to compare against.
+     *
+     * @return `true` if the codes match; otherwise, `false`.
+     */
+    fun isEqual(to: AppException): Boolean = code == to.errorCode
+
+    /**
+     * Returns a Boolean value indicating whether this exception's
+     * error code matches any catalogued [AppException].
+     *
+     * @param toAny The catalogued exceptions to compare against.
+     *
+     * @return `true` if a match is found; otherwise, `false`.
+     */
+    fun isEqual(toAny: List<AppException>): Boolean = toAny.any { it.errorCode == code }
+
     // MARK: - Equatable Conformance
 
     override fun equals(other: Any?): Boolean {
         if (other !is Exception) return false
+
+        val leftStrings = userInfo?.filterValues { it is String }?.mapValues { it.value as String }
+        val rightStrings = other.userInfo?.filterValues { it is String }?.mapValues { it.value as String }
+        val leftNonStringCount = (userInfo?.size ?: 0) - (leftStrings?.size ?: 0)
+        val rightNonStringCount = (other.userInfo?.size ?: 0) - (rightStrings?.size ?: 0)
+
         return code == other.code &&
             descriptor == other.descriptor &&
             isReportable == other.isReportable &&
-            storedUnderlyingExceptions == other.storedUnderlyingExceptions
+            metadata == other.metadata &&
+            underlyingExceptions == other.underlyingExceptions &&
+            leftStrings == rightStrings &&
+            leftNonStringCount == rightNonStringCount
     }
 
     override fun hashCode(): Int {
@@ -224,3 +311,10 @@ private val String.errorCode: String
 
         return (hexString.take(2) + hexString.takeLast(2)).uppercase()
     }
+
+// Returns a copy of the map with each key's first character
+// uppercased, mirroring the iOS `withCapitalizedKeys` normalization.
+private fun Map<String, Any>.withCapitalizedKeys(): Map<String, Any> =
+    entries.associate { (key, value) -> key.replaceFirstChar { it.uppercaseChar() } to value }
+
+private const val SOMETHING_WENT_WRONG = "Something went wrong. Please try again later."

@@ -44,7 +44,7 @@ class ErrorAlert(
             AlertPresenter.present(
                 PresentedAlert.ErrorContent(
                     title = "Error",
-                    message = exception.descriptor,
+                    message = exception.userFacingDescriptor,
                     dismissButtonTitle = dismissButtonTitle,
                     sendReportButtonTitle = if (exception.isReportable) sendReportButtonTitle else null,
                     onDismiss = {

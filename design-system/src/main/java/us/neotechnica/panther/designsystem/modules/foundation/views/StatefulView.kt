@@ -105,7 +105,7 @@ private fun FailurePage(
         )
 
         Text(
-            exception.descriptor,
+            exception.userFacingDescriptor,
             color = LocalPantherColors.current.subtitleText,
             style = MaterialTheme.typography.bodyMedium,
         )

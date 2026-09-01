@@ -68,7 +68,7 @@ object LoggerPresentationService : LoggerPresentationDelegate {
         exception: Exception?,
         text: String?,
     ) {
-        val message = exception?.descriptor ?: text ?: return
+        val message = exception?.userFacingDescriptor ?: text ?: return
         scope.launch { Alert(message = message).present() }
     }
 
@@ -77,7 +77,7 @@ object LoggerPresentationService : LoggerPresentationDelegate {
         exception: Exception?,
         text: String?,
     ) {
-        val message = exception?.descriptor ?: text ?: return
+        val message = exception?.userFacingDescriptor ?: text ?: return
         val style = alertType.style ?: if (exception == null) ToastStyle.INFO else ToastStyle.ERROR
 
         val type =

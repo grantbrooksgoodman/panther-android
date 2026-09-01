@@ -18,6 +18,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.services.CommonPropertyLists
+import us.neotechnica.panther.modules.common.services.ExceptionMetadataService
 import us.neotechnica.panther.modules.common.services.LoggerPresentationService
 import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
 import us.neotechnica.panther.modules.notifications.services.PantherMessagingService
@@ -29,6 +30,7 @@ import us.neotechnica.panther.networking.modules.session.services.UserMutationSe
 import us.neotechnica.panther.networking.modules.session.services.retryAllEligible
 import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
+import us.neotechnica.panther.subsystem.AppSubsystem
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
@@ -63,6 +65,7 @@ class PantherApplication : Application() {
         configureBuild()
 
         Logger.setPresentationDelegate(LoggerPresentationService)
+        AppSubsystem.delegates.registerExceptionMetadataDelegate(ExceptionMetadataService)
 
         Networking.initialize(
             context = this,
