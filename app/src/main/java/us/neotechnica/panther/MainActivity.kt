@@ -27,6 +27,7 @@ import us.neotechnica.panther.designsystem.modules.foundation.overlay.OverlayHos
 import us.neotechnica.panther.designsystem.modules.foundation.toast.ToastHost
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.designsystem.modules.theming.views.PantherTheme
+import us.neotechnica.panther.modules.content.shared.views.ForcedUpdateView
 import us.neotechnica.panther.navigation.PendingChatNavigation
 import us.neotechnica.panther.navigation.RootView
 
@@ -54,6 +55,7 @@ class MainActivity : ComponentActivity() {
                                 .align(Alignment.BottomEnd)
                                 .padding(end = 20.dp, bottom = 32.dp),
                     )
+                    ForcedUpdateView()
                 }
             }
         }

@@ -34,5 +34,23 @@ value class PersistentStorageKey(
 
         /** Whether the build-info overlay is hidden. */
         val hidesBuildInfoOverlay = PersistentStorageKey("hidesBuildInfoOverlay")
+
+        /** The hosted app share link. */
+        val appShareLink = PersistentStorageKey("appShareLink")
+
+        /** The hosted App Store build number. */
+        val appStoreBuildNumber = PersistentStorageKey("appStoreBuildNumber")
+
+        /** Whether the app should force an update. */
+        val shouldForceUpdate = PersistentStorageKey("shouldForceUpdate")
+
+        /** The build number the user was last forced to update from. */
+        val buildNumberWhenLastForcedToUpdate = PersistentStorageKey("buildNumberWhenLastForcedToUpdate")
+
+        /** The relaunch count since a postponed update. */
+        val relaunchesSinceLastPostponedUpdate = PersistentStorageKey("relaunchesSinceLastPostponedUpdate")
+
+        /** The epoch of the first postponed update. */
+        val firstPostponedUpdate = PersistentStorageKey("firstPostponedUpdate")
     }
 }

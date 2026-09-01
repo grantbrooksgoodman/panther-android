@@ -29,6 +29,7 @@ import kotlinx.coroutines.delay
 import us.neotechnica.panther.R
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
+import us.neotechnica.panther.modules.common.services.UpdateService
 import us.neotechnica.panther.modules.content.shared.constants.SplashViewFloats
 import us.neotechnica.panther.navigation.PendingChatNavigation
 import us.neotechnica.panther.navigation.RootNavigatorState
@@ -52,9 +53,10 @@ private typealias Floats = SplashViewFloats
  * The launch splash. Routes to the signed-in content flow when a user
  * is persisted, or to onboarding otherwise.
  *
- * **Note:** the full iOS splash resolves the session, caches, and
- * metadata; that initialization lands with the session layer in a
- * later phase. This is the routing-only variant.
+ * **Note:** this variant resolves hosted metadata and gates forced
+ * updates through [UpdateService]; the full iOS splash's session and
+ * cache initialization still lands with the session layer in a later
+ * phase.
  *
  * @param modifier The modifier for this view.
  */
@@ -65,6 +67,10 @@ fun SplashView(modifier: Modifier = Modifier) {
 
     LaunchedEffect(Unit) {
         delay(Floats.SPLASH_DELAY_MILLIS)
+
+        UpdateService.incrementRelaunchCountIfNeeded()
+        runCatching { UpdateService.promptToUpdateIfNeeded() }
+        UpdateService.startObservingForcedUpdateChanges()
 
         if (Persistent.string(PersistentStorageKey.currentUserID) == null) {
             navigation.navigate(Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.Onboarding)))

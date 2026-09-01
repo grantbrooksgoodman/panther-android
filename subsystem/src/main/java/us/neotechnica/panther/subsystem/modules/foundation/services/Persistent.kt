@@ -66,6 +66,38 @@ object Persistent {
         preferences()?.edit()?.putBoolean(key.rawValue, value)?.apply()
     }
 
+    /** The stored integer for [key], or `null` if unset. */
+    fun int(key: PersistentStorageKey): Int? {
+        val preferences = preferences() ?: return null
+        return if (preferences.contains(key.rawValue)) preferences.getInt(key.rawValue, 0) else null
+    }
+
+    /** Stores [value] for [key], removing the entry when `null`. */
+    fun setInt(
+        key: PersistentStorageKey,
+        value: Int?,
+    ) {
+        val editor = preferences()?.edit() ?: return
+        if (value == null) editor.remove(key.rawValue) else editor.putInt(key.rawValue, value)
+        editor.apply()
+    }
+
+    /** The stored long for [key], or `null` if unset. */
+    fun long(key: PersistentStorageKey): Long? {
+        val preferences = preferences() ?: return null
+        return if (preferences.contains(key.rawValue)) preferences.getLong(key.rawValue, 0L) else null
+    }
+
+    /** Stores [value] for [key], removing the entry when `null`. */
+    fun setLong(
+        key: PersistentStorageKey,
+        value: Long?,
+    ) {
+        val editor = preferences()?.edit() ?: return
+        if (value == null) editor.remove(key.rawValue) else editor.putLong(key.rawValue, value)
+        editor.apply()
+    }
+
     // MARK: - Auxiliary
 
     private fun preferences() = appContext?.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
