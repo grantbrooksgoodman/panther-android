@@ -9,6 +9,7 @@ package us.neotechnica.panther.networking.modules.auth.services
 
 import android.app.Activity
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthOptions
@@ -16,6 +17,7 @@ import com.google.firebase.auth.PhoneAuthProvider
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.auth.extensions.FIREBASE_AUTH_ERROR_CODE_KEY
 import us.neotechnica.panther.networking.modules.auth.interfaces.AuthDelegate
 import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -158,7 +160,15 @@ class Auth : AuthDelegate {
         }
     }
 
-    private fun wrap(throwable: Throwable): Exception = (throwable as? Exception) ?: Exception.from(throwable, ExceptionMetadata(this))
+    // Captures the Firebase error code under the same user-info key
+    // the iOS SDK populates, so reducers can mark user-caused auth
+    // failures (invalid input, expired session) as non-reportable.
+    private fun wrap(throwable: Throwable): Exception {
+        (throwable as? Exception)?.let { return it }
+        val exception = Exception.from(throwable, ExceptionMetadata(this))
+        val errorCode = (throwable as? FirebaseAuthException)?.errorCode ?: return exception
+        return exception.appending(userInfo = mapOf(FIREBASE_AUTH_ERROR_CODE_KEY to errorCode))
+    }
 
     private companion object {
         const val VERIFICATION_TIMEOUT_SECONDS = 60L

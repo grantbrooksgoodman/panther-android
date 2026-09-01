@@ -17,6 +17,7 @@ import us.neotechnica.panther.navigation.OnboardingRoute
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.auth.extensions.notReportableForAuthCodes
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.networking.modules.translation.interfaces.TranslatedLabelStrings
 import us.neotechnica.panther.networking.modules.translation.models.TranslatedLabelStringCollection
@@ -24,6 +25,7 @@ import us.neotechnica.panther.networking.modules.translation.models.TranslationI
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
+import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
@@ -141,7 +143,10 @@ class AuthCodePageReducer : Reducer<AuthCodePageReducer.State, AuthCodePageReduc
 
             is Action.AuthenticateUserFailed -> {
                 Overlay.hide()
-                Logger.log(action.exception)
+                Logger.log(
+                    action.exception.notReportableForAuthCodes(VERIFICATION_USER_ERROR_CODES),
+                    with = AlertType.toast,
+                )
                 ReduceResult(
                     state.copy(
                         hasError = true,
@@ -196,6 +201,13 @@ class AuthCodePageReducer : Reducer<AuthCodePageReducer.State, AuthCodePageReduc
     // MARK: - Companion
 
     private companion object {
+        val VERIFICATION_USER_ERROR_CODES =
+            setOf(
+                "ERROR_INVALID_VERIFICATION_CODE",
+                "ERROR_SESSION_EXPIRED",
+                "ERROR_WEB_CONTEXT_CANCELLED",
+            )
+
         const val CONTINUE_DELAY_MILLIS = 100L
         const val VERIFICATION_CODE_LENGTH = 6
     }

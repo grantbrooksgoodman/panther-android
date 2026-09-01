@@ -37,6 +37,7 @@ import us.neotechnica.panther.networking.modules.session.services.ModerationSess
 import us.neotechnica.panther.networking.modules.session.services.SessionStore
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
+import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
@@ -157,19 +158,31 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
                 }
 
             Action.BlockTapped ->
-                moderation(state) { ModerationSessionService.blockUsers(state.otherParticipantIDs) }
+                moderation(
+                    state,
+                    title = "Block",
+                    message = "Are you sure you'd like to block this person? You will no longer receive their messages.",
+                ) { ModerationSessionService.blockUsers(state.otherParticipantIDs) }
 
             Action.ReportTapped ->
-                moderation(state) { ModerationSessionService.reportUsers(state.otherParticipantIDs) }
+                moderation(
+                    state,
+                    title = "Report",
+                    message = "Are you sure you'd like to report this conversation?",
+                ) { ModerationSessionService.reportUsers(state.otherParticipantIDs) }
 
             Action.LeaveTapped ->
                 ReduceResult(state, leaveConversationEffect(state))
 
             Action.DeleteTapped ->
-                leaveOrDelete(state) { conversation -> ConversationSessionService.deleteConversation(conversation) }
+                leaveOrDelete(
+                    state,
+                    title = "Delete Conversation",
+                    message = "Are you sure you'd like to delete this conversation? This cannot be undone.",
+                ) { conversation -> ConversationSessionService.deleteConversation(conversation) }
 
             is Action.Failed -> {
-                Logger.log(action.exception)
+                Logger.log(action.exception, with = AlertType.toast)
                 ReduceResult(state.copy(isBusy = false))
             }
 
@@ -296,11 +309,22 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
 
     private fun moderation(
         state: State,
+        title: String,
+        message: String,
         operation: suspend () -> Unit,
     ): ReduceResult<State, Action> =
         ReduceResult(
-            state.copy(isBusy = true),
+            state,
             Effect.run { send ->
+                val confirmed =
+                    ActionSheetAlert(
+                        title = title,
+                        message = message,
+                        confirmButtonTitle = "Confirm",
+                        isDestructive = true,
+                    ).present()
+                if (!confirmed) return@run
+
                 try {
                     operation()
                     send(Action.Reload)
@@ -312,12 +336,23 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
 
     private fun leaveOrDelete(
         state: State,
+        title: String,
+        message: String,
         operation: suspend (Conversation) -> Unit,
     ): ReduceResult<State, Action> {
         val conversation = state.conversation ?: return ReduceResult(state)
         return ReduceResult(
-            state.copy(isBusy = true),
+            state,
             Effect.run { send ->
+                val confirmed =
+                    ActionSheetAlert(
+                        title = title,
+                        message = message,
+                        confirmButtonTitle = "Confirm",
+                        isDestructive = true,
+                    ).present()
+                if (!confirmed) return@run
+
                 try {
                     operation(conversation)
                     DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))

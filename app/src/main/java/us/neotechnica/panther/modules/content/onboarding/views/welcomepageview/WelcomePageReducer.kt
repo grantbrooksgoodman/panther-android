@@ -26,6 +26,7 @@ import us.neotechnica.panther.networking.modules.translation.models.TranslationI
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
+import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
@@ -85,7 +86,11 @@ class WelcomePageReducer : Reducer<WelcomePageReducer.State, WelcomePageReducer.
                     state,
                     Effect.run {
                         delay(ANONYMOUS_SIGN_IN_DELAY_MILLIS)
-                        runCatching { Networking.config.authDelegate.signInAnonymously() }
+                        try {
+                            Networking.config.authDelegate.signInAnonymously()
+                        } catch (exception: Exception) {
+                            Logger.log(exception, with = AlertType.toastInPrerelease)
+                        }
                     },
                 )
             }

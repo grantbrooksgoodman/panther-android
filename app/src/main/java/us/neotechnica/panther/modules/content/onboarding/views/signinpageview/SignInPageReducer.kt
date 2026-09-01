@@ -22,6 +22,7 @@ import us.neotechnica.panther.navigation.RootRoute
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.auth.extensions.notReportableForAuthCodes
 import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.schema.common.models.PhoneNumber
 import us.neotechnica.panther.networking.modules.translation.extensions.value
@@ -35,6 +36,7 @@ import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.effect.cancel
 import us.neotechnica.panther.subsystem.modules.effect.cancellable
 import us.neotechnica.panther.subsystem.modules.effect.merge
+import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
@@ -215,7 +217,10 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
 
             is Action.VerifyPhoneNumberFailed -> {
                 Overlay.hide()
-                Logger.log(action.exception)
+                Logger.log(
+                    action.exception.notReportableForAuthCodes(PHONE_USER_ERROR_CODES),
+                    with = AlertType.toast,
+                )
                 ReduceResult(
                     state.copy(isBackButtonEnabled = true, isContinueButtonEnabled = state.numberIsValidLength),
                 )
@@ -233,7 +238,10 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
 
             is Action.AuthenticateUserFailed -> {
                 Overlay.hide()
-                Logger.log(action.exception)
+                Logger.log(
+                    action.exception.notReportableForAuthCodes(VERIFICATION_USER_ERROR_CODES),
+                    with = AlertType.toast,
+                )
                 ReduceResult(
                     state.copy(
                         isBackButtonEnabled = true,
@@ -423,6 +431,19 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
     private object VerifyPhoneNumberCancelID
 
     private companion object {
+        val PHONE_USER_ERROR_CODES =
+            setOf(
+                "ERROR_INVALID_PHONE_NUMBER",
+                "ERROR_SESSION_EXPIRED",
+                "ERROR_WEB_CONTEXT_CANCELLED",
+            )
+        val VERIFICATION_USER_ERROR_CODES =
+            setOf(
+                "ERROR_INVALID_VERIFICATION_CODE",
+                "ERROR_SESSION_EXPIRED",
+                "ERROR_WEB_CONTEXT_CANCELLED",
+            )
+
         const val CONTINUE_DELAY_MILLIS = 100L
         const val VERIFICATION_CODE_LENGTH = 6
         const val DEVELOPER_CALLING_CODE = "1"

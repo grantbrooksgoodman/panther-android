@@ -23,6 +23,7 @@ import us.neotechnica.panther.networking.modules.session.services.MessageSession
 import us.neotechnica.panther.networking.modules.user.services.UserService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
+import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
@@ -180,7 +181,7 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
             }
 
             is Action.SendFailed -> {
-                Logger.log(action.exception)
+                Logger.log(action.exception, with = AlertType.toast)
                 ReduceResult(state.copy(isSending = false))
             }
 

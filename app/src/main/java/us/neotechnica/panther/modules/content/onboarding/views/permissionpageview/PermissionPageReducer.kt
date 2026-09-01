@@ -25,6 +25,7 @@ import us.neotechnica.panther.networking.modules.translation.models.TranslationI
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
+import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
@@ -142,7 +143,7 @@ class PermissionPageReducer : Reducer<PermissionPageReducer.State, PermissionPag
                 Overlay.hide()
                 val exception = action.exception
                 if (exception != null) {
-                    Logger.log(exception)
+                    Logger.log(exception, with = AlertType.toast)
                     ReduceResult(state.copy(isBackButtonEnabled = true, isFinishButtonEnabled = true))
                 } else {
                     // Clear the onboarding stack so a later sign-out returns to

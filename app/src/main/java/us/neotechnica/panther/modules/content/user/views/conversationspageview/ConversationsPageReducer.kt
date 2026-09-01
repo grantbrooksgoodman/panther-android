@@ -19,6 +19,7 @@ import us.neotechnica.panther.networking.modules.translation.models.TranslatedLa
 import us.neotechnica.panther.networking.modules.translation.models.TranslationInputMap
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.effect.Effect
+import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
@@ -121,7 +122,7 @@ class ConversationsPageReducer : Reducer<ConversationsPageReducer.State, Convers
                 ReduceResult(state.copy(isRefreshing = false, changeToken = UUID.randomUUID()))
 
             is Action.ReloadFailed -> {
-                Logger.log(action.exception)
+                Logger.log(action.exception, with = AlertType.toast)
                 ReduceResult(state.copy(isRefreshing = false))
             }
 

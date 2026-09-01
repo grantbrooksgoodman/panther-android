@@ -20,6 +20,7 @@ import us.neotechnica.panther.navigation.OnboardingRoute
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.auth.extensions.notReportableForAuthCodes
 import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.schema.common.models.PhoneNumber
 import us.neotechnica.panther.networking.modules.translation.extensions.value
@@ -30,6 +31,7 @@ import us.neotechnica.panther.networking.modules.translation.models.TranslationO
 import us.neotechnica.panther.networking.modules.user.services.UserService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
+import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
@@ -205,7 +207,10 @@ class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNum
 
             is Action.VerifyPhoneNumberFailed -> {
                 Overlay.hide()
-                Logger.log(action.exception)
+                Logger.log(
+                    action.exception.notReportableForAuthCodes(PHONE_USER_ERROR_CODES),
+                    with = AlertType.toast,
+                )
                 ReduceResult(
                     state.copy(
                         hasError = true,
@@ -290,6 +295,13 @@ class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNum
     // MARK: - Companion
 
     private companion object {
+        val PHONE_USER_ERROR_CODES =
+            setOf(
+                "ERROR_INVALID_PHONE_NUMBER",
+                "ERROR_SESSION_EXPIRED",
+                "ERROR_WEB_CONTEXT_CANCELLED",
+            )
+
         const val CONTINUE_DELAY_MILLIS = 100L
     }
 }
