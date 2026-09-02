@@ -11,6 +11,7 @@ package us.neotechnica.panther.modules.content.user.views.chatpageview
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.content.user.extensions.chatPageHeaderLabelText
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
+import us.neotechnica.panther.modules.content.user.services.ContextMenuActionHandlerService
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
@@ -85,6 +86,11 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         data class React(
             val message: Message,
             val style: Reaction.Style,
+        ) : Action
+
+        data class Speak(
+            val messageID: String,
+            val displayText: String,
         ) : Action
 
         data object StoreChanged : Action
@@ -174,6 +180,9 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             is Action.React ->
                 ReduceResult(state, reactEffect(action.message, action.style))
 
+            is Action.Speak ->
+                ReduceResult(state, speakEffect(state, action.messageID, action.displayText))
+
             Action.StoreChanged ->
                 ReduceResult(state.copy(changeToken = UUID.randomUUID()), markReadEffect())
 
@@ -198,6 +207,22 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             val currentUserID = User.currentUserID ?: return@run
             try {
                 ReactionSessionService.react(Reaction(style, currentUserID), message)
+            } catch (exception: Exception) {
+                Logger.log(exception, with = AlertType.toast)
+            }
+        }
+
+    private fun speakEffect(
+        state: State,
+        messageID: String,
+        displayText: String,
+    ): Effect<Action> =
+        Effect.run {
+            val message = state.messages.firstOrNull { it.id == messageID } ?: return@run
+            val translation = state.translationsByID[messageID] ?: message.translations?.firstOrNull()
+            val isDisplayingAlternateText = messageID in state.alternateTextMessageIDs
+            try {
+                ContextMenuActionHandlerService.handleSpeakAction(message, translation, displayText, isDisplayingAlternateText)
             } catch (exception: Exception) {
                 Logger.log(exception, with = AlertType.toast)
             }

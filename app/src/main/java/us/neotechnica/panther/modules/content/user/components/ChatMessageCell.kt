@@ -41,6 +41,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ReactionChoice
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellColors
 import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellStrings
@@ -73,6 +74,7 @@ import androidx.compose.material3.Text as Material3Text
  * @param onToggleAlternate Toggles the alternate text for a message ID.
  * @param onTapMedia Opens the media preview for the given media message ID.
  * @param onReact Applies the given reaction style to the given message.
+ * @param onSpeak Speaks the given displayed text for the given message ID.
  */
 @Composable
 fun ChatMessageCell(
@@ -80,6 +82,7 @@ fun ChatMessageCell(
     onToggleAlternate: (String) -> Unit,
     onTapMedia: (String) -> Unit,
     onReact: (Message, Reaction.Style) -> Unit,
+    onSpeak: (String, String) -> Unit,
 ) {
     val colors = LocalPantherColors.current
     val clipboard = LocalClipboardManager.current
@@ -147,7 +150,7 @@ fun ChatMessageCell(
                 }
             } else {
                 MessageContextMenu(
-                    actions = actionsFor(row, onToggleAlternate) { clipboard.setText(AnnotatedString(displayText)) },
+                    actions = actionsFor(row, displayText, onToggleAlternate, onSpeak) { clipboard.setText(AnnotatedString(displayText)) },
                     alignment = alignment,
                     reactionChoices = reactionChoices,
                 ) {
@@ -346,11 +349,24 @@ private fun MessageBubble(
 
 private fun actionsFor(
     row: ChatMessageRowData,
+    displayText: String,
     onToggleAlternate: (String) -> Unit,
+    onSpeak: (String, String) -> Unit,
     onCopy: () -> Unit,
 ): List<ContextMenuAction> {
     val actions = mutableListOf<ContextMenuAction>()
     actions.add(ContextMenuAction(LocalizedStringKey.Copy.localized(), "doc.on.doc") { onCopy() })
+
+    val isSpeaking = TextToSpeechService.isSpeaking
+    actions.add(
+        ContextMenuAction(
+            (if (isSpeaking) LocalizedStringKey.StopSpeaking else LocalizedStringKey.Speak).localized(),
+            if (isSpeaking) "speaker.slash.circle" else "speaker.wave.2.circle",
+        ) { onSpeak(row.message.id, displayText) },
+    )
+
+    // The report and view-alternate actions are hidden while speaking, mirroring iOS.
+    if (isSpeaking) return actions
 
     ContextMenuActionHandlerService.reportMistranslationAction(row)?.let { actions.add(it) }
 

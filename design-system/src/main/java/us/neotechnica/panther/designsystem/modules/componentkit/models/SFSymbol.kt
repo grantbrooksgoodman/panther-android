@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -116,5 +117,7 @@ object SFSymbol {
             "arrow.clockwise" to Icons.Filled.Refresh,
             "speaker.wave.2" to Icons.Filled.VolumeUp,
             "speaker.wave.2.fill" to Icons.Filled.VolumeUp,
+            "speaker.wave.2.circle" to Icons.Filled.VolumeUp,
+            "speaker.slash.circle" to Icons.Filled.VolumeOff,
         )
 }

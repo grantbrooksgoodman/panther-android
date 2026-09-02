@@ -10,18 +10,24 @@ package us.neotechnica.panther.modules.content.user.services
 
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAction
 import us.neotechnica.panther.modules.common.services.ErrorReportingService
+import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.content.user.components.ChatMessageRowData
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
+import us.neotechnica.panther.networking.modules.schema.message.models.Message
 import us.neotechnica.panther.networking.modules.session.extensions.isFromCurrentUser
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
+import us.neotechnica.panther.translator.models.LanguagePair
+import us.neotechnica.panther.translator.models.Translation
+import us.neotechnica.panther.translator.services.LanguageRecognitionService
 
 /**
  * Builds context menu actions and handles their side effects.
  *
- * **Note:** this port currently handles only the report-mistranslation
- * action; the remaining actions (copy, view alternate) are built inline
+ * **Note:** this port handles the report-mistranslation and speak
+ * actions; the remaining actions (copy, view alternate) are built inline
  * by `ChatMessageCell` for now.
  *
  * The iOS original gates report-mistranslation behind retry-translation,
@@ -73,7 +79,59 @@ object ContextMenuActionHandlerService {
         ) { ErrorReportingService.fileReport(exception) }
     }
 
+    // MARK: - Speak
+
+    /**
+     * Speaks [displayText] aloud, or stops any in-progress utterance when
+     * a message is already being spoken – the single-speaker rule.
+     *
+     * The utterance language starts from the message's language pair and
+     * its displayed-alternate state: an own message speaks the current
+     * user's side, a received message the other side. When the displayed
+     * text does not confidently match the chosen language but confidently
+     * matches the other, and the translation's input equals its output,
+     * the other language is used instead – mirroring the iOS
+     * `handleSpeakAction` language-recognition override.
+     *
+     * @param message The message being spoken.
+     * @param translation The message's resolved translation, or `null`.
+     * @param displayText The text currently shown for the message.
+     * @param isDisplayingAlternateText Whether the message shows its alternate text.
+     */
+    suspend fun handleSpeakAction(
+        message: Message,
+        translation: Translation?,
+        displayText: String,
+        isDisplayingAlternateText: Boolean,
+    ) {
+        if (TextToSpeechService.isSpeaking) return TextToSpeechService.stop()
+        if (displayText.isBlank()) return
+
+        val languagePair =
+            translation?.languagePair
+                ?: LanguagePair(from = RuntimeStorage.languageCode, to = RuntimeStorage.languageCode)
+        val currentUserUtteranceLanguageCode = if (isDisplayingAlternateText) languagePair.to else languagePair.from
+        val notCurrentUserUtteranceLanguageCode = if (isDisplayingAlternateText) languagePair.from else languagePair.to
+        var utteranceLanguageCode =
+            if (message.isFromCurrentUser) currentUserUtteranceLanguageCode else notCurrentUserUtteranceLanguageCode
+
+        val chosenLanguageConfidence = LanguageRecognitionService.shared.matchConfidence(displayText, utteranceLanguageCode)
+        val otherLanguageConfidence = LanguageRecognitionService.shared.matchConfidence(displayText, notCurrentUserUtteranceLanguageCode)
+        if (chosenLanguageConfidence <= LANGUAGE_RECOGNITION_MATCH_CONFIDENCE_THRESHOLD &&
+            otherLanguageConfidence >= LANGUAGE_RECOGNITION_MATCH_CONFIDENCE_THRESHOLD &&
+            processed(translation?.input?.value) == processed(translation?.output)
+        ) {
+            utteranceLanguageCode =
+                listOf(currentUserUtteranceLanguageCode, notCurrentUserUtteranceLanguageCode)
+                    .firstOrNull { it != utteranceLanguageCode } ?: utteranceLanguageCode
+        }
+
+        TextToSpeechService.speak(displayText, utteranceLanguageCode)
+    }
+
     // MARK: - Auxiliary
+
+    private fun processed(string: String?): String = string?.lowercase()?.trim().orEmpty()
 
     private fun mistranslationException(hostingKey: String): Exception =
         Exception(
@@ -91,4 +149,5 @@ object ContextMenuActionHandlerService {
         get() = "${take(2)}${takeLast(2)}".uppercase()
 
     private const val REPORT_ACTION_IMAGE_SYSTEM_NAME = "flag"
+    private const val LANGUAGE_RECOGNITION_MATCH_CONFIDENCE_THRESHOLD = 0.8f
 }

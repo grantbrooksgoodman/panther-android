@@ -153,6 +153,7 @@ fun ChatPageView(
                         onToggleAlternate = { viewModel.send(ChatPageReducer.Action.ToggleAlternate(it)) },
                         onTapMedia = { previewMessageID = it },
                         onReact = { message, style -> viewModel.send(ChatPageReducer.Action.React(message, style)) },
+                        onSpeak = { messageID, text -> viewModel.send(ChatPageReducer.Action.Speak(messageID, text)) },
                     )
 
                     MessageInputBar(
@@ -240,12 +241,14 @@ private fun ChatHeader(
 }
 
 @Composable
+@Suppress("LongParameterList")
 private fun MessageList(
     state: ChatPageReducer.State,
     modifier: Modifier,
     onToggleAlternate: (String) -> Unit,
     onTapMedia: (String) -> Unit,
     onReact: (Message, Reaction.Style) -> Unit,
+    onSpeak: (String, String) -> Unit,
 ) {
     val listState = rememberLazyListState()
     val messages = state.messages
@@ -305,6 +308,7 @@ private fun MessageList(
                 onToggleAlternate = onToggleAlternate,
                 onTapMedia = onTapMedia,
                 onReact = onReact,
+                onSpeak = onSpeak,
             )
         }
     }
