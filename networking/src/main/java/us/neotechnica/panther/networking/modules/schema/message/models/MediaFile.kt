@@ -8,19 +8,18 @@
 package us.neotechnica.panther.networking.modules.schema.message.models
 
 import us.neotechnica.panther.networking.modules.common.models.MediaFileExtension
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.EncodedHashable
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
 import java.io.File
+import java.security.MessageDigest
 
 /**
  * A media file stored in the app's documents directory.
  *
  * A media file locates its content by [relativePath], resolved against
  * the documents directory, so values remain valid across app launches
- * even though the directory's absolute location can change.
- *
- * **Note:** This viewing-phase port omits the iOS content-hash
- * identity used for upload deduplication; downloaded media is
- * identified by its server-assigned path.
+ * even though the directory's absolute location can change. The file's
+ * identity derives from its extension and a hash of its content on disk.
  */
 data class MediaFile(
     /** The file's path, relative to the documents directory. */
@@ -29,7 +28,7 @@ data class MediaFile(
     val name: String,
     /** The file's extension. */
     val fileExtension: MediaFileExtension,
-) {
+) : EncodedHashable {
     // MARK: - Computed Properties
 
     /** The absolute file, resolved against the current documents directory. */
@@ -46,11 +45,50 @@ data class MediaFile(
             return FileStore.resolve(thumbnailRelativePath)?.takeIf { it.exists() }
         }
 
+    /** A Boolean value that indicates whether a thumbnail exists on disk for this file. */
+    val hasThumbnail: Boolean
+        get() = thumbnailFile != null
+
+    /**
+     * The file extension's raw value and a hash of the file's content,
+     * sorted alphabetically. When the content cannot be read, the content
+     * hash is omitted. Matches the iOS `MediaFile.hashFactors`.
+     */
+    override val hashFactors: List<String>
+        get() {
+            val factors = mutableListOf(fileExtension.rawValue)
+            contentHash()?.let { factors.add(it) }
+            return factors.sorted()
+        }
+
+    // MARK: - Auxiliary
+
+    // A streamed SHA-256 hex digest of the file's bytes — byte-identical to
+    // the iOS `Data.hash`, but streamed rather than loading the whole file
+    // into memory so large videos do not risk an OOM.
+    private fun contentHash(): String? {
+        val file = localPathFile?.takeIf { it.exists() } ?: return null
+        return runCatching {
+            val digest = MessageDigest.getInstance("SHA-256")
+            file.inputStream().use { stream ->
+                val buffer = ByteArray(DIGEST_BUFFER_SIZE)
+                var read = stream.read(buffer)
+                while (read >= 0) {
+                    digest.update(buffer, 0, read)
+                    read = stream.read(buffer)
+                }
+            }
+            digest.digest().joinToString("") { "%02x".format(it) }
+        }.getOrNull()
+    }
+
     // MARK: - Companion
 
     companion object {
         /** The suffix appended to a media file's path prefix to form its thumbnail path. */
         const val THUMBNAIL_IMAGE_NAME_SUFFIX = "-thumbnail.jpeg"
+
+        private const val DIGEST_BUFFER_SIZE = 8192
 
         /**
          * Creates a media file from the given relative path, deriving its

@@ -80,4 +80,29 @@ interface StorageDelegate {
         bytes: ByteArray,
         path: String,
     )
+
+    /**
+     * Uploads [file] to the specified storage path, streaming from disk
+     * rather than loading the whole file into memory.
+     *
+     * @param file The local file to upload.
+     * @param path The storage path to upload to.
+     *
+     * @throws us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+     *   if the upload fails.
+     */
+    suspend fun upload(
+        file: File,
+        path: String,
+    )
+
+    /**
+     * Returns whether a file exists at the specified storage path.
+     *
+     * @param path The storage path to check.
+     *
+     * @return `true` if a file exists at the path; otherwise, `false`
+     *   (including when the existence check itself fails).
+     */
+    suspend fun itemExists(path: String): Boolean
 }

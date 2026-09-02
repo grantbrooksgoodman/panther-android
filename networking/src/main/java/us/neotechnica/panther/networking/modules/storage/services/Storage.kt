@@ -7,6 +7,7 @@
 
 package us.neotechnica.panther.networking.modules.storage.services
 
+import android.net.Uri
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
 import us.neotechnica.panther.networking.Networking
@@ -50,6 +51,19 @@ class Storage : StorageDelegate {
     ) {
         runGuarded { reference.child(environmentPath(path)).putBytes(bytes).await() }
     }
+
+    override suspend fun upload(
+        file: File,
+        path: String,
+    ) {
+        runGuarded { reference.child(environmentPath(path)).putFile(Uri.fromFile(file)).await() }
+    }
+
+    override suspend fun itemExists(path: String): Boolean =
+        runCatching {
+            reference.child(environmentPath(path)).metadata.await()
+            true
+        }.getOrDefault(false)
 
     // MARK: - Auxiliary
 
