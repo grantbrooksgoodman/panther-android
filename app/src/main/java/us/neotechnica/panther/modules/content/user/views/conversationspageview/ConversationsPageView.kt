@@ -141,6 +141,7 @@ fun ConversationsPageView(modifier: Modifier = Modifier) {
                                 conversation = conversation,
                                 languageCode = languageCode,
                                 changeToken = state.changeToken,
+                                searchQuery = state.searchQuery,
                                 modifier =
                                     Modifier.clickable {
                                         navigation.navigate(

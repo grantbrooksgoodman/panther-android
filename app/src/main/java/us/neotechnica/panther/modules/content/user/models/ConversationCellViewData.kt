@@ -10,6 +10,8 @@ package us.neotechnica.panther.modules.content.user.models
 
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.formattedString
+import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
 import us.neotechnica.panther.networking.modules.schema.message.models.HostedContentType
@@ -46,16 +48,30 @@ data class ConversationCellViewData(
     val otherRegionCode: String?,
 ) {
     companion object {
-        /** Builds the cell data for [conversation], resolving text into [languageCode]. */
+        /**
+         * Builds the cell data for [conversation], resolving text into
+         * [languageCode].
+         *
+         * When [searchQuery] is non-blank, the preview and date reflect
+         * the most recent message matching the query rather than the
+         * latest message, mirroring the iOS search behavior.
+         */
         suspend fun build(
             conversation: Conversation,
             languageCode: String,
+            searchQuery: String = "",
         ): ConversationCellViewData {
             val title = title(conversation)
-            val lastMessage = conversation.messages?.maxByOrNull { it.sentDate.time }
+            val messages = conversation.messages.orEmpty().sortedBy { it.sentDate.time }
+            val matchingMessage =
+                searchQuery
+                    .takeIf { it.isNotBlank() }
+                    ?.let { query -> messages.lastOrNull { it.matchesSearchQuery(query) } }
+            val lastMessage = matchingMessage ?: messages.lastOrNull()
             val users = conversation.users.orEmpty()
             val isGroup = conversation.participants.size > 2
             val hasName = title.any { it.isLetter() }
+            val lastMessageFromOthers = messages.lastOrNull { !it.isFromCurrentUser }
 
             return ConversationCellViewData(
                 title = title,
@@ -64,7 +80,7 @@ data class ConversationCellViewData(
                     lastMessage?.sentDate?.let { relativeDateString(it) }
                         ?: relativeDateString(conversation.metadata.lastModifiedDate),
                 isShowingUnreadIndicator =
-                    lastMessage != null && !lastMessage.isFromCurrentUser && !lastMessage.isReadByCurrentUser,
+                    lastMessageFromOthers != null && !lastMessageFromOthers.isReadByCurrentUser,
                 initials = if (hasName) initials(title) else "",
                 hasContactName = hasName,
                 isGroup = isGroup,
@@ -74,7 +90,29 @@ data class ConversationCellViewData(
             )
         }
 
+        /**
+         * Returns whether [conversation] matches the given search
+         * query by title or by any message's text content.
+         */
+        fun matches(
+            conversation: Conversation,
+            query: String,
+        ): Boolean {
+            val trimmed = query.trim()
+            if (trimmed.isEmpty()) return true
+            if (title(conversation).lowercase().contains(trimmed.lowercase())) return true
+            return conversation.messages?.any { it.matchesSearchQuery(trimmed) } == true
+        }
+
         // MARK: - Auxiliary
+
+        private fun Message.matchesSearchQuery(query: String): Boolean {
+            val lowercased = query.lowercase()
+            return translations?.any {
+                it.input.value.lowercase().contains(lowercased) ||
+                    it.output.lowercase().contains(lowercased)
+            } == true
+        }
 
         private fun title(conversation: Conversation): String {
             val metadataName = conversation.metadata.name
@@ -93,9 +131,16 @@ data class ConversationCellViewData(
             languageCode: String,
         ): String {
             lastMessage ?: return ""
-            return when (lastMessage.contentType) {
+            return when (val contentType = lastMessage.contentType) {
+                is HostedContentType.Audio -> "🔊 ${LocalizedStringKey.AudioMessage.localized()}"
+                is HostedContentType.Media ->
+                    when {
+                        contentType.fileExtension.isDocument -> "📄 ${LocalizedStringKey.Document.localized()}"
+                        contentType.fileExtension.isImage -> "🏞️ ${LocalizedStringKey.Image.localized()}"
+                        contentType.fileExtension.isVideo -> "🎥 ${LocalizedStringKey.Video.localized()}"
+                        else -> "📎 ${LocalizedStringKey.Attachment.localized()}"
+                    }
                 HostedContentType.Text -> lastMessage.resolvedText(languageCode)
-                else -> "📎 Attachment"
             }
         }
 

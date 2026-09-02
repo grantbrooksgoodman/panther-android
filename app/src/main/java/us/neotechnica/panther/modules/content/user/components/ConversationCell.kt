@@ -59,6 +59,7 @@ fun ConversationCell(
     conversation: Conversation,
     languageCode: String,
     changeToken: Any,
+    searchQuery: String = "",
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalPantherColors.current
@@ -66,8 +67,9 @@ fun ConversationCell(
         initialValue = null,
         conversation,
         changeToken,
+        searchQuery,
     ) {
-        value = ConversationCellViewData.build(conversation, languageCode)
+        value = ConversationCellViewData.build(conversation, languageCode, searchQuery)
     }
     val data = cellData ?: return
 

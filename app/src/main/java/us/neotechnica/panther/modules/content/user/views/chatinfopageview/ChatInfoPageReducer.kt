@@ -21,8 +21,11 @@ import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
+import us.neotechnica.panther.networking.modules.schema.conversation.models.ActivityAction
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
+import us.neotechnica.panther.networking.modules.schema.conversation.models.ConversationMetadata
 import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
 import us.neotechnica.panther.networking.modules.schema.message.models.Message
 import us.neotechnica.panther.networking.modules.schema.user.models.User
@@ -31,6 +34,8 @@ import us.neotechnica.panther.networking.modules.session.extensions.currentUserI
 import us.neotechnica.panther.networking.modules.session.extensions.isFromCurrentUser
 import us.neotechnica.panther.networking.modules.session.extensions.isMediaMessage
 import us.neotechnica.panther.networking.modules.session.extensions.messages
+import us.neotechnica.panther.networking.modules.session.extensions.offsetFromCurrentUserAdditionDate
+import us.neotechnica.panther.networking.modules.session.extensions.sortedByDescendingSentDate
 import us.neotechnica.panther.networking.modules.session.extensions.users
 import us.neotechnica.panther.networking.modules.session.services.ActivitySessionService
 import us.neotechnica.panther.networking.modules.session.services.ConversationSessionService
@@ -224,8 +229,9 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         val users = conversation.users.orEmpty()
         return conversation.messages
             .orEmpty()
+            .offsetFromCurrentUserAdditionDate(conversation.activities)
             .filter { it.isMediaMessage }
-            .sortedByDescending { it.sentDate }
+            .sortedByDescendingSentDate
             .mapNotNull { message ->
                 val mediaFile = message.cachedMediaFile ?: return@mapNotNull null
                 val user = users.firstOrNull { it.id == message.fromAccountID } ?: SessionStore.users[message.fromAccountID]
@@ -279,18 +285,17 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
     private fun changeMetadataEffect(state: State): Effect<Action> =
         Effect.run { send ->
             val conversation = state.conversation ?: return@run
-            val current =
-                conversation.metadata.name
-                    .takeUnless { it.isBangQualifiedEmpty }
-                    .orEmpty()
-            val name =
+            val currentName = conversation.metadata.name.takeUnless { it.isBangQualifiedEmpty }.orEmpty()
+            val input =
                 TextInputAlert(
                     message = "Choose a new name for this conversation:",
-                    initialText = current,
+                    initialText = currentName,
                     confirmButtonTitle = "Done",
                 ).present() ?: return@run
+            val (action, newMetadata) = resolveNameChange(conversation, input) ?: return@run
+
             try {
-                ActivitySessionService.renameConversation(conversation, name)
+                ActivitySessionService.updateMetadata(conversation, action, newMetadata)
                 send(Action.Reload)
             } catch (exception: Exception) {
                 send(Action.Failed(exception))
@@ -396,6 +401,29 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
             },
         )
     }
+}
+
+/**
+ * Resolves [input] into the activity action and metadata for renaming
+ * [conversation], or `null` when the input is invalid or a no-op.
+ *
+ * Mirrors the iOS change-name flow: names containing reserved characters
+ * are rejected, an unchanged name is a no-op, and clearing the name
+ * records a removed-name activity.
+ */
+private fun resolveNameChange(
+    conversation: Conversation,
+    input: String,
+): Pair<ActivityAction, ConversationMetadata>? {
+    if (input.any { it in "⌘:" }) return null
+    if (input == conversation.metadata.name) return null
+    if (input.isBangQualifiedEmpty && conversation.metadata.name.isBangQualifiedEmpty) return null
+
+    val trimmed = input.trim()
+    val newName = if (trimmed.isBangQualifiedEmpty) BANG_QUALIFIED_EMPTY else trimmed
+    val action =
+        if (newName.isBangQualifiedEmpty) ActivityAction.RemovedName else ActivityAction.RenamedConversation(newName)
+    return action to conversation.metadata.copyWith(name = newName)
 }
 
 /** The translated label strings for the chat info page. */

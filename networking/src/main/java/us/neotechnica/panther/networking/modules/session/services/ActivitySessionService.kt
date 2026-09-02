@@ -11,6 +11,7 @@ import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Activity
 import us.neotechnica.panther.networking.modules.schema.conversation.models.ActivityAction
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
+import us.neotechnica.panther.networking.modules.schema.conversation.models.ConversationMetadata
 import us.neotechnica.panther.networking.modules.schema.conversation.models.MessageRecipientConsentAcknowledgementData
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Participant
 import us.neotechnica.panther.networking.modules.schema.conversation.models.PenPalsSharingData
@@ -126,24 +127,26 @@ object ActivitySessionService {
         return committed
     }
 
-    // MARK: - Rename
+    // MARK: - Update Metadata
 
     /**
-     * Renames [conversation] to [name].
+     * Applies [newMetadata] to [conversation], recording [action] as an
+     * activity.
      *
      * @return The updated conversation.
      *
-     * @throws Exception if the write fails.
+     * @throws Exception if the current user is unset or the write fails.
      */
-    suspend fun renameConversation(
+    suspend fun updateMetadata(
         conversation: Conversation,
-        name: String,
+        action: ActivityAction,
+        newMetadata: ConversationMetadata,
     ): Conversation {
-        val activity = activity(ActivityAction.RenamedConversation(name))
+        val activity = activity(action)
         val updated =
             conversation.copy(
                 activities = ((conversation.activities ?: emptyList()) + activity).filter { it != Activity.empty },
-                metadata = conversation.metadata.copyWith(name = name),
+                metadata = newMetadata,
             )
         return conversation.commitFieldUpdates(updated, CHANGED_KEYS)
     }

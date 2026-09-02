@@ -9,6 +9,7 @@
 package us.neotechnica.panther.modules.content.user.views.conversationspageview
 
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
+import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
 import us.neotechnica.panther.networking.modules.session.extensions.conversations
@@ -77,12 +78,7 @@ class ConversationsPageReducer : Reducer<ConversationsPageReducer.State, Convers
             get() {
                 val all = UserSessionService.currentUser?.conversations?.filteredAndSorted ?: emptyList()
                 if (searchQuery.isBlank()) return all
-                val query = searchQuery.trim().lowercase()
-                return all.filter {
-                    it.metadata.name
-                        .lowercase()
-                        .contains(query)
-                }
+                return all.filter { ConversationCellViewData.matches(it, searchQuery) }
             }
     }
 
