@@ -30,6 +30,7 @@ value class ColoredItemType(
         val navigationBarBackground = ColoredItemType("navigationBarBackground")
         val navigationBarButton = ColoredItemType("navigationBarButton")
         val navigationBarTitle = ColoredItemType("navigationBarTitle")
+        val reactionButtonBackground = ColoredItemType("reactionButtonBackground")
         val receiverBubble = ColoredItemType("receiverBubble")
         val senderBubble = ColoredItemType("senderBubble")
         val subtitleText = ColoredItemType("subtitleText")

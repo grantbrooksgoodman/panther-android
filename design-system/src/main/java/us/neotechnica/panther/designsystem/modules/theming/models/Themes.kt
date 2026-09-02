@@ -32,6 +32,7 @@ object Themes {
                     item(ColoredItemType.navigationBarBackground, rgb(0xF8F8F8), rgb(0x2A2A2C)),
                     item(ColoredItemType.navigationBarButton, PlatformColors.systemBlue),
                     item(ColoredItemType.navigationBarTitle, PlatformColors.black, PlatformColors.white),
+                    item(ColoredItemType.reactionButtonBackground, rgb(0xC7C7CC), rgb(0x48484A)),
                     item(ColoredItemType.senderBubble, PlatformColors.systemBlue),
                     item(ColoredItemType.receiverBubble, rgb(0xE5E5EA), rgb(0x27252A)),
                     item(ColoredItemType.titleText, PlatformColors.black, PlatformColors.white),
@@ -78,6 +79,7 @@ object Themes {
                     item(ColoredItemType.navigationBarBackground, darkThemeBackground),
                     item(ColoredItemType.navigationBarButton, accent),
                     item(ColoredItemType.navigationBarTitle, PlatformColors.white),
+                    item(ColoredItemType.reactionButtonBackground, darkThemeReactionButtonBackground),
                     item(ColoredItemType.senderBubble, accent),
                     item(ColoredItemType.receiverBubble, darkThemeReceiverBubble),
                     item(ColoredItemType.titleText, PlatformColors.white),
@@ -90,4 +92,5 @@ object Themes {
 // The shared dark-theme greys, hoisted so they read as design tokens.
 private val darkThemeBackground = rgb(0x1A1A1A)
 private val darkThemeGroupedBackground = rgb(0x1C1C1E)
+private val darkThemeReactionButtonBackground = rgb(0x48484A)
 private val darkThemeReceiverBubble = rgb(0x27252A)

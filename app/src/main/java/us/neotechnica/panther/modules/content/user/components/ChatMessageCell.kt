@@ -39,6 +39,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMe
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAlignment
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
+import us.neotechnica.panther.designsystem.modules.componentkit.models.ReactionChoice
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellColors
 import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellFloats
@@ -48,7 +49,10 @@ import us.neotechnica.panther.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
+import us.neotechnica.panther.networking.modules.schema.conversation.models.Reaction
 import us.neotechnica.panther.networking.modules.schema.message.models.Message
+import us.neotechnica.panther.networking.modules.schema.user.models.User
+import us.neotechnica.panther.networking.modules.session.extensions.currentUserID
 import us.neotechnica.panther.networking.modules.session.extensions.isFromCurrentUser
 import us.neotechnica.panther.networking.modules.session.extensions.isMediaMessage
 import us.neotechnica.panther.networking.modules.session.extensions.isSystemMessage
@@ -68,12 +72,14 @@ import androidx.compose.material3.Text as Material3Text
  * @param row The row's display inputs.
  * @param onToggleAlternate Toggles the alternate text for a message ID.
  * @param onTapMedia Opens the media preview for the given media message ID.
+ * @param onReact Applies the given reaction style to the given message.
  */
 @Composable
 fun ChatMessageCell(
     row: ChatMessageRowData,
     onToggleAlternate: (String) -> Unit,
     onTapMedia: (String) -> Unit,
+    onReact: (Message, Reaction.Style) -> Unit,
 ) {
     val colors = LocalPantherColors.current
     val clipboard = LocalClipboardManager.current
@@ -117,6 +123,8 @@ fun ChatMessageCell(
 
         val isOwn = message.isFromCurrentUser
         val displayText = displayText(row)
+        val reactionChoices = reactionChoicesFor(row, onReact)
+        val alignment = if (isOwn) ContextMenuAlignment.TRAILING else ContextMenuAlignment.LEADING
 
         Row(
             horizontalArrangement = if (isOwn) Arrangement.End else Arrangement.Start,
@@ -127,18 +135,21 @@ fun ChatMessageCell(
                 SenderAvatar(show = row.showSenderAvatar, initials = row.senderInitials)
             }
             if (message.isMediaMessage) {
-                Column(horizontalAlignment = if (isOwn) Alignment.End else Alignment.Start) {
-                    SenderNameLabel(row)
-                    MediaMessageBubble(
-                        mediaFile = row.mediaFile,
-                        isOwn = isOwn,
-                        onTap = { onTapMedia(message.id) },
-                    )
+                MessageContextMenu(actions = emptyList(), alignment = alignment, reactionChoices = reactionChoices) {
+                    Column(horizontalAlignment = if (isOwn) Alignment.End else Alignment.Start) {
+                        SenderNameLabel(row)
+                        MediaMessageBubble(
+                            mediaFile = row.mediaFile,
+                            isOwn = isOwn,
+                            onTap = { onTapMedia(message.id) },
+                        )
+                    }
                 }
             } else {
                 MessageContextMenu(
                     actions = actionsFor(row, onToggleAlternate) { clipboard.setText(AnnotatedString(displayText)) },
-                    alignment = if (isOwn) ContextMenuAlignment.TRAILING else ContextMenuAlignment.LEADING,
+                    alignment = alignment,
+                    reactionChoices = reactionChoices,
                 ) {
                     Column(horizontalAlignment = if (isOwn) Alignment.End else Alignment.Start) {
                         SenderNameLabel(row)
@@ -203,9 +214,10 @@ private fun SenderAvatar(
 }
 
 /**
- * The label below a message bubble: its reactions (as emoji) and, for the
- * last confirmed own message in a one-to-one chat, its delivery status.
- * Aligns to the message's side, matching iOS's cell bottom label.
+ * The label below a message bubble: its reaction chips (one per style,
+ * with a count and the current user's own reaction highlighted) and, for
+ * the last confirmed own message in a one-to-one chat, its delivery
+ * status. Aligns to the message's side, matching iOS's cell bottom label.
  */
 @Composable
 private fun BottomLabel(
@@ -213,9 +225,10 @@ private fun BottomLabel(
     isOwn: Boolean,
 ) {
     val colors = LocalPantherColors.current
+    val chips = reactionChips(row.reactions)
     val status =
         if (isOwn && row.isLastConfirmedOwnMessage && !row.isGroup) statusText(row.message, row.isFailed) else null
-    if (row.reactionsText.isEmpty() && status == null) return
+    if (chips.isEmpty() && status == null) return
 
     // Align the label to the message bubble, not the screen edge: group
     // received bubbles are indented past the sender avatar column.
@@ -240,21 +253,53 @@ private fun BottomLabel(
                     end = ChatMessageCellFloats.bottomLabelEndPadding,
                 ),
     ) {
-        if (row.reactionsText.isNotEmpty()) {
-            Components.Text(
-                row.reactionsText,
-                color = colors.subtitleText,
-                font = Font.system(FontScale.Custom(ChatMessageCellFloats.REACTION_FONT_SIZE)),
-            )
-        }
+        chips.forEach { chip -> ReactionChipView(chip) }
         if (status != null) {
-            if (row.reactionsText.isNotEmpty()) {
+            if (chips.isNotEmpty()) {
                 Components.Text(ChatMessageCellStrings.STATUS_SEPARATOR, color = colors.subtitleText, font = Font.system(FontScale.Small))
             }
             Components.Text(
                 status.first,
                 color = if (status.second) ChatMessageCellColors.error else colors.subtitleText,
                 font = Font.system(FontScale.Small),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReactionChipView(chip: ReactionChip) {
+    val colors = LocalPantherColors.current
+    val background =
+        if (chip.isOwn) {
+            chip.style.squareIconColor.copy(alpha = ChatMessageCellFloats.REACTION_OWN_HIGHLIGHT_ALPHA)
+        } else {
+            colors.reactionButtonBackground
+        }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier
+                .padding(end = ChatMessageCellFloats.reactionChipSpacing)
+                .clip(RoundedCornerShape(ChatMessageCellFloats.reactionChipCornerRadius))
+                .background(background)
+                .padding(
+                    horizontal = ChatMessageCellFloats.reactionChipHorizontalPadding,
+                    vertical = ChatMessageCellFloats.reactionChipVerticalPadding,
+                ),
+    ) {
+        Components.Text(
+            chip.style.emojiValue,
+            color = colors.titleText,
+            font = Font.system(FontScale.Custom(ChatMessageCellFloats.REACTION_FONT_SIZE)),
+        )
+        if (chip.count > 1) {
+            Components.Text(
+                chip.count.toString(),
+                color = colors.subtitleText,
+                font = Font.system(FontScale.Small),
+                modifier = Modifier.padding(start = ChatMessageCellFloats.reactionChipCountStartPadding),
             )
         }
     }
@@ -339,6 +384,54 @@ private fun shouldShowAlternateAction(row: ChatMessageRowData): Boolean {
     val relevantLanguageCode = if (row.message.isFromCurrentUser) pair.to else pair.from
     return relevantLanguageCode != RuntimeStorage.languageCode
 }
+
+private data class ReactionChip(
+    val style: Reaction.Style,
+    val count: Int,
+    val isOwn: Boolean,
+)
+
+private fun reactionChips(reactions: List<Reaction>): List<ReactionChip> =
+    reactions
+        .groupBy { it.style }
+        .entries
+        .sortedBy { it.key.orderValue }
+        .map { (style, styleReactions) ->
+            ReactionChip(
+                style = style,
+                count = styleReactions.size,
+                isOwn = styleReactions.any { it.userID == User.currentUserID },
+            )
+        }
+
+private fun reactionChoicesFor(
+    row: ChatMessageRowData,
+    onReact: (Message, Reaction.Style) -> Unit,
+): List<ReactionChoice> {
+    val ownStyles = row.reactions.filter { it.userID == User.currentUserID }.map { it.style }.toSet()
+    return Reaction.Style.orderedCases.map { style ->
+        ReactionChoice(
+            emoji = style.emojiValue,
+            selectedColor = style.squareIconColor,
+            isSelected = style in ownStyles,
+            isDoubleTapDefault = style == Reaction.Style.LOVE,
+            onSelect = { onReact(row.message, style) },
+        )
+    }
+}
+
+// The background color of a reaction style's square icon, mirroring the
+// iOS `Reaction.Style.squareIconBackgroundColor` hex values.
+private val Reaction.Style.squareIconColor: Color
+    get() =
+        when (this) {
+            Reaction.Style.DISLIKE -> Color(0xFFFF5252)
+            Reaction.Style.EMPHASIS -> Color(0xFF0FB9B1)
+            Reaction.Style.LAUGH -> Color(0xFFC56CF0)
+            Reaction.Style.LIKE -> Color(0xFF27AE60)
+            Reaction.Style.LOVE -> Color(0xFF30AAF2)
+            Reaction.Style.QUESTION -> Color(0xFFFFB142)
+        }
 
 private fun displayText(row: ChatMessageRowData): String {
     val translation = row.translation ?: return ""

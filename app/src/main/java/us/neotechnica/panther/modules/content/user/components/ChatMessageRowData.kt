@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.components
 
+import us.neotechnica.panther.networking.modules.schema.conversation.models.Reaction
 import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
 import us.neotechnica.panther.networking.modules.schema.message.models.Message
 import us.neotechnica.panther.translator.models.Translation
@@ -30,8 +31,7 @@ import us.neotechnica.panther.translator.models.Translation
  * @property senderInitials The sender's initials, for the avatar fallback.
  * @property showSenderAvatar Whether to render the sender's avatar beside
  *   this row (the last message in a run from a group participant).
- * @property reactionsText The message's reaction emoji, joined in display
- *   order, or an empty string when the message has no reactions.
+ * @property reactions The message's reactions, or empty when it has none.
  * @property mediaFile The message's resolved media file, or `null` if the
  *   message is not media or its media has not yet downloaded.
  */
@@ -46,6 +46,6 @@ data class ChatMessageRowData(
     val senderName: String?,
     val senderInitials: String = "",
     val showSenderAvatar: Boolean = false,
-    val reactionsText: String = "",
+    val reactions: List<Reaction> = emptyList(),
     val mediaFile: MediaFile? = null,
 )

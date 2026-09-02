@@ -33,6 +33,7 @@ class PantherColors(
     val navigationBarBackground: Color get() = color(ColoredItemType.navigationBarBackground)
     val navigationBarButton: Color get() = color(ColoredItemType.navigationBarButton)
     val navigationBarTitle: Color get() = color(ColoredItemType.navigationBarTitle)
+    val reactionButtonBackground: Color get() = color(ColoredItemType.reactionButtonBackground)
     val receiverBubble: Color get() = color(ColoredItemType.receiverBubble)
     val senderBubble: Color get() = color(ColoredItemType.senderBubble)
     val subtitleText: Color get() = color(ColoredItemType.subtitleText)

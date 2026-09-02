@@ -60,6 +60,7 @@ import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentNavigatorState
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.networking.modules.schema.conversation.models.Reaction
 import us.neotechnica.panther.networking.modules.schema.message.models.Message
 import us.neotechnica.panther.networking.modules.schema.user.models.User
 import us.neotechnica.panther.networking.modules.session.extensions.currentConversationDidBecomeUnavailable
@@ -151,6 +152,7 @@ fun ChatPageView(
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                         onToggleAlternate = { viewModel.send(ChatPageReducer.Action.ToggleAlternate(it)) },
                         onTapMedia = { previewMessageID = it },
+                        onReact = { message, style -> viewModel.send(ChatPageReducer.Action.React(message, style)) },
                     )
 
                     MessageInputBar(
@@ -243,6 +245,7 @@ private fun MessageList(
     modifier: Modifier,
     onToggleAlternate: (String) -> Unit,
     onTapMedia: (String) -> Unit,
+    onReact: (Message, Reaction.Style) -> Unit,
 ) {
     val listState = rememberLazyListState()
     val messages = state.messages
@@ -296,16 +299,12 @@ private fun MessageList(
                         senderName = if (showSender && firstOfRun) senderName(message, senderMatch, users) else null,
                         senderInitials = senderMatch?.initials ?: "",
                         showSenderAvatar = showSender && lastOfRun,
-                        reactionsText =
-                            message.reactions
-                                .orEmpty()
-                                .map { it.style }
-                                .sortedBy { it.orderValue }
-                                .joinToString(separator = "") { it.emojiValue },
+                        reactions = message.reactions.orEmpty(),
                         mediaFile = state.mediaByID[message.id],
                     ),
                 onToggleAlternate = onToggleAlternate,
                 onTapMedia = onTapMedia,
+                onReact = onReact,
             )
         }
     }

@@ -15,16 +15,21 @@ import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
+import us.neotechnica.panther.networking.modules.schema.conversation.models.Reaction
 import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
 import us.neotechnica.panther.networking.modules.schema.message.models.Message
+import us.neotechnica.panther.networking.modules.schema.user.models.User
+import us.neotechnica.panther.networking.modules.session.extensions.currentUserID
 import us.neotechnica.panther.networking.modules.session.extensions.isMediaMessage
 import us.neotechnica.panther.networking.modules.session.extensions.resolvedMediaFile
 import us.neotechnica.panther.networking.modules.session.extensions.resolvedTranslation
 import us.neotechnica.panther.networking.modules.session.services.ConversationSessionService
 import us.neotechnica.panther.networking.modules.session.services.MessageDeliveryService
+import us.neotechnica.panther.networking.modules.session.services.ReactionSessionService
 import us.neotechnica.panther.networking.modules.session.services.SessionStore
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
+import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
@@ -75,6 +80,11 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
 
         data class ToggleAlternate(
             val messageID: String,
+        ) : Action
+
+        data class React(
+            val message: Message,
+            val style: Reaction.Style,
         ) : Action
 
         data object StoreChanged : Action
@@ -161,6 +171,9 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
                 ReduceResult(state.copy(alternateTextMessageIDs = updated))
             }
 
+            is Action.React ->
+                ReduceResult(state, reactEffect(action.message, action.style))
+
             Action.StoreChanged ->
                 ReduceResult(state.copy(changeToken = UUID.randomUUID()), markReadEffect())
 
@@ -176,6 +189,19 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         }
 
     // MARK: - Auxiliary
+
+    private fun reactEffect(
+        message: Message,
+        style: Reaction.Style,
+    ): Effect<Action> =
+        Effect.run {
+            val currentUserID = User.currentUserID ?: return@run
+            try {
+                ReactionSessionService.react(Reaction(style, currentUserID), message)
+            } catch (exception: Exception) {
+                Logger.log(exception, with = AlertType.toast)
+            }
+        }
 
     private fun startEffect(conversationIDKey: String): Effect<Action> =
         Effect.run { send ->

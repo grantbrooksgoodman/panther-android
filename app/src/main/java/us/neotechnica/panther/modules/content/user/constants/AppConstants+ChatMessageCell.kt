@@ -23,6 +23,11 @@ object ChatMessageCellFloats {
     val bubbleRadius: Dp = 18.dp
     val bubbleTailRadius: Dp = 4.dp
     val bubbleVerticalPadding: Dp = 9.dp
+    val reactionChipCornerRadius: Dp = 10.dp
+    val reactionChipCountStartPadding: Dp = 2.dp
+    val reactionChipHorizontalPadding: Dp = 6.dp
+    val reactionChipSpacing: Dp = 4.dp
+    val reactionChipVerticalPadding: Dp = 2.dp
     val rowHorizontalPadding: Dp = 12.dp
     val rowVerticalPadding: Dp = 2.dp
     val senderAvatarGlyphSize: Dp = 18.dp
@@ -36,6 +41,7 @@ object ChatMessageCellFloats {
     const val DAY_SEPARATOR_GAP_MILLIS = 5_400_000L
     const val MILLIS_PER_DAY = 24L * 60 * 60 * 1000
     const val REACTION_FONT_SIZE = 14f
+    const val REACTION_OWN_HIGHLIGHT_ALPHA = 0.22f
 }
 
 // MARK: - Color
