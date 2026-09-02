@@ -8,8 +8,10 @@
 package us.neotechnica.panther.networking.modules.session.services
 
 import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
+import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
 import us.neotechnica.panther.networking.modules.session.extensions.users
 import us.neotechnica.panther.networking.modules.session.models.OutboxEntry
+import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import java.util.Date
@@ -68,6 +70,32 @@ object MessageDeliveryService {
         } catch (exception: Exception) {
             MessageOutboxService.markFailed(entry.id)
             Logger.log(exception)
+        }
+    }
+
+    /**
+     * Sends [mediaFile] to the current conversation's participants.
+     *
+     * **Note:** this Phase R3.3 port sends directly; outbox staging,
+     * delivery-progress states, and retry semantics arrive with the send
+     * pipeline (Phase R3.4). Failures surface as a toast.
+     */
+    suspend fun sendMediaMessage(mediaFile: MediaFile) {
+        val conversation = ConversationSessionService.currentConversation ?: return
+        val users = conversation.users.orEmpty()
+        if (users.isEmpty()) return
+
+        try {
+            val updated =
+                MessageSessionService.sendMediaMessage(
+                    mediaFile = mediaFile,
+                    users = users,
+                    conversation = conversation,
+                    isPenPalsConversation = conversation.metadata.isPenPalsConversation,
+                )
+            ConversationSessionService.setCurrentConversation(updated)
+        } catch (exception: Exception) {
+            Logger.log(exception, with = AlertType.toast)
         }
     }
 }

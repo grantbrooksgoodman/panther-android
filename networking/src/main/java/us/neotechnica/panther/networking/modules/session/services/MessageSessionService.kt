@@ -16,10 +16,12 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.conversation.services.ConversationService
+import us.neotechnica.panther.networking.modules.message.services.MediaMessageService
 import us.neotechnica.panther.networking.modules.message.services.MessageService
 import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Participant
+import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
 import us.neotechnica.panther.networking.modules.schema.message.models.Message
 import us.neotechnica.panther.networking.modules.schema.user.models.User
 import us.neotechnica.panther.networking.modules.translation.models.ArchiveStrategy
@@ -89,6 +91,43 @@ object MessageSessionService {
         }
 
         val message = MessageService.buildTextMessage(currentUser.id, presetID, translations)
+        return createMessageAndAddToConversation(
+            conversation = conversation,
+            initiatingUser = currentUser,
+            otherUsers = recipients,
+            message = message,
+            isPenPalsConversation = isPenPalsConversation,
+        )
+    }
+
+    // MARK: - Send Media Message
+
+    /**
+     * Sends [mediaFile] as a media message to the given recipients.
+     *
+     * Mirrors the iOS ordering: the media and its thumbnail are uploaded
+     * first, then the message is written and recipients are notified.
+     *
+     * @return The updated (or newly created) conversation.
+     *
+     * @throws Exception if the current user is unavailable, the upload
+     *   fails, or the message cannot be sent.
+     */
+    suspend fun sendMediaMessage(
+        mediaFile: MediaFile,
+        users: List<User>,
+        conversation: Conversation?,
+        isPenPalsConversation: Boolean = false,
+    ): Conversation {
+        val currentUser =
+            UserSessionService.currentUser
+                ?: throw Exception("Current user has not been set.", metadata = ExceptionMetadata(this))
+
+        val recipients = users.filter { it.id != currentUser.id }
+        val message = MessageService.buildMediaMessage(currentUser.id, mediaFile)
+
+        MediaMessageService.uploadMediaComponent(mediaFile, message)
+
         return createMessageAndAddToConversation(
             conversation = conversation,
             initiatingUser = currentUser,

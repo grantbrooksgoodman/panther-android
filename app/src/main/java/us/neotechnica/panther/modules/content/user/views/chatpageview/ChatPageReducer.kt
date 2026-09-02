@@ -93,6 +93,14 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             val displayText: String,
         ) : Action
 
+        data class AttachmentPicked(
+            val mediaFile: MediaFile,
+        ) : Action
+
+        data object RemoveAttachment : Action
+
+        data object SendMedia : Action
+
         data object StoreChanged : Action
 
         data object ConversationUnavailable : Action
@@ -107,6 +115,7 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         val messages: List<Message> = emptyList(),
         val translationsByID: Map<String, Translation> = emptyMap(),
         val mediaByID: Map<String, MediaFile> = emptyMap(),
+        val pendingAttachment: MediaFile? = null,
         val alternateTextMessageIDs: Set<String> = emptySet(),
         val inputText: String = "",
         val isSending: Boolean = false,
@@ -118,6 +127,7 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
 
     // MARK: - Reduce
 
+    @Suppress("CyclomaticComplexMethod")
     override fun reduce(
         state: State,
         action: Action,
@@ -183,6 +193,17 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             is Action.Speak ->
                 ReduceResult(state, speakEffect(state, action.messageID, action.displayText))
 
+            is Action.AttachmentPicked ->
+                ReduceResult(state.copy(pendingAttachment = action.mediaFile))
+
+            Action.RemoveAttachment ->
+                ReduceResult(state.copy(pendingAttachment = null))
+
+            Action.SendMedia ->
+                state.pendingAttachment?.let { mediaFile ->
+                    ReduceResult(state.copy(pendingAttachment = null), sendMediaEffect(mediaFile))
+                } ?: ReduceResult(state)
+
             Action.StoreChanged ->
                 ReduceResult(state.copy(changeToken = UUID.randomUUID()), markReadEffect())
 
@@ -210,6 +231,11 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             } catch (exception: Exception) {
                 Logger.log(exception, with = AlertType.toast)
             }
+        }
+
+    private fun sendMediaEffect(mediaFile: MediaFile): Effect<Action> =
+        Effect.run {
+            MessageDeliveryService.sendMediaMessage(mediaFile)
         }
 
     private fun speakEffect(

@@ -7,6 +7,8 @@
 
 package us.neotechnica.panther.designsystem.modules.componentkit.components
 
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -23,12 +26,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -47,6 +53,9 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
  * @param onTextChange Invoked as the text changes.
  * @param onSend Invoked when the send button is tapped.
  * @param onAttach Invoked when the leading attach button is tapped.
+ * @param attachmentPreview The thumbnail bytes of a staged attachment, or
+ *   `null` when none is staged.
+ * @param onRemoveAttachment Invoked when the staged attachment is removed.
  * @param enabled An additional gate on the send button, beyond a
  *   non-blank, non-sending message (for example, requiring a recipient).
  * @param modifier The modifier for this bar.
@@ -60,6 +69,8 @@ fun MessageInputBar(
     onTextChange: (String) -> Unit,
     onSend: () -> Unit,
     onAttach: () -> Unit,
+    attachmentPreview: ByteArray? = null,
+    onRemoveAttachment: () -> Unit = {},
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
@@ -72,6 +83,9 @@ fun MessageInputBar(
                     .height(DIVIDER_HEIGHT)
                     .background(colors.subtitleText.copy(alpha = DIVIDER_ALPHA)),
         )
+        if (attachmentPreview != null) {
+            MediaAttachmentPreview(attachmentPreview, onRemoveAttachment)
+        }
         Row(
             verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -112,7 +126,7 @@ fun MessageInputBar(
                 )
             }
 
-            val canSend = enabled && text.isNotBlank() && !isSending
+            val canSend = enabled && (text.isNotBlank() || attachmentPreview != null) && !isSending
             InputBarButton(
                 symbol = "arrow.up",
                 glyphColor = Color.White,
@@ -151,10 +165,57 @@ private fun InputBarButton(
     }
 }
 
+@Composable
+private fun MediaAttachmentPreview(
+    preview: ByteArray,
+    onRemove: () -> Unit,
+) {
+    val colors = LocalPantherColors.current
+    val bitmap = remember(preview) { BitmapFactory.decodeByteArray(preview, 0, preview.size)?.asImageBitmap() }
+
+    Box(modifier = Modifier.padding(start = 12.dp, top = 8.dp)) {
+        Box(
+            modifier =
+                Modifier
+                    .size(PREVIEW_SIZE)
+                    .clip(RoundedCornerShape(PREVIEW_RADIUS))
+                    .background(colors.groupedContentBackground),
+        ) {
+            bitmap?.let {
+                Image(
+                    bitmap = it,
+                    contentDescription = "Attachment",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier =
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .size(PREVIEW_REMOVE_SIZE)
+                    .clip(CircleShape)
+                    .background(colors.titleText.copy(alpha = PREVIEW_REMOVE_ALPHA))
+                    .clickable(onClick = onRemove)
+                    .semantics { contentDescription = "Remove attachment" },
+        ) {
+            Components.Symbol("xmark", color = colors.background, modifier = Modifier.size(PREVIEW_REMOVE_GLYPH))
+        }
+    }
+}
+
 private val BUTTON_SIZE = 40.dp
 private val GLYPH_SIZE = 22.dp
 private val FIELD_RADIUS = 20.dp
 private val DIVIDER_HEIGHT = 0.5.dp
+private val PREVIEW_SIZE = 64.dp
+private val PREVIEW_RADIUS = 8.dp
+private val PREVIEW_REMOVE_SIZE = 20.dp
+private val PREVIEW_REMOVE_GLYPH = 12.dp
 private const val FIELD_BORDER_ALPHA = 0.3f
 private const val DIVIDER_ALPHA = 0.15f
 private const val FIELD_MAX_LINES = 5
+private const val PREVIEW_REMOVE_ALPHA = 0.6f

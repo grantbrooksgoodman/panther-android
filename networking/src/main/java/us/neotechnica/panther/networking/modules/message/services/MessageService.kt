@@ -14,9 +14,11 @@ import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.schema.message.models.HostedContentType
+import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
 import us.neotechnica.panther.networking.modules.schema.message.models.Message
 import us.neotechnica.panther.networking.modules.schema.message.models.TranslationReference
 import us.neotechnica.panther.networking.modules.session.services.SessionStore
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.translator.models.Translation
@@ -31,6 +33,8 @@ object MessageService {
     // MARK: - Properties
 
     private val database get() = Networking.config.databaseDelegate
+
+    private const val MEDIA_ID_LENGTH = 32
 
     // MARK: - Methods
 
@@ -105,6 +109,48 @@ object MessageService {
             readReceipts = null,
             sentDate = Date(),
             translations = translations,
+        )
+    }
+
+    /**
+     * Builds a media message for [mediaFile] from the given account.
+     *
+     * The message's content type carries the media's content-hash
+     * identifier and file extension; the media itself is uploaded
+     * separately.
+     *
+     * @param fromAccountID The identifier of the sending account.
+     * @param mediaFile The media file to send.
+     *
+     * @return The built media message.
+     *
+     * @throws Exception if the account identifier is empty or a message
+     *   key cannot be generated.
+     */
+    suspend fun buildMediaMessage(
+        fromAccountID: String,
+        mediaFile: MediaFile,
+    ): Message {
+        if (fromAccountID.isBangQualifiedEmpty) {
+            throw Exception("Passed arguments fail validation.", metadata = ExceptionMetadata(this))
+        }
+
+        val id =
+            database.generateKey(NetworkPath.messages.rawValue)
+                ?: throw Exception("Failed to generate key for new message.", metadata = ExceptionMetadata(this))
+
+        return Message(
+            id = id,
+            fromAccountID = fromAccountID,
+            contentType =
+                HostedContentType.Media(
+                    id = mediaFile.encodedHash.take(MEDIA_ID_LENGTH),
+                    fileExtension = mediaFile.fileExtension,
+                ),
+            translationReferences = null,
+            readReceipts = null,
+            sentDate = Date(),
+            translations = null,
         )
     }
 

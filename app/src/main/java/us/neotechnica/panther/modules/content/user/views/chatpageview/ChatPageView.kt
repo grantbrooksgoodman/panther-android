@@ -31,7 +31,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +41,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.zIndex
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
+import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
 import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
@@ -52,7 +60,9 @@ import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.content.user.components.ChatMessageCell
 import us.neotechnica.panther.modules.content.user.components.ChatMessageRowData
+import us.neotechnica.panther.modules.content.user.components.ContentPickers
 import us.neotechnica.panther.modules.content.user.components.MediaPreviewOverlay
+import us.neotechnica.panther.modules.content.user.components.rememberContentPickers
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
@@ -76,6 +86,8 @@ import us.neotechnica.panther.networking.modules.session.services.ConversationSe
 import us.neotechnica.panther.networking.modules.session.services.MessageOutboxService
 import us.neotechnica.panther.networking.modules.session.services.SessionStore
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 
@@ -123,6 +135,21 @@ fun ChatPageView(
     val state by viewModel.state.collectAsState()
     var previewMessageID by remember { mutableStateOf<String?>(null) }
 
+    val scope = rememberCoroutineScope()
+    val pickers =
+        rememberContentPickers(
+            onPicked = { viewModel.send(ChatPageReducer.Action.AttachmentPicked(it)) },
+            onFailed = { Logger.log(it, with = AlertType.toast) },
+        )
+    val pendingAttachment = state.pendingAttachment
+    val attachmentPreview by
+        produceState<ByteArray?>(null, pendingAttachment) {
+            value =
+                pendingAttachment?.let {
+                    withContext(Dispatchers.IO) { (it.thumbnailFile ?: it.localPathFile)?.readBytes() }
+                }
+        }
+
     val mediaMessages = state.messages.filter { it.isMediaMessage && state.mediaByID[it.id] != null }
     val previewMediaFiles = mediaMessages.mapNotNull { state.mediaByID[it.id] }
     val previewStartIndex = mediaMessages.indexOfFirst { it.id == previewMessageID }
@@ -161,8 +188,16 @@ fun ChatPageView(
                         placeholder = LocalizedStringKey.NewMessage.localized(),
                         isSending = state.isSending,
                         onTextChange = { viewModel.send(ChatPageReducer.Action.InputChanged(it)) },
-                        onSend = { viewModel.send(ChatPageReducer.Action.SendTapped) },
-                        onAttach = {},
+                        onSend = {
+                            if (state.pendingAttachment != null) {
+                                viewModel.send(ChatPageReducer.Action.SendMedia)
+                            } else {
+                                viewModel.send(ChatPageReducer.Action.SendTapped)
+                            }
+                        },
+                        onAttach = { scope.launch { presentAttachMediaSheet(pickers) } },
+                        attachmentPreview = attachmentPreview,
+                        onRemoveAttachment = { viewModel.send(ChatPageReducer.Action.RemoveAttachment) },
                     )
                 }
             }
@@ -322,4 +357,19 @@ private fun senderName(
     match?.let { return it.fullName }
     val user = users.firstOrNull { it.id == message.fromAccountID } ?: SessionStore.users[message.fromAccountID]
     return user?.phoneNumber?.formattedString() ?: message.fromAccountID
+}
+
+// Mirrors the iOS `MediaActionHandlerService.attachMediaButtonTapped` action sheet.
+private suspend fun presentAttachMediaSheet(pickers: ContentPickers) {
+    Alert(
+        title = "Attach media",
+        message = null,
+        actions =
+            listOf(
+                Action("Take photo") { pickers.launchCamera() },
+                Action("Select document") { pickers.launchDocument() },
+                Action("Select photo or video") { pickers.launchPhotoOrVideo() },
+                Action("Cancel", style = ActionStyle.CANCEL) {},
+            ),
+    ).present()
 }
