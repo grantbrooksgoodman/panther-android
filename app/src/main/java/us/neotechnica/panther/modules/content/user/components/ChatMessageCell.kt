@@ -43,6 +43,7 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellColors
 import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellStrings
+import us.neotechnica.panther.modules.content.user.services.ContextMenuActionHandlerService
 import us.neotechnica.panther.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
@@ -305,6 +306,8 @@ private fun actionsFor(
 ): List<ContextMenuAction> {
     val actions = mutableListOf<ContextMenuAction>()
     actions.add(ContextMenuAction(LocalizedStringKey.Copy.localized(), "doc.on.doc") { onCopy() })
+
+    ContextMenuActionHandlerService.reportMistranslationAction(row)?.let { actions.add(it) }
 
     if (shouldShowAlternateAction(row)) {
         val title =

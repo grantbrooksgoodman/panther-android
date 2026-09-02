@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -109,6 +110,7 @@ object SFSymbol {
             "square.and.arrow.down" to Icons.Filled.Download,
             "square.and.pencil" to Icons.Filled.Edit,
             "globe" to Icons.Filled.Language,
+            "flag" to Icons.Filled.Flag,
             "character.bubble" to Icons.AutoMirrored.Filled.Message,
             "character.bubble.fill" to Icons.AutoMirrored.Filled.Message,
             "arrow.clockwise" to Icons.Filled.Refresh,
