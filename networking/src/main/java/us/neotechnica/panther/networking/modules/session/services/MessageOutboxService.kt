@@ -28,9 +28,8 @@ import java.util.Date
  * persists them to disk. It publishes a change whenever its contents
  * change.
  *
- * **Note:** this Phase 7 port queues text messages only; audio and
- * media payloads (and their payload files) arrive with the media
- * phases.
+ * **Note:** this port queues text and media messages; audio payloads
+ * arrive with the audio phase.
  */
 object MessageOutboxService {
     // MARK: - Properties
@@ -206,6 +205,7 @@ object MessageOutboxService {
             obj.put(KEY_FROM_ACCOUNT_ID, entry.fromAccountID)
             obj.put(KEY_RECIPIENT_USER_IDS, JSONArray(entry.recipientUserIDs))
             obj.put(KEY_TEXT, entry.text)
+            obj.put(KEY_MEDIA_RELATIVE_PATH, entry.mediaRelativePath ?: JSONObject.NULL)
             obj.put(KEY_IS_PEN_PALS, entry.isPenPalsConversation)
             obj.put(KEY_CREATED_DATE, entry.createdDate.time)
             obj.put(KEY_ATTEMPT_COUNT, entry.attemptCount)
@@ -233,6 +233,7 @@ object MessageOutboxService {
                     fromAccountID = obj.getString(KEY_FROM_ACCOUNT_ID),
                     recipientUserIDs = recipients,
                     text = obj.getString(KEY_TEXT),
+                    mediaRelativePath = if (obj.isNull(KEY_MEDIA_RELATIVE_PATH)) null else obj.getString(KEY_MEDIA_RELATIVE_PATH),
                     isPenPalsConversation = obj.getBoolean(KEY_IS_PEN_PALS),
                     createdDate = Date(obj.getLong(KEY_CREATED_DATE)),
                     attemptCount = obj.getInt(KEY_ATTEMPT_COUNT),
@@ -252,6 +253,7 @@ object MessageOutboxService {
     private const val KEY_FROM_ACCOUNT_ID = "fromAccountID"
     private const val KEY_RECIPIENT_USER_IDS = "recipientUserIDs"
     private const val KEY_TEXT = "text"
+    private const val KEY_MEDIA_RELATIVE_PATH = "mediaRelativePath"
     private const val KEY_IS_PEN_PALS = "isPenPalsConversation"
     private const val KEY_CREATED_DATE = "createdDate"
     private const val KEY_ATTEMPT_COUNT = "attemptCount"

@@ -46,6 +46,31 @@ suspend fun MessageOutboxService.retry(entryID: String) {
         return
     }
 
+    if (entry.isMediaEntry) {
+        val mediaFile = entry.mediaFile
+        if (mediaFile == null) {
+            remove(entryID)
+            Logger.log("Removed outbox entry $entryID: staged media no longer exists.")
+            return
+        }
+
+        try {
+            MessageSessionService.sendMediaMessage(
+                mediaFile = mediaFile,
+                users = recipients,
+                conversation = conversation,
+                isPenPalsConversation = entry.isPenPalsConversation,
+                presetID = entry.reservedRemoteID,
+            )
+            remove(entryID)
+            Logger.log("Retry succeeded for outbox entry $entryID.")
+        } catch (exception: Exception) {
+            markFailed(entryID)
+            Logger.log(exception)
+        }
+        return
+    }
+
     try {
         MessageSessionService.sendTextMessage(
             text = entry.text,

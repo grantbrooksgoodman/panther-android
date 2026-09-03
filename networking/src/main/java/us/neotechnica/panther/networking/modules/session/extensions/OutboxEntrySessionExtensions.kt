@@ -7,6 +7,7 @@
 
 package us.neotechnica.panther.networking.modules.session.extensions
 
+import us.neotechnica.panther.networking.modules.common.models.MediaFileExtension
 import us.neotechnica.panther.networking.modules.schema.message.models.HostedContentType
 import us.neotechnica.panther.networking.modules.schema.message.models.Message
 import us.neotechnica.panther.networking.modules.schema.message.models.TranslationReference
@@ -24,6 +25,24 @@ import us.neotechnica.panther.networking.modules.translation.models.TranslationR
  */
 val OutboxEntry.asDisplayMessage: Message
     get() {
+        // A media entry renders as a media message pointing at its staged
+        // local file (id = the staging name, so the path resolves before
+        // the upload re-keys it by content hash).
+        mediaRelativePath?.let { relativePath ->
+            val fileName = relativePath.substringAfterLast("/")
+            MediaFileExtension.from(fileName.substringAfterLast("."))?.let { fileExtension ->
+                return Message(
+                    id = id,
+                    fromAccountID = fromAccountID,
+                    contentType = HostedContentType.Media(id = fileName.substringBeforeLast("."), fileExtension = fileExtension),
+                    translationReferences = null,
+                    readReceipts = null,
+                    sentDate = createdDate,
+                    translations = null,
+                )
+            }
+        }
+
         val languageCode = UserSessionService.currentUser?.languageCode ?: RuntimeStorage.languageCode
         val selfPair = LanguagePair(from = languageCode, to = languageCode)
         val translation =

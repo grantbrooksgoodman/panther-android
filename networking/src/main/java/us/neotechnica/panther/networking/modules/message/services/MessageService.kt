@@ -121,6 +121,8 @@ object MessageService {
      *
      * @param fromAccountID The identifier of the sending account.
      * @param mediaFile The media file to send.
+     * @param presetID A reserved message identifier to reuse (for retries),
+     *   or `null` to generate a new one.
      *
      * @return The built media message.
      *
@@ -130,13 +132,14 @@ object MessageService {
     suspend fun buildMediaMessage(
         fromAccountID: String,
         mediaFile: MediaFile,
+        presetID: String? = null,
     ): Message {
         if (fromAccountID.isBangQualifiedEmpty) {
             throw Exception("Passed arguments fail validation.", metadata = ExceptionMetadata(this))
         }
 
         val id =
-            database.generateKey(NetworkPath.messages.rawValue)
+            presetID ?: database.generateKey(NetworkPath.messages.rawValue)
                 ?: throw Exception("Failed to generate key for new message.", metadata = ExceptionMetadata(this))
 
         return Message(

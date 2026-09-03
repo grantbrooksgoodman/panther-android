@@ -118,13 +118,14 @@ object MessageSessionService {
         users: List<User>,
         conversation: Conversation?,
         isPenPalsConversation: Boolean = false,
+        presetID: String? = null,
     ): Conversation {
         val currentUser =
             UserSessionService.currentUser
                 ?: throw Exception("Current user has not been set.", metadata = ExceptionMetadata(this))
 
         val recipients = users.filter { it.id != currentUser.id }
-        val message = MessageService.buildMediaMessage(currentUser.id, mediaFile)
+        val message = MessageService.buildMediaMessage(currentUser.id, mediaFile, presetID)
 
         MediaMessageService.uploadMediaComponent(mediaFile, message)
 
