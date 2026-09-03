@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
@@ -108,6 +109,7 @@ object SFSymbol {
             "film.fill" to Icons.Filled.Movie,
             "play.fill" to Icons.Filled.PlayArrow,
             "play.circle.fill" to Icons.Filled.PlayArrow,
+            "pause.fill" to Icons.Filled.Pause,
             "square.and.arrow.down" to Icons.Filled.Download,
             "square.and.pencil" to Icons.Filled.Edit,
             "globe" to Icons.Filled.Language,

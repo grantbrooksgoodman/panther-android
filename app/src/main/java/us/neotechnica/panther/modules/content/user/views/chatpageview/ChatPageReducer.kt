@@ -17,11 +17,14 @@ import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Reaction
+import us.neotechnica.panther.networking.modules.schema.message.models.AudioMessageReference
 import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
 import us.neotechnica.panther.networking.modules.schema.message.models.Message
 import us.neotechnica.panther.networking.modules.schema.user.models.User
 import us.neotechnica.panther.networking.modules.session.extensions.currentUserID
+import us.neotechnica.panther.networking.modules.session.extensions.isAudioMessage
 import us.neotechnica.panther.networking.modules.session.extensions.isMediaMessage
+import us.neotechnica.panther.networking.modules.session.extensions.resolvedAudioReference
 import us.neotechnica.panther.networking.modules.session.extensions.resolvedMediaFile
 import us.neotechnica.panther.networking.modules.session.extensions.resolvedTranslation
 import us.neotechnica.panther.networking.modules.session.services.ConversationSessionService
@@ -65,6 +68,10 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
 
         data class MediaResolved(
             val media: Map<String, MediaFile>,
+        ) : Action
+
+        data class AudioResolved(
+            val audio: Map<String, AudioMessageReference>,
         ) : Action
 
         data class TitleResolved(
@@ -115,6 +122,7 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         val messages: List<Message> = emptyList(),
         val translationsByID: Map<String, Translation> = emptyMap(),
         val mediaByID: Map<String, MediaFile> = emptyMap(),
+        val audioByID: Map<String, AudioMessageReference> = emptyMap(),
         val pendingAttachment: MediaFile? = null,
         val alternateTextMessageIDs: Set<String> = emptySet(),
         val inputText: String = "",
@@ -144,11 +152,14 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             is Action.MessagesUpdated ->
                 ReduceResult(
                     state.copy(messages = action.messages, viewState = ViewState.Loaded, changeToken = UUID.randomUUID()),
-                    resolveEffect(action.messages, state.languageCode, state.translationsByID, state.mediaByID),
+                    resolveEffect(action.messages, state.languageCode, state.translationsByID, state.mediaByID, state.audioByID),
                 )
 
             is Action.TranslationsResolved ->
                 ReduceResult(state.copy(translationsByID = state.translationsByID + action.translations))
+
+            is Action.AudioResolved ->
+                ReduceResult(state.copy(audioByID = state.audioByID + action.audio, changeToken = UUID.randomUUID()))
 
             is Action.MediaResolved ->
                 ReduceResult(
@@ -272,17 +283,21 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             markCurrentConversationAsRead()
         }
 
+    @Suppress("LongParameterList")
     private fun resolveEffect(
         messages: List<Message>,
         languageCode: String,
         existing: Map<String, Translation>,
         existingMedia: Map<String, MediaFile>,
+        existingAudio: Map<String, AudioMessageReference>,
     ): Effect<Action> =
         Effect.run { send ->
             val resolved = resolveTranslations(messages, languageCode, existing)
             val resolvedMedia = resolveMedia(messages, existingMedia)
+            val resolvedAudio = resolveAudio(messages, languageCode, existingAudio)
             if (resolved.isNotEmpty()) send(Action.TranslationsResolved(resolved))
             if (resolvedMedia.isNotEmpty()) send(Action.MediaResolved(resolvedMedia))
+            if (resolvedAudio.isNotEmpty()) send(Action.AudioResolved(resolvedAudio))
             markCurrentConversationAsRead()
         }
 
@@ -307,6 +322,19 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         for (message in messages) {
             if (!message.isMediaMessage || message.id in existingMedia) continue
             message.resolvedMediaFile()?.let { resolved[message.id] = it }
+        }
+        return resolved
+    }
+
+    private suspend fun resolveAudio(
+        messages: List<Message>,
+        languageCode: String,
+        existingAudio: Map<String, AudioMessageReference>,
+    ): Map<String, AudioMessageReference> {
+        val resolved = mutableMapOf<String, AudioMessageReference>()
+        for (message in messages) {
+            if (!message.isAudioMessage || message.id in existingAudio) continue
+            message.resolvedAudioReference(languageCode)?.let { resolved[message.id] = it }
         }
         return resolved
     }

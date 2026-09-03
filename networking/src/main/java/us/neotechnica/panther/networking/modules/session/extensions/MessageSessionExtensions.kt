@@ -7,9 +7,13 @@
 
 package us.neotechnica.panther.networking.modules.session.extensions
 
+import android.media.MediaMetadataRetriever
 import us.neotechnica.panther.networking.modules.common.models.CommonConstants
+import us.neotechnica.panther.networking.modules.message.services.AudioMessageService
 import us.neotechnica.panther.networking.modules.message.services.MediaMessageService
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Reaction
+import us.neotechnica.panther.networking.modules.schema.message.models.AudioMessageReference
+import us.neotechnica.panther.networking.modules.schema.message.models.LocalAudioFilePath
 import us.neotechnica.panther.networking.modules.schema.message.models.LocalMediaFilePath
 import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
 import us.neotechnica.panther.networking.modules.schema.message.models.Message
@@ -19,6 +23,7 @@ import us.neotechnica.panther.networking.modules.session.models.OutboxEntry
 import us.neotechnica.panther.networking.modules.session.services.ConversationSessionService
 import us.neotechnica.panther.networking.modules.translation.services.TranslationResolver
 import us.neotechnica.panther.translator.models.Translation
+import java.io.File
 import us.neotechnica.panther.networking.modules.translation.models.TranslationReference as HostedTranslationReference
 
 /** Whether the message was sent by the current user. */
@@ -49,6 +54,49 @@ val Message.cachedMediaFile: MediaFile?
         val localMediaFilePath = LocalMediaFilePath.from(this) ?: return null
         return MediaFile.from(localMediaFilePath.relativePathString)
     }
+
+/** Whether the message carries audio content. */
+val Message.isAudioMessage: Boolean
+    get() = contentType.isAudio
+
+/**
+ * Resolves the message's audio reference, using the local copy when
+ * available and downloading it otherwise, with the displayed side's
+ * duration resolved for the bubble label. Returns `null` if the message
+ * is not audio or the resolution fails.
+ */
+suspend fun Message.resolvedAudioReference(languageCode: String): AudioMessageReference? {
+    if (!contentType.isAudio) return null
+    val translation = resolvedTranslation(languageCode) ?: return null
+    val localAudioFilePath = LocalAudioFilePath.from(this, translation) ?: return null
+    val reference =
+        runCatching {
+            AudioMessageService.getAudioComponent(id, isFromCurrentUser, localAudioFilePath, translation)
+        }.getOrNull() ?: return null
+
+    val displayed = if (isFromCurrentUser) reference.original else reference.translated
+    val duration = audioDuration(displayed.localPathFile)
+    return if (isFromCurrentUser) {
+        reference.copy(original = displayed.copy(contentDuration = duration))
+    } else {
+        reference.copy(translated = displayed.copy(contentDuration = duration))
+    }
+}
+
+private fun audioDuration(file: File?): Float? {
+    file ?: return null
+    val retriever = MediaMetadataRetriever()
+    return try {
+        runCatching {
+            retriever.setDataSource(file.absolutePath)
+            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toFloatOrNull()?.let { it / MILLIS_PER_SECOND }
+        }.getOrNull()
+    } finally {
+        retriever.release()
+    }
+}
+
+private const val MILLIS_PER_SECOND = 1000f
 
 /** Whether the current user has read the message. */
 val Message.isReadByCurrentUser: Boolean

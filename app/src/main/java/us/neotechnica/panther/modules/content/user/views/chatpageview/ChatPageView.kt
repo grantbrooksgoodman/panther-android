@@ -339,6 +339,7 @@ private fun MessageList(
                         showSenderAvatar = showSender && lastOfRun,
                         reactions = message.reactions.orEmpty(),
                         mediaFile = state.mediaByID[message.id],
+                        audioReference = state.audioByID[message.id],
                     ),
                 onToggleAlternate = onToggleAlternate,
                 onTapMedia = onTapMedia,

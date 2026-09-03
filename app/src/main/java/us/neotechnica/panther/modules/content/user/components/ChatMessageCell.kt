@@ -148,6 +148,13 @@ fun ChatMessageCell(
                         )
                     }
                 }
+            } else if (row.audioReference != null) {
+                MessageContextMenu(actions = emptyList(), alignment = alignment, reactionChoices = reactionChoices) {
+                    Column(horizontalAlignment = if (isOwn) Alignment.End else Alignment.Start) {
+                        SenderNameLabel(row)
+                        AudioMessageBubble(reference = row.audioReference, isOwn = isOwn)
+                    }
+                }
             } else {
                 MessageContextMenu(
                     actions = actionsFor(row, displayText, onToggleAlternate, onSpeak) { clipboard.setText(AnnotatedString(displayText)) },

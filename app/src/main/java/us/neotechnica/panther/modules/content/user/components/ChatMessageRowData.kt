@@ -9,6 +9,7 @@
 package us.neotechnica.panther.modules.content.user.components
 
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Reaction
+import us.neotechnica.panther.networking.modules.schema.message.models.AudioMessageReference
 import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
 import us.neotechnica.panther.networking.modules.schema.message.models.Message
 import us.neotechnica.panther.translator.models.Translation
@@ -34,6 +35,8 @@ import us.neotechnica.panther.translator.models.Translation
  * @property reactions The message's reactions, or empty when it has none.
  * @property mediaFile The message's resolved media file, or `null` if the
  *   message is not media or its media has not yet downloaded.
+ * @property audioReference The message's resolved audio, or `null` if the
+ *   message is not audio or its audio has not yet resolved.
  */
 data class ChatMessageRowData(
     val message: Message,
@@ -48,4 +51,5 @@ data class ChatMessageRowData(
     val showSenderAvatar: Boolean = false,
     val reactions: List<Reaction> = emptyList(),
     val mediaFile: MediaFile? = null,
+    val audioReference: AudioMessageReference? = null,
 )
