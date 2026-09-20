@@ -116,10 +116,13 @@ object SFSymbol {
             "flag" to Icons.Filled.Flag,
             "character.bubble" to Icons.AutoMirrored.Filled.Message,
             "character.bubble.fill" to Icons.AutoMirrored.Filled.Message,
+            "text.bubble" to Icons.AutoMirrored.Filled.Message,
+            "text.bubble.fill" to Icons.AutoMirrored.Filled.Message,
             "arrow.clockwise" to Icons.Filled.Refresh,
             "speaker.wave.2" to Icons.Filled.VolumeUp,
             "speaker.wave.2.fill" to Icons.Filled.VolumeUp,
             "speaker.wave.2.circle" to Icons.Filled.VolumeUp,
+            "speaker.wave.2.bubble" to Icons.Filled.VolumeUp,
             "speaker.slash.circle" to Icons.Filled.VolumeOff,
         )
 }

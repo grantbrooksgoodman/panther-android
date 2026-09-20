@@ -107,6 +107,8 @@ object ContextMenuActionHandlerService {
         if (TextToSpeechService.isSpeaking) return TextToSpeechService.stop()
         if (displayText.isBlank()) return
 
+        AudioMessagePlaybackService.stopPlayback()
+
         val languagePair =
             translation?.languagePair
                 ?: LanguagePair(from = RuntimeStorage.languageCode, to = RuntimeStorage.languageCode)

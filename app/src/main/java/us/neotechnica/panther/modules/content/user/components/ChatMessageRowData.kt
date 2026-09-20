@@ -37,12 +37,15 @@ import us.neotechnica.panther.translator.models.Translation
  *   message is not media or its media has not yet downloaded.
  * @property audioReference The message's resolved audio, or `null` if the
  *   message is not audio or its audio has not yet resolved.
+ * @property isDisplayingAudioTranscription Whether an audio message shows
+ *   its transcription in place of the audio bubble.
  */
 data class ChatMessageRowData(
     val message: Message,
     val previousMessage: Message?,
     val translation: Translation?,
     val showAlternate: Boolean,
+    val isDisplayingAudioTranscription: Boolean = false,
     val isLastConfirmedOwnMessage: Boolean,
     val isGroup: Boolean,
     val isFailed: Boolean,

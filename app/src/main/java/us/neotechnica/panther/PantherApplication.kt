@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.services.TextToSpeechService
+import us.neotechnica.panther.modules.content.user.services.AudioMessagePlaybackService
 import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
 import us.neotechnica.panther.modules.common.services.CommonPropertyLists
 import us.neotechnica.panther.modules.common.services.ExceptionMetadataService
@@ -72,6 +73,7 @@ class PantherApplication : Application() {
         CommonPropertyLists.initialize(this)
         ContactService.initialize(this)
         TextToSpeechService.initialize(this)
+        AudioMessagePlaybackService.initialize(this)
         MediaActionHandlerService.initialize(this)
         configureBuild()
 

@@ -12,6 +12,7 @@ import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
 import us.neotechnica.panther.translator.models.Translation
 import java.io.File
+import us.neotechnica.panther.networking.modules.translation.models.TranslationReference as HostedTranslationReference
 
 /**
  * The local file paths for an audio message's input recording and its
@@ -69,14 +70,25 @@ data class LocalAudioFilePath(
         /**
          * Creates an audio file path from the given message and its resolved
          * translation, or `null` if the message is not an audio message or
-         * carries no translation reference.
+         * carries no matching translation reference.
+         *
+         * The output audio lives under the hosting key of the *resolved*
+         * translation – the message's reference whose language pair matches
+         * [translation] – mirroring the iOS `translation.reference.hostingKey`.
+         * A message may carry several references (for example, one per
+         * participant language in a group), so the first reference is not
+         * necessarily the resolved one.
          */
         fun from(
             message: Message,
             translation: Translation,
         ): LocalAudioFilePath? {
             if (message.contentType !is HostedContentType.Audio) return null
-            val hostingKey = message.translationReferences?.firstOrNull()?.hostingKey ?: return null
+            val hostingKey =
+                message.translationReferences
+                    ?.firstOrNull { HostedTranslationReference.fromString(it.hostingKey)?.languagePair == translation.languagePair }
+                    ?.hostingKey
+                    ?: return null
             return from(message.id, translation, hostingKey)
         }
 

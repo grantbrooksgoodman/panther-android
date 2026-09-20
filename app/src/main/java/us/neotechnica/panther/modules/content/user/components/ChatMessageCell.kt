@@ -45,6 +45,7 @@ import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellColors
 import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellStrings
+import us.neotechnica.panther.modules.content.user.services.AudioMessagePlaybackService
 import us.neotechnica.panther.modules.content.user.services.ContextMenuActionHandlerService
 import us.neotechnica.panther.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
@@ -72,20 +73,23 @@ import androidx.compose.material3.Text as Material3Text
  *
  * @param row The row's display inputs.
  * @param onToggleAlternate Toggles the alternate text for a message ID.
+ * @param onToggleAudioTranscription Toggles an audio message's
+ *   transcription for a message ID.
  * @param onTapMedia Opens the media preview for the given media message ID.
  * @param onReact Applies the given reaction style to the given message.
  * @param onSpeak Speaks the given displayed text for the given message ID.
  */
 @Composable
+@Suppress("LongParameterList")
 fun ChatMessageCell(
     row: ChatMessageRowData,
     onToggleAlternate: (String) -> Unit,
+    onToggleAudioTranscription: (String) -> Unit,
     onTapMedia: (String) -> Unit,
     onReact: (Message, Reaction.Style) -> Unit,
     onSpeak: (String, String) -> Unit,
 ) {
     val colors = LocalPantherColors.current
-    val clipboard = LocalClipboardManager.current
     val message = row.message
 
     Column(
@@ -124,59 +128,114 @@ fun ChatMessageCell(
             }
         }
 
-        val isOwn = message.isFromCurrentUser
-        val displayText = displayText(row)
-        val reactionChoices = reactionChoicesFor(row, onReact)
-        val alignment = if (isOwn) ContextMenuAlignment.TRAILING else ContextMenuAlignment.LEADING
+        MessageContent(
+            row = row,
+            onToggleAlternate = onToggleAlternate,
+            onToggleAudioTranscription = onToggleAudioTranscription,
+            onTapMedia = onTapMedia,
+            onReact = onReact,
+            onSpeak = onSpeak,
+        )
 
-        Row(
-            horizontalArrangement = if (isOwn) Arrangement.End else Arrangement.Start,
-            verticalAlignment = Alignment.Bottom,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            if (row.isGroup && !isOwn) {
-                SenderAvatar(show = row.showSenderAvatar, initials = row.senderInitials)
+        BottomLabel(row = row, isOwn = message.isFromCurrentUser)
+    }
+}
+
+/**
+ * The message's bubble (media, audio, or text) with its long-press
+ * context menu, preceded by the sender's avatar in received group
+ * messages. An audio message renders as its transcription bubble when
+ * that alternate is displayed.
+ */
+@Composable
+@Suppress("LongParameterList")
+private fun MessageContent(
+    row: ChatMessageRowData,
+    onToggleAlternate: (String) -> Unit,
+    onToggleAudioTranscription: (String) -> Unit,
+    onTapMedia: (String) -> Unit,
+    onReact: (Message, Reaction.Style) -> Unit,
+    onSpeak: (String, String) -> Unit,
+) {
+    val colors = LocalPantherColors.current
+    val clipboard = LocalClipboardManager.current
+    val message = row.message
+    val isOwn = message.isFromCurrentUser
+    val displayText = displayText(row)
+    val reactionChoices = reactionChoicesFor(row, onReact)
+    val alignment = if (isOwn) ContextMenuAlignment.TRAILING else ContextMenuAlignment.LEADING
+
+    Row(
+        horizontalArrangement = if (isOwn) Arrangement.End else Arrangement.Start,
+        verticalAlignment = Alignment.Bottom,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        if (row.isGroup && !isOwn) {
+            SenderAvatar(show = row.showSenderAvatar, initials = row.senderInitials)
+        }
+        if (message.isMediaMessage) {
+            MessageContextMenu(actions = emptyList(), alignment = alignment, reactionChoices = reactionChoices) {
+                Column(horizontalAlignment = if (isOwn) Alignment.End else Alignment.Start) {
+                    SenderNameLabel(row)
+                    MediaMessageBubble(
+                        mediaFile = row.mediaFile,
+                        isOwn = isOwn,
+                        onTap = { onTapMedia(message.id) },
+                    )
+                }
             }
-            if (message.isMediaMessage) {
-                MessageContextMenu(actions = emptyList(), alignment = alignment, reactionChoices = reactionChoices) {
-                    Column(horizontalAlignment = if (isOwn) Alignment.End else Alignment.Start) {
-                        SenderNameLabel(row)
-                        MediaMessageBubble(
-                            mediaFile = row.mediaFile,
-                            isOwn = isOwn,
-                            onTap = { onTapMedia(message.id) },
-                        )
-                    }
-                }
-            } else if (row.audioReference != null) {
-                MessageContextMenu(actions = emptyList(), alignment = alignment, reactionChoices = reactionChoices) {
-                    Column(horizontalAlignment = if (isOwn) Alignment.End else Alignment.Start) {
-                        SenderNameLabel(row)
-                        AudioMessageBubble(reference = row.audioReference, isOwn = isOwn)
-                    }
-                }
-            } else {
-                MessageContextMenu(
-                    actions = actionsFor(row, displayText, onToggleAlternate, onSpeak) { clipboard.setText(AnnotatedString(displayText)) },
-                    alignment = alignment,
-                    reactionChoices = reactionChoices,
-                ) {
-                    Column(horizontalAlignment = if (isOwn) Alignment.End else Alignment.Start) {
-                        SenderNameLabel(row)
+        } else if (row.audioReference != null) {
+            val isPlaying = AudioMessagePlaybackService.playingMessageID == message.id
+            val transcriptionText = displayText
+            MessageContextMenu(
+                actions =
+                    audioActionsFor(row, transcriptionText, onToggleAudioTranscription, onSpeak) {
+                        clipboard.setText(AnnotatedString(transcriptionText))
+                    },
+                alignment = alignment,
+                reactionChoices = reactionChoices,
+            ) {
+                Column(horizontalAlignment = if (isOwn) Alignment.End else Alignment.Start) {
+                    SenderNameLabel(row)
+                    if (row.isDisplayingAudioTranscription) {
                         MessageBubble(
-                            displayText,
+                            transcriptionText,
                             isOwn,
                             colors.senderBubble,
                             colors.receiverBubble,
                             colors.titleText,
-                            isAlternate = row.showAlternate,
+                            isAlternate = true,
+                        )
+                    } else {
+                        AudioMessageBubble(
+                            reference = row.audioReference,
+                            isOwn = isOwn,
+                            isPlaying = isPlaying,
+                            progress = if (isPlaying) AudioMessagePlaybackService.progress else 0f,
+                            onPlay = { AudioMessagePlaybackService.didTapPlayButton(message, row.audioReference) },
                         )
                     }
                 }
             }
+        } else {
+            MessageContextMenu(
+                actions = actionsFor(row, displayText, onToggleAlternate, onSpeak) { clipboard.setText(AnnotatedString(displayText)) },
+                alignment = alignment,
+                reactionChoices = reactionChoices,
+            ) {
+                Column(horizontalAlignment = if (isOwn) Alignment.End else Alignment.Start) {
+                    SenderNameLabel(row)
+                    MessageBubble(
+                        displayText,
+                        isOwn,
+                        colors.senderBubble,
+                        colors.receiverBubble,
+                        colors.titleText,
+                        isAlternate = row.showAlternate,
+                    )
+                }
+            }
         }
-
-        BottomLabel(row = row, isOwn = isOwn)
     }
 }
 
@@ -353,6 +412,44 @@ private fun MessageBubble(
 }
 
 // MARK: - Auxiliary
+
+/**
+ * The context-menu actions for an audio message, lifted from the iOS
+ * `getAudioMessageActions`: a copy action offered only while the
+ * transcription is displayed, a speak/stop-speaking action offered while
+ * something is speaking or while an own message's transcription is
+ * displayed, and always a view-transcription/view-as-audio toggle.
+ */
+private fun audioActionsFor(
+    row: ChatMessageRowData,
+    transcriptionText: String,
+    onToggleAudioTranscription: (String) -> Unit,
+    onSpeak: (String, String) -> Unit,
+    onCopy: () -> Unit,
+): List<ContextMenuAction> {
+    val actions = mutableListOf<ContextMenuAction>()
+    val isDisplayingAudioTranscription = row.isDisplayingAudioTranscription
+    val isSpeaking = TextToSpeechService.isSpeaking
+
+    if (isDisplayingAudioTranscription) {
+        actions.add(ContextMenuAction(LocalizedStringKey.Copy.localized(), "doc.on.doc") { onCopy() })
+    }
+
+    if (isSpeaking || (isDisplayingAudioTranscription && row.message.isFromCurrentUser)) {
+        actions.add(
+            ContextMenuAction(
+                (if (isSpeaking) LocalizedStringKey.StopSpeaking else LocalizedStringKey.Speak).localized(),
+                "speaker.wave.2.circle",
+            ) { onSpeak(row.message.id, transcriptionText) },
+        )
+    }
+
+    val title = if (isDisplayingAudioTranscription) LocalizedStringKey.ViewAsAudio else LocalizedStringKey.ViewTranscription
+    val systemImageName = if (isDisplayingAudioTranscription) "speaker.wave.2.bubble" else "text.bubble"
+    actions.add(ContextMenuAction(title.localized(), systemImageName) { onToggleAudioTranscription(row.message.id) })
+
+    return actions
+}
 
 private fun actionsFor(
     row: ChatMessageRowData,

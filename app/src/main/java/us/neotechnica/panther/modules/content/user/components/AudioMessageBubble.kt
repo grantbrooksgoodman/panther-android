@@ -39,8 +39,8 @@ import java.util.Locale
  * and a duration label, mirroring the iOS `AudioMessageCell`.
  *
  * The label shows the total duration when idle and the elapsed time while
- * playing. Playback itself (driving [isPlaying] and [progress]) lands with
- * the playback service (Phase R4.3).
+ * playing. Playback itself (driving [isPlaying] and [progress]) is managed
+ * by the `AudioMessagePlaybackService`.
  *
  * @param reference The message's resolved audio.
  * @param isOwn Whether the message was sent by the current user.

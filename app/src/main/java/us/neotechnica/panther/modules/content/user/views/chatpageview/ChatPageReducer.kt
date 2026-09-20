@@ -90,6 +90,10 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             val messageID: String,
         ) : Action
 
+        data class ToggleAudioTranscription(
+            val messageID: String,
+        ) : Action
+
         data class React(
             val message: Message,
             val style: Reaction.Style,
@@ -125,6 +129,7 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         val audioByID: Map<String, AudioMessageReference> = emptyMap(),
         val pendingAttachment: MediaFile? = null,
         val alternateTextMessageIDs: Set<String> = emptySet(),
+        val audioTranscriptionMessageIDs: Set<String> = emptySet(),
         val inputText: String = "",
         val isSending: Boolean = false,
         val languageCode: String = "en",
@@ -196,6 +201,21 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
                         state.alternateTextMessageIDs + action.messageID
                     }
                 ReduceResult(state.copy(alternateTextMessageIDs = updated))
+            }
+
+            is Action.ToggleAudioTranscription -> {
+                val isDisplayingAudioTranscription = action.messageID in state.audioTranscriptionMessageIDs
+                if (!isDisplayingAudioTranscription) {
+                    AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.VIEW_ALTERNATE)
+                }
+
+                val updated =
+                    if (isDisplayingAudioTranscription) {
+                        state.audioTranscriptionMessageIDs - action.messageID
+                    } else {
+                        state.audioTranscriptionMessageIDs + action.messageID
+                    }
+                ReduceResult(state.copy(audioTranscriptionMessageIDs = updated))
             }
 
             is Action.React ->
