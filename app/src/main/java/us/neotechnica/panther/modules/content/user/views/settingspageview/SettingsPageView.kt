@@ -38,6 +38,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.components.Circl
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.common.contacts.components.rememberContactCardPresenter
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewColors
@@ -46,6 +47,7 @@ import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewStr
 import us.neotechnica.panther.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
+import us.neotechnica.panther.networking.modules.schema.common.models.PhoneNumber
 import us.neotechnica.panther.networking.modules.session.services.UserSessionService
 import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
@@ -75,6 +77,7 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
 
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
+    val presentContactCard = rememberContactCardPresenter()
 
     Box(modifier = modifier.fillMaxSize().background(colors.groupedContentBackground)) {
         Column(
@@ -89,7 +92,7 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
                 enabled = !state.isBusy,
             )
 
-            ContactDetailCard()
+            ContactDetailCard(onTap = presentContactCard)
 
             SettingsCard {
                 SettingsIconRow(
@@ -180,7 +183,7 @@ private fun Header(
 // MARK: - Contact Detail
 
 @Composable
-private fun ContactDetailCard() {
+private fun ContactDetailCard(onTap: (PhoneNumber?, String?) -> Unit) {
     val colors = LocalPantherColors.current
     val currentUser = UserSessionService.currentUser
     val number = currentUser?.phoneNumber?.formattedString()
@@ -195,7 +198,8 @@ private fun ContactDetailCard() {
                 .fillMaxWidth()
                 .padding(horizontal = Floats.cardHorizontalMargin, vertical = Floats.cardVerticalMargin)
                 .clip(RoundedCornerShape(Floats.contactCornerRadius))
-                .background(colors.background.copy(alpha = Floats.CONTACT_BACKGROUND_ALPHA))
+                .background(colors.groupedRowBackground)
+                .clickable { onTap(currentUser?.phoneNumber, contactName) }
                 .padding(Floats.cardPadding),
     ) {
         AvatarImageView(modifier = Modifier.size(Floats.avatarSize), glyphSize = Floats.avatarGlyphSize)
@@ -226,7 +230,7 @@ private fun SettingsCard(content: @Composable () -> Unit) {
                 .fillMaxWidth()
                 .padding(horizontal = Floats.cardHorizontalMargin, vertical = Floats.cardVerticalMargin)
                 .clip(RoundedCornerShape(Floats.cardCornerRadius))
-                .background(colors.background),
+                .background(colors.groupedRowBackground),
     ) {
         content()
     }

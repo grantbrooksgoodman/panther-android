@@ -47,6 +47,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.components.Circl
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.common.contacts.components.rememberContactCardPresenter
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.services.RegionDetailService
@@ -57,6 +58,7 @@ import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewCon
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewFloats
 import us.neotechnica.panther.modules.content.user.models.MediaItemViewData
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
+import us.neotechnica.panther.networking.modules.schema.common.models.PhoneNumber
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
 import us.neotechnica.panther.networking.modules.schema.user.models.User
 import us.neotechnica.panther.networking.modules.session.extensions.currentUserID
@@ -100,6 +102,8 @@ fun ChatInfoPageView(
     val conversation = state.conversation
     var previewIndex by remember { mutableStateOf<Int?>(null) }
     val showMediaSegment = state.mediaItems.isNotEmpty() && state.selectedSegment == 1
+    val presentContactCard = rememberContactCardPresenter()
+    val singleContact = conversation?.takeUnless { state.isGroup }?.let { otherParticipants(it).firstOrNull() }
 
     Box(modifier = modifier.fillMaxSize().background(colors.groupedContentBackground)) {
         Column(
@@ -114,6 +118,7 @@ fun ChatInfoPageView(
                 conversation = conversation,
                 isGroup = state.isGroup,
                 onDone = { viewModel.send(ChatInfoPageReducer.Action.BackTapped) },
+                onContactTap = singleContact?.let { { presentContactCard(it.phoneNumber, it.displayName) } },
             )
 
             if (state.isGroup && conversation != null) {
@@ -149,6 +154,7 @@ fun ChatInfoPageView(
                     strings = state.strings,
                     onToggle = { viewModel.send(ChatInfoPageReducer.Action.ToggleExpanded) },
                     onAddContact = { /* Deferred: needs the contact selector page. */ },
+                    onParticipantTap = { presentContactCard(it.phoneNumber, it.displayName) },
                 )
 
                 LeaveRow(
@@ -184,6 +190,7 @@ private fun ChatInfoHeader(
     conversation: Conversation?,
     isGroup: Boolean,
     onDone: () -> Unit,
+    onContactTap: (() -> Unit)?,
 ) {
     val colors = LocalPantherColors.current
     Row(
@@ -206,8 +213,12 @@ private fun ChatInfoHeader(
         )
     }
 
+    // In a one-to-one conversation the avatar and name present the other
+    // participant's contact card (the iOS `singleCNContactContainer`).
+    val contactTapModifier = if (onContactTap != null) Modifier.clickable(onClick = onContactTap) else Modifier
+
     AvatarImageView(
-        modifier = Modifier.padding(top = Floats.avatarTopPadding).size(Floats.avatarSize),
+        modifier = contactTapModifier.padding(top = Floats.avatarTopPadding).size(Floats.avatarSize),
         imageData = conversation?.metadata?.imageData,
         fallbackSymbol = if (isGroup) "person.2" else "person",
         glyphSize = Floats.avatarGlyphSize,
@@ -219,7 +230,7 @@ private fun ChatInfoHeader(
         font = Font.systemBold(FontScale.Large),
         textAlign = TextAlign.Center,
         modifier =
-            Modifier.padding(
+            contactTapModifier.padding(
                 top = Floats.titleTopPadding,
                 start = Floats.titleHorizontalPadding,
                 end = Floats.titleHorizontalPadding,
@@ -255,7 +266,7 @@ private fun SegmentedControl(
                     Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(Floats.segmentCornerRadius))
-                        .background(if (isSelected) colors.background else Color.Transparent)
+                        .background(if (isSelected) colors.groupedRowBackground else Color.Transparent)
                         .clickable { onSelect(index) }
                         .padding(vertical = Floats.segmentVerticalPadding),
             ) {
@@ -287,12 +298,14 @@ private fun MediaList(
 // MARK: - Participants Card
 
 @Composable
+@Suppress("LongParameterList")
 private fun ParticipantsCard(
     participants: List<ParticipantRowData>,
     isExpanded: Boolean,
     strings: List<TranslationOutputMap>,
     onToggle: () -> Unit,
     onAddContact: () -> Unit,
+    onParticipantTap: (ParticipantRowData) -> Unit,
 ) {
     InfoCard {
         ParticipantsHeaderRow(
@@ -305,7 +318,7 @@ private fun ParticipantsCard(
         if (isExpanded) {
             participants.forEach { participant ->
                 CardDivider()
-                ParticipantRow(participant)
+                ParticipantRow(participant, onTap = { onParticipantTap(participant) })
             }
             CardDivider()
             AddContactRow(strings.value(ChatInfoPageViewStrings.addContactButtonText), onAddContact)
@@ -360,13 +373,17 @@ private fun ParticipantsHeaderRow(
 }
 
 @Composable
-private fun ParticipantRow(participant: ParticipantRowData) {
+private fun ParticipantRow(
+    participant: ParticipantRowData,
+    onTap: () -> Unit,
+) {
     val colors = LocalPantherColors.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
             Modifier
                 .fillMaxWidth()
+                .clickable(onClick = onTap)
                 .padding(horizontal = Floats.cardHorizontalPadding, vertical = Floats.rowVerticalPadding),
     ) {
         AvatarImageView(
@@ -450,7 +467,7 @@ private fun LeaveRow(
                 .fillMaxWidth()
                 .padding(horizontal = Floats.cardHorizontalMargin, vertical = Floats.cardVerticalMargin)
                 .clip(RoundedCornerShape(Floats.cardCornerRadius))
-                .background(colors.background)
+                .background(colors.groupedRowBackground)
                 .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier)
                 .padding(Floats.cardPadding),
     ) {
@@ -499,7 +516,7 @@ private fun InfoCard(content: @Composable () -> Unit) {
                 .fillMaxWidth()
                 .padding(horizontal = Floats.cardHorizontalMargin, vertical = Floats.cardVerticalMargin)
                 .clip(RoundedCornerShape(Floats.cardCornerRadius))
-                .background(colors.background),
+                .background(colors.groupedRowBackground),
     ) {
         content()
     }
@@ -522,6 +539,7 @@ private data class ParticipantRowData(
     val initials: String,
     val languageCode: String?,
     val regionCode: String?,
+    val phoneNumber: PhoneNumber?,
 )
 
 private fun otherParticipants(conversation: Conversation): List<ParticipantRowData> =
@@ -536,6 +554,7 @@ private fun otherParticipants(conversation: Conversation): List<ParticipantRowDa
                 initials = match?.initials.orEmpty(),
                 languageCode = user?.languageCode,
                 regionCode = user?.phoneNumber?.regionCode,
+                phoneNumber = user?.phoneNumber,
             )
         }
 

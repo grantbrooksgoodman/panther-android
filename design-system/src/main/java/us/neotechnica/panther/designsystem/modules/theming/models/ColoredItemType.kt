@@ -27,6 +27,7 @@ value class ColoredItemType(
         val background = ColoredItemType("background")
         val disabled = ColoredItemType("disabled")
         val groupedContentBackground = ColoredItemType("groupedContentBackground")
+        val groupedRowBackground = ColoredItemType("groupedRowBackground")
         val navigationBarBackground = ColoredItemType("navigationBarBackground")
         val navigationBarButton = ColoredItemType("navigationBarButton")
         val navigationBarTitle = ColoredItemType("navigationBarTitle")

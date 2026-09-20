@@ -29,6 +29,7 @@ object Themes {
                     item(ColoredItemType.background, PlatformColors.white, PlatformColors.black),
                     item(ColoredItemType.disabled, PlatformColors.systemGray3),
                     item(ColoredItemType.groupedContentBackground, rgb(0xF2F2F7), rgb(0x1C1C1E)),
+                    item(ColoredItemType.groupedRowBackground, PlatformColors.white, rgb(0x2A2A2C)),
                     item(ColoredItemType.navigationBarBackground, rgb(0xF8F8F8), rgb(0x2A2A2C)),
                     item(ColoredItemType.navigationBarButton, PlatformColors.systemBlue),
                     item(ColoredItemType.navigationBarTitle, PlatformColors.black, PlatformColors.white),
@@ -76,6 +77,7 @@ object Themes {
                     item(ColoredItemType.background, darkThemeBackground),
                     item(ColoredItemType.disabled, PlatformColors.systemGray3),
                     item(ColoredItemType.groupedContentBackground, darkThemeGroupedBackground),
+                    item(ColoredItemType.groupedRowBackground, darkThemeRowBackground),
                     item(ColoredItemType.navigationBarBackground, darkThemeBackground),
                     item(ColoredItemType.navigationBarButton, accent),
                     item(ColoredItemType.navigationBarTitle, PlatformColors.white),
@@ -92,5 +94,6 @@ object Themes {
 // The shared dark-theme greys, hoisted so they read as design tokens.
 private val darkThemeBackground = rgb(0x1A1A1A)
 private val darkThemeGroupedBackground = rgb(0x1C1C1E)
+private val darkThemeRowBackground = rgb(0x2A2A2C)
 private val darkThemeReactionButtonBackground = rgb(0x48484A)
 private val darkThemeReceiverBubble = rgb(0x27252A)

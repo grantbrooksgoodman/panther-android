@@ -30,6 +30,7 @@ class PantherColors(
     val background: Color get() = color(ColoredItemType.background)
     val disabled: Color get() = color(ColoredItemType.disabled)
     val groupedContentBackground: Color get() = color(ColoredItemType.groupedContentBackground)
+    val groupedRowBackground: Color get() = color(ColoredItemType.groupedRowBackground)
     val navigationBarBackground: Color get() = color(ColoredItemType.navigationBarBackground)
     val navigationBarButton: Color get() = color(ColoredItemType.navigationBarButton)
     val navigationBarTitle: Color get() = color(ColoredItemType.navigationBarTitle)

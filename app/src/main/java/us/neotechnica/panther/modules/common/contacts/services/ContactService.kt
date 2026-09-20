@@ -11,6 +11,7 @@ package us.neotechnica.panther.modules.common.contacts.services
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.provider.ContactsContract
 import androidx.core.content.ContextCompat
 import org.json.JSONArray
@@ -56,6 +57,30 @@ object ContactService {
 
     /** Returns the contact matched to the given user, or `null`. */
     fun match(userID: String): ContactMatch? = matches().firstOrNull { it.userID == userID }
+
+    /**
+     * Returns the lookup URI of the device contact matching
+     * [compiledNumberString], suitable for a system contact-view intent,
+     * or `null` when no device contact matches (or contact permission is
+     * not granted). Standing in for the iOS `firstCNContact(for:)` lookup
+     * that resolves a `CNContact` for a phone number.
+     */
+    fun deviceContactLookupUri(compiledNumberString: String): Uri? {
+        val resolver = appContext?.contentResolver ?: return null
+        if (!hasContactPermission()) return null
+
+        val filterUri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(compiledNumberString))
+        val projection = arrayOf(ContactsContract.PhoneLookup._ID, ContactsContract.PhoneLookup.LOOKUP_KEY)
+        resolver.query(filterUri, projection, null, null, null)?.use { cursor ->
+            if (!cursor.moveToFirst()) return null
+            val idIndex = cursor.getColumnIndex(ContactsContract.PhoneLookup._ID)
+            val keyIndex = cursor.getColumnIndex(ContactsContract.PhoneLookup.LOOKUP_KEY)
+            if (idIndex < 0 || keyIndex < 0) return null
+            val lookupKey = cursor.getString(keyIndex) ?: return null
+            return ContactsContract.Contacts.getLookupUri(cursor.getLong(idIndex), lookupKey)
+        }
+        return null
+    }
 
     // MARK: - Sync
 

@@ -34,8 +34,6 @@ object SettingsPageViewFloats {
     val iconTitleStartPadding: Dp = 12.dp
     val versionBottomPadding: Dp = 24.dp
     val versionTopPadding: Dp = 12.dp
-
-    const val CONTACT_BACKGROUND_ALPHA = 0.55f
 }
 
 // MARK: - Color
