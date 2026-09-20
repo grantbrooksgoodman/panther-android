@@ -66,10 +66,16 @@ fun AlertHost() {
 
 // MARK: - Action Sheet
 
+/**
+ * A bottom action sheet: a title, an optional message, one filled
+ * rounded-pill button per action, and a plain cancel button. A binary
+ * confirm/cancel sheet is the single-action case, so its confirm button
+ * matches every multi-action option.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ActionSheetSheet(alert: PresentedAlert.ActionSheet) {
-    ModalBottomSheet(onDismissRequest = { alert.onResult(false) }) {
+    ModalBottomSheet(onDismissRequest = alert.onCancel) {
         Column(
             modifier =
                 Modifier
@@ -80,25 +86,43 @@ private fun ActionSheetSheet(alert: PresentedAlert.ActionSheet) {
         ) {
             alert.title?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
             alert.message?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
-            Button(
-                colors =
-                    if (alert.isDestructive) {
-                        ButtonDefaults.buttonColors(containerColor = ACTION_SHEET_DESTRUCTIVE_COLOR, contentColor = Color.White)
-                    } else {
-                        ButtonDefaults.buttonColors(contentColor = Color.White)
-                    },
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { alert.onResult(true) },
-            ) {
-                Text(alert.confirmButtonTitle)
+            alert.actions.forEachIndexed { index, action ->
+                SheetActionButton(
+                    title = action.title,
+                    isDestructive = action.style.isDestructive,
+                    isEnabled = action.isEnabled,
+                    onClick = { alert.onSelect(index) },
+                )
             }
             TextButton(
                 modifier = Modifier.fillMaxWidth(),
-                onClick = { alert.onResult(false) },
+                onClick = alert.onCancel,
             ) {
                 Text(alert.cancelButtonTitle)
             }
         }
+    }
+}
+
+@Composable
+private fun SheetActionButton(
+    title: String,
+    isDestructive: Boolean,
+    isEnabled: Boolean,
+    onClick: () -> Unit,
+) {
+    Button(
+        colors =
+            if (isDestructive) {
+                ButtonDefaults.buttonColors(containerColor = ACTION_SHEET_DESTRUCTIVE_COLOR, contentColor = Color.White)
+            } else {
+                ButtonDefaults.buttonColors(contentColor = Color.White)
+            },
+        enabled = isEnabled,
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+    ) {
+        Text(title)
     }
 }
 

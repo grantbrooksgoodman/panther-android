@@ -174,14 +174,15 @@ private fun MessageContent(
             SenderAvatar(show = row.showSenderAvatar, initials = row.senderInitials)
         }
         if (message.isMediaMessage) {
-            MessageContextMenu(actions = emptyList(), alignment = alignment, reactionChoices = reactionChoices) {
+            MessageContextMenu(
+                actions = emptyList(),
+                alignment = alignment,
+                reactionChoices = reactionChoices,
+                onTap = { onTapMedia(message.id) },
+            ) {
                 Column(horizontalAlignment = if (isOwn) Alignment.End else Alignment.Start) {
                     SenderNameLabel(row)
-                    MediaMessageBubble(
-                        mediaFile = row.mediaFile,
-                        isOwn = isOwn,
-                        onTap = { onTapMedia(message.id) },
-                    )
+                    MediaMessageBubble(mediaFile = row.mediaFile, isOwn = isOwn)
                 }
             }
         } else if (row.audioReference != null) {

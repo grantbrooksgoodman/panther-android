@@ -10,7 +10,6 @@ package us.neotechnica.panther.modules.content.user.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
@@ -43,18 +42,19 @@ import androidx.compose.material3.Text as Material3Text
  * A message bubble carrying media: an inline image, a video thumbnail
  * with a play affordance, or a document card. While the media is still
  * downloading ([mediaFile] `null`), a loading placeholder is shown.
- * Tapping resolved media invokes [onTap] to open the full-screen
- * preview.
+ *
+ * The bubble carries no tap handler of its own: the enclosing
+ * `MessageContextMenu` owns the tap (to open the preview) alongside the
+ * long-press and double-tap, so a single gesture detector arbitrates all
+ * three.
  *
  * @param mediaFile The resolved media file, or `null` while downloading.
  * @param isOwn Whether the message is from the current user.
- * @param onTap The action performed when the bubble is tapped.
  */
 @Composable
 fun MediaMessageBubble(
     mediaFile: MediaFile?,
     isOwn: Boolean,
-    onTap: () -> Unit,
 ) {
     val shape =
         RoundedCornerShape(
@@ -67,9 +67,9 @@ fun MediaMessageBubble(
     val fileExtension = mediaFile?.fileExtension
     when {
         mediaFile == null -> Placeholder(shape, isOwn)
-        fileExtension?.isImage == true -> ImageContent(mediaFile, shape, onTap)
-        fileExtension?.isVideo == true -> VideoContent(mediaFile, shape, onTap)
-        else -> DocumentContent(mediaFile, isOwn, shape, onTap)
+        fileExtension?.isImage == true -> ImageContent(mediaFile, shape)
+        fileExtension?.isVideo == true -> VideoContent(mediaFile, shape)
+        else -> DocumentContent(mediaFile, isOwn, shape)
     }
 }
 
@@ -79,7 +79,6 @@ fun MediaMessageBubble(
 private fun ImageContent(
     mediaFile: MediaFile,
     shape: Shape,
-    onTap: () -> Unit,
 ) {
     val image =
         remember(mediaFile.relativePath) {
@@ -102,8 +101,7 @@ private fun ImageContent(
             Modifier
                 .width(MediaMessageBubbleFloats.imageMaxWidth)
                 .height(displayHeight)
-                .clip(shape)
-                .clickable(onClick = onTap),
+                .clip(shape),
     )
 }
 
@@ -113,7 +111,6 @@ private fun ImageContent(
 private fun VideoContent(
     mediaFile: MediaFile,
     shape: Shape,
-    onTap: () -> Unit,
 ) {
     val thumbnail =
         remember(mediaFile.relativePath) {
@@ -134,8 +131,7 @@ private fun VideoContent(
                 .width(MediaMessageBubbleFloats.imageMaxWidth)
                 .height(displayHeight)
                 .clip(shape)
-                .background(MediaMessageBubbleColors.videoPlaceholderBackground)
-                .clickable(onClick = onTap),
+                .background(MediaMessageBubbleColors.videoPlaceholderBackground),
     ) {
         if (thumbnail != null) {
             Image(
@@ -174,7 +170,6 @@ private fun DocumentContent(
     mediaFile: MediaFile,
     isOwn: Boolean,
     shape: Shape,
-    onTap: () -> Unit,
 ) {
     val colors = LocalPantherColors.current
     val foreground = if (isOwn) MediaMessageBubbleColors.playGlyph else colors.titleText
@@ -184,7 +179,6 @@ private fun DocumentContent(
             Modifier
                 .clip(shape)
                 .background(if (isOwn) colors.senderBubble else colors.receiverBubble)
-                .clickable(onClick = onTap)
                 .padding(MediaMessageBubbleFloats.documentPadding)
                 .widthIn(max = MediaMessageBubbleFloats.imageMaxWidth),
     ) {

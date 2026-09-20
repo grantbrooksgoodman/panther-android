@@ -60,14 +60,18 @@ sealed interface PresentedAlert {
         val onResult: (String?) -> Unit,
     ) : PresentedAlert
 
-    /** A bottom action sheet resolving to a Boolean. */
+    /**
+     * A bottom action sheet offering a list of actions and a cancel
+     * button, standing in for the iOS `AKActionSheet`. A binary
+     * confirm/cancel sheet is the single-action case.
+     */
     data class ActionSheet(
         val title: String?,
         val message: String?,
-        val confirmButtonTitle: String,
+        val actions: List<Action>,
         val cancelButtonTitle: String,
-        val isDestructive: Boolean,
-        val onResult: (Boolean) -> Unit,
+        val onSelect: (Int) -> Unit,
+        val onCancel: () -> Unit,
     ) : PresentedAlert
 
     /** A non-dismissable progress indicator with an optional cancel action. */

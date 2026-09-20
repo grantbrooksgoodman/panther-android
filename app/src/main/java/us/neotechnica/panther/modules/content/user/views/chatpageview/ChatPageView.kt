@@ -45,8 +45,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
-import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
 import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
@@ -366,15 +365,13 @@ private fun senderName(
 
 // Mirrors the iOS `MediaActionHandlerService.attachMediaButtonTapped` action sheet.
 private suspend fun presentAttachMediaSheet(pickers: ContentPickers) {
-    Alert(
+    ActionSheetAlert(
         title = "Attach media",
-        message = null,
         actions =
             listOf(
                 Action("Take photo") { pickers.launchCamera() },
                 Action("Select document") { pickers.launchDocument() },
                 Action("Select photo or video") { pickers.launchPhotoOrVideo() },
-                Action("Cancel", style = ActionStyle.CANCEL) {},
             ),
     ).present()
 }

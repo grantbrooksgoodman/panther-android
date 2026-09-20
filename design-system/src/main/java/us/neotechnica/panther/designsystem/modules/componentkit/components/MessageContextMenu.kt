@@ -15,14 +15,17 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -126,14 +129,19 @@ fun ContextMenuHost(
  * @param alignment The side the menu anchors to.
  * @param reactionChoices The reaction options shown above the bubble; the
  *   row is omitted when empty.
+ * @param onTap The action performed on a single tap, or `null` when the
+ *   bubble has none. Handling it here (rather than a `clickable` inside
+ *   [content]) keeps the tap from consuming the long-press and double-tap.
  * @param modifier The modifier for the wrapper.
  * @param content The message bubble.
  */
 @Composable
+@Suppress("LongParameterList")
 fun MessageContextMenu(
     actions: List<ContextMenuAction>,
     alignment: ContextMenuAlignment,
     reactionChoices: List<ReactionChoice> = emptyList(),
+    onTap: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -150,8 +158,9 @@ fun MessageContextMenu(
         modifier
             .onGloballyPositioned { coordinates ->
                 anchorBounds = Rect(coordinates.positionInRoot(), coordinates.size.toSize())
-            }.pointerInput(actions, reactionChoices, controller) {
+            }.pointerInput(actions, reactionChoices, controller, onTap) {
                 detectTapGestures(
+                    onTap = onTap?.let { tap -> { tap() } },
                     onDoubleTap = {
                         val doubleTapChoice = reactionChoices.firstOrNull { it.isDoubleTapDefault }
                         if (doubleTapChoice != null) {
@@ -181,6 +190,8 @@ private fun ContextMenuOverlay(
     val density = LocalDensity.current
     val progress = remember { Animatable(0f) }
     var reactionRowWidthPx by remember { mutableIntStateOf(0) }
+    var reactionRowHeightPx by remember { mutableIntStateOf(0) }
+    var menuHeightPx by remember { mutableIntStateOf(0) }
     LaunchedEffect(active) {
         progress.snapTo(0f)
         progress.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMediumLow))
@@ -188,28 +199,48 @@ private fun ContextMenuOverlay(
 
     val bounds = active.anchorBounds
     val originX = if (active.alignment == ContextMenuAlignment.LEADING) 0f else 1f
+    val hasReactions = active.reactionChoices.isNotEmpty()
+    val hasActions = active.actions.isNotEmpty()
 
-    Box(
+    BoxWithConstraints(
         Modifier
             .background(Color.Black.copy(alpha = SCRIM_ALPHA * progress.value))
             .fillMaxSize()
             .pointerInput(Unit) { detectTapGestures { onDismiss() } },
     ) {
+        val gapPx = with(density) { MENU_GAP.toPx() }
+        val reactionGapPx = with(density) { REACTION_ROW_GAP.toPx() }
+        val edgeMarginPx = with(density) { EDGE_MARGIN.toPx() }
+        val topLimitPx = WindowInsets.systemBars.getTop(density) + edgeMarginPx
+        val bottomLimitPx = constraints.maxHeight - WindowInsets.systemBars.getBottom(density) - edgeMarginPx
+
+        // The bubble scales up from its top, so its visual bottom sits below
+        // the measured bounds; the menu must clear that, not just `bounds.bottom`.
+        val bubbleBottomPx = bounds.bottom + bounds.height * LIFT_SCALE_BONUS
+
+        // Shift the whole stack vertically so the reaction row clears the top
+        // inset and the menu clears the bottom inset, keeping every item on
+        // screen when the bubble is near an edge.
+        val shiftPx =
+            run {
+                val stackTopPx = if (hasReactions) bounds.top - reactionGapPx - reactionRowHeightPx else bounds.top
+                val stackBottomPx = if (hasActions) bubbleBottomPx + gapPx + menuHeightPx else bubbleBottomPx
+                var shift = (bottomLimitPx - stackBottomPx).coerceAtMost(0f)
+                if (stackTopPx + shift < topLimitPx) shift = topLimitPx - stackTopPx
+                shift
+            }
+
         // Reaction row, above the bubble, aligned to its side.
-        if (active.reactionChoices.isNotEmpty()) {
+        if (hasReactions) {
             Box(
                 Modifier
-                    .onGloballyPositioned { reactionRowWidthPx = it.size.width }
-                    .offset {
-                        val gapPx = with(density) { REACTION_ROW_GAP.toPx() }
-                        val rowHeightPx = with(density) { REACTION_ROW_HEIGHT.toPx() }
-                        val x =
-                            if (active.alignment == ContextMenuAlignment.LEADING) {
-                                bounds.left
-                            } else {
-                                bounds.right - reactionRowWidthPx
-                            }
-                        IntOffset(x.roundToInt().coerceAtLeast(0), (bounds.top - rowHeightPx - gapPx).roundToInt().coerceAtLeast(0))
+                    .onGloballyPositioned {
+                        reactionRowWidthPx = it.size.width
+                        reactionRowHeightPx = it.size.height
+                    }.offset {
+                        val x = if (active.alignment == ContextMenuAlignment.LEADING) bounds.left else bounds.right - reactionRowWidthPx
+                        val y = bounds.top - reactionRowHeightPx - reactionGapPx + shiftPx
+                        IntOffset(x.roundToInt().coerceAtLeast(0), y.roundToInt().coerceAtLeast(0))
                     }.graphicsLayer {
                         alpha = progress.value
                         val scale = MENU_MIN_SCALE + (1f - MENU_MIN_SCALE) * progress.value
@@ -225,10 +256,10 @@ private fun ContextMenuOverlay(
             }
         }
 
-        // Lifted bubble copy, anchored exactly over its origin.
+        // Lifted bubble copy, anchored over its (possibly shifted) origin.
         Box(
             Modifier
-                .offset { IntOffset(bounds.left.roundToInt(), bounds.top.roundToInt()) }
+                .offset { IntOffset(bounds.left.roundToInt(), (bounds.top + shiftPx).roundToInt()) }
                 .graphicsLayer {
                     val scale = 1f + LIFT_SCALE_BONUS * progress.value
                     scaleX = scale
@@ -237,30 +268,28 @@ private fun ContextMenuOverlay(
                 },
         ) { active.content() }
 
-        // Action menu, below the bubble, aligned to its side.
-        Box(
-            Modifier
-                .offset {
-                    val menuWidthPx = with(density) { MENU_WIDTH.toPx() }
-                    val gapPx = with(density) { MENU_GAP.toPx() }
-                    val x =
-                        if (active.alignment == ContextMenuAlignment.LEADING) {
-                            bounds.left
-                        } else {
-                            bounds.right - menuWidthPx
-                        }
-                    IntOffset(x.roundToInt().coerceAtLeast(0), (bounds.bottom + gapPx).roundToInt())
-                }.graphicsLayer {
-                    alpha = progress.value
-                    val scale = MENU_MIN_SCALE + (1f - MENU_MIN_SCALE) * progress.value
-                    scaleX = scale
-                    scaleY = scale
-                    transformOrigin = TransformOrigin(originX, 0f)
-                },
-        ) {
-            ContextMenuCard(active.actions) { action ->
-                onDismiss()
-                action.onSelect()
+        // Action menu, below the scaled bubble, aligned to its side.
+        if (hasActions) {
+            Box(
+                Modifier
+                    .onGloballyPositioned { menuHeightPx = it.size.height }
+                    .offset {
+                        val menuWidthPx = with(density) { MENU_WIDTH.toPx() }
+                        val x = if (active.alignment == ContextMenuAlignment.LEADING) bounds.left else bounds.right - menuWidthPx
+                        val y = bubbleBottomPx + gapPx + shiftPx
+                        IntOffset(x.roundToInt().coerceAtLeast(0), y.roundToInt())
+                    }.graphicsLayer {
+                        alpha = progress.value
+                        val scale = MENU_MIN_SCALE + (1f - MENU_MIN_SCALE) * progress.value
+                        scaleX = scale
+                        scaleY = scale
+                        transformOrigin = TransformOrigin(originX, 0f)
+                    },
+            ) {
+                ContextMenuCard(active.actions) { action ->
+                    onDismiss()
+                    action.onSelect()
+                }
             }
         }
     }
@@ -342,6 +371,7 @@ private fun ReactionRow(
 
 private val MENU_WIDTH = 250.dp
 private val MENU_GAP = 8.dp
+private val EDGE_MARGIN = 12.dp
 private val MENU_CORNER_RADIUS = 12.dp
 private val MENU_ROW_HEIGHT = 44.dp
 private val MENU_ICON_SIZE = 22.dp
@@ -351,7 +381,6 @@ private const val LIFT_SCALE_BONUS = 0.06f
 private const val MENU_MIN_SCALE = 0.85f
 private val DESTRUCTIVE_COLOR = Color(0xFFFF3B30)
 private val REACTION_ROW_GAP = 8.dp
-private val REACTION_ROW_HEIGHT = 52.dp
 private val REACTION_ROW_CORNER_RADIUS = 26.dp
 private val REACTION_ROW_PADDING = 6.dp
 private val REACTION_ROW_SPACING = 2.dp
