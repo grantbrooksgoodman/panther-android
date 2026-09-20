@@ -21,6 +21,7 @@ import us.neotechnica.panther.networking.modules.schema.message.models.ReadRecei
 import us.neotechnica.panther.networking.modules.schema.user.models.User
 import us.neotechnica.panther.networking.modules.session.models.OutboxEntry
 import us.neotechnica.panther.networking.modules.session.services.ConversationSessionService
+import us.neotechnica.panther.networking.modules.session.services.MessageTranslationCache
 import us.neotechnica.panther.networking.modules.translation.services.TranslationResolver
 import us.neotechnica.panther.translator.models.Translation
 import java.io.File
@@ -144,6 +145,8 @@ suspend fun Message.resolvedTranslation(languageCode: String): Translation? {
         return pickInlineTranslation(inline, languageCode) ?: inline.firstOrNull()
     }
 
+    MessageTranslationCache.get(id, languageCode)?.let { return it }
+
     val parsed =
         translationReferences
             .orEmpty()
@@ -157,7 +160,25 @@ suspend fun Message.resolvedTranslation(languageCode: String): Translation? {
             parsed.firstOrNull { it.languagePair.to == languageCode } ?: parsed.first()
         }
 
-    return runCatching { TranslationResolver.resolve(reference) }.getOrNull()
+    return runCatching { TranslationResolver.resolve(reference) }
+        .getOrNull()
+        ?.also { MessageTranslationCache.put(id, languageCode, it) }
+}
+
+/**
+ * The message's translation resolved for [languageCode] from local
+ * sources only – its inline translations or the process cache – with no
+ * archive read.
+ *
+ * Returns `null` when a hosted message's translation has not yet been
+ * resolved, letting the caller seed what is already known synchronously
+ * and fall back to the asynchronous [resolvedTranslation] for the rest.
+ */
+fun Message.cachedTranslation(languageCode: String): Translation? {
+    translations?.let { inline ->
+        return pickInlineTranslation(inline, languageCode) ?: inline.firstOrNull()
+    }
+    return MessageTranslationCache.get(id, languageCode)
 }
 
 private fun Message.pickInlineTranslation(

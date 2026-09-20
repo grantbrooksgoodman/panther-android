@@ -10,6 +10,7 @@ package us.neotechnica.panther.modules.content.user.views.chatpageview
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,6 +37,8 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -93,6 +97,10 @@ import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 // MARK: - Constants Accessors
 
 private typealias Floats = ChatPageViewFloats
+
+// The maximum number of frames to keep re-pinning the newest message while
+// its content settles into place, guarding against an unbounded loop.
+private const val SCROLL_SETTLE_MAX_FRAMES = 8
 
 /**
  * The chat page for a single conversation.
@@ -275,6 +283,70 @@ private fun ChatHeader(
     }
 }
 
+/**
+ * Keeps the message list pinned to the newest message.
+ *
+ * The list starts pinned and scrolls to the bottom on initial load, when
+ * the user sends a message, or whenever pinned content grows — the first
+ * asynchronous resolution of a cold-opened chat, or a reaction landing
+ * below the last message. It unpins the moment the user drags the list to
+ * read earlier messages and re-pins once the list next rests at the very
+ * bottom, so content growth is never mistaken for the user scrolling away.
+ * Mirrors the iOS chat page's stick-to-bottom.
+ */
+@Composable
+private fun StickToBottomEffect(
+    listState: LazyListState,
+    state: ChatPageReducer.State,
+) {
+    val messages = state.messages
+    var stickToBottom by remember { mutableStateOf(true) }
+    LaunchedEffect(listState) {
+        listState.interactionSource.interactions.collect { interaction ->
+            if (interaction is DragInteraction.Start) stickToBottom = false
+        }
+    }
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.canScrollForward }.collect { canScrollForward ->
+            if (!canScrollForward) stickToBottom = true
+        }
+    }
+
+    // Keyed on the specific growth signals (including the last message's
+    // reaction count) so unrelated store churn never cancels the settle loop.
+    var previousMessageCount by remember { mutableStateOf(0) }
+    val lastMessageReactionCount = messages.lastOrNull()?.reactions?.size ?: 0
+    LaunchedEffect(
+        messages.size,
+        state.translationsByID.size,
+        state.mediaByID.size,
+        state.audioByID.size,
+        lastMessageReactionCount,
+    ) {
+        if (messages.isEmpty()) {
+            previousMessageCount = 0
+            return@LaunchedEffect
+        }
+
+        val isInitialLoad = previousMessageCount == 0
+        val newestMessageIsOwn = messages.size > previousMessageCount && messages.last().isFromCurrentUser
+        previousMessageCount = messages.size
+
+        if (isInitialLoad || newestMessageIsOwn || stickToBottom) {
+            // Re-pin across frames until multi-step content growth (async text,
+            // decoded media, resolved audio, a reaction chip) settles, so the
+            // newest message rests fully at the bottom rather than short of it.
+            var settleFrames = 0
+            do {
+                listState.scrollToItem(messages.lastIndex)
+                withFrameNanos {}
+                settleFrames++
+            } while (listState.canScrollForward && settleFrames < SCROLL_SETTLE_MAX_FRAMES)
+            listState.scrollToItem(messages.lastIndex)
+        }
+    }
+}
+
 @Composable
 @Suppress("LongParameterList")
 private fun MessageList(
@@ -292,27 +364,7 @@ private fun MessageList(
     val isGroup = (ConversationSessionService.currentConversation?.participants?.size ?: 2) > 2
     val lastConfirmedOwnIndex = messages.indexOfLast { it.isFromCurrentUser && !it.isOutboxMessage }
 
-    // Auto-scroll to the newest message only on initial load, when the user
-    // sends a message, or when they are already at the bottom — never yanking
-    // them away while they read earlier messages. Mirrors the iOS chat page.
-    var previousMessageCount by remember { mutableStateOf(0) }
-    LaunchedEffect(messages.size, state.translationsByID.size, state.mediaByID.size) {
-        if (messages.isEmpty()) {
-            previousMessageCount = 0
-            return@LaunchedEffect
-        }
-
-        val didAppendMessages = messages.size > previousMessageCount
-        val isInitialLoad = previousMessageCount == 0
-        val newestMessageIsOwn = didAppendMessages && messages.last().isFromCurrentUser
-        val lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
-        val wasAtBottom = lastVisibleIndex == null || lastVisibleIndex >= messages.lastIndex - 1
-
-        if (isInitialLoad || newestMessageIsOwn || wasAtBottom) {
-            listState.scrollToItem(messages.lastIndex)
-        }
-        previousMessageCount = messages.size
-    }
+    StickToBottomEffect(listState, state)
 
     LazyColumn(state = listState, modifier = modifier, verticalArrangement = Arrangement.Top) {
         itemsIndexed(messages, key = { _, message -> message.id }) { index, message ->

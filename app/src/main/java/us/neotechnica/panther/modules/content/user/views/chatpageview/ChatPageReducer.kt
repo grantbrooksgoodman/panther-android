@@ -21,6 +21,8 @@ import us.neotechnica.panther.networking.modules.schema.message.models.AudioMess
 import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
 import us.neotechnica.panther.networking.modules.schema.message.models.Message
 import us.neotechnica.panther.networking.modules.schema.user.models.User
+import us.neotechnica.panther.networking.modules.session.extensions.cachedMediaFile
+import us.neotechnica.panther.networking.modules.session.extensions.cachedTranslation
 import us.neotechnica.panther.networking.modules.session.extensions.currentUserID
 import us.neotechnica.panther.networking.modules.session.extensions.isAudioMessage
 import us.neotechnica.panther.networking.modules.session.extensions.isMediaMessage
@@ -154,11 +156,23 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
                 )
             }
 
-            is Action.MessagesUpdated ->
+            is Action.MessagesUpdated -> {
+                // Seed already-cached translations and already-downloaded media
+                // synchronously, so a reopened chat presents its history on the
+                // first frame instead of visibly resolving every message again.
+                val translations = state.translationsByID + seedTranslations(action.messages, state.languageCode, state.translationsByID)
+                val media = state.mediaByID + seedMedia(action.messages, state.mediaByID)
                 ReduceResult(
-                    state.copy(messages = action.messages, viewState = ViewState.Loaded, changeToken = UUID.randomUUID()),
-                    resolveEffect(action.messages, state.languageCode, state.translationsByID, state.mediaByID, state.audioByID),
+                    state.copy(
+                        messages = action.messages,
+                        translationsByID = translations,
+                        mediaByID = media,
+                        viewState = ViewState.Loaded,
+                        changeToken = UUID.randomUUID(),
+                    ),
+                    resolveEffect(action.messages, state.languageCode, translations, media, state.audioByID),
                 )
+            }
 
             is Action.TranslationsResolved ->
                 ReduceResult(state.copy(translationsByID = state.translationsByID + action.translations))
@@ -320,6 +334,31 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             if (resolvedAudio.isNotEmpty()) send(Action.AudioResolved(resolvedAudio))
             markCurrentConversationAsRead()
         }
+
+    private fun seedTranslations(
+        messages: List<Message>,
+        languageCode: String,
+        existing: Map<String, Translation>,
+    ): Map<String, Translation> {
+        val seeded = mutableMapOf<String, Translation>()
+        for (message in messages) {
+            if (message.id in existing) continue
+            message.cachedTranslation(languageCode)?.let { seeded[message.id] = it }
+        }
+        return seeded
+    }
+
+    private fun seedMedia(
+        messages: List<Message>,
+        existingMedia: Map<String, MediaFile>,
+    ): Map<String, MediaFile> {
+        val seeded = mutableMapOf<String, MediaFile>()
+        for (message in messages) {
+            if (!message.isMediaMessage || message.id in existingMedia) continue
+            message.cachedMediaFile?.let { seeded[message.id] = it }
+        }
+        return seeded
+    }
 
     private suspend fun resolveTranslations(
         messages: List<Message>,
