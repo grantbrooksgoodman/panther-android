@@ -59,7 +59,10 @@ object NotificationSessionService {
         val title = senderTitle(currentUser)
         val userNumberHash = encodedHashOf(listOf(currentUser.phoneNumber.nationalNumberString))
 
-        for (user in users) {
+        // Do not notify users who have blocked the current user, matching iOS.
+        val notifiableUsers = users.filter { currentUser.id !in (it.blockedUserIDs ?: emptyList()) }
+
+        for (user in notifiableUsers) {
             try {
                 notifyUser(
                     user = user,
@@ -117,13 +120,23 @@ object NotificationSessionService {
         message: Message,
         user: User,
     ): String? =
-        when (message.contentType) {
+        when (val contentType = message.contentType) {
             HostedContentType.Text ->
                 message.translations
                     ?.firstOrNull { it.languagePair.to == user.languageCode }
                     ?.output
                     ?: message.translations?.firstOrNull()?.output
-            else -> "📎"
+            // The iOS notification body prefixes a per-type emoji and a localized label; the label
+            // lives in the app module, out of this networking layer's reach, so only the emoji type
+            // hint is carried.
+            is HostedContentType.Audio -> AUDIO_BODY
+            is HostedContentType.Media ->
+                when {
+                    contentType.fileExtension.isDocument -> DOCUMENT_BODY
+                    contentType.fileExtension.isImage -> IMAGE_BODY
+                    contentType.fileExtension.isVideo -> VIDEO_BODY
+                    else -> ATTACHMENT_BODY
+                }
         }
 
     /**
@@ -215,4 +228,11 @@ object NotificationSessionService {
     private const val ACCESS_TOKEN_URL = "https://us-central1-jaguar-5d735.cloudfunctions.net/generateAccessToken"
     private const val BADGE_NUMBER_KEY = "badgeNumber"
     private const val HTTP_NOT_FOUND = 404
+
+    // The per-type emoji prefixes of the iOS notification body.
+    private const val AUDIO_BODY = "🔊"
+    private const val DOCUMENT_BODY = "📄"
+    private const val IMAGE_BODY = "🏞️"
+    private const val VIDEO_BODY = "🎥"
+    private const val ATTACHMENT_BODY = "📎"
 }
