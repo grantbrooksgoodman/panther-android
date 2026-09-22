@@ -181,7 +181,7 @@ private fun Header(
         )
         CircleChipButton(
             systemName = "checkmark",
-            contentDescription = Strings.DONE,
+            contentDescription = LocalizedStringKey.Done.localized(LocalizationSource.SUBSYSTEM),
             onClick = onDone,
             modifier = Modifier.align(Alignment.CenterEnd),
             tint = colors.titleText,

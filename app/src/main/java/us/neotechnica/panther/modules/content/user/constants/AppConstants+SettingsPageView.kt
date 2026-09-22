@@ -63,7 +63,6 @@ object SettingsPageViewStrings {
     const val CLEAR_CACHES_DONE_MESSAGE = "Caches have been cleared. You must now restart the app."
     const val DEFAULT_TITLE = "You"
     const val DELETE_ACCOUNT = "Delete account"
-    const val DONE = "Done"
     const val FEEDBACK_SUBJECT = "Hello — Feedback"
     const val HIDE_BUILD_INFO_OVERLAY = "Hide Build Info Overlay"
     const val INVITE_FRIENDS = "Invite friends"

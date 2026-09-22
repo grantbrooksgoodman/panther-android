@@ -57,6 +57,9 @@ import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewCol
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewConstants
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewFloats
 import us.neotechnica.panther.modules.content.user.models.MediaItemViewData
+import us.neotechnica.panther.modules.localization.models.LocalizationSource
+import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.schema.common.models.PhoneNumber
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
@@ -206,7 +209,7 @@ private fun ChatInfoHeader(
     ) {
         CircleChipButton(
             systemName = "checkmark",
-            contentDescription = Strings.DONE,
+            contentDescription = LocalizedStringKey.Done.localized(LocalizationSource.SUBSYSTEM),
             onClick = onDone,
             tint = colors.titleText,
             glyphSize = Floats.doneButtonGlyphSize,

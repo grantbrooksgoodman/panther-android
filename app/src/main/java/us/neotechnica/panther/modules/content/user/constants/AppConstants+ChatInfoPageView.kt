@@ -67,7 +67,6 @@ object ChatInfoPageViewColors {
 object ChatInfoPageViewConstants {
     const val BLOCK = "Block"
     const val DELETE_CONVERSATION = "Delete this Conversation"
-    const val DONE = "Done"
     const val FILE_TYPE_SEPARATOR = " • "
     const val PARTICIPANTS_SEPARATOR = ", "
     const val REPORT = "Report"
