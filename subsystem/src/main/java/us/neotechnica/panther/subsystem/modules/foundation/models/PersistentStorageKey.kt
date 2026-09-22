@@ -29,6 +29,9 @@ value class PersistentStorageKey(
         /** The persisted message outbox archive (JSON). */
         val messageOutbox = PersistentStorageKey("messageOutbox")
 
+        /** The key of the conversation open when the app was last backgrounded, restored after process death. */
+        val openConversationIDKey = PersistentStorageKey("openConversationIDKey")
+
         /** The persisted contact-match archive (JSON). */
         val contactArchive = PersistentStorageKey("contactArchive")
 

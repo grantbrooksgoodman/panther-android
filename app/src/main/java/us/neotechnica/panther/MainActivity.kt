@@ -30,11 +30,24 @@ import us.neotechnica.panther.designsystem.modules.theming.views.PantherTheme
 import us.neotechnica.panther.modules.content.shared.views.ForcedUpdateView
 import us.neotechnica.panther.navigation.PendingChatNavigation
 import us.neotechnica.panther.navigation.RootView
+import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
+import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // A non-null saved state on the first activity creation of a process means the process was
+        // recreated after death (not a config change, which reuses the process); restore the open
+        // conversation, unless a tapped notification already targets one (R6.2).
+        val isProcessRestart = savedInstanceState != null && !hasCreatedInProcess
+        hasCreatedInProcess = true
+
         capturePendingChat(intent)
+        if (isProcessRestart && intent?.getStringExtra(PendingChatNavigation.CONVERSATION_ID_KEY_EXTRA) == null) {
+            PendingChatNavigation.set(Persistent.string(PersistentStorageKey.openConversationIDKey))
+        }
+
         enableEdgeToEdge()
         setContent {
             PantherTheme {
@@ -69,5 +82,11 @@ class MainActivity : ComponentActivity() {
 
     private fun capturePendingChat(intent: Intent?) {
         PendingChatNavigation.set(intent?.getStringExtra(PendingChatNavigation.CONVERSATION_ID_KEY_EXTRA))
+    }
+
+    private companion object {
+        /** Whether this process has already created the activity once, distinguishing config changes from process restarts. */
+        @Volatile
+        private var hasCreatedInProcess = false
     }
 }

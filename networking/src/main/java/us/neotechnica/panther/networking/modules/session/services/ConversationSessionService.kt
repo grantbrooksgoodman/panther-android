@@ -41,6 +41,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHas
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
+import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
+import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 import us.neotechnica.panther.subsystem.modules.shared.models.send
 
@@ -108,11 +110,14 @@ object ConversationSessionService {
 
         if (conversation.isDraft) {
             reference.wrappedValue = CurrentConversationReference.Draft(conversation)
+            persistOpenConversationIDKey(null)
         } else {
             SessionStore.upsertConversation(conversation)
             reference.wrappedValue = CurrentConversationReference.Stored(conversation.id.key)
             // Live-observe the open conversation (iOS starts this on view-appear).
             ConversationObserverService.startObserving(conversation.id.key)
+            // Persist the open conversation so process death can restore it (R6.2).
+            persistOpenConversationIDKey(conversation.id.key)
         }
 
         ensureObserving()
@@ -363,6 +368,13 @@ object ConversationSessionService {
         ConversationObserverService.stopObserving()
         reference.wrappedValue = CurrentConversationReference.None
         internalDisplayedMessages.value = emptyList()
+        persistOpenConversationIDKey(null)
+    }
+
+    /** Records (or clears) the open conversation for process-death restoration, avoiding redundant writes. */
+    private fun persistOpenConversationIDKey(conversationIDKey: String?) {
+        if (Persistent.string(PersistentStorageKey.openConversationIDKey) == conversationIDKey) return
+        Persistent.setString(PersistentStorageKey.openConversationIDKey, conversationIDKey)
     }
 
     private fun ensureObserving() {
