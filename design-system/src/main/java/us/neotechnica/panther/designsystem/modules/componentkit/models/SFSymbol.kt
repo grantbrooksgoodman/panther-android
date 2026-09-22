@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Cached
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
@@ -27,8 +28,10 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Pause
@@ -114,6 +117,10 @@ object SFSymbol {
             "square.and.pencil" to Icons.Filled.Edit,
             "globe" to Icons.Filled.Language,
             "flag" to Icons.Filled.Flag,
+            "flag.fill" to Icons.Filled.Flag,
+            "location.fill" to Icons.Filled.LocationOn,
+            "info" to Icons.Filled.Info,
+            "command" to Icons.Filled.Cached,
             "character.bubble" to Icons.AutoMirrored.Filled.Message,
             "character.bubble.fill" to Icons.AutoMirrored.Filled.Message,
             "text.bubble" to Icons.AutoMirrored.Filled.Message,

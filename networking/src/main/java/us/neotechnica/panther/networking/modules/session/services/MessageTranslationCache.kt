@@ -43,6 +43,11 @@ internal object MessageTranslationCache {
         store.withValue { it.value[cacheKey(messageID, languageCode)] = translation }
     }
 
+    /** Empties the cache, so every message resolves afresh. */
+    fun clear() {
+        store.withValue { it.value.clear() }
+    }
+
     // MARK: - Auxiliary
 
     private fun cacheKey(

@@ -8,6 +8,9 @@
 
 package us.neotechnica.panther.modules.content.user.views.settingspageview
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -27,11 +30,21 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
 import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
@@ -78,6 +91,10 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
     val presentContactCard = rememberContactCardPresenter()
+    val context = LocalContext.current
+    val haptics = LocalHapticFeedback.current
+    val clipboard = LocalClipboardManager.current
+    val scope = rememberCoroutineScope()
 
     Box(modifier = modifier.fillMaxSize().background(colors.groupedContentBackground)) {
         Column(
@@ -94,23 +111,12 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
 
             ContactDetailCard(onTap = presentContactCard)
 
-            SettingsCard {
-                SettingsIconRow(
-                    symbol = "trash.fill",
-                    iconColor = Colors.iconOrange,
-                    title = Strings.DELETE_ACCOUNT,
-                    enabled = !state.isBusy,
-                    onClick = { viewModel.send(SettingsPageReducer.Action.DeleteAccountTapped) },
-                )
-                SettingsRowDivider()
-                SettingsIconRow(
-                    symbol = "hand.raised.fill",
-                    iconColor = Colors.iconRed,
-                    title = Strings.SIGN_OUT,
-                    enabled = !state.isBusy,
-                    onClick = { viewModel.send(SettingsPageReducer.Action.SignOutTapped) },
-                )
-            }
+            SettingsActionCards(
+                enabled = !state.isBusy,
+                context = context,
+                scope = scope,
+                send = viewModel::send,
+            )
 
             // Prerelease-only affordance to restore the build-info overlay after it has been
             // long-press–dismissed (mirrors iOS Developer Mode).
@@ -133,15 +139,20 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
             }
 
             if (Build.isConfigured) {
+                // The build-info row copies its text on tap, with haptics, mirroring iOS.
+                val buildInfo = versionString()
                 Components.Text(
-                    versionString(),
+                    buildInfo,
                     color = colors.subtitleText,
                     font = Font.system(FontScale.Small),
                     textAlign = TextAlign.Center,
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(top = Floats.versionTopPadding, bottom = Floats.versionBottomPadding),
+                            .clickable {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                clipboard.setText(AnnotatedString(buildInfo))
+                            }.padding(top = Floats.versionTopPadding, bottom = Floats.versionBottomPadding),
                 )
             }
         }
@@ -219,6 +230,46 @@ private fun ContactDetailCard(onTap: (PhoneNumber?, String?) -> Unit) {
     }
 }
 
+// MARK: - Action Cards
+
+@Composable
+private fun SettingsActionCards(
+    enabled: Boolean,
+    context: Context,
+    scope: CoroutineScope,
+    send: (SettingsPageReducer.Action) -> Unit,
+) {
+    SettingsCard {
+        SettingsIconRow("location.fill", Colors.iconBlue, Strings.INVITE_FRIENDS, enabled) {
+            scope.launch { presentInviteSheet(context) }
+        }
+        SettingsRowDivider()
+        SettingsIconRow("star.fill", Colors.iconYellow, Strings.LEAVE_REVIEW, enabled) { launchLeaveReview(context) }
+    }
+
+    SettingsCard {
+        SettingsIconRow("info", Colors.iconIndigo, Strings.SEND_FEEDBACK, enabled) { launchSendFeedback(context) }
+        SettingsRowDivider()
+        SettingsIconRow("command", Colors.iconMint, Strings.CLEAR_CACHES, enabled) {
+            send(SettingsPageReducer.Action.ClearCachesTapped)
+        }
+    }
+
+    SettingsCard {
+        SettingsIconRow("flag.fill", Colors.iconGray, Strings.BLOCKED_USERS, enabled) {
+            send(SettingsPageReducer.Action.BlockedUsersTapped)
+        }
+        SettingsRowDivider()
+        SettingsIconRow("trash.fill", Colors.iconOrange, Strings.DELETE_ACCOUNT, enabled) {
+            send(SettingsPageReducer.Action.DeleteAccountTapped)
+        }
+        SettingsRowDivider()
+        SettingsIconRow("hand.raised.fill", Colors.iconRed, Strings.SIGN_OUT, enabled) {
+            send(SettingsPageReducer.Action.SignOutTapped)
+        }
+    }
+}
+
 // MARK: - Cards
 
 @Composable
@@ -281,3 +332,62 @@ private fun SettingsRowDivider() {
 private fun versionString(): String =
     "${Strings.VERSION_PREFIX}${Build.bundleVersion} " +
         "(${Build.buildNumber}${Build.milestone.shortString}/${Build.bundleRevision.lowercase()})"
+
+/**
+ * Presents the invite-friends action sheet, offering to share the app to
+ * another app, mirroring the iOS `inviteFriendsButtonTapped`.
+ *
+ * **Note:** the iOS original also offers a "Show QR Code" action; that is
+ * deferred with the invite-QR-code page.
+ */
+private suspend fun presentInviteSheet(context: Context) {
+    ActionSheetAlert(
+        title = Strings.INVITE_FRIENDS,
+        actions = listOf(Action(Strings.SHARE_TO_ANOTHER_APP) { launchShare(context) }),
+    ).present()
+}
+
+/** Presents the system share sheet with the invite message and store link. */
+private fun launchShare(context: Context) {
+    val shareIntent =
+        Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, "${Strings.INVITE_MESSAGE}\n${playStoreUrl(context)}")
+        }
+    runCatching { context.startActivity(Intent.createChooser(shareIntent, Strings.INVITE_FRIENDS)) }
+}
+
+/**
+ * Opens the app's Play Store listing, standing in for the iOS App Store
+ * write-review page.
+ *
+ * Prefers the Play Store app's `market://` scheme, falling back to the
+ * web listing when it is unavailable.
+ */
+private fun launchLeaveReview(context: Context) {
+    val marketIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${context.packageName}"))
+    val didLaunch = runCatching { context.startActivity(marketIntent) }.isSuccess
+    if (!didLaunch) {
+        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(playStoreUrl(context)))) }
+    }
+}
+
+/**
+ * Opens the mail composer prefilled with a feedback subject and build
+ * diagnostics, standing in for the iOS `sendFeedbackButtonTapped`.
+ */
+private fun launchSendFeedback(context: Context) {
+    val diagnostics =
+        "\n\n---\n${versionString()}\n" +
+            "Device: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL} (API ${android.os.Build.VERSION.SDK_INT})"
+    val mailIntent =
+        Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:")).apply {
+            putExtra(Intent.EXTRA_SUBJECT, Strings.FEEDBACK_SUBJECT)
+            putExtra(Intent.EXTRA_TEXT, diagnostics)
+        }
+    runCatching { context.startActivity(mailIntent) }
+}
+
+/** The web URL of the app's Play Store listing. */
+private fun playStoreUrl(context: Context): String =
+    "https://play.google.com/store/apps/details?id=${context.packageName}"

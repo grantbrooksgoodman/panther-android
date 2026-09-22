@@ -39,19 +39,39 @@ object SettingsPageViewFloats {
 // MARK: - Color
 
 object SettingsPageViewColors {
+    val iconBlue = Color(0xFF007AFF)
     val iconGray = Color(0xFF8E8E93)
+    val iconIndigo = Color(0xFF5856D6)
+    val iconMint = Color(0xFF00C7BE)
     val iconOrange = Color(0xFFFF9500)
     val iconRed = Color(0xFFFF3B30)
+    val iconYellow = Color(0xFFFFCC00)
 }
 
 // MARK: - String
 
 object SettingsPageViewStrings {
+    const val BLOCKED_USERS = "Blocked users"
+    const val BLOCKED_USERS_EMPTY = "No blocked users."
+    const val CLEAR_CACHES = "Clear caches"
+    const val CLEAR_CACHES_CONFIRM_MESSAGE =
+        "Are you sure you'd like to clear all caches?\n\n" +
+            "This may fix some issues, but can also temporarily slow down the app while indexes rebuild.\n\n" +
+            "You will need to restart the app for this to take effect."
+    const val CLEAR_CACHES_DONE_MESSAGE = "Caches have been cleared. You must now restart the app."
     const val DEFAULT_TITLE = "You"
     const val DELETE_ACCOUNT = "Delete account"
     const val DONE = "Done"
+    const val FEEDBACK_SUBJECT = "Hello — Feedback"
     const val HIDE_BUILD_INFO_OVERLAY = "Hide Build Info Overlay"
+    const val INVITE_FRIENDS = "Invite friends"
+    const val INVITE_MESSAGE = "Come chat with me on Hello!"
+    const val LEAVE_REVIEW = "Leave review"
+    const val SEND_FEEDBACK = "Send feedback"
+    const val SHARE_TO_ANOTHER_APP = "Share to Another App"
     const val SHOW_BUILD_INFO_OVERLAY = "Show Build Info Overlay"
     const val SIGN_OUT = "Sign out"
+    const val UNBLOCK = "Unblock"
+    const val UNKNOWN = "Unknown"
     const val VERSION_PREFIX = "Version "
 }
