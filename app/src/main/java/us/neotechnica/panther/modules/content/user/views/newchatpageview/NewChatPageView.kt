@@ -40,7 +40,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.input.ImeAction
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
@@ -85,8 +91,10 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
             RecipientBar(
                 recipients = state.recipients,
                 query = state.recipientQuery,
+                highlightedRecipientID = state.highlightedRecipientID,
                 onQueryChange = { viewModel.send(Action.RecipientQueryChanged(it)) },
                 onSubmit = { viewModel.send(Action.RecipientQuerySubmitted) },
+                onBackspace = { viewModel.send(Action.RecipientBackspaced) },
                 onRemove = { viewModel.send(Action.RemoveRecipient(it)) },
                 onAdd = { viewModel.send(Action.ShowContactSelector) },
             )
@@ -157,8 +165,10 @@ private fun Header(onClose: () -> Unit) {
 private fun RecipientBar(
     recipients: List<NewChatPageReducer.Recipient>,
     query: String,
+    highlightedRecipientID: String?,
     onQueryChange: (String) -> Unit,
     onSubmit: () -> Unit,
+    onBackspace: () -> Unit,
     onRemove: (String) -> Unit,
     onAdd: () -> Unit,
 ) {
@@ -189,8 +199,10 @@ private fun RecipientBar(
         RecipientBarContent(
             recipients = recipients,
             query = query,
+            highlightedRecipientID = highlightedRecipientID,
             onQueryChange = onQueryChange,
             onSubmit = onSubmit,
+            onBackspace = onBackspace,
             onRemove = onRemove,
             modifier = Modifier.weight(1f),
         )
@@ -216,8 +228,10 @@ private fun RecipientBar(
 private fun RecipientBarContent(
     recipients: List<NewChatPageReducer.Recipient>,
     query: String,
+    highlightedRecipientID: String?,
     onQueryChange: (String) -> Unit,
     onSubmit: () -> Unit,
+    onBackspace: () -> Unit,
     onRemove: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -228,7 +242,11 @@ private fun RecipientBarContent(
         modifier = modifier,
     ) {
         recipients.forEach { recipient ->
-            RecipientChip(recipient = recipient, onRemove = { onRemove(recipient.userID) })
+            RecipientChip(
+                recipient = recipient,
+                isHighlighted = recipient.userID == highlightedRecipientID,
+                onRemove = { onRemove(recipient.userID) },
+            )
         }
         BasicTextField(
             value = query,
@@ -241,7 +259,20 @@ private fun RecipientBarContent(
             modifier =
                 Modifier
                     .defaultMinSize(minWidth = Floats.fieldMinWidth)
-                    .padding(vertical = Floats.fieldVerticalPadding),
+                    .padding(vertical = Floats.fieldVerticalPadding)
+                    .onPreviewKeyEvent { event ->
+                        val isBackspaceOnEmpty =
+                            event.type == KeyEventType.KeyDown &&
+                                event.key == Key.Backspace &&
+                                query.isEmpty() &&
+                                recipients.isNotEmpty()
+                        if (isBackspaceOnEmpty) {
+                            onBackspace()
+                            true
+                        } else {
+                            false
+                        }
+                    },
         )
     }
 }
@@ -249,15 +280,18 @@ private fun RecipientBarContent(
 @Composable
 private fun RecipientChip(
     recipient: NewChatPageReducer.Recipient,
+    isHighlighted: Boolean,
     onRemove: () -> Unit,
 ) {
     val colors = LocalPantherColors.current
+    val backgroundColor = if (isHighlighted) colors.accent else colors.accent.copy(alpha = Floats.CHIP_BACKGROUND_ALPHA)
+    val contentColor = if (isHighlighted) Color.White else colors.accent
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
             Modifier
                 .clip(CircleShape)
-                .background(colors.accent.copy(alpha = Floats.CHIP_BACKGROUND_ALPHA))
+                .background(backgroundColor)
                 .clickable(onClick = onRemove)
                 .padding(
                     start = Floats.recipientChipStartPadding,
@@ -266,10 +300,10 @@ private fun RecipientChip(
                     bottom = Floats.recipientChipVerticalPadding,
                 ),
     ) {
-        Components.Text(recipient.displayName, color = colors.accent, font = Font.systemMedium(FontScale.Small))
+        Components.Text(recipient.displayName, color = contentColor, font = Font.systemMedium(FontScale.Small))
         Components.Symbol(
             "xmark",
-            color = colors.accent,
+            color = contentColor,
             modifier =
                 Modifier
                     .padding(start = Floats.chipRemoveIconStartPadding)

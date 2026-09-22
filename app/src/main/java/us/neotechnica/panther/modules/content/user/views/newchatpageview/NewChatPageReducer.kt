@@ -59,6 +59,8 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
 
         data object RecipientQuerySubmitted : Action
 
+        data object RecipientBackspaced : Action
+
         data class AddRecipient(
             val userID: String,
             val displayName: String,
@@ -95,6 +97,7 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
         val contacts: List<ContactMatch> = emptyList(),
         val recipients: List<Recipient> = emptyList(),
         val recipientQuery: String = "",
+        val highlightedRecipientID: String? = null,
         val inputText: String = "",
         val isSending: Boolean = false,
         val isShowingContactSelector: Boolean = false,
@@ -137,7 +140,7 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
             }
 
             is Action.RecipientQueryChanged ->
-                ReduceResult(state.copy(recipientQuery = action.query))
+                ReduceResult(state.copy(recipientQuery = action.query, highlightedRecipientID = null))
 
             Action.RecipientQuerySubmitted ->
                 if (state.recipientQueryIsPhoneNumber) {
@@ -146,17 +149,30 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
                     ReduceResult(state)
                 }
 
+            Action.RecipientBackspaced ->
+                ReduceResult(state.backspacingRecipient())
+
             is Action.AddRecipient -> {
                 val alreadyAdded = state.recipients.any { it.userID == action.userID }
                 val recipients =
                     if (alreadyAdded) state.recipients else state.recipients + Recipient(action.userID, action.displayName)
                 ReduceResult(
-                    state.copy(recipients = recipients, recipientQuery = "", isShowingContactSelector = false),
+                    state.copy(
+                        recipients = recipients,
+                        recipientQuery = "",
+                        highlightedRecipientID = null,
+                        isShowingContactSelector = false,
+                    ),
                 )
             }
 
             is Action.RemoveRecipient ->
-                ReduceResult(state.copy(recipients = state.recipients.filter { it.userID != action.userID }))
+                ReduceResult(
+                    state.copy(
+                        recipients = state.recipients.filter { it.userID != action.userID },
+                        highlightedRecipientID = state.highlightedRecipientID.takeIf { it != action.userID },
+                    ),
+                )
 
             Action.ShowContactSelector ->
                 ReduceResult(state.copy(isShowingContactSelector = true))
@@ -195,6 +211,22 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
         }
 
     // MARK: - Auxiliary
+
+    /**
+     * The state after a backspace on the empty field: the first backspace
+     * highlights the trailing recipient, and a second removes it, mirroring
+     * the iOS `onSuperflousBackspace`.
+     */
+    private fun State.backspacingRecipient(): State =
+        when {
+            recipientQuery.isNotEmpty() || recipients.isEmpty() -> this
+            highlightedRecipientID == null -> copy(highlightedRecipientID = recipients.last().userID)
+            else ->
+                copy(
+                    recipients = recipients.filter { it.userID != highlightedRecipientID },
+                    highlightedRecipientID = null,
+                )
+        }
 
     private fun findByPhoneEffect(query: String): Effect<Action> =
         Effect.run { send ->
