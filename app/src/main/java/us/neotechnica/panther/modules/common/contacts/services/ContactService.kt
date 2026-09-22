@@ -19,6 +19,7 @@ import org.json.JSONObject
 import us.neotechnica.panther.modules.common.contacts.models.ContactMatch
 import us.neotechnica.panther.networking.modules.schema.user.models.User
 import us.neotechnica.panther.networking.modules.user.services.UserService
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHashOf
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
@@ -59,6 +60,19 @@ object ContactService {
     fun match(userID: String): ContactMatch? = matches().firstOrNull { it.userID == userID }
 
     /**
+     * Returns the display name of the contact whose national number hashes
+     * to [userNumberHash], or `null`. Resolves the sender of a push
+     * notification, standing in for the iOS notification extension's
+     * contact-archive lookup by `userNumberHash`.
+     */
+    fun nameForNumberHash(userNumberHash: String): String? =
+        matches()
+            .firstOrNull {
+                it.nationalNumberString.isNotBlank() &&
+                    encodedHashOf(listOf(it.nationalNumberString)) == userNumberHash
+            }?.fullName
+
+    /**
      * Returns the lookup URI of the device contact matching
      * [compiledNumberString], suitable for a system contact-view intent,
      * or `null` when no device contact matches (or contact permission is
@@ -85,13 +99,15 @@ object ContactService {
     // MARK: - Sync
 
     /**
-     * Rebuilds the contact archive when it is empty and contact
-     * permission is granted. Concurrent syncs are not coalesced; callers
-     * invoke this at boot.
+     * Rebuilds the contact archive when it is empty – or predates the
+     * national-number field a push notification's sender is resolved by –
+     * and contact permission is granted. Concurrent syncs are not
+     * coalesced; callers invoke this at boot.
      */
     suspend fun syncIfNeeded() {
         loadIfNeeded()
-        if (matchesRef.wrappedValue.isNotEmpty()) return
+        val current = matchesRef.wrappedValue
+        if (current.isNotEmpty() && current.all { it.nationalNumberString.isNotBlank() }) return
         if (!hasContactPermission()) return
         sync()
     }
@@ -107,7 +123,14 @@ object ContactService {
         val matches = mutableListOf<ContactMatch>()
         for (user in users) {
             val name = matchName(user, deviceContacts) ?: continue
-            matches.add(ContactMatch(user.id, name, user.phoneNumber.compiledNumberString))
+            matches.add(
+                ContactMatch(
+                    user.id,
+                    name,
+                    user.phoneNumber.compiledNumberString,
+                    user.phoneNumber.nationalNumberString,
+                ),
+            )
         }
 
         matchesRef.wrappedValue = matches
@@ -175,7 +198,8 @@ object ContactService {
                 JSONObject()
                     .put(KEY_USER_ID, match.userID)
                     .put(KEY_FULL_NAME, match.fullName)
-                    .put(KEY_NUMBER, match.compiledNumberString),
+                    .put(KEY_NUMBER, match.compiledNumberString)
+                    .put(KEY_NATIONAL_NUMBER, match.nationalNumberString),
             )
         }
         Persistent.setString(PersistentStorageKey.contactArchive, array.toString())
@@ -185,7 +209,12 @@ object ContactService {
         val array = JSONArray(archive)
         return (0 until array.length()).map { index ->
             val obj = array.getJSONObject(index)
-            ContactMatch(obj.getString(KEY_USER_ID), obj.getString(KEY_FULL_NAME), obj.getString(KEY_NUMBER))
+            ContactMatch(
+                obj.getString(KEY_USER_ID),
+                obj.getString(KEY_FULL_NAME),
+                obj.getString(KEY_NUMBER),
+                obj.optString(KEY_NATIONAL_NUMBER),
+            )
         }
     }
 
@@ -194,4 +223,5 @@ object ContactService {
     private const val KEY_USER_ID = "userID"
     private const val KEY_FULL_NAME = "fullName"
     private const val KEY_NUMBER = "number"
+    private const val KEY_NATIONAL_NUMBER = "nationalNumber"
 }

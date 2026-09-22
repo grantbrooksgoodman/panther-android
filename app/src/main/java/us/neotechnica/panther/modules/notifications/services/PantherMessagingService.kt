@@ -27,10 +27,13 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.MainActivity
 import us.neotechnica.panther.R
+import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.navigation.PendingChatNavigation
+import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.schema.user.models.User
 import us.neotechnica.panther.networking.modules.session.extensions.currentUserID
 import us.neotechnica.panther.networking.modules.session.services.ConversationSessionService
+import us.neotechnica.panther.networking.modules.session.services.SessionStore
 import us.neotechnica.panther.networking.modules.session.services.UserMutationService
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
@@ -64,9 +67,39 @@ class PantherMessagingService : FirebaseMessagingService() {
         // Suppress while the conversation is already on screen.
         if (ConversationSessionService.currentConversation?.id?.key == conversationIDKey) return
 
-        val title = message.notification?.title ?: message.data["title"] ?: getString(R.string.app_name)
-        val body = message.notification?.body ?: message.data["body"].orEmpty()
-        showNotification(this, conversationIDKey, title, body)
+        val body = message.notification?.body ?: message.data[BODY_KEY].orEmpty()
+
+        // Enrich the title with the sender's contact name, and a group conversation's name as
+        // the subtitle, mirroring the iOS notification extension.
+        val title = enrichedTitle(message)
+        val subtitle =
+            SessionStore
+                .getConversation(conversationIDKey)
+                ?.metadata
+                ?.name
+                ?.takeUnless { it.isBangQualifiedEmpty || it.isBlank() }
+
+        showNotification(this, conversationIDKey, title, body, subtitle)
+    }
+
+    /**
+     * The notification title enriched with the sender's contact name: the
+     * contact's full name, or "<full name> <reactionSuffix>" for a
+     * reaction, falling back to the payload title when the sender is not a
+     * known contact.
+     */
+    private fun enrichedTitle(message: RemoteMessage): String {
+        val fallback = message.notification?.title ?: message.data[TITLE_KEY] ?: getString(R.string.app_name)
+        val userNumberHash = message.data[USER_NUMBER_HASH_KEY] ?: return fallback
+        val fullName = ContactService.nameForNumberHash(userNumberHash) ?: return fallback
+
+        val reactionMessageID = message.data[REACTION_MESSAGE_ID_KEY]
+        val reactionSuffix = message.data[REACTION_SUFFIX_KEY].orEmpty()
+        return if (reactionMessageID != null && reactionMessageID != NO_REACTION && reactionSuffix.isNotEmpty()) {
+            "$fullName $reactionSuffix"
+        } else {
+            fullName
+        }
     }
 
     // MARK: - Companion
@@ -93,6 +126,7 @@ class PantherMessagingService : FirebaseMessagingService() {
             conversationIDKey: String,
             title: String,
             body: String,
+            subtitle: String?,
         ) {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
                 PackageManager.PERMISSION_GRANTED
@@ -115,7 +149,7 @@ class PantherMessagingService : FirebaseMessagingService() {
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 )
 
-            val notification =
+            val builder =
                 NotificationCompat
                     .Builder(context, MESSAGES_CHANNEL_ID)
                     .setSmallIcon(android.R.drawable.sym_action_email)
@@ -123,13 +157,35 @@ class PantherMessagingService : FirebaseMessagingService() {
                     .setContentText(body)
                     .setAutoCancel(true)
                     .setContentIntent(pendingIntent)
+                    // Group per conversation, matching the iOS per-thread grouping.
+                    .setGroup(conversationIDKey)
                     .setPriority(NotificationCompat.PRIORITY_HIGH)
-                    .build()
+            if (subtitle != null) builder.setSubText(subtitle)
 
             NotificationManagerCompat
                 .from(context)
-                .notify(conversationIDKey.hashCode(), notification)
+                .notify(conversationIDKey.hashCode(), builder.build())
         }
+
+        // MARK: - Data Keys
+
+        /** The push payload's message-title field. */
+        private const val TITLE_KEY = "title"
+
+        /** The push payload's message-body field. */
+        private const val BODY_KEY = "body"
+
+        /** The push payload's sender-number-hash field. */
+        private const val USER_NUMBER_HASH_KEY = "userNumberHash"
+
+        /** The push payload's reaction-message-identifier field. */
+        private const val REACTION_MESSAGE_ID_KEY = "reactionMessageID"
+
+        /** The push payload's reaction-suffix field. */
+        private const val REACTION_SUFFIX_KEY = "reactionSuffix"
+
+        /** The sentinel `reactionMessageID` for a non-reaction message. */
+        private const val NO_REACTION = "!"
     }
 
     // MARK: - Auxiliary

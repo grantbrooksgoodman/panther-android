@@ -14,11 +14,15 @@ package us.neotechnica.panther.modules.common.contacts.models
  * @property userID The matched registered user's identifier.
  * @property fullName The contact's display name.
  * @property compiledNumberString The matched phone number's digits.
+ * @property nationalNumberString The matched phone number's national
+ *   digits, used to resolve the sender of a push notification by its
+ *   `userNumberHash`.
  */
 data class ContactMatch(
     val userID: String,
     val fullName: String,
     val compiledNumberString: String,
+    val nationalNumberString: String = "",
 ) {
     /** The contact's initials, derived from [fullName]. */
     val initials: String
