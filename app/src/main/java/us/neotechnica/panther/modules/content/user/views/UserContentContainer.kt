@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import us.neotechnica.panther.modules.content.user.constants.UserContentContainerFloats
 import us.neotechnica.panther.modules.content.user.constants.UserContentContainerStrings
+import us.neotechnica.panther.modules.content.user.views.changelanguagepageview.ChangeLanguagePageView
 import us.neotechnica.panther.modules.content.user.views.chatinfopageview.ChatInfoPageView
 import us.neotechnica.panther.modules.content.user.views.chatpageview.ChatPageView
 import us.neotechnica.panther.modules.content.user.views.conversationspageview.ConversationsPageView
@@ -100,6 +101,11 @@ fun UserContentContainer(modifier: Modifier = Modifier) {
             // iOS; the page insets its own content.
             UserContentNavigatorState.SeguePath.Settings ->
                 SettingsPageView(Modifier.fillMaxSize())
+
+            // Drawn edge-to-edge so its grouped background bleeds past the system bars, matching
+            // iOS; the page insets its own content.
+            UserContentNavigatorState.SeguePath.ChangeLanguage ->
+                ChangeLanguagePageView(Modifier.fillMaxSize())
 
             null -> ConversationsPageView(Modifier.fillMaxSize().systemBarsPadding())
         }

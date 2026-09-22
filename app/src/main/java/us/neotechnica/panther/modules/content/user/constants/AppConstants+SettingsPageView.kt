@@ -44,6 +44,7 @@ object SettingsPageViewColors {
     val iconIndigo = Color(0xFF5856D6)
     val iconMint = Color(0xFF00C7BE)
     val iconOrange = Color(0xFFFF9500)
+    val iconPink = Color(0xFFFF2D55)
     val iconRed = Color(0xFFFF3B30)
     val iconYellow = Color(0xFFFFCC00)
 }
@@ -53,6 +54,7 @@ object SettingsPageViewColors {
 object SettingsPageViewStrings {
     const val BLOCKED_USERS = "Blocked users"
     const val BLOCKED_USERS_EMPTY = "No blocked users."
+    const val CHANGE_LANGUAGE = "Change language"
     const val CLEAR_CACHES = "Clear caches"
     const val CLEAR_CACHES_CONFIRM_MESSAGE =
         "Are you sure you'd like to clear all caches?\n\n" +

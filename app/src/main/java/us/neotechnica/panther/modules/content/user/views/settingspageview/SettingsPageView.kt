@@ -245,6 +245,10 @@ private fun SettingsActionCards(
         }
         SettingsRowDivider()
         SettingsIconRow("star.fill", Colors.iconYellow, Strings.LEAVE_REVIEW, enabled) { launchLeaveReview(context) }
+        SettingsRowDivider()
+        SettingsIconRow("globe", Colors.iconPink, Strings.CHANGE_LANGUAGE, enabled) {
+            send(SettingsPageReducer.Action.ChangeLanguageTapped)
+        }
     }
 
     SettingsCard {

@@ -75,6 +75,8 @@ data class UserContentNavigatorState(
         data object NewChat : SeguePath
 
         data object Settings : SeguePath
+
+        data object ChangeLanguage : SeguePath
     }
 }
 

@@ -20,6 +20,7 @@ import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewStr
 import us.neotechnica.panther.navigation.RootNavigatorState
 import us.neotechnica.panther.navigation.RootRoute
 import us.neotechnica.panther.navigation.Route
+import us.neotechnica.panther.navigation.UserContentNavigatorState
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
@@ -58,6 +59,8 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
 
         data object BlockedUsersTapped : Action
 
+        data object ChangeLanguageTapped : Action
+
         data object Finished : Action
     }
 
@@ -90,6 +93,13 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
 
             Action.BlockedUsersTapped ->
                 ReduceResult(state.copy(isBusy = true), unblockUsersEffect())
+
+            Action.ChangeLanguageTapped -> {
+                DependencyValues.current.navigation.navigate(
+                    Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePath.ChangeLanguage)),
+                )
+                ReduceResult(state)
+            }
 
             Action.Finished ->
                 ReduceResult(state.copy(isBusy = false))
