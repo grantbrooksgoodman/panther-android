@@ -39,6 +39,23 @@ class SchemaRoundTripTest {
             assertEquals(fixture, Message.decode(fixture).encoded)
         }
 
+    // A media message carries its file identifier and extension in the composite
+    // `contentType` string ("<mime> – <id> – <ext>"), covering the R2/R3 media surface.
+    @Test
+    fun `media message decodes and re-encodes structurally identically`() =
+        runTest {
+            val fixture = FixtureJson.loadObject("message_media.json")
+            assertEquals(fixture, Message.decode(fixture).encoded)
+        }
+
+    // An audio message's `contentType` is its bare MIME string, covering the R4 audio surface.
+    @Test
+    fun `audio message decodes and re-encodes structurally identically`() =
+        runTest {
+            val fixture = FixtureJson.loadObject("message_audio.json")
+            assertEquals(fixture, Message.decode(fixture).encoded)
+        }
+
     // MARK: - Identity-Hash Tests
 
     @Test
