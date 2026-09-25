@@ -13,7 +13,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -27,7 +26,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
@@ -59,7 +57,6 @@ import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAction
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAlignment
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
-import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ReactionChoice
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import kotlin.math.roundToInt
@@ -73,6 +70,7 @@ internal data class ActiveContextMenu(
     val alignment: ContextMenuAlignment,
     val actions: List<ContextMenuAction>,
     val reactionChoices: List<ReactionChoice>,
+    val liftScale: Float,
     val content: @Composable () -> Unit,
 )
 
@@ -135,6 +133,8 @@ fun ContextMenuHost(
  * @param alignment The side the menu anchors to.
  * @param reactionChoices The reaction options shown above the bubble; the
  *   row is omitted when empty.
+ * @param liftScale The fraction the lifted copy scales up by; pass `0`
+ *   to lift a full-width row without scaling it past the screen edge.
  * @param onTap The action performed on a single tap, or `null` when the
  *   bubble has none. Handling it here (rather than a `clickable` inside
  *   [content]) keeps the tap from consuming the long-press and double-tap.
@@ -147,6 +147,7 @@ fun MessageContextMenu(
     actions: List<ContextMenuAction>,
     alignment: ContextMenuAlignment,
     reactionChoices: List<ReactionChoice> = emptyList(),
+    liftScale: Float = LIFT_SCALE_BONUS,
     onTap: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
@@ -165,21 +166,23 @@ fun MessageContextMenu(
             .onGloballyPositioned { coordinates ->
                 anchorBounds = Rect(coordinates.positionInRoot(), coordinates.size.toSize())
             }.pointerInput(actions, reactionChoices, controller, onTap) {
+                // A non-null onDoubleTap delays single taps, so install one only for a double-tap-default reaction.
+                val doubleTapChoice = reactionChoices.firstOrNull { it.isDoubleTapDefault }
                 detectTapGestures(
                     onTap = onTap?.let { tap -> { tap() } },
-                    onDoubleTap = {
-                        val doubleTapChoice = reactionChoices.firstOrNull { it.isDoubleTapDefault }
-                        if (doubleTapChoice != null) {
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            doubleTapChoice.onSelect()
-                        }
-                    },
+                    onDoubleTap =
+                        doubleTapChoice?.let { choice ->
+                            {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                choice.onSelect()
+                            }
+                        },
                     onLongPress = {
                         val hasMenu = actions.isNotEmpty() || reactionChoices.isNotEmpty()
                         if (hasMenu && controller?.canBegin == true && anchorBounds != Rect.Zero) {
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                             controller.present(
-                                ActiveContextMenu(anchorBounds, alignment, actions, reactionChoices, content),
+                                ActiveContextMenu(anchorBounds, alignment, actions, reactionChoices, liftScale, content),
                             )
                         }
                     },
@@ -222,7 +225,7 @@ private fun ContextMenuOverlay(
 
         // The bubble scales up from its top, so its visual bottom sits below
         // the measured bounds; the menu must clear that, not just `bounds.bottom`.
-        val bubbleBottomPx = bounds.bottom + bounds.height * LIFT_SCALE_BONUS
+        val bubbleBottomPx = bounds.bottom + bounds.height * active.liftScale
 
         // Shift the whole stack vertically so the reaction row clears the top
         // inset and the menu clears the bottom inset, keeping every item on
@@ -267,7 +270,7 @@ private fun ContextMenuOverlay(
             Modifier
                 .offset { IntOffset(bounds.left.roundToInt(), (bounds.top + shiftPx).roundToInt()) }
                 .graphicsLayer {
-                    val scale = 1f + LIFT_SCALE_BONUS * progress.value
+                    val scale = 1f + active.liftScale * progress.value
                     scaleX = scale
                     scaleY = scale
                     transformOrigin = TransformOrigin(originX, 0f)
@@ -345,36 +348,6 @@ private fun ContextMenuCard(
     }
 }
 
-@Composable
-private fun ReactionRow(
-    choices: List<ReactionChoice>,
-    onSelect: (ReactionChoice) -> Unit,
-) {
-    val colors = LocalPantherColors.current
-
-    Row(
-        Modifier
-            .clip(RoundedCornerShape(REACTION_ROW_CORNER_RADIUS))
-            .background(colors.reactionButtonBackground)
-            .padding(REACTION_ROW_PADDING),
-        horizontalArrangement = Arrangement.spacedBy(REACTION_ROW_SPACING),
-    ) {
-        choices.forEach { choice ->
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier =
-                    Modifier
-                        .size(REACTION_BUTTON_SIZE)
-                        .clip(CircleShape)
-                        .background(if (choice.isSelected) choice.selectedColor else Color.Transparent)
-                        .clickable { onSelect(choice) },
-            ) {
-                Components.Text(choice.emoji, color = colors.titleText, font = Font.system(FontScale.Custom(REACTION_EMOJI_FONT_SIZE)))
-            }
-        }
-    }
-}
-
 private val MENU_WIDTH = 250.dp
 private val MENU_GAP = 8.dp
 private val EDGE_MARGIN = 12.dp
@@ -387,11 +360,6 @@ private const val LIFT_SCALE_BONUS = 0.06f
 private const val MENU_MIN_SCALE = 0.85f
 private val DESTRUCTIVE_COLOR = Color(0xFFFF3B30)
 private val REACTION_ROW_GAP = 8.dp
-private val REACTION_ROW_CORNER_RADIUS = 26.dp
-private val REACTION_ROW_PADDING = 6.dp
-private val REACTION_ROW_SPACING = 2.dp
-private val REACTION_BUTTON_SIZE = 40.dp
-private const val REACTION_EMOJI_FONT_SIZE = 22f
 
 private fun androidx.compose.ui.unit.IntSize.toSize() =
     androidx.compose.ui.geometry

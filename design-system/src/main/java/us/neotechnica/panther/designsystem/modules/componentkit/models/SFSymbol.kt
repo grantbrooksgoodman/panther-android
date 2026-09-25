@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Image
@@ -116,6 +117,7 @@ object SFSymbol {
             "square.and.arrow.down" to Icons.Filled.Download,
             "square.and.pencil" to Icons.Filled.Edit,
             "globe" to Icons.Filled.Language,
+            "exclamationmark.bubble" to Icons.Filled.Feedback,
             "flag" to Icons.Filled.Flag,
             "flag.fill" to Icons.Filled.Flag,
             "location.fill" to Icons.Filled.LocationOn,

@@ -1,5 +1,5 @@
 //
-//  AppConstants+ConversationCell.kt
+//  AppConstants+ConversationCellView.kt
 //  Panther
 //
 //  Created by Grant Brooks Goodman on 24/08/2026.
@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.dp
 
 // MARK: - Float
 
-object ConversationCellFloats {
+object ConversationCellViewFloats {
     val avatarSize: Dp = 48.dp
     val badgeBorderWidth: Dp = 1.dp
     val badgeSize: Dp = 18.dp
@@ -38,6 +38,14 @@ object ConversationCellFloats {
 
 // MARK: - Color
 
-object ConversationCellColors {
+object ConversationCellViewColors {
     val badgeBorder = Color(0xFFC7C7CC)
+}
+
+// MARK: - String
+
+object ConversationCellViewStrings {
+    const val BLOCK_USERS_BUTTON_IMAGE_SYSTEM_NAME = "flag"
+    const val DELETE_CONVERSATION_BUTTON_IMAGE_SYSTEM_NAME = "trash"
+    const val REPORT_USERS_BUTTON_IMAGE_SYSTEM_NAME = "exclamationmark.bubble"
 }
