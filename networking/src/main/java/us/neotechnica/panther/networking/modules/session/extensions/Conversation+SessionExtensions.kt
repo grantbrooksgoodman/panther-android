@@ -7,12 +7,17 @@
 
 package us.neotechnica.panther.networking.modules.session.extensions
 
+import us.neotechnica.panther.networking.modules.common.models.CommonConstants
 import us.neotechnica.panther.networking.modules.conversation.services.ConversationService
 import us.neotechnica.panther.networking.modules.message.services.MessageService
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
+import us.neotechnica.panther.networking.modules.schema.conversation.models.ConversationID
+import us.neotechnica.panther.networking.modules.schema.conversation.models.ConversationMetadata
+import us.neotechnica.panther.networking.modules.schema.conversation.models.Participant
 import us.neotechnica.panther.networking.modules.schema.message.models.Message
 import us.neotechnica.panther.networking.modules.schema.user.models.User
 import us.neotechnica.panther.networking.modules.session.services.SessionStore
+import us.neotechnica.panther.networking.modules.session.services.UserSessionService
 import us.neotechnica.panther.networking.modules.user.services.UserService
 
 /**
@@ -71,4 +76,75 @@ suspend fun Conversation.resolveUsers() {
 /** Refetches the conversation's full record into the store. */
 suspend fun Conversation.resolve() {
     ConversationService.getConversation(id.key)
+}
+
+/**
+ * A Boolean value that indicates whether the conversation is empty –
+ * having neither a key nor a hash.
+ */
+val Conversation.isEmpty: Boolean
+    get() = id.key.isBlank() && id.hash.isBlank()
+
+/**
+ * A Boolean value that indicates whether the conversation is a mock,
+ * representing a new conversation not yet created on the server.
+ */
+val Conversation.isMock: Boolean
+    get() = id.key == CommonConstants.NEW_CONVERSATION_ID
+
+/** An empty conversation with no participants. */
+val Conversation.Companion.empty: Conversation
+    get() = empty(withUsers = emptyList())
+
+/**
+ * Creates an empty conversation with the given users as its
+ * participants.
+ *
+ * @param withUsers The users to include as participants.
+ *
+ * @return An empty conversation containing the given users.
+ */
+fun Conversation.Companion.empty(withUsers: List<User>): Conversation {
+    SessionStore.upsertUsers(withUsers.toSet())
+    return Conversation(
+        id = ConversationID(key = "", hash = ""),
+        activities = null,
+        messageIDs = emptyList(),
+        metadata = emptyConversationMetadata(withUsers.map { it.id }),
+        participants = withUsers.map { Participant(userID = it.id) },
+        reactionMetadata = null,
+    )
+}
+
+/**
+ * Creates a mock conversation with the given users as its
+ * participants.
+ *
+ * Use a mock conversation to represent a new conversation before it
+ * is created on the server.
+ *
+ * @param withUsers The users to include as participants.
+ *
+ * @return A mock conversation containing the given users.
+ */
+fun Conversation.Companion.mock(withUsers: List<User>): Conversation {
+    SessionStore.upsertUsers(withUsers.toSet())
+    return Conversation(
+        id = ConversationID(key = CommonConstants.NEW_CONVERSATION_ID, hash = ""),
+        activities = null,
+        messageIDs = emptyList(),
+        metadata = emptyConversationMetadata(withUsers.map { it.id }),
+        participants = withUsers.map { Participant(userID = it.id) },
+        reactionMetadata = null,
+    )
+}
+
+private fun emptyConversationMetadata(userIDs: List<String>): ConversationMetadata {
+    val consentRequired = UserSessionService.currentUser?.messageRecipientConsentRequired == true
+    return ConversationMetadata.empty(
+        userIDs = userIDs,
+        isPenPalsConversation = false,
+        consentAcknowledged = !consentRequired,
+        requiresConsentFromInitiator = if (consentRequired) User.currentUserID else null,
+    )
 }

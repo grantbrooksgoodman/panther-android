@@ -13,7 +13,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
+import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
 import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
+import us.neotechnica.panther.networking.modules.schema.user.models.User
+import us.neotechnica.panther.networking.modules.session.extensions.isMock
 import us.neotechnica.panther.networking.modules.session.extensions.users
 import us.neotechnica.panther.networking.modules.session.models.OutboxEntry
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -43,37 +46,57 @@ object MessageDeliveryService {
      */
     val isSendingMessage: StateFlow<Boolean> = internalIsSendingMessage.asStateFlow()
 
+    private val conversation: Conversation?
+        get() = ConversationSessionService.currentConversation
+
+    private val isExistingConversation: Boolean
+        get() = conversation != null && conversation?.isMock != true
+
+    private val users: List<User>
+        get() = conversation?.users.orEmpty().distinctBy { it.id }
+
     // MARK: - Methods
 
     /**
      * Sends [text] to the current conversation's participants.
      *
-     * The message is staged in the outbox, then delivered; on
-     * success the staged entry is removed, and on failure it is
-     * marked failed so it can be retried. Does nothing when the
-     * text is blank or no recipients are resolved.
+     * When the current conversation already exists, the message is
+     * staged in the outbox, then delivered; on success the staged
+     * entry is removed, and on failure it is marked failed so it can
+     * be retried. When the current conversation is a mock, the
+     * message creates a new conversation, and a delivery failure is
+     * thrown. Does nothing when the text is blank or no recipients
+     * are resolved.
+     *
+     * @throws Exception if delivery fails for a message that was not
+     *   staged in the outbox.
      */
     suspend fun sendTextMessage(text: String) {
-        val conversation = ConversationSessionService.currentConversation ?: return
-        val currentUser = UserSessionService.currentUser ?: return
-        val users = conversation.users.orEmpty()
-        if (users.isEmpty() || text.isBlank()) return
+        val recipients = users
+        if (recipients.isEmpty() || text.isBlank()) return
 
-        val entry =
-            OutboxEntry(
-                id = "${OutboxEntry.ID_PREFIX}${UUID.randomUUID()}",
-                conversationIDKey = conversation.id.key,
-                fromAccountID = currentUser.id,
-                recipientUserIDs = users.map { it.id },
-                text = text.trimEnd(),
-                isPenPalsConversation = conversation.metadata.isPenPalsConversation,
-                createdDate = Date(),
-                attemptCount = 1,
-                lastAttemptDate = Date(),
-                reservedRemoteID = null,
-                state = OutboxEntry.State.SENDING,
-            )
-        MessageOutboxService.enqueue(entry)
+        val currentConversation = conversation
+        val currentUser = UserSessionService.currentUser
+        var outboxEntryID: String? = null
+        if (isExistingConversation && currentConversation != null && currentUser != null) {
+            val entry =
+                OutboxEntry(
+                    id = "${OutboxEntry.ID_PREFIX}${UUID.randomUUID()}",
+                    conversationIDKey = currentConversation.id.key,
+                    fromAccountID = currentUser.id,
+                    recipientUserIDs = recipients.map { it.id },
+                    text = text.trimEnd(),
+                    isPenPalsConversation = currentConversation.metadata.isPenPalsConversation,
+                    createdDate = Date(),
+                    attemptCount = 1,
+                    lastAttemptDate = Date(),
+                    reservedRemoteID = null,
+                    state = OutboxEntry.State.SENDING,
+                )
+            outboxEntryID = entry.id
+            MessageOutboxService.enqueue(entry)
+        }
+
         internalIsSendingMessage.value = true
         withContext(Dispatchers.Main) {
             MessageSessionService.deliveryProgressIndicator?.startAnimatingDeliveryProgress()
@@ -82,17 +105,22 @@ object MessageDeliveryService {
         try {
             val updated =
                 MessageSessionService.sendTextMessage(
-                    text = entry.text,
+                    text = text.trimEnd(),
                     presetID = null,
-                    users = users,
-                    conversation = conversation,
+                    users = recipients,
+                    conversation = currentConversation?.takeUnless { it.isMock },
                 )
-            MessageOutboxService.remove(entry.id)
-            ConversationSessionService.setCurrentConversation(updated)
+            outboxEntryID?.let { MessageOutboxService.remove(it) }
             AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.SEND_TEXT_MESSAGE)
+            setCurrentConversationIfApplicable(updated)
         } catch (exception: Exception) {
-            MessageOutboxService.markFailed(entry.id)
-            Logger.log(exception)
+            val id = outboxEntryID
+            if (id != null) {
+                MessageOutboxService.markFailed(id)
+                Logger.log(exception)
+            } else {
+                throw exception
+            }
         } finally {
             cleanUpAfterSend()
         }
@@ -153,6 +181,12 @@ object MessageDeliveryService {
     }
 
     // MARK: - Auxiliary
+
+    private fun setCurrentConversationIfApplicable(conversation: Conversation) {
+        val current = ConversationSessionService.currentConversation
+        if (current != null && !current.isMock && current.id.key != conversation.id.key) return
+        ConversationSessionService.setCurrentConversation(conversation)
+    }
 
     private suspend fun cleanUpAfterSend() {
         internalIsSendingMessage.value = false

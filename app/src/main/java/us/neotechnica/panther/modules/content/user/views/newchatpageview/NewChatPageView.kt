@@ -37,6 +37,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,13 +56,22 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.user.components.ContactRow
+import us.neotechnica.panther.modules.content.user.components.DeliveryProgressView
 import us.neotechnica.panther.modules.content.user.constants.NewChatPageViewFloats
 import us.neotechnica.panther.modules.content.user.constants.NewChatPageViewStrings
+import us.neotechnica.panther.modules.content.user.services.DeliveryProgressIndicatorService
 import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageView
 import us.neotechnica.panther.modules.content.user.views.newchatpageview.NewChatPageReducer.Action
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
+import us.neotechnica.panther.networking.modules.session.extensions.messageOutboxDidChange
+import us.neotechnica.panther.networking.modules.session.models.OutboxEntry
+import us.neotechnica.panther.networking.modules.session.services.MessageDeliveryService
+import us.neotechnica.panther.networking.modules.session.services.MessageOutboxService
+import us.neotechnica.panther.networking.modules.session.services.MessageSessionService
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
+import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 
 // MARK: - Constants Accessors
 
@@ -77,16 +87,32 @@ private typealias Strings = NewChatPageViewStrings
  */
 @Composable
 fun NewChatPageView(modifier: Modifier = Modifier) {
-    val viewModel = remember { ViewModel(NewChatPageReducer.State(), NewChatPageReducer()) }
-    DisposableEffect(Unit) { onDispose { viewModel.close() } }
-    LaunchedEffect(Unit) { viewModel.send(Action.ViewFirstAppeared) }
+    val viewModel = remember { buildNewChatViewModel() }
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.send(Action.ViewDisappeared)
+            viewModel.close()
+        }
+    }
+    LaunchedEffect(Unit) {
+        viewModel.send(Action.ViewFirstAppeared)
+        viewModel.send(Action.MessageOutboxChanged(anyOutboxSending()))
+    }
 
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
+    val deliveryProgressIndicatorService = rememberRegisteredDeliveryProgressIndicatorService()
 
     Box(modifier = modifier.fillMaxSize().background(colors.groupedContentBackground)) {
         Column(modifier = Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
-            Header(onClose = { viewModel.send(Action.BackTapped) })
+            Box {
+                Header(onClose = { viewModel.send(Action.BackTapped) })
+                DeliveryProgressView(
+                    progress = deliveryProgressIndicatorService.progress,
+                    alpha = deliveryProgressIndicatorService.alpha,
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
+            }
 
             RecipientBar(
                 recipients = state.recipients,
@@ -113,7 +139,7 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
             MessageInputBar(
                 text = state.inputText,
                 placeholder = LocalizedStringKey.NewMessage.localized(),
-                isSending = state.isSending,
+                isSending = state.isSendingMessage || state.hasSendingOutboxEntry,
                 onTextChange = { viewModel.send(Action.InputChanged(it)) },
                 onSend = { viewModel.send(Action.SendTapped) },
                 onAttach = {},
@@ -129,6 +155,27 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
         }
     }
 }
+
+@Composable
+private fun rememberRegisteredDeliveryProgressIndicatorService(): DeliveryProgressIndicatorService {
+    val scope = rememberCoroutineScope()
+    val service = remember { DeliveryProgressIndicatorService(scope) }
+    DisposableEffect(service) {
+        MessageSessionService.registerDeliveryProgressIndicator(service)
+        onDispose { service.teardown() }
+    }
+    return service
+}
+
+private fun buildNewChatViewModel(): ViewModel<NewChatPageReducer.State, NewChatPageReducer.Action> =
+    ViewModel(NewChatPageReducer.State(), NewChatPageReducer())
+        .observing(MessageDeliveryService.isSendingMessage) {
+            Action.IsSendingMessageChanged(it)
+        }.observing(DependencyValues.current.sharedEvents.messageOutboxDidChange.events) {
+            Action.MessageOutboxChanged(anyOutboxSending())
+        }
+
+private fun anyOutboxSending(): Boolean = MessageOutboxService.allEntries.any { it.state == OutboxEntry.State.SENDING }
 
 // MARK: - Header
 

@@ -20,7 +20,16 @@ import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
 import us.neotechnica.panther.networking.modules.schema.common.models.PhoneNumber
-import us.neotechnica.panther.networking.modules.session.services.MessageSessionService
+import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
+import us.neotechnica.panther.networking.modules.session.extensions.conversations
+import us.neotechnica.panther.networking.modules.session.extensions.empty
+import us.neotechnica.panther.networking.modules.session.extensions.mock
+import us.neotechnica.panther.networking.modules.session.extensions.sortedByLatestMessageSentDate
+import us.neotechnica.panther.networking.modules.session.extensions.users
+import us.neotechnica.panther.networking.modules.session.extensions.visibleForCurrentUser
+import us.neotechnica.panther.networking.modules.session.services.ConversationSessionService
+import us.neotechnica.panther.networking.modules.session.services.MessageDeliveryService
+import us.neotechnica.panther.networking.modules.session.services.UserSessionService
 import us.neotechnica.panther.networking.modules.user.services.UserService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
@@ -36,8 +45,9 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
  *
  * Recipients are added from the contact suggestions, the contact
  * selector, or by entering a phone number in the recipient bar (which
- * resolves to its registered user). A first message creates the
- * conversation on send and navigates into it.
+ * resolves to its registered user). The current conversation is kept
+ * in sync with the recipients, and a first message sends through the
+ * delivery service and navigates into the resulting conversation.
  */
 class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.Action> {
     // MARK: - Types
@@ -52,6 +62,8 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
 
     sealed interface Action {
         data object ViewFirstAppeared : Action
+
+        data object ViewDisappeared : Action
 
         data class RecipientQueryChanged(
             val query: String,
@@ -80,15 +92,24 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
 
         data object SendTapped : Action
 
+        data object BackTapped : Action
+
+        data class IsSendingMessageChanged(
+            val isSendingMessage: Boolean,
+        ) : Action
+
+        data class MessageOutboxChanged(
+            val hasSendingOutboxEntry: Boolean,
+        ) : Action
+
         data class SendReturned(
             val conversationIDKey: String,
         ) : Action
 
         data class SendFailed(
             val exception: Exception,
+            val restoredText: String,
         ) : Action
-
-        data object BackTapped : Action
     }
 
     // MARK: - State
@@ -99,7 +120,9 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
         val recipientQuery: String = "",
         val highlightedRecipientID: String? = null,
         val inputText: String = "",
-        val isSending: Boolean = false,
+        val isSendingMessage: Boolean = false,
+        val hasSendingOutboxEntry: Boolean = false,
+        val didNavigateToChat: Boolean = false,
         val isShowingContactSelector: Boolean = false,
     ) {
         /** The contact suggestions matching [recipientQuery], excluding already-added recipients. */
@@ -124,11 +147,12 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
 
         /** Whether the first message can be sent. */
         val canSend: Boolean
-            get() = recipients.isNotEmpty() && inputText.isNotBlank() && !isSending
+            get() = recipients.isNotEmpty() && inputText.isNotBlank() && !isSendingMessage
     }
 
     // MARK: - Reduce
 
+    @Suppress("CyclomaticComplexMethod")
     override fun reduce(
         state: State,
         action: Action,
@@ -137,6 +161,11 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
             Action.ViewFirstAppeared -> {
                 AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.ACCESS_NEW_CHAT_PAGE)
                 ReduceResult(state.copy(contacts = ContactService.matches()))
+            }
+
+            Action.ViewDisappeared -> {
+                if (!state.didNavigateToChat) ConversationSessionService.setCurrentConversation(null)
+                ReduceResult(state)
             }
 
             is Action.RecipientQueryChanged ->
@@ -149,8 +178,14 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
                     ReduceResult(state)
                 }
 
-            Action.RecipientBackspaced ->
-                ReduceResult(state.backspacingRecipient())
+            Action.RecipientBackspaced -> {
+                val updated = state.backspacingRecipient()
+                if (updated.recipients != state.recipients) {
+                    ReduceResult(updated, resolveConversationEffect(updated.recipients.map { it.userID }))
+                } else {
+                    ReduceResult(updated)
+                }
+            }
 
             is Action.AddRecipient -> {
                 val alreadyAdded = state.recipients.any { it.userID == action.userID }
@@ -163,16 +198,20 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
                         highlightedRecipientID = null,
                         isShowingContactSelector = false,
                     ),
+                    resolveConversationEffect(recipients.map { it.userID }),
                 )
             }
 
-            is Action.RemoveRecipient ->
+            is Action.RemoveRecipient -> {
+                val recipients = state.recipients.filter { it.userID != action.userID }
                 ReduceResult(
                     state.copy(
-                        recipients = state.recipients.filter { it.userID != action.userID },
+                        recipients = recipients,
                         highlightedRecipientID = state.highlightedRecipientID.takeIf { it != action.userID },
                     ),
+                    resolveConversationEffect(recipients.map { it.userID }),
                 )
+            }
 
             Action.ShowContactSelector ->
                 ReduceResult(state.copy(isShowingContactSelector = true))
@@ -187,8 +226,19 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
                 if (!state.canSend) {
                     ReduceResult(state)
                 } else {
-                    ReduceResult(state.copy(isSending = true), sendEffect(state.inputText, state.recipients.map { it.userID }))
+                    ReduceResult(state.copy(inputText = ""), sendEffect(state.inputText))
                 }
+
+            Action.BackTapped -> {
+                DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
+                ReduceResult(state)
+            }
+
+            is Action.IsSendingMessageChanged ->
+                ReduceResult(state.copy(isSendingMessage = action.isSendingMessage))
+
+            is Action.MessageOutboxChanged ->
+                ReduceResult(state.copy(hasSendingOutboxEntry = action.hasSendingOutboxEntry))
 
             is Action.SendReturned -> {
                 DependencyValues.current.navigation.navigate(
@@ -196,17 +246,12 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
                         UserContentRoute.Stack(listOf(UserContentNavigatorState.SeguePath.Chat(action.conversationIDKey))),
                     ),
                 )
-                ReduceResult(state.copy(isSending = false))
+                ReduceResult(state.copy(didNavigateToChat = true))
             }
 
             is Action.SendFailed -> {
                 Logger.log(action.exception, with = AlertType.toast)
-                ReduceResult(state.copy(isSending = false))
-            }
-
-            Action.BackTapped -> {
-                DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
-                ReduceResult(state)
+                ReduceResult(state.copy(inputText = action.restoredText))
             }
         }
 
@@ -250,28 +295,49 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
             }
         }
 
-    private fun sendEffect(
-        text: String,
-        recipientUserIDs: List<String>,
-    ): Effect<Action> =
-        Effect.run { send ->
-            try {
-                val users = UserService.getUsers(recipientUserIDs)
-                if (users.isEmpty()) {
-                    send(Action.SendFailed(Exception("No recipients resolved.", metadata = ExceptionMetadata(this))))
+    private fun resolveConversationEffect(recipientUserIDs: List<String>): Effect<Action> =
+        Effect.run {
+            if (recipientUserIDs.isEmpty()) {
+                ConversationSessionService.setCurrentConversation(Conversation.empty)
+                return@run
+            }
+
+            val users =
+                try {
+                    UserService.getUsers(recipientUserIDs)
+                } catch (exception: Exception) {
+                    Logger.log(exception)
                     return@run
                 }
 
-                val conversation =
-                    MessageSessionService.sendTextMessage(
-                        text = text,
-                        presetID = null,
-                        users = users,
-                        conversation = null,
-                    )
-                send(Action.SendReturned(conversation.id.key))
+            val sortedIDs = recipientUserIDs.sorted()
+            val existingConversation =
+                UserSessionService.currentUser
+                    ?.conversations
+                    ?.visibleForCurrentUser
+                    ?.filter { it.users != null }
+                    ?.sortedByLatestMessageSentDate
+                    ?.firstOrNull { it.users?.map { user -> user.id }?.sorted() == sortedIDs }
+
+            if (existingConversation != null) {
+                ConversationSessionService.setCurrentConversation(existingConversation)
+            } else {
+                ConversationSessionService.setCurrentConversation(Conversation.mock(withUsers = users))
+            }
+        }
+
+    private fun sendEffect(text: String): Effect<Action> =
+        Effect.run { send ->
+            try {
+                MessageDeliveryService.sendTextMessage(text)
+                val conversationIDKey = ConversationSessionService.currentConversation?.id?.key
+                if (conversationIDKey != null) {
+                    send(Action.SendReturned(conversationIDKey))
+                } else {
+                    send(Action.SendFailed(Exception("No conversation resolved.", metadata = ExceptionMetadata(this)), text))
+                }
             } catch (exception: Exception) {
-                send(Action.SendFailed(exception))
+                send(Action.SendFailed(exception, text))
             }
         }
 }
