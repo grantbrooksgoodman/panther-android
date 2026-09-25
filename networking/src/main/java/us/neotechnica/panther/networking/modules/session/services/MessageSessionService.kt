@@ -24,15 +24,22 @@ import us.neotechnica.panther.networking.modules.schema.conversation.models.Part
 import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
 import us.neotechnica.panther.networking.modules.schema.message.models.Message
 import us.neotechnica.panther.networking.modules.schema.user.models.User
+import us.neotechnica.panther.networking.modules.session.constants.MessageSessionServiceFloats
+import us.neotechnica.panther.networking.modules.session.interfaces.DeliveryProgressIndicator
 import us.neotechnica.panther.networking.modules.translation.models.ArchiveStrategy
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.Translation
 import us.neotechnica.panther.translator.models.TranslationInput
 import us.neotechnica.panther.translator.services.LanguageRecognitionService
 import us.neotechnica.panther.networking.modules.translation.models.TranslationReference as HostedTranslationReference
+
+// MARK: - Constants Accessors
+
+private typealias Floats = MessageSessionServiceFloats
 
 /**
  * Sends text messages, translating them into each recipient's language.
@@ -44,9 +51,42 @@ import us.neotechnica.panther.networking.modules.translation.models.TranslationR
 object MessageSessionService {
     // MARK: - Properties
 
+    private val deliveryProgressScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
     private val hostedTranslation get() = Networking.config.hostedTranslationDelegate
 
+    private val internalDeliveryProgressIndicator = LockIsolated<DeliveryProgressIndicator?>(null)
+
     private val notificationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    // MARK: - Computed Properties
+
+    /**
+     * The indicator that displays the progress of the current
+     * message delivery, if one is registered.
+     *
+     * **Important:** [DeliveryProgressIndicator] is a main-thread
+     * type. Access its members only from the main thread.
+     */
+    val deliveryProgressIndicator: DeliveryProgressIndicator?
+        get() = internalDeliveryProgressIndicator.wrappedValue
+
+    // MARK: - Register Delivery Progress Indicator
+
+    /**
+     * Registers the indicator that displays the progress of the
+     * current message delivery.
+     *
+     * Call this method when a screen capable of showing delivery
+     * progress becomes active. The registered indicator replaces any
+     * previously registered one and is returned by
+     * [deliveryProgressIndicator].
+     *
+     * @param deliveryProgressIndicator The indicator to register.
+     */
+    fun registerDeliveryProgressIndicator(deliveryProgressIndicator: DeliveryProgressIndicator) {
+        internalDeliveryProgressIndicator.wrappedValue = deliveryProgressIndicator
+    }
 
     // MARK: - Send Text Message
 
@@ -90,6 +130,7 @@ object MessageSessionService {
             throw Exception("Translations fail validation.", metadata = ExceptionMetadata(this))
         }
 
+        incrementDeliveryProgress(conversation, Floats.CREATE_MESSAGE_DELIVERY_PROGRESS_INCREMENT)
         val message = MessageService.buildTextMessage(currentUser.id, presetID, translations)
         return createMessageAndAddToConversation(
             conversation = conversation,
@@ -127,6 +168,7 @@ object MessageSessionService {
         val recipients = users.filter { it.id != currentUser.id }
         val message = MessageService.buildMediaMessage(currentUser.id, mediaFile, presetID)
 
+        incrementDeliveryProgress(conversation, Floats.CREATE_MESSAGE_DELIVERY_PROGRESS_INCREMENT)
         MediaMessageService.uploadMediaComponent(mediaFile, message)
 
         return createMessageAndAddToConversation(
@@ -149,10 +191,12 @@ object MessageSessionService {
     ): Conversation {
         val resolvedConversation =
             if (conversation != null) {
+                incrementDeliveryProgress(conversation, Floats.ADD_MESSAGE_DELIVERY_PROGRESS_INCREMENT)
                 ConversationSessionService.addMessages(listOf(message), conversation)
             } else {
                 val participants = (listOf(initiatingUser) + otherUsers).map { Participant(userID = it.id) }
                 AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.CREATE_NEW_CONVERSATION)
+                incrementDeliveryProgress(null, Floats.CREATE_CONVERSATION_DELIVERY_PROGRESS_INCREMENT)
                 ConversationService.createConversation(
                     firstMessage = message,
                     isPenPalsConversation = isPenPalsConversation,
@@ -171,10 +215,25 @@ object MessageSessionService {
                     conversationIDKey = resolvedConversation.id.key,
                 )
             }.onFailure { Logger.log("Push notification failed: $it") }
+
+            incrementDeliveryProgress(conversation, Floats.NOTIFY_DELIVERY_PROGRESS_INCREMENT)
         }
 
         return resolvedConversation
     }
+
+    private fun incrementDeliveryProgress(
+        conversation: Conversation?,
+        by: Float,
+    ) {
+        if (!shouldAnimateDeliveryProgress(conversation)) return
+        deliveryProgressScope.launch {
+            deliveryProgressIndicator?.incrementDeliveryProgress(by)
+        }
+    }
+
+    private fun shouldAnimateDeliveryProgress(conversation: Conversation?): Boolean =
+        ConversationSessionService.currentConversation?.id?.key == conversation?.id?.key
 
     private suspend fun translate(
         text: String,

@@ -43,6 +43,13 @@ object ThemeService {
     val currentTheme: StateFlow<Theme> = mutableCurrentTheme.asStateFlow()
 
     /**
+     * A Boolean value that indicates whether the app's default theme
+     * is the active theme.
+     */
+    val isAppDefaultThemeApplied: Boolean
+        get() = mutableCurrentTheme.value == Themes.appDefault
+
+    /**
      * An appearance override applied over the active theme's style, or
      * `null` to follow the theme.
      */

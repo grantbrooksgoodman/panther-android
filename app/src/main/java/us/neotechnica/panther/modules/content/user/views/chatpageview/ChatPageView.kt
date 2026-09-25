@@ -64,9 +64,11 @@ import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.content.user.components.ChatMessageCell
 import us.neotechnica.panther.modules.content.user.components.ChatMessageRowData
 import us.neotechnica.panther.modules.content.user.components.ContentPickers
+import us.neotechnica.panther.modules.content.user.components.DeliveryProgressView
 import us.neotechnica.panther.modules.content.user.components.MediaPreviewOverlay
 import us.neotechnica.panther.modules.content.user.components.rememberContentPickers
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
+import us.neotechnica.panther.modules.content.user.services.DeliveryProgressIndicatorService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.navigation.Route
@@ -89,6 +91,7 @@ import us.neotechnica.panther.networking.modules.session.models.OutboxEntry
 import us.neotechnica.panther.networking.modules.session.services.ConversationSessionService
 import us.neotechnica.panther.networking.modules.session.services.MessageDeliveryService
 import us.neotechnica.panther.networking.modules.session.services.MessageOutboxService
+import us.neotechnica.panther.networking.modules.session.services.MessageSessionService
 import us.neotechnica.panther.networking.modules.session.services.SessionStore
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
@@ -133,6 +136,7 @@ fun ChatPageView(
     }
 
     val state by viewModel.state.collectAsState()
+    val deliveryProgressIndicatorService = rememberRegisteredDeliveryProgressIndicatorService()
     var previewMessageID by remember { mutableStateOf<String?>(null) }
 
     val scope = rememberCoroutineScope()
@@ -161,20 +165,10 @@ fun ChatPageView(
                 canBegin = !state.isSendingMessage,
             ) {
                 Column(modifier = Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
-                    ChatHeader(
+                    ChatHeaderWithDeliveryProgress(
                         title = state.title,
-                        onBack = {
-                            DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
-                        },
-                        onInfo = {
-                            DependencyValues.current.navigation.navigate(
-                                Route.UserContent(
-                                    UserContentRoute.Push(
-                                        UserContentNavigatorState.SeguePath.ChatInfo(state.conversationIDKey),
-                                    ),
-                                ),
-                            )
-                        },
+                        conversationIDKey = state.conversationIDKey,
+                        service = deliveryProgressIndicatorService,
                     )
 
                     MessageList(
@@ -214,6 +208,47 @@ fun ChatPageView(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun rememberRegisteredDeliveryProgressIndicatorService(): DeliveryProgressIndicatorService {
+    val scope = rememberCoroutineScope()
+    val service = remember { DeliveryProgressIndicatorService(scope) }
+    DisposableEffect(service) {
+        MessageSessionService.registerDeliveryProgressIndicator(service)
+        onDispose { service.teardown() }
+    }
+    return service
+}
+
+@Composable
+private fun ChatHeaderWithDeliveryProgress(
+    title: String,
+    conversationIDKey: String,
+    service: DeliveryProgressIndicatorService,
+) {
+    Box {
+        ChatHeader(
+            title = title,
+            onBack = {
+                DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
+            },
+            onInfo = {
+                DependencyValues.current.navigation.navigate(
+                    Route.UserContent(
+                        UserContentRoute.Push(
+                            UserContentNavigatorState.SeguePath.ChatInfo(conversationIDKey),
+                        ),
+                    ),
+                )
+            },
+        )
+        DeliveryProgressView(
+            progress = service.progress,
+            alpha = service.alpha,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 }
 

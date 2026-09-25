@@ -7,9 +7,11 @@
 
 package us.neotechnica.panther.networking.modules.session.services
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
 import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
 import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
 import us.neotechnica.panther.networking.modules.session.extensions.users
@@ -73,6 +75,9 @@ object MessageDeliveryService {
             )
         MessageOutboxService.enqueue(entry)
         internalIsSendingMessage.value = true
+        withContext(Dispatchers.Main) {
+            MessageSessionService.deliveryProgressIndicator?.startAnimatingDeliveryProgress()
+        }
 
         try {
             val updated =
@@ -124,6 +129,9 @@ object MessageDeliveryService {
             )
         MessageOutboxService.enqueue(entry)
         internalIsSendingMessage.value = true
+        withContext(Dispatchers.Main) {
+            MessageSessionService.deliveryProgressIndicator?.startAnimatingDeliveryProgress()
+        }
 
         try {
             val updated =
@@ -146,7 +154,10 @@ object MessageDeliveryService {
 
     // MARK: - Auxiliary
 
-    private fun cleanUpAfterSend() {
+    private suspend fun cleanUpAfterSend() {
         internalIsSendingMessage.value = false
+        withContext(Dispatchers.Main) {
+            MessageSessionService.deliveryProgressIndicator?.stopAnimatingDeliveryProgress()
+        }
     }
 }

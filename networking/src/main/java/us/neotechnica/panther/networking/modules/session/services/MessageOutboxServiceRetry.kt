@@ -7,6 +7,8 @@
 
 package us.neotechnica.panther.networking.modules.session.services
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.session.models.OutboxEntry
@@ -54,6 +56,7 @@ suspend fun MessageOutboxService.retry(entryID: String) {
             return
         }
 
+        startDeliveryProgressIfCurrent(entry)
         try {
             MessageSessionService.sendMediaMessage(
                 mediaFile = mediaFile,
@@ -67,10 +70,13 @@ suspend fun MessageOutboxService.retry(entryID: String) {
         } catch (exception: Exception) {
             markFailed(entryID)
             Logger.log(exception)
+        } finally {
+            stopDeliveryProgressIfCurrent(entry)
         }
         return
     }
 
+    startDeliveryProgressIfCurrent(entry)
     try {
         MessageSessionService.sendTextMessage(
             text = entry.text,
@@ -83,6 +89,22 @@ suspend fun MessageOutboxService.retry(entryID: String) {
     } catch (exception: Exception) {
         markFailed(entryID)
         Logger.log(exception)
+    } finally {
+        stopDeliveryProgressIfCurrent(entry)
+    }
+}
+
+private suspend fun startDeliveryProgressIfCurrent(entry: OutboxEntry) {
+    if (ConversationSessionService.currentConversation?.id?.key != entry.conversationIDKey) return
+    withContext(Dispatchers.Main) {
+        MessageSessionService.deliveryProgressIndicator?.startAnimatingDeliveryProgress()
+    }
+}
+
+private suspend fun stopDeliveryProgressIfCurrent(entry: OutboxEntry) {
+    if (ConversationSessionService.currentConversation?.id?.key != entry.conversationIDKey) return
+    withContext(Dispatchers.Main) {
+        MessageSessionService.deliveryProgressIndicator?.stopAnimatingDeliveryProgress()
     }
 }
 
