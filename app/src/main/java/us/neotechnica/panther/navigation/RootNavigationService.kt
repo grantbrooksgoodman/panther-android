@@ -87,6 +87,7 @@ private object ChatNavigator {
         when (route) {
             ChatRoute.Pop -> state.copy(stack = state.stack.dropLast(1))
             is ChatRoute.Push -> state.copy(stack = state.stack + route.path)
+            is ChatRoute.Sheet -> state.copy(sheet = route.path)
             is ChatRoute.Stack -> state.copy(stack = route.paths)
         }
 }

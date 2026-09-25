@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 // MARK: - Float
 
 object ContactRowFloats {
+    val annotationStartPadding: Dp = 6.dp
     val avatarGlyphSize: Dp = 22.dp
     val avatarSize: Dp = 40.dp
     val horizontalPadding: Dp = 20.dp

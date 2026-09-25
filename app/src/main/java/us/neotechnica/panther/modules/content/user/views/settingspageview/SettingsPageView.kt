@@ -54,6 +54,7 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.modules.common.contacts.components.rememberContactCardPresenter
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.formattedString
+import us.neotechnica.panther.modules.common.services.InviteService
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewFloats
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewStrings
@@ -241,7 +242,7 @@ private fun SettingsActionCards(
 ) {
     SettingsCard {
         SettingsIconRow("location.fill", Colors.iconBlue, Strings.INVITE_FRIENDS, enabled) {
-            scope.launch { presentInviteSheet(context) }
+            scope.launch { presentInviteSheet() }
         }
         SettingsRowDivider()
         SettingsIconRow("star.fill", Colors.iconYellow, Strings.LEAVE_REVIEW, enabled) { launchLeaveReview(context) }
@@ -344,21 +345,11 @@ private fun versionString(): String =
  * **Note:** the iOS original also offers a "Show QR Code" action; that is
  * deferred with the invite-QR-code page.
  */
-private suspend fun presentInviteSheet(context: Context) {
+private suspend fun presentInviteSheet() {
     ActionSheetAlert(
         title = Strings.INVITE_FRIENDS,
-        actions = listOf(Action(Strings.SHARE_TO_ANOTHER_APP) { launchShare(context) }),
+        actions = listOf(Action(Strings.SHARE_TO_ANOTHER_APP) { InviteService.presentInvitationPrompt() }),
     ).present()
-}
-
-/** Presents the system share sheet with the invite message and store link. */
-private fun launchShare(context: Context) {
-    val shareIntent =
-        Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, "${Strings.INVITE_MESSAGE}\n${playStoreUrl(context)}")
-        }
-    runCatching { context.startActivity(Intent.createChooser(shareIntent, Strings.INVITE_FRIENDS)) }
 }
 
 /**

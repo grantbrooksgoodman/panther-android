@@ -84,10 +84,6 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
             val userID: String,
         ) : Action
 
-        data object ShowContactSelector : Action
-
-        data object DismissContactSelector : Action
-
         data class InputChanged(
             val text: String,
         ) : Action
@@ -125,7 +121,6 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
         val isSendingMessage: Boolean = false,
         val hasSendingOutboxEntry: Boolean = false,
         val didNavigateToChat: Boolean = false,
-        val isShowingContactSelector: Boolean = false,
     ) {
         /** The contact suggestions matching [recipientQuery], excluding already-added recipients. */
         val suggestions: List<ContactMatch>
@@ -201,7 +196,6 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
                             recipients = recipients,
                             recipientQuery = "",
                             highlightedRecipientID = null,
-                            isShowingContactSelector = false,
                         ),
                         resolveConversationEffect(recipients.map { it.userID }),
                     )
@@ -218,12 +212,6 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
                     resolveConversationEffect(recipients.map { it.userID }),
                 )
             }
-
-            Action.ShowContactSelector ->
-                ReduceResult(state.copy(isShowingContactSelector = true))
-
-            Action.DismissContactSelector ->
-                ReduceResult(state.copy(isShowingContactSelector = false))
 
             is Action.InputChanged ->
                 ReduceResult(state.copy(inputText = action.text))

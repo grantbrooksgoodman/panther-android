@@ -25,27 +25,36 @@ import us.neotechnica.panther.modules.content.user.constants.ContactRowFloats
 
 /**
  * A tappable contact row: a circular avatar (the contact's initials, or a
- * person glyph when none) followed by the contact's name.
+ * person glyph when none) followed by the contact's name and an optional
+ * annotation.
  *
  * @param name The contact's display name.
  * @param initials The contact's initials, or blank for the person glyph.
  * @param onClick Invoked when the row is tapped.
  * @param modifier The modifier for this row.
+ * @param enabled Whether the row responds to taps; when `false`, the row
+ *   is dimmed and ignores taps.
+ * @param annotation A trailing note shown after the name, or `null` for
+ *   none.
  */
 @Composable
+@Suppress("LongParameterList")
 fun ContactRow(
     name: String,
     initials: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    annotation: String? = null,
 ) {
     val colors = LocalPantherColors.current
+    val foregroundColor = if (enabled) colors.titleText else colors.disabled
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
             modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
+                .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier)
                 .padding(horizontal = ContactRowFloats.horizontalPadding, vertical = ContactRowFloats.verticalPadding),
     ) {
         AvatarImageView(
@@ -56,9 +65,16 @@ fun ContactRow(
         )
         Components.Text(
             name,
-            color = colors.titleText,
+            color = foregroundColor,
             font = Font.systemSemibold(),
             modifier = Modifier.padding(start = ContactRowFloats.nameStartPadding),
         )
+        annotation?.let {
+            Components.Text(
+                it,
+                color = foregroundColor,
+                modifier = Modifier.padding(start = ContactRowFloats.annotationStartPadding),
+            )
+        }
     }
 }

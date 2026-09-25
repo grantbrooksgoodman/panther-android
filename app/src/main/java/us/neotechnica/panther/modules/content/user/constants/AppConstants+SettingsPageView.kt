@@ -66,7 +66,6 @@ object SettingsPageViewStrings {
     const val FEEDBACK_SUBJECT = "Hello — Feedback"
     const val HIDE_BUILD_INFO_OVERLAY = "Hide Build Info Overlay"
     const val INVITE_FRIENDS = "Invite friends"
-    const val INVITE_MESSAGE = "Come chat with me on Hello!"
     const val LEAVE_REVIEW = "Leave review"
     const val SEND_FEEDBACK = "Send feedback"
     const val SHARE_TO_ANOTHER_APP = "Share to Another App"

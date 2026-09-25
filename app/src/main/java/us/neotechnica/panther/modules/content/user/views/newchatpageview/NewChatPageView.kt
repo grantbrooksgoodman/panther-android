@@ -60,10 +60,15 @@ import us.neotechnica.panther.modules.content.user.components.DeliveryProgressVi
 import us.neotechnica.panther.modules.content.user.constants.NewChatPageViewFloats
 import us.neotechnica.panther.modules.content.user.constants.NewChatPageViewStrings
 import us.neotechnica.panther.modules.content.user.services.DeliveryProgressIndicatorService
+import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageReducer
 import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageView
 import us.neotechnica.panther.modules.content.user.views.newchatpageview.NewChatPageReducer.Action
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
+import us.neotechnica.panther.navigation.ChatNavigatorState
+import us.neotechnica.panther.navigation.ChatRoute
+import us.neotechnica.panther.navigation.Route
+import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.modules.session.extensions.messageOutboxDidChange
 import us.neotechnica.panther.networking.modules.session.models.OutboxEntry
 import us.neotechnica.panther.networking.modules.session.services.MessageDeliveryService
@@ -88,9 +93,11 @@ private typealias Strings = NewChatPageViewStrings
 @Composable
 fun NewChatPageView(modifier: Modifier = Modifier) {
     val viewModel = remember { buildNewChatViewModel() }
+    val navigation = remember { DependencyValues.current.navigation }
     DisposableEffect(Unit) {
         onDispose {
             viewModel.send(Action.ViewDisappeared)
+            navigation.navigate(Route.Chat(ChatRoute.Sheet(null)))
             viewModel.close()
         }
     }
@@ -100,6 +107,7 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
     }
 
     val state by viewModel.state.collectAsState()
+    val navState by navigation.state.collectAsState()
     val colors = LocalPantherColors.current
     val deliveryProgressIndicatorService = rememberRegisteredDeliveryProgressIndicatorService()
 
@@ -122,7 +130,7 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
                 onSubmit = { viewModel.send(Action.RecipientQuerySubmitted) },
                 onBackspace = { viewModel.send(Action.RecipientBackspaced) },
                 onRemove = { viewModel.send(Action.RemoveRecipient(it)) },
-                onAdd = { viewModel.send(Action.ShowContactSelector) },
+                onAdd = { navigation.navigate(Route.Chat(ChatRoute.Sheet(ChatNavigatorState.SheetPath.ContactSelector))) },
             )
 
             LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -147,10 +155,10 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
             )
         }
 
-        if (state.isShowingContactSelector) {
+        if (navState.chat.sheet == ChatNavigatorState.SheetPath.ContactSelector) {
             ContactSelectorPageView(
-                onSelect = { userID, displayName -> viewModel.send(Action.AddRecipient(userID, displayName)) },
-                onDismiss = { viewModel.send(Action.DismissContactSelector) },
+                entryPoint = ContactSelectorPageReducer.EntryPoint.NEW_CHAT_PAGE_VIEW,
+                onSelectRecipient = { userID, displayName -> viewModel.send(Action.AddRecipient(userID, displayName)) },
             )
         }
     }

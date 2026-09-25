@@ -22,6 +22,7 @@ import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.services.AlertKitTranslationService
 import us.neotechnica.panther.modules.common.services.CommonPropertyLists
 import us.neotechnica.panther.modules.common.services.ExceptionMetadataService
+import us.neotechnica.panther.modules.common.services.InviteService
 import us.neotechnica.panther.modules.common.services.LoggerPresentationService
 import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.common.services.UpdateService
@@ -74,6 +75,7 @@ class PantherApplication : Application() {
         FileStore.initialize(this)
         CommonPropertyLists.initialize(this)
         ContactService.initialize(this)
+        InviteService.initialize(this)
         TextToSpeechService.initialize(this)
         AudioMessagePlaybackService.initialize(this)
         MediaActionHandlerService.initialize(this)

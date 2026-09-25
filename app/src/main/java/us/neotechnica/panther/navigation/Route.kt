@@ -96,6 +96,11 @@ sealed interface ChatRoute {
         val path: ChatNavigatorState.SeguePath,
     ) : ChatRoute
 
+    /** Presents the given sheet over the chat flow, or dismisses it when `null`. */
+    data class Sheet(
+        val path: ChatNavigatorState.SheetPath?,
+    ) : ChatRoute
+
     data class Stack(
         val paths: List<ChatNavigatorState.SeguePath>,
     ) : ChatRoute

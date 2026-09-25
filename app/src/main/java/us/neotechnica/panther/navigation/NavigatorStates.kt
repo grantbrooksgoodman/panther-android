@@ -93,9 +93,15 @@ data class SettingsNavigatorState(
 
 /** The chat flow's navigation state. */
 data class ChatNavigatorState(
+    val sheet: SheetPath? = null,
     val stack: List<SeguePath> = emptyList(),
 ) {
     sealed interface SeguePath : Paths {
         data object ChatInfo : SeguePath
+    }
+
+    /** The sheet destinations presented over the chat flow. */
+    sealed interface SheetPath : Paths {
+        data object ContactSelector : SheetPath
     }
 }
