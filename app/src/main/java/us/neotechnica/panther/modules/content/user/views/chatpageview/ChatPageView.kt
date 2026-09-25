@@ -54,6 +54,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
 import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
 import us.neotechnica.panther.designsystem.modules.componentkit.components.ContextMenuHost
+import us.neotechnica.panther.designsystem.modules.componentkit.components.LocalContextMenuController
 import us.neotechnica.panther.designsystem.modules.componentkit.components.MessageInputBar
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
@@ -61,6 +62,7 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.modules.common.contacts.models.ContactMatch
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.formattedString
+import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.content.user.components.ChatMessageCell
 import us.neotechnica.panther.modules.content.user.components.ChatMessageRowData
 import us.neotechnica.panther.modules.content.user.components.ContentPickers
@@ -164,6 +166,8 @@ fun ChatPageView(
                 modifier = Modifier.fillMaxSize(),
                 canBegin = !state.isSendingMessage,
             ) {
+                SpeechSynthesizerDidFinishOrCancel()
+
                 Column(modifier = Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
                     ChatHeaderWithDeliveryProgress(
                         title = state.title,
@@ -220,6 +224,18 @@ private fun rememberRegisteredDeliveryProgressIndicatorService(): DeliveryProgre
         onDispose { service.teardown() }
     }
     return service
+}
+
+@Composable
+private fun SpeechSynthesizerDidFinishOrCancel() {
+    val controller = LocalContextMenuController.current
+    LaunchedEffect(controller) {
+        var wasSpeaking = false
+        snapshotFlow { TextToSpeechService.isSpeaking }.collect { isSpeaking ->
+            if (wasSpeaking && !isSpeaking) controller?.dismiss()
+            wasSpeaking = isSpeaking
+        }
+    }
 }
 
 @Composable
