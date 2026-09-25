@@ -7,6 +7,9 @@
 
 package us.neotechnica.panther.networking.modules.session.services
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
 import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
 import us.neotechnica.panther.networking.modules.session.extensions.users
@@ -17,21 +20,36 @@ import java.util.Date
 import java.util.UUID
 
 /**
- * Sends messages from the chat page, staging each in the outbox so a
- * failed send can be retried.
+ * Sends messages from the chat page, staging each in the outbox so
+ * a failed send can be retried.
  *
- * **Note:** this Phase 7 port sends text into existing conversations
- * only; new-conversation composition, audio, and media arrive with later
- * phases.
+ * Use [MessageDeliveryService] to send text and media messages to
+ * the current conversation's participants. While a send is in
+ * flight, [isSendingMessage] is `true`. Only this service updates
+ * that value.
  */
 object MessageDeliveryService {
+    // MARK: - Properties
+
+    private val internalIsSendingMessage = MutableStateFlow(false)
+
+    // MARK: - Computed Properties
+
+    /**
+     * A Boolean value that indicates whether a message send is in
+     * flight.
+     */
+    val isSendingMessage: StateFlow<Boolean> = internalIsSendingMessage.asStateFlow()
+
+    // MARK: - Methods
+
     /**
      * Sends [text] to the current conversation's participants.
      *
-     * The message is staged in the outbox, then delivered; on success
-     * the staged entry is removed, and on failure it is marked failed so
-     * it can be retried. Does nothing when the text is blank or no
-     * recipients are resolved.
+     * The message is staged in the outbox, then delivered; on
+     * success the staged entry is removed, and on failure it is
+     * marked failed so it can be retried. Does nothing when the
+     * text is blank or no recipients are resolved.
      */
     suspend fun sendTextMessage(text: String) {
         val conversation = ConversationSessionService.currentConversation ?: return
@@ -54,6 +72,7 @@ object MessageDeliveryService {
                 state = OutboxEntry.State.SENDING,
             )
         MessageOutboxService.enqueue(entry)
+        internalIsSendingMessage.value = true
 
         try {
             val updated =
@@ -69,15 +88,18 @@ object MessageDeliveryService {
         } catch (exception: Exception) {
             MessageOutboxService.markFailed(entry.id)
             Logger.log(exception)
+        } finally {
+            cleanUpAfterSend()
         }
     }
 
     /**
      * Sends [mediaFile] to the current conversation's participants.
      *
-     * The media is staged in the outbox, then delivered; on success the
-     * staged entry is removed, and on failure it is marked failed so it
-     * can be retried. Does nothing when no recipients are resolved.
+     * The media is staged in the outbox, then delivered; on success
+     * the staged entry is removed, and on failure it is marked
+     * failed so it can be retried. Does nothing when no recipients
+     * are resolved.
      */
     suspend fun sendMediaMessage(mediaFile: MediaFile) {
         val conversation = ConversationSessionService.currentConversation ?: return
@@ -101,6 +123,7 @@ object MessageDeliveryService {
                 state = OutboxEntry.State.SENDING,
             )
         MessageOutboxService.enqueue(entry)
+        internalIsSendingMessage.value = true
 
         try {
             val updated =
@@ -116,6 +139,14 @@ object MessageDeliveryService {
         } catch (exception: Exception) {
             MessageOutboxService.markFailed(entry.id)
             Logger.log(exception)
+        } finally {
+            cleanUpAfterSend()
         }
+    }
+
+    // MARK: - Auxiliary
+
+    private fun cleanUpAfterSend() {
+        internalIsSendingMessage.value = false
     }
 }

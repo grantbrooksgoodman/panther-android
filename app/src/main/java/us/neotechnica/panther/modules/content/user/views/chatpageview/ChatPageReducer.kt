@@ -86,8 +86,6 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
 
         data object SendTapped : Action
 
-        data object SendFinished : Action
-
         data class ToggleAlternate(
             val messageID: String,
         ) : Action
@@ -116,6 +114,14 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
 
         data object StoreChanged : Action
 
+        data class IsSendingMessageChanged(
+            val isSendingMessage: Boolean,
+        ) : Action
+
+        data class MessageOutboxChanged(
+            val hasSendingOutboxEntry: Boolean,
+        ) : Action
+
         data object ConversationUnavailable : Action
 
         data object ViewDisappeared : Action
@@ -133,7 +139,8 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         val alternateTextMessageIDs: Set<String> = emptySet(),
         val audioTranscriptionMessageIDs: Set<String> = emptySet(),
         val inputText: String = "",
-        val isSending: Boolean = false,
+        val isSendingMessage: Boolean = false,
+        val hasSendingOutboxEntry: Boolean = false,
         val languageCode: String = "en",
         val title: String = "",
         val changeToken: UUID = UUID.randomUUID(),
@@ -192,15 +199,12 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
                 ReduceResult(state.copy(inputText = action.text))
 
             Action.SendTapped -> {
-                if (state.isSending || state.inputText.isBlank()) {
+                if (state.isSendingMessage || state.inputText.isBlank()) {
                     ReduceResult(state)
                 } else {
-                    ReduceResult(state.copy(inputText = "", isSending = true), sendEffect(state.inputText))
+                    ReduceResult(state.copy(inputText = ""), sendEffect(state.inputText))
                 }
             }
-
-            Action.SendFinished ->
-                ReduceResult(state.copy(isSending = false))
 
             is Action.ToggleAlternate -> {
                 val isDisplayingAlternateText = action.messageID in state.alternateTextMessageIDs
@@ -251,6 +255,12 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
 
             Action.StoreChanged ->
                 ReduceResult(state.copy(changeToken = UUID.randomUUID()), markReadEffect())
+
+            is Action.IsSendingMessageChanged ->
+                ReduceResult(state.copy(isSendingMessage = action.isSendingMessage))
+
+            is Action.MessageOutboxChanged ->
+                ReduceResult(state.copy(hasSendingOutboxEntry = action.hasSendingOutboxEntry))
 
             Action.ConversationUnavailable -> {
                 DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
@@ -399,9 +409,8 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
     }
 
     private fun sendEffect(text: String): Effect<Action> =
-        Effect.run { send ->
+        Effect.run {
             MessageDeliveryService.sendTextMessage(text)
-            send(Action.SendFinished)
         }
 
     private fun markReadEffect(): Effect<Action> = Effect.run { markCurrentConversationAsRead() }

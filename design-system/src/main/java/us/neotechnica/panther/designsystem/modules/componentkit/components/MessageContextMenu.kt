@@ -81,6 +81,8 @@ class ContextMenuController internal constructor() {
     internal var active by mutableStateOf<ActiveContextMenu?>(null)
         private set
 
+    internal var canBegin: Boolean = true
+
     internal fun present(item: ActiveContextMenu) {
         active = item
     }
@@ -100,14 +102,18 @@ val LocalContextMenuController = compositionLocalOf<ContextMenuController?> { nu
  * tap-to-dismiss backdrop.
  *
  * @param modifier The modifier for the host.
+ * @param canBegin Whether a long press may present a menu; when
+ *   `false`, long presses are ignored but double-taps still fire.
  * @param content The hosted content, containing [MessageContextMenu]s.
  */
 @Composable
 fun ContextMenuHost(
     modifier: Modifier = Modifier,
+    canBegin: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val controller = remember { ContextMenuController() }
+    controller.canBegin = canBegin
 
     Box(modifier.fillMaxSize()) {
         CompositionLocalProvider(LocalContextMenuController provides controller) {
@@ -170,7 +176,7 @@ fun MessageContextMenu(
                     },
                     onLongPress = {
                         val hasMenu = actions.isNotEmpty() || reactionChoices.isNotEmpty()
-                        if (hasMenu && controller != null && anchorBounds != Rect.Zero) {
+                        if (hasMenu && controller?.canBegin == true && anchorBounds != Rect.Zero) {
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                             controller.present(
                                 ActiveContextMenu(anchorBounds, alignment, actions, reactionChoices, content),

@@ -81,11 +81,13 @@ import us.neotechnica.panther.networking.modules.session.extensions.isFromCurren
 import us.neotechnica.panther.networking.modules.session.extensions.isMediaMessage
 import us.neotechnica.panther.networking.modules.session.extensions.isOutboxMessage
 import us.neotechnica.panther.networking.modules.session.extensions.isSystemMessage
+import us.neotechnica.panther.networking.modules.session.extensions.messageOutboxDidChange
 import us.neotechnica.panther.networking.modules.session.extensions.reactions
 import us.neotechnica.panther.networking.modules.session.extensions.sessionStoreDidChange
 import us.neotechnica.panther.networking.modules.session.extensions.users
 import us.neotechnica.panther.networking.modules.session.models.OutboxEntry
 import us.neotechnica.panther.networking.modules.session.services.ConversationSessionService
+import us.neotechnica.panther.networking.modules.session.services.MessageDeliveryService
 import us.neotechnica.panther.networking.modules.session.services.MessageOutboxService
 import us.neotechnica.panther.networking.modules.session.services.SessionStore
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
@@ -117,17 +119,7 @@ fun ChatPageView(
     conversationIDKey: String,
     modifier: Modifier = Modifier,
 ) {
-    val viewModel =
-        remember {
-            ViewModel(ChatPageReducer.State(), ChatPageReducer())
-                .observing(ConversationSessionService.displayedMessages) {
-                    ChatPageReducer.Action.MessagesUpdated(it)
-                }.observing(DependencyValues.current.sharedEvents.sessionStoreDidChange.events) {
-                    ChatPageReducer.Action.StoreChanged
-                }.observing(DependencyValues.current.sharedEvents.currentConversationDidBecomeUnavailable.events) {
-                    ChatPageReducer.Action.ConversationUnavailable
-                }
-        }
+    val viewModel = remember { buildChatPageViewModel() }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -137,6 +129,7 @@ fun ChatPageView(
     }
     LaunchedEffect(conversationIDKey) {
         viewModel.send(ChatPageReducer.Action.ViewFirstAppeared(conversationIDKey))
+        viewModel.send(ChatPageReducer.Action.MessageOutboxChanged(anyOutboxSending()))
     }
 
     val state by viewModel.state.collectAsState()
@@ -163,7 +156,10 @@ fun ChatPageView(
 
     StatefulView(state = state.viewState, modifier = modifier) {
         Box(modifier = Modifier.fillMaxSize()) {
-            ContextMenuHost(Modifier.fillMaxSize()) {
+            ContextMenuHost(
+                modifier = Modifier.fillMaxSize(),
+                canBegin = !state.isSendingMessage,
+            ) {
                 Column(modifier = Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
                     ChatHeader(
                         title = state.title,
@@ -194,7 +190,7 @@ fun ChatPageView(
                     MessageInputBar(
                         text = state.inputText,
                         placeholder = LocalizedStringKey.NewMessage.localized(),
-                        isSending = state.isSending,
+                        isSending = state.isSendingMessage || state.hasSendingOutboxEntry,
                         onTextChange = { viewModel.send(ChatPageReducer.Action.InputChanged(it)) },
                         onSend = {
                             if (state.pendingAttachment != null) {
@@ -404,6 +400,22 @@ private fun MessageList(
         }
     }
 }
+
+private fun anyOutboxSending(): Boolean = MessageOutboxService.allEntries.any { it.state == OutboxEntry.State.SENDING }
+
+private fun buildChatPageViewModel(): ViewModel<ChatPageReducer.State, ChatPageReducer.Action> =
+    ViewModel(ChatPageReducer.State(), ChatPageReducer())
+        .observing(ConversationSessionService.displayedMessages) {
+            ChatPageReducer.Action.MessagesUpdated(it)
+        }.observing(DependencyValues.current.sharedEvents.sessionStoreDidChange.events) {
+            ChatPageReducer.Action.StoreChanged
+        }.observing(DependencyValues.current.sharedEvents.currentConversationDidBecomeUnavailable.events) {
+            ChatPageReducer.Action.ConversationUnavailable
+        }.observing(MessageDeliveryService.isSendingMessage) {
+            ChatPageReducer.Action.IsSendingMessageChanged(it)
+        }.observing(DependencyValues.current.sharedEvents.messageOutboxDidChange.events) {
+            ChatPageReducer.Action.MessageOutboxChanged(anyOutboxSending())
+        }
 
 private fun senderName(
     message: Message,

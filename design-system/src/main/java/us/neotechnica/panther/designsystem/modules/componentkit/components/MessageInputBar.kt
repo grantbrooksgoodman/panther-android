@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -49,7 +50,10 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
  *
  * @param text The composed text.
  * @param placeholder The placeholder shown when [text] is empty.
- * @param isSending Whether a send is in progress (disables the button).
+ * @param isSending Whether a send is in progress. While `true`,
+ *   the send button shows an activity indicator in place of its
+ *   glyph, the attach button is disabled, and the text field
+ *   hides its cursor.
  * @param onTextChange Invoked as the text changes.
  * @param onSend Invoked when the send button is tapped.
  * @param onAttach Invoked when the leading attach button is tapped.
@@ -93,10 +97,11 @@ fun MessageInputBar(
         ) {
             InputBarButton(
                 symbol = "plus",
-                glyphColor = colors.titleText,
+                glyphColor = if (isSending) colors.disabled else colors.titleText,
                 background = colors.background,
                 onClick = onAttach,
                 description = "Attach media",
+                enabled = !isSending,
                 elevated = true,
             )
 
@@ -120,7 +125,7 @@ fun MessageInputBar(
                     value = text,
                     onValueChange = onTextChange,
                     textStyle = Font.system.textStyle.copy(color = colors.titleText),
-                    cursorBrush = SolidColor(colors.accent),
+                    cursorBrush = SolidColor(if (isSending) Color.Transparent else colors.accent),
                     maxLines = FIELD_MAX_LINES,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -130,10 +135,11 @@ fun MessageInputBar(
             InputBarButton(
                 symbol = "arrow.up",
                 glyphColor = Color.White,
-                background = if (canSend) colors.accent else colors.disabled,
+                background = if (canSend || isSending) colors.accent else colors.disabled,
                 onClick = onSend,
                 description = "Send",
                 enabled = canSend,
+                isLoading = isSending,
             )
         }
     }
@@ -149,6 +155,7 @@ private fun InputBarButton(
     description: String,
     enabled: Boolean = true,
     elevated: Boolean = false,
+    isLoading: Boolean = false,
 ) {
     Box(
         contentAlignment = Alignment.Center,
@@ -158,10 +165,18 @@ private fun InputBarButton(
                 .then(if (elevated) Modifier.shadow(2.dp, CircleShape) else Modifier)
                 .clip(CircleShape)
                 .background(background)
-                .clickable(enabled = enabled, onClick = onClick)
+                .clickable(enabled = enabled && !isLoading, onClick = onClick)
                 .semantics { contentDescription = description },
     ) {
-        Components.Symbol(symbol, color = glyphColor, modifier = Modifier.size(GLYPH_SIZE))
+        if (isLoading) {
+            CircularProgressIndicator(
+                color = glyphColor,
+                strokeWidth = INDICATOR_STROKE_WIDTH,
+                modifier = Modifier.size(INDICATOR_SIZE),
+            )
+        } else {
+            Components.Symbol(symbol, color = glyphColor, modifier = Modifier.size(GLYPH_SIZE))
+        }
     }
 }
 
@@ -209,6 +224,8 @@ private fun MediaAttachmentPreview(
 
 private val BUTTON_SIZE = 40.dp
 private val GLYPH_SIZE = 22.dp
+private val INDICATOR_SIZE = 20.dp
+private val INDICATOR_STROKE_WIDTH = 2.dp
 private val FIELD_RADIUS = 20.dp
 private val DIVIDER_HEIGHT = 0.5.dp
 private val PREVIEW_SIZE = 64.dp
