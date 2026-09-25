@@ -24,8 +24,8 @@ import us.neotechnica.panther.modules.content.user.constants.MediaActionHandlerS
 import us.neotechnica.panther.networking.modules.common.models.DocumentFileExtension
 import us.neotechnica.panther.networking.modules.common.models.ImageFileExtension
 import us.neotechnica.panther.networking.modules.common.models.MediaFileExtension
-import us.neotechnica.panther.networking.modules.common.models.VideoFileExtension
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.common.models.VideoFileExtension
 import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -69,8 +69,7 @@ object MediaActionHandlerService {
      *
      * @throws Exception if the image cannot be read or compressed.
      */
-    suspend fun processImage(uri: Uri): MediaFile =
-        withContext(Dispatchers.IO) { imageMediaFile(uri) }
+    suspend fun processImage(uri: Uri): MediaFile = withContext(Dispatchers.IO) { imageMediaFile(uri) }
 
     // MARK: - Process Video
 
@@ -204,8 +203,7 @@ object MediaActionHandlerService {
         return data
     }
 
-    private fun requireContext(): Context =
-        appContext ?: throw failure("Media action handler is not initialized.")
+    private fun requireContext(): Context = appContext ?: throw failure("Media action handler is not initialized.")
 
     private fun failure(message: String): Exception = Exception(message, metadata = ExceptionMetadata(this))
 

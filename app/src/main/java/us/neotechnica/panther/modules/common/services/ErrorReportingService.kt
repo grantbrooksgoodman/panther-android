@@ -119,8 +119,7 @@ object ErrorReportingService {
             appendLine("Timestamp: ${SimpleDateFormat(TIMESTAMP_FORMAT, Locale.US).format(Date())}")
         }
 
-    private fun fileNameSuffix(): String =
-        "${Build.milestone.shortString}${Build.buildNumber}${Build.bundleRevision}"
+    private fun fileNameSuffix(): String = "${Build.milestone.shortString}${Build.buildNumber}${Build.bundleRevision}"
 }
 
 private const val FILE_DATE_FORMAT = "yyMMdd"

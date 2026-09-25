@@ -41,7 +41,6 @@ import us.neotechnica.panther.networking.modules.session.services.ActivitySessio
 import us.neotechnica.panther.networking.modules.session.services.ConversationSessionService
 import us.neotechnica.panther.networking.modules.session.services.ModerationSessionService
 import us.neotechnica.panther.networking.modules.session.services.SessionStore
-import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.networking.modules.translation.interfaces.TranslatedLabelStrings
 import us.neotechnica.panther.networking.modules.translation.models.TranslatedLabelStringCollection
 import us.neotechnica.panther.networking.modules.translation.models.TranslationInputMap
@@ -285,7 +284,10 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
     private fun changeMetadataEffect(state: State): Effect<Action> =
         Effect.run { send ->
             val conversation = state.conversation ?: return@run
-            val currentName = conversation.metadata.name.takeUnless { it.isBangQualifiedEmpty }.orEmpty()
+            val currentName =
+                conversation.metadata.name
+                    .takeUnless { it.isBangQualifiedEmpty }
+                    .orEmpty()
             val input =
                 TextInputAlert(
                     message = "Choose a new name for this conversation:",

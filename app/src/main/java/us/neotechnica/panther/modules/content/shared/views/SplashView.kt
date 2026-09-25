@@ -69,7 +69,7 @@ fun SplashView(modifier: Modifier = Modifier) {
         delay(Floats.SPLASH_DELAY_MILLIS)
 
         UpdateService.incrementRelaunchCountIfNeeded()
-        // TODO: Rework server values – need to include Android-specific properties.
+        // Disabled until server values include Android-specific properties.
         // runCatching { UpdateService.promptToUpdateIfNeeded() }
         // UpdateService.startObservingForcedUpdateChanges()
 

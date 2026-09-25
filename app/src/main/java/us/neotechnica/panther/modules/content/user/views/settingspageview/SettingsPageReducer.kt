@@ -8,7 +8,6 @@
 
 package us.neotechnica.panther.modules.content.user.views.settingspageview
 
-import us.neotechnica.panther.designsystem.modules.alertkit.models.Action as AlertAction
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
@@ -38,6 +37,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
+import us.neotechnica.panther.designsystem.modules.alertkit.models.Action as AlertAction
 
 /**
  * The reducer for the settings page.

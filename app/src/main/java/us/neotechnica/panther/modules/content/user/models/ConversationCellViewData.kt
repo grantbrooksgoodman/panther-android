@@ -109,7 +109,9 @@ data class ConversationCellViewData(
         private fun Message.matchesSearchQuery(query: String): Boolean {
             val lowercased = query.lowercase()
             return translations?.any {
-                it.input.value.lowercase().contains(lowercased) ||
+                it.input.value
+                    .lowercase()
+                    .contains(lowercased) ||
                     it.output.lowercase().contains(lowercased)
             } == true
         }

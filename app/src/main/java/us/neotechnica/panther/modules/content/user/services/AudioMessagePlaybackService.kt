@@ -115,7 +115,10 @@ object AudioMessagePlaybackService {
     fun stopPlayback() {
         progressJob?.cancel()
         progressJob = null
-        player?.let { runCatching { it.stop() }; it.release() }
+        player?.let {
+            runCatching { it.stop() }
+            it.release()
+        }
         player = null
         abandonFocus()
         mutablePlayingMessageID = null
@@ -135,9 +138,15 @@ object AudioMessagePlaybackService {
             MediaPlayer().apply {
                 setAudioAttributes(audioAttributes)
                 setDataSource(filePath)
-                setOnPreparedListener { start(); startProgressPolling() }
+                setOnPreparedListener {
+                    start()
+                    startProgressPolling()
+                }
                 setOnCompletionListener { onFinished(messageID) }
-                setOnErrorListener { _, _, _ -> stopPlayback(); true }
+                setOnErrorListener { _, _, _ ->
+                    stopPlayback()
+                    true
+                }
                 runCatching { prepareAsync() }.onFailure { stopPlayback() }
             }
         mutablePlayingMessageID = messageID

@@ -529,7 +529,11 @@ private fun reactionChoicesFor(
     row: ChatMessageRowData,
     onReact: (Message, Reaction.Style) -> Unit,
 ): List<ReactionChoice> {
-    val ownStyles = row.reactions.filter { it.userID == User.currentUserID }.map { it.style }.toSet()
+    val ownStyles =
+        row.reactions
+            .filter { it.userID == User.currentUserID }
+            .map { it.style }
+            .toSet()
     return Reaction.Style.orderedCases.map { style ->
         ReactionChoice(
             emoji = style.emojiValue,

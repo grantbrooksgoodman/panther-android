@@ -15,10 +15,10 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
 import us.neotechnica.panther.networking.modules.conversation.services.ConversationService
 import us.neotechnica.panther.networking.modules.message.services.MediaMessageService
 import us.neotechnica.panther.networking.modules.message.services.MessageService
-import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Participant
 import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile

@@ -393,5 +393,4 @@ private fun launchSendFeedback(context: Context) {
 }
 
 /** The web URL of the app's Play Store listing. */
-private fun playStoreUrl(context: Context): String =
-    "https://play.google.com/store/apps/details?id=${context.packageName}"
+private fun playStoreUrl(context: Context): String = "https://play.google.com/store/apps/details?id=${context.packageName}"

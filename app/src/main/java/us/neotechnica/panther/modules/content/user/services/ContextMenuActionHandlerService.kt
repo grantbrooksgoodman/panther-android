@@ -68,7 +68,10 @@ object ContextMenuActionHandlerService {
         val isDisplayingTranslation = if (row.message.isFromCurrentUser) row.showAlternate else !row.showAlternate
         if (!isDisplayingTranslation) return null
 
-        val hostingKey = row.message.translationReferences?.firstOrNull()?.hostingKey ?: return null
+        val hostingKey =
+            row.message.translationReferences
+                ?.firstOrNull()
+                ?.hostingKey ?: return null
 
         val exception = mistranslationException(hostingKey)
         if (exception.code in ErrorReportingService.reportedErrorCodes) return null

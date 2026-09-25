@@ -23,9 +23,9 @@ import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.auth.extensions.notReportableForAuthCodes
+import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
 import us.neotechnica.panther.networking.modules.common.services.AnalyticsService.AnalyticsEvent
-import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.schema.common.models.PhoneNumber
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.networking.modules.translation.interfaces.TranslatedLabelStrings
