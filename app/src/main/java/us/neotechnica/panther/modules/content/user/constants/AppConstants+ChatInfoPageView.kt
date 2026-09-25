@@ -15,6 +15,11 @@ import androidx.compose.ui.unit.dp
 // MARK: - Float
 
 object ChatInfoPageViewFloats {
+    val addContactButtonCircleFrameMaxHeight: Dp = 40.dp
+    val addContactButtonCircleFrameMaxWidth: Dp = 40.dp
+    val addContactButtonCircleTrailingPadding: Dp = 2.dp
+    val addContactButtonImageHeight: Dp = 15.dp
+    val addContactButtonImageWidth: Dp = 15.dp
     val avatarGlyphSize: Dp = 52.dp
     val avatarSize: Dp = 100.dp
     val avatarTopPadding: Dp = 20.dp
@@ -55,6 +60,8 @@ object ChatInfoPageViewFloats {
 // MARK: - Color
 
 object ChatInfoPageViewColors {
+    val addContactButtonCircleDarkForeground = Color(0xFF3A3A3C)
+    val addContactButtonCircleLightForeground = Color(0xFFE5E5EA)
     val destructive = Color(0xFFFF3B30)
     val segmentedControlTrack = Color(0x1F787880)
 }
@@ -65,6 +72,7 @@ object ChatInfoPageViewColors {
 // name is reserved for the translated-label-strings object (mirroring
 // iOS); these format, separator, and Android-specific labels live here.
 object ChatInfoPageViewConstants {
+    const val ADD_CONTACT_BUTTON_IMAGE_SYSTEM_NAME = "plus"
     const val BLOCK = "Block"
     const val DELETE_CONVERSATION = "Delete this Conversation"
     const val FILE_TYPE_SEPARATOR = " • "

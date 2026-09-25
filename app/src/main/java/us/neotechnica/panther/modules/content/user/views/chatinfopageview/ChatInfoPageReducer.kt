@@ -10,13 +10,15 @@ package us.neotechnica.panther.modules.content.user.views.chatinfopageview
 
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAlert
-import us.neotechnica.panther.modules.common.contacts.models.ContactMatch
+import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewConstants
 import us.neotechnica.panther.modules.content.user.models.MediaItemViewData
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
+import us.neotechnica.panther.navigation.ChatNavigatorState
+import us.neotechnica.panther.navigation.ChatRoute
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
@@ -76,8 +78,12 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
 
         data object ToggleExpanded : Action
 
-        data class AddParticipant(
-            val userID: String,
+        data object AddContactButtonTapped : Action
+
+        data object LoadingStateUpdated : Action
+
+        data class IsSendingMessageChanged(
+            val isSendingMessage: Boolean,
         ) : Action
 
         data class RemoveParticipant(
@@ -120,7 +126,9 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         val selectedSegment: Int = 0,
         val isExpanded: Boolean = true,
         val isBusy: Boolean = false,
+        val isSendingMessage: Boolean = false,
         val strings: List<TranslationOutputMap> = ChatInfoPageViewStrings.defaultOutputMap,
+        val viewState: ViewState = ViewState.Loaded,
     ) {
         val isGroup: Boolean
             get() = (conversation?.participants?.size ?: 0) > 2
@@ -128,10 +136,28 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         val otherParticipantIDs: List<String>
             get() = conversation?.participants?.map { it.userID }?.filter { it != User.currentUserID } ?: emptyList()
 
-        val addableContacts: List<ContactMatch>
+        /** Whether the add-contact button is enabled. Disabled while a message is being sent. */
+        val isAddContactButtonEnabled: Boolean
+            get() = !isSendingMessage
+
+        /**
+         * The amount by which to increase the number of participant rows
+         * shown, for the add-contact row. Its value is `1` in an expanded,
+         * non-PenPals conversation that is not awaiting the initiator's
+         * consent and has fewer than ten other participants; otherwise `0`.
+         */
+        val visibleParticipantsIncrement: Int
             get() {
-                val existing = conversation?.participants?.map { it.userID }?.toSet() ?: emptySet()
-                return ContactService.matches().filter { it.userID !in existing }
+                val metadata = conversation?.metadata ?: return 0
+                return if (!metadata.isPenPalsConversation &&
+                    metadata.requiresConsentFromInitiator == null &&
+                    isExpanded &&
+                    otherParticipantIDs.size in 1..MAX_OTHER_PARTICIPANTS_FOR_ADD_CONTACT
+                ) {
+                    1
+                } else {
+                    0
+                }
             }
     }
 
@@ -156,7 +182,13 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
 
             Action.Reload -> {
                 val conversation = SessionStore.getConversation(state.conversationIDKey)
-                ReduceResult(state.copy(conversation = conversation, mediaItems = buildMediaItems(conversation)))
+                ReduceResult(
+                    state.copy(
+                        conversation = conversation,
+                        mediaItems = buildMediaItems(conversation),
+                        viewState = ViewState.Loaded,
+                    ),
+                )
             }
 
             Action.ToggleExpanded ->
@@ -168,10 +200,16 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
             Action.ChangeMetadataTapped ->
                 ReduceResult(state, changeMetadataEffect(state))
 
-            is Action.AddParticipant ->
-                mutation(state) { conversation ->
-                    ActivitySessionService.addToConversation(action.userID, conversation)
-                }
+            Action.AddContactButtonTapped -> {
+                DependencyValues.current.navigation.navigate(Route.Chat(ChatRoute.Sheet(ChatNavigatorState.SheetPath.ContactSelector)))
+                ReduceResult(state)
+            }
+
+            Action.LoadingStateUpdated ->
+                ReduceResult(state.copy(viewState = ViewState.Loading))
+
+            is Action.IsSendingMessageChanged ->
+                ReduceResult(state.copy(isSendingMessage = action.isSendingMessage))
 
             is Action.RemoveParticipant ->
                 mutation(state) { conversation ->
@@ -404,6 +442,10 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         )
     }
 }
+
+// The maximum number of other participants for which the add-contact row
+// is shown; beyond it, the group is too large to keep growing inline.
+private const val MAX_OTHER_PARTICIPANTS_FOR_ADD_CONTACT = 9
 
 /**
  * Resolves [input] into the activity action and metadata for renaming
