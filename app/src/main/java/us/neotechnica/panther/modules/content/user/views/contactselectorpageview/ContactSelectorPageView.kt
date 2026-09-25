@@ -45,6 +45,8 @@ import us.neotechnica.panther.modules.content.user.constants.ContactSelectorPage
 import us.neotechnica.panther.modules.content.user.constants.ContactSelectorPageViewStrings
 import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.schema.common.models.PhoneNumber
+import us.neotechnica.panther.networking.modules.schema.user.models.User
+import us.neotechnica.panther.networking.modules.session.extensions.currentUserID
 import us.neotechnica.panther.networking.modules.user.services.UserService
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
@@ -73,7 +75,7 @@ fun ContactSelectorPageView(
     val colors = LocalPantherColors.current
     val scope = rememberCoroutineScope()
     var query by remember { mutableStateOf("") }
-    val contacts = remember { ContactService.matches() }
+    val contacts = remember { ContactService.matches().filter { it.userID != User.currentUserID } }
     val filtered = filterContacts(contacts, query)
     val queryIsPhoneNumber =
         query.digits.isNotEmpty() &&

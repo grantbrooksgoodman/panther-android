@@ -21,7 +21,9 @@ import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
 import us.neotechnica.panther.networking.modules.schema.common.models.PhoneNumber
 import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
+import us.neotechnica.panther.networking.modules.schema.user.models.User
 import us.neotechnica.panther.networking.modules.session.extensions.conversations
+import us.neotechnica.panther.networking.modules.session.extensions.currentUserID
 import us.neotechnica.panther.networking.modules.session.extensions.empty
 import us.neotechnica.panther.networking.modules.session.extensions.mock
 import us.neotechnica.panther.networking.modules.session.extensions.sortedByLatestMessageSentDate
@@ -160,7 +162,7 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
         when (action) {
             Action.ViewFirstAppeared -> {
                 AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.ACCESS_NEW_CHAT_PAGE)
-                ReduceResult(state.copy(contacts = ContactService.matches()))
+                ReduceResult(state.copy(contacts = ContactService.matches().filter { it.userID != User.currentUserID }))
             }
 
             Action.ViewDisappeared -> {
@@ -188,18 +190,22 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
             }
 
             is Action.AddRecipient -> {
-                val alreadyAdded = state.recipients.any { it.userID == action.userID }
-                val recipients =
-                    if (alreadyAdded) state.recipients else state.recipients + Recipient(action.userID, action.displayName)
-                ReduceResult(
-                    state.copy(
-                        recipients = recipients,
-                        recipientQuery = "",
-                        highlightedRecipientID = null,
-                        isShowingContactSelector = false,
-                    ),
-                    resolveConversationEffect(recipients.map { it.userID }),
-                )
+                if (action.userID == User.currentUserID) {
+                    ReduceResult(state)
+                } else {
+                    val alreadyAdded = state.recipients.any { it.userID == action.userID }
+                    val recipients =
+                        if (alreadyAdded) state.recipients else state.recipients + Recipient(action.userID, action.displayName)
+                    ReduceResult(
+                        state.copy(
+                            recipients = recipients,
+                            recipientQuery = "",
+                            highlightedRecipientID = null,
+                            isShowingContactSelector = false,
+                        ),
+                        resolveConversationEffect(recipients.map { it.userID }),
+                    )
+                }
             }
 
             is Action.RemoveRecipient -> {

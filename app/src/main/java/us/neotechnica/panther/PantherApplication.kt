@@ -16,8 +16,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
+import us.neotechnica.panther.modules.common.services.AlertKitTranslationService
 import us.neotechnica.panther.modules.common.services.CommonPropertyLists
 import us.neotechnica.panther.modules.common.services.ExceptionMetadataService
 import us.neotechnica.panther.modules.common.services.LoggerPresentationService
@@ -79,6 +81,7 @@ class PantherApplication : Application() {
 
         Logger.setPresentationDelegate(LoggerPresentationService)
         AppSubsystem.delegates.registerExceptionMetadataDelegate(ExceptionMetadataService)
+        AlertKitConfig.registerTranslationDelegate(AlertKitTranslationService)
 
         Networking.initialize(
             context = this,

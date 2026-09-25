@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import us.neotechnica.panther.designsystem.modules.alertkit.views.AlertHost
+import us.neotechnica.panther.designsystem.modules.foundation.hud.HUDHost
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.BuildInfoOverlayView
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.OverlayHost
 import us.neotechnica.panther.designsystem.modules.foundation.toast.ToastHost
@@ -61,6 +62,7 @@ class MainActivity : ComponentActivity() {
                     AlertHost()
                     ToastHost()
                     OverlayHost()
+                    HUDHost()
                     BuildInfoOverlayView(
                         modifier =
                             Modifier
