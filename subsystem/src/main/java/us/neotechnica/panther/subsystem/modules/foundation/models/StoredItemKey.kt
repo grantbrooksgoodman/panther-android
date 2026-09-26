@@ -21,4 +21,9 @@ package us.neotechnica.panther.subsystem.modules.foundation.models
 value class StoredItemKey(
     /** The key's raw string identifier. */
     val rawValue: String,
-)
+) {
+    // MARK: - Companion
+
+    /** A namespace for app-declared runtime storage keys. */
+    companion object
+}

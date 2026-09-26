@@ -38,6 +38,9 @@ value class PersistentStorageKey(
         /** Whether the build-info overlay is hidden. */
         val hidesBuildInfoOverlay = PersistentStorageKey("hidesBuildInfoOverlay")
 
+        /** The keys owned by the subsystem, preserved across resets. */
+        val subsystemKeys: List<PersistentStorageKey> = listOf(hidesBuildInfoOverlay)
+
         /** The hosted app share link. */
         val appShareLink = PersistentStorageKey("appShareLink")
 

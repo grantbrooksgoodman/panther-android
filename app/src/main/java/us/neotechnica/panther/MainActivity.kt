@@ -28,6 +28,7 @@ import us.neotechnica.panther.designsystem.modules.foundation.overlay.OverlayHos
 import us.neotechnica.panther.designsystem.modules.foundation.toast.ToastHost
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.designsystem.modules.theming.views.PantherTheme
+import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.content.shared.views.ForcedUpdateView
 import us.neotechnica.panther.navigation.PendingChatNavigation
 import us.neotechnica.panther.navigation.RootView
@@ -80,6 +81,15 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         capturePendingChat(intent)
+    }
+
+    // Approximates applicationWillTerminate; the store flush lands with the
+    // session store in a later phase.
+    override fun onDestroy() {
+        super.onDestroy()
+        if (isFinishing) {
+            AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.TERMINATE_APP)
+        }
     }
 
     private fun capturePendingChat(intent: Intent?) {

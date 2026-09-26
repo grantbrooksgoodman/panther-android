@@ -8,6 +8,7 @@
 package us.neotechnica.panther.subsystem.modules.foundation.services
 
 import android.util.Log
+import us.neotechnica.panther.subsystem.AppSubsystem
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.LoggerPresentationDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -47,6 +48,16 @@ object Logger {
     // MARK: - Computed Properties
 
     /**
+     * A Boolean value indicating whether reportable exceptions are
+     * filed automatically.
+     *
+     * When `true`, [log] forwards every reportable exception through
+     * the registered error report delegate. The default is `false`.
+     */
+    var reportsErrorsAutomatically = false
+        private set
+
+    /**
      * The file of the on-disk session record for the current
      * launch.
      *
@@ -75,6 +86,19 @@ object Logger {
         presentationDelegate = delegate
     }
 
+    /**
+     * Sets whether reportable exceptions are filed automatically.
+     *
+     * When enabled, [log] forwards every reportable exception
+     * through the registered error report delegate.
+     *
+     * @param reportsErrorsAutomatically Whether to file reportable
+     *   exceptions automatically.
+     */
+    fun setReportsErrorsAutomatically(reportsErrorsAutomatically: Boolean) {
+        this.reportsErrorsAutomatically = reportsErrorsAutomatically
+    }
+
     // MARK: - Methods
 
     /**
@@ -95,6 +119,10 @@ object Logger {
             domain = LoggerDomain.exception,
         )
 
+        if (reportsErrorsAutomatically && exception.isReportable) {
+            AppSubsystem.delegates.errorReport?.fileReport(exception)
+        }
+
         with?.let { presentationDelegate?.present(it, exception, null) }
     }
 
@@ -113,14 +141,22 @@ object Logger {
         domain: LoggerDomain = LoggerDomain.general,
         with: AlertType? = null,
     ) {
-        val composed = "[${domain.rawValue}] $message"
+        val subscription = AppSubsystem.delegates.loggerDomainSubscription
+        if (subscription == null || subscription.subscribedDomains.contains(domain)) {
+            val composed = "[${domain.rawValue}] $message"
 
-        // android.util.Log is unavailable in local unit tests;
-        // fall back to standard output.
-        runCatching { Log.d(TAG, composed) }
-            .onFailure { println("$TAG: $composed") }
+            // android.util.Log is unavailable in local unit tests;
+            // fall back to standard output.
+            runCatching { Log.d(TAG, composed) }
+                .onFailure { println("$TAG: $composed") }
 
-        appendToSessionRecord(composed)
+            if (subscription == null ||
+                !subscription.domainsExcludedFromSessionRecord.contains(domain)
+            ) {
+                appendToSessionRecord(composed)
+            }
+        }
+
         with?.let { presentationDelegate?.present(it, null, message) }
     }
 

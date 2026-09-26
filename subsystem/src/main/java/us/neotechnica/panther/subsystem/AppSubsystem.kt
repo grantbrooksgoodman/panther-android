@@ -7,7 +7,11 @@
 
 package us.neotechnica.panther.subsystem
 
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.CacheDomainListDelegate
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.ErrorReportDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.ExceptionMetadataDelegate
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.LoggerDomainSubscriptionDelegate
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.PermanentPersistentStorageKeyDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 
 /**
@@ -44,9 +48,37 @@ object AppSubsystem {
     object Delegates {
         // MARK: - Properties
 
+        private val _cacheDomainList = LockIsolated<CacheDomainListDelegate?>(null)
+
+        private val _errorReport = LockIsolated<ErrorReportDelegate?>(null)
+
         private val _exceptionMetadata = LockIsolated<ExceptionMetadataDelegate?>(null)
 
+        private val _loggerDomainSubscription = LockIsolated<LoggerDomainSubscriptionDelegate?>(null)
+
+        private val _permanentPersistentStorageKeys = LockIsolated<PermanentPersistentStorageKeyDelegate?>(null)
+
         // MARK: - Computed Properties
+
+        /**
+         * The delegate that supplies the app's cache domains.
+         *
+         * When this property is `null`, only the subsystem's
+         * built-in cache domains are available.
+         */
+        val cacheDomainList: CacheDomainListDelegate?
+            get() = _cacheDomainList.wrappedValue
+
+        /**
+         * The delegate that files automatic error reports.
+         *
+         * The logger forwards reportable exceptions through this
+         * delegate when the logger is configured to report errors
+         * automatically. When this property is `null`, automatic
+         * error reporting is disabled.
+         */
+        val errorReport: ErrorReportDelegate?
+            get() = _errorReport.wrappedValue
 
         /**
          * The delegate that provides app-specific metadata for
@@ -61,7 +93,45 @@ object AppSubsystem {
         val exceptionMetadata: ExceptionMetadataDelegate?
             get() = _exceptionMetadata.wrappedValue
 
+        /**
+         * The delegate that specifies which logger domains the app
+         * subscribes to at launch.
+         *
+         * When this property is `null`, output for every domain is
+         * produced and nothing is excluded from the session record.
+         */
+        val loggerDomainSubscription: LoggerDomainSubscriptionDelegate?
+            get() = _loggerDomainSubscription.wrappedValue
+
+        /**
+         * The delegate that declares which persistent storage keys
+         * survive a reset.
+         *
+         * When this property is `null`, only subsystem keys and any
+         * explicitly specified keys are preserved during a reset.
+         */
+        val permanentPersistentStorageKeys: PermanentPersistentStorageKeyDelegate?
+            get() = _permanentPersistentStorageKeys.wrappedValue
+
         // MARK: - Methods
+
+        /**
+         * Registers the specified cache domain list delegate.
+         *
+         * @param cacheDomainListDelegate The delegate to register.
+         */
+        fun registerCacheDomainListDelegate(cacheDomainListDelegate: CacheDomainListDelegate) {
+            _cacheDomainList.wrappedValue = cacheDomainListDelegate
+        }
+
+        /**
+         * Registers the specified error report delegate.
+         *
+         * @param errorReportDelegate The delegate to register.
+         */
+        fun registerErrorReportDelegate(errorReportDelegate: ErrorReportDelegate) {
+            _errorReport.wrappedValue = errorReportDelegate
+        }
 
         /**
          * Registers the specified exception metadata delegate.
@@ -71,6 +141,32 @@ object AppSubsystem {
          */
         fun registerExceptionMetadataDelegate(exceptionMetadataDelegate: ExceptionMetadataDelegate) {
             _exceptionMetadata.wrappedValue = exceptionMetadataDelegate
+        }
+
+        /**
+         * Registers the specified logger domain subscription
+         * delegate.
+         *
+         * @param loggerDomainSubscriptionDelegate The delegate to
+         *   register.
+         */
+        fun registerLoggerDomainSubscriptionDelegate(
+            loggerDomainSubscriptionDelegate: LoggerDomainSubscriptionDelegate,
+        ) {
+            _loggerDomainSubscription.wrappedValue = loggerDomainSubscriptionDelegate
+        }
+
+        /**
+         * Registers the specified permanent persistent storage key
+         * delegate.
+         *
+         * @param permanentPersistentStorageKeyDelegate The delegate
+         *   to register.
+         */
+        fun registerPermanentPersistentStorageKeyDelegate(
+            permanentPersistentStorageKeyDelegate: PermanentPersistentStorageKeyDelegate,
+        ) {
+            _permanentPersistentStorageKeys.wrappedValue = permanentPersistentStorageKeyDelegate
         }
     }
 }

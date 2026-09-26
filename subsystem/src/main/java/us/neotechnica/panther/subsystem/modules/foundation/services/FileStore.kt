@@ -25,17 +25,25 @@ object FileStore {
     @Volatile
     private var appContext: Context? = null
 
+    @Volatile
+    private var testDirectory: File? = null
+
     // MARK: - Computed Properties
 
     /** The root documents directory, or `null` before initialization. */
     val documentsDirectory: File?
-        get() = appContext?.filesDir
+        get() = testDirectory ?: appContext?.filesDir
 
     // MARK: - Initialization
 
     /** Prepares the file store for use. */
     fun initialize(context: Context) {
         appContext = context.applicationContext
+    }
+
+    /** Prepares the file store with a temporary directory for tests. */
+    fun initializeForTesting(directory: File) {
+        testDirectory = directory
     }
 
     // MARK: - Accessors
@@ -48,6 +56,11 @@ object FileStore {
 
     /** Whether a file exists at [relativePath]. */
     fun exists(relativePath: String): Boolean = resolve(relativePath)?.exists() == true
+
+    /** Deletes the file or directory at [relativePath], recursively. */
+    fun delete(relativePath: String) {
+        resolve(relativePath)?.deleteRecursively()
+    }
 
     /**
      * Writes [bytes] to [relativePath], creating parent directories as

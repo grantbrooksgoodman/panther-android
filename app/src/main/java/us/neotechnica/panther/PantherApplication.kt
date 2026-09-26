@@ -11,6 +11,9 @@ package us.neotechnica.panther
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +35,9 @@ import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
 import us.neotechnica.panther.modules.networking.user.models.DeviceID
+import us.neotechnica.panther.bundle.CacheDomainList
+import us.neotechnica.panther.bundle.LoggerDomainSubscription
+import us.neotechnica.panther.bundle.PermanentKeyDelegate
 import us.neotechnica.panther.modules.notifications.services.PantherMessagingService
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkEnvironment
@@ -71,6 +77,7 @@ class PantherApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        us.neotechnica.panther.bundle.Application.initialize(this)
         AnalyticsService.initialize(this)
         LocalizedStringResolver.initialize(this)
         Persistent.initialize(this)
@@ -85,7 +92,10 @@ class PantherApplication : Application() {
         configureBuild()
 
         Logger.setPresentationDelegate(LoggerPresentationService)
+        AppSubsystem.delegates.registerCacheDomainListDelegate(CacheDomainList)
         AppSubsystem.delegates.registerExceptionMetadataDelegate(ExceptionMetadataService)
+        AppSubsystem.delegates.registerLoggerDomainSubscriptionDelegate(LoggerDomainSubscription)
+        AppSubsystem.delegates.registerPermanentPersistentStorageKeyDelegate(PermanentKeyDelegate)
         AlertKitConfig.registerTranslationDelegate(AlertKitTranslationService)
 
         Networking.initialize(
@@ -97,8 +107,28 @@ class PantherApplication : Application() {
         registerTranslatorActivityProvider()
         setUpConnectionStatusEffects()
         setUpPushNotifications()
+        observeProcessLifecycle()
 
         AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.OPEN_APP)
+    }
+
+    // MARK: - Process Lifecycle
+
+    private fun observeProcessLifecycle() {
+        ProcessLifecycleOwner.get().lifecycle.addObserver(
+            object : DefaultLifecycleObserver {
+                // Mirrors sceneDidBecomeActive.
+                override fun onStart(owner: LifecycleOwner) {
+                    outboxScope.launch { MessageOutboxService.retryAllEligible() }
+                }
+
+                // Mirrors sceneDidEnterBackground. The store flush, badge
+                // update, and notification-extension name-map refresh are
+                // wired as the session store and those services land in
+                // later phases.
+                override fun onStop(owner: LifecycleOwner) = Unit
+            },
+        )
     }
 
     // MARK: - Build Configuration
@@ -148,9 +178,6 @@ class PantherApplication : Application() {
 
     private fun setUpConnectionStatusEffects() {
         ConnectionStatusService.initialize(this)
-
-        // Retry eligible entries on launch.
-        outboxScope.launch { MessageOutboxService.retryAllEligible() }
 
         // Retry eligible entries when connectivity is restored.
         ConnectionStatusService.addEffectUponConnectionChanged(RETRY_OUTBOX_EFFECT_ID) {
