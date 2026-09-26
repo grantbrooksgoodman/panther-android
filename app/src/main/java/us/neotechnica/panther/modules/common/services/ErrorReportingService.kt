@@ -14,7 +14,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
 import us.neotechnica.panther.networking.Networking
-import us.neotechnica.panther.networking.modules.common.services.ConnectionStatusService
+import us.neotechnica.panther.modules.common.services.ConnectionStatusService
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated

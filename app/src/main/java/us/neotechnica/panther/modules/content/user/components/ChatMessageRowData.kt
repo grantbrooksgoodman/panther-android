@@ -8,10 +8,10 @@
 
 package us.neotechnica.panther.modules.content.user.components
 
-import us.neotechnica.panther.networking.modules.schema.conversation.models.Reaction
-import us.neotechnica.panther.networking.modules.schema.message.models.AudioMessageReference
-import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
-import us.neotechnica.panther.networking.modules.schema.message.models.Message
+import us.neotechnica.panther.modules.networking.conversation.models.Reaction
+import us.neotechnica.panther.modules.networking.message.models.AudioMessageReference
+import us.neotechnica.panther.modules.networking.message.models.MediaFile
+import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.translator.models.Translation
 
 /**

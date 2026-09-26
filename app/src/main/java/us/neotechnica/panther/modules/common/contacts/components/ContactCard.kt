@@ -35,7 +35,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.formattedString
-import us.neotechnica.panther.networking.modules.schema.common.models.PhoneNumber
+import us.neotechnica.panther.modules.common.models.PhoneNumber
 
 /**
  * A contact identified for display, standing in for the iOS

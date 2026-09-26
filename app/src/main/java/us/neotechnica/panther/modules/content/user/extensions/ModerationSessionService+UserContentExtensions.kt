@@ -22,9 +22,9 @@ import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.content.user.models.ModerationType
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
-import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
-import us.neotechnica.panther.networking.modules.session.extensions.users
-import us.neotechnica.panther.networking.modules.session.services.ModerationSessionService
+import us.neotechnica.panther.modules.networking.conversation.models.Conversation
+import us.neotechnica.panther.modules.session.entity.extensions.users
+import us.neotechnica.panther.modules.session.entity.services.ModerationSessionService
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata

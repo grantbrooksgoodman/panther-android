@@ -17,8 +17,8 @@ import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
 import us.neotechnica.panther.modules.common.contacts.models.ContactMatch
-import us.neotechnica.panther.networking.modules.schema.user.models.User
-import us.neotechnica.panther.networking.modules.user.services.UserService
+import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.networking.user.services.UserService
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHashOf
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey

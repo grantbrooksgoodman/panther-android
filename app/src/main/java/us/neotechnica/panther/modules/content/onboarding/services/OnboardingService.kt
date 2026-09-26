@@ -11,9 +11,9 @@ package us.neotechnica.panther.modules.content.onboarding.services
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationAlert
-import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
-import us.neotechnica.panther.networking.modules.schema.common.models.PhoneNumber
-import us.neotechnica.panther.networking.modules.user.services.UserService
+import us.neotechnica.panther.modules.common.services.AnalyticsService
+import us.neotechnica.panther.modules.common.models.PhoneNumber
+import us.neotechnica.panther.modules.networking.user.services.UserService
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey

@@ -34,7 +34,7 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.modules.content.user.constants.MediaItemViewColors
 import us.neotechnica.panther.modules.content.user.constants.MediaItemViewFloats
 import us.neotechnica.panther.modules.content.user.models.MediaItemViewData
-import us.neotechnica.panther.networking.modules.common.models.MediaFileExtension
+import us.neotechnica.panther.modules.common.models.MediaFileExtension
 
 /**
  * A row describing a media file in a conversation's shared-media list: a

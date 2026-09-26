@@ -38,7 +38,7 @@ import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewColors
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewFloats
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
-import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import androidx.compose.material3.Text as Material3Text
 
 /**

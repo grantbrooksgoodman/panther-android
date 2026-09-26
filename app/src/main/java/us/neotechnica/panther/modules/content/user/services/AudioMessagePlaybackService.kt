@@ -26,12 +26,12 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import us.neotechnica.panther.modules.common.services.TextToSpeechService
-import us.neotechnica.panther.networking.modules.schema.message.models.AudioMessageReference
-import us.neotechnica.panther.networking.modules.schema.message.models.Message
-import us.neotechnica.panther.networking.modules.session.extensions.isAudioMessage
-import us.neotechnica.panther.networking.modules.session.extensions.isFromCurrentUser
-import us.neotechnica.panther.networking.modules.session.extensions.resolvedAudioReference
-import us.neotechnica.panther.networking.modules.session.services.ConversationSessionService
+import us.neotechnica.panther.modules.networking.message.models.AudioMessageReference
+import us.neotechnica.panther.modules.networking.message.models.Message
+import us.neotechnica.panther.modules.session.entity.extensions.isAudioMessage
+import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
+import us.neotechnica.panther.modules.session.entity.extensions.resolvedAudioReference
+import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 
 /**

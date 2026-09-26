@@ -22,7 +22,7 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.modules.common.extensions.isForcedUpdateRequired
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
-import us.neotechnica.panther.networking.modules.common.services.MetadataService
+import us.neotechnica.panther.modules.common.services.MetadataService
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build

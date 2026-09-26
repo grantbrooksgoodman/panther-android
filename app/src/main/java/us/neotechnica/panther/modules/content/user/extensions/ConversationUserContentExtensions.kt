@@ -11,7 +11,7 @@ package us.neotechnica.panther.modules.content.user.extensions
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
-import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 
 /**
  * The text shown in the chat page header, or `null` when the

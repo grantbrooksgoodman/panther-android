@@ -20,8 +20,8 @@ import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.digits
-import us.neotechnica.panther.networking.modules.schema.common.models.PhoneNumber
-import us.neotechnica.panther.networking.modules.schema.user.models.User
+import us.neotechnica.panther.modules.common.models.PhoneNumber
+import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.effect.Effect

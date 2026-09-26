@@ -69,11 +69,11 @@ import us.neotechnica.panther.navigation.ChatNavigatorState
 import us.neotechnica.panther.navigation.ChatRoute
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.navigation
-import us.neotechnica.panther.networking.modules.session.extensions.messageOutboxDidChange
-import us.neotechnica.panther.networking.modules.session.models.OutboxEntry
-import us.neotechnica.panther.networking.modules.session.services.MessageDeliveryService
-import us.neotechnica.panther.networking.modules.session.services.MessageOutboxService
-import us.neotechnica.panther.networking.modules.session.services.MessageSessionService
+import us.neotechnica.panther.modules.session.entity.extensions.messageOutboxDidChange
+import us.neotechnica.panther.modules.session.state.models.OutboxEntry
+import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
+import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
+import us.neotechnica.panther.modules.session.entity.services.MessageSessionService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents

@@ -16,11 +16,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.modules.content.user.constants.DeliveryProgressIndicatorFloats
-import us.neotechnica.panther.networking.modules.session.interfaces.DeliveryProgressIndicator
-import us.neotechnica.panther.networking.modules.session.models.OutboxEntry
-import us.neotechnica.panther.networking.modules.session.services.ConversationSessionService
-import us.neotechnica.panther.networking.modules.session.services.MessageDeliveryService
-import us.neotechnica.panther.networking.modules.session.services.MessageOutboxService
+import us.neotechnica.panther.modules.session.entity.interfaces.DeliveryProgressIndicator
+import us.neotechnica.panther.modules.session.state.models.OutboxEntry
+import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
+import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
+import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
 
 /**
  * The service that manages the message delivery progress bar.

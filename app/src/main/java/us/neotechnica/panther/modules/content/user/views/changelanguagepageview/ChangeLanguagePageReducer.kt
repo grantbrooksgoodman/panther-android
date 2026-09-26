@@ -16,7 +16,7 @@ import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
-import us.neotechnica.panther.networking.modules.session.services.LanguageChangeService
+import us.neotechnica.panther.modules.content.user.services.LanguageChangeService
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues

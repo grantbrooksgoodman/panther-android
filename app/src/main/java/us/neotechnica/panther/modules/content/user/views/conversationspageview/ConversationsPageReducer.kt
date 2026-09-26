@@ -11,10 +11,10 @@ package us.neotechnica.panther.modules.content.user.views.conversationspageview
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.networking.Networking
-import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
-import us.neotechnica.panther.networking.modules.session.extensions.conversations
-import us.neotechnica.panther.networking.modules.session.extensions.filteredAndSorted
-import us.neotechnica.panther.networking.modules.session.services.UserSessionService
+import us.neotechnica.panther.modules.networking.conversation.models.Conversation
+import us.neotechnica.panther.modules.session.entity.extensions.conversations
+import us.neotechnica.panther.modules.session.entity.extensions.filteredAndSorted
+import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.networking.modules.translation.interfaces.TranslatedLabelStrings
 import us.neotechnica.panther.networking.modules.translation.models.TranslatedLabelStringCollection
 import us.neotechnica.panther.networking.modules.translation.models.TranslationInputMap

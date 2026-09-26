@@ -8,7 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.models
 
-import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
+import us.neotechnica.panther.modules.networking.message.models.MediaFile
 
 /**
  * The display inputs for one row in a conversation's shared-media list,

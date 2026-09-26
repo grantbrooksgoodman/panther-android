@@ -31,14 +31,15 @@ import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerSe
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
+import us.neotechnica.panther.modules.networking.user.models.DeviceID
 import us.neotechnica.panther.modules.notifications.services.PantherMessagingService
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkEnvironment
-import us.neotechnica.panther.networking.modules.common.services.AnalyticsService
-import us.neotechnica.panther.networking.modules.common.services.ConnectionStatusService
-import us.neotechnica.panther.networking.modules.session.services.MessageOutboxService
-import us.neotechnica.panther.networking.modules.session.services.UserMutationService
-import us.neotechnica.panther.networking.modules.session.services.retryAllEligible
+import us.neotechnica.panther.modules.common.services.AnalyticsService
+import us.neotechnica.panther.modules.common.services.ConnectionStatusService
+import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
+import us.neotechnica.panther.modules.networking.user.services.UserMutationService
+import us.neotechnica.panther.modules.session.state.services.retryAllEligible
 import us.neotechnica.panther.subsystem.AppSubsystem
 import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
 import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
@@ -70,11 +71,13 @@ class PantherApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        AnalyticsService.initialize(this)
         LocalizedStringResolver.initialize(this)
         Persistent.initialize(this)
         FileStore.initialize(this)
         CommonPropertyLists.initialize(this)
         ContactService.initialize(this)
+        DeviceID.initialize(this)
         InviteService.initialize(this)
         TextToSpeechService.initialize(this)
         AudioMessagePlaybackService.initialize(this)

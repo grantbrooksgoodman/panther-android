@@ -40,10 +40,10 @@ import us.neotechnica.panther.modules.content.user.components.ContactRow
 import us.neotechnica.panther.modules.content.user.constants.ContactSelectorPageViewFloats
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
-import us.neotechnica.panther.networking.modules.schema.user.models.User
-import us.neotechnica.panther.networking.modules.session.extensions.currentUserID
-import us.neotechnica.panther.networking.modules.session.services.ConversationSessionService
-import us.neotechnica.panther.networking.modules.session.services.UserSessionService
+import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
+import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
+import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 
 // MARK: - Constants Accessors

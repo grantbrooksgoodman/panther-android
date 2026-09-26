@@ -10,7 +10,7 @@ package us.neotechnica.panther.modules.common.extensions
 
 import com.google.i18n.phonenumbers.PhoneNumberUtil
 import us.neotechnica.panther.networking.modules.common.extensions.digits
-import us.neotechnica.panther.networking.modules.schema.common.models.PhoneNumber
+import us.neotechnica.panther.modules.common.models.PhoneNumber
 
 /**
  * Returns the national number formatted for the given region's

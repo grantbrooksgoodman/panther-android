@@ -38,8 +38,8 @@ import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentNavigatorState
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
-import us.neotechnica.panther.networking.modules.session.services.UserMutationService
-import us.neotechnica.panther.networking.modules.session.services.UserSessionService
+import us.neotechnica.panther.modules.networking.user.services.UserMutationService
+import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent

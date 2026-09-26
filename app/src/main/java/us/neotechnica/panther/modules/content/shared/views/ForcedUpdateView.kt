@@ -31,7 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.extensions.isForcedUpdateRequired
-import us.neotechnica.panther.networking.modules.common.services.MetadataService
+import us.neotechnica.panther.modules.common.services.MetadataService
 import us.neotechnica.panther.subsystem.modules.shared.models.SharedState
 
 /**

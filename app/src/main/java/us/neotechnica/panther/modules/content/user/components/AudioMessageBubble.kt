@@ -31,7 +31,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.networking.modules.schema.message.models.AudioMessageReference
+import us.neotechnica.panther.modules.networking.message.models.AudioMessageReference
 import java.util.Locale
 
 /**

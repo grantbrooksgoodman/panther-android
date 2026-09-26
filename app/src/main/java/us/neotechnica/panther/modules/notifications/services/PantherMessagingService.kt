@@ -30,11 +30,11 @@ import us.neotechnica.panther.R
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.navigation.PendingChatNavigation
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
-import us.neotechnica.panther.networking.modules.schema.user.models.User
-import us.neotechnica.panther.networking.modules.session.extensions.currentUserID
-import us.neotechnica.panther.networking.modules.session.services.ConversationSessionService
-import us.neotechnica.panther.networking.modules.session.services.SessionStore
-import us.neotechnica.panther.networking.modules.session.services.UserMutationService
+import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
+import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
+import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.modules.networking.user.services.UserMutationService
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 

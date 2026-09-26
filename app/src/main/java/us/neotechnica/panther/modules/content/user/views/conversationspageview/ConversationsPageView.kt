@@ -50,8 +50,8 @@ import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentNavigatorState
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
-import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
-import us.neotechnica.panther.networking.modules.session.extensions.sessionStoreDidChange
+import us.neotechnica.panther.modules.networking.conversation.models.Conversation
+import us.neotechnica.panther.modules.session.entity.extensions.sessionStoreDidChange
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage

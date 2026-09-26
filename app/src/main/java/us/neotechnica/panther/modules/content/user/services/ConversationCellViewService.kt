@@ -15,8 +15,8 @@ import us.neotechnica.panther.modules.content.user.extensions.blockUsers
 import us.neotechnica.panther.modules.content.user.extensions.reportUsers
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
-import us.neotechnica.panther.networking.modules.schema.conversation.models.Conversation
-import us.neotechnica.panther.networking.modules.session.services.ModerationSessionService
+import us.neotechnica.panther.modules.networking.conversation.models.Conversation
+import us.neotechnica.panther.modules.session.entity.services.ModerationSessionService
 
 /**
  * Handles conversation cell interactions requiring presentation or

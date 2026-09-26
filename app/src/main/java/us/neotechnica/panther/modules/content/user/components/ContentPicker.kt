@@ -24,7 +24,7 @@ import androidx.core.content.FileProvider
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.modules.content.user.constants.MediaActionHandlerStrings
 import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
-import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
+import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import java.io.File
 

@@ -61,8 +61,8 @@ import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewStr
 import us.neotechnica.panther.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
-import us.neotechnica.panther.networking.modules.schema.common.models.PhoneNumber
-import us.neotechnica.panther.networking.modules.session.services.UserSessionService
+import us.neotechnica.panther.modules.common.models.PhoneNumber
+import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.BuildInfoOverlay

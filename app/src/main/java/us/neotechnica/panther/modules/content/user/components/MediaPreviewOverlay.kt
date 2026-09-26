@@ -50,7 +50,7 @@ import us.neotechnica.panther.modules.content.user.constants.MediaPreviewOverlay
 import us.neotechnica.panther.modules.content.user.constants.MediaPreviewOverlayStrings
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
-import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
+import us.neotechnica.panther.modules.networking.message.models.MediaFile
 
 /**
  * A full-screen preview over a conversation's media, opened from a chat

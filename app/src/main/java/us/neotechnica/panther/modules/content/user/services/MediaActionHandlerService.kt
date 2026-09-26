@@ -21,12 +21,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import us.neotechnica.panther.modules.content.user.constants.MediaActionHandlerFloats
 import us.neotechnica.panther.modules.content.user.constants.MediaActionHandlerStrings
-import us.neotechnica.panther.networking.modules.common.models.DocumentFileExtension
-import us.neotechnica.panther.networking.modules.common.models.ImageFileExtension
-import us.neotechnica.panther.networking.modules.common.models.MediaFileExtension
+import us.neotechnica.panther.modules.common.models.DocumentFileExtension
+import us.neotechnica.panther.modules.common.models.ImageFileExtension
+import us.neotechnica.panther.modules.common.models.MediaFileExtension
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
-import us.neotechnica.panther.networking.modules.common.models.VideoFileExtension
-import us.neotechnica.panther.networking.modules.schema.message.models.MediaFile
+import us.neotechnica.panther.modules.common.models.VideoFileExtension
+import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore

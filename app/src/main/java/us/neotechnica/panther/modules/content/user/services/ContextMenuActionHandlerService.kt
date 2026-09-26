@@ -14,8 +14,8 @@ import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.content.user.components.ChatMessageRowData
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
-import us.neotechnica.panther.networking.modules.schema.message.models.Message
-import us.neotechnica.panther.networking.modules.session.extensions.isFromCurrentUser
+import us.neotechnica.panther.modules.networking.message.models.Message
+import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
