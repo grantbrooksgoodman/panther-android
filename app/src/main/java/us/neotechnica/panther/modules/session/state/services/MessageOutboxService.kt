@@ -7,37 +7,46 @@
 
 package us.neotechnica.panther.modules.session.state.services
 
-import org.json.JSONArray
-import org.json.JSONObject
 import us.neotechnica.panther.modules.session.entity.extensions.messageOutboxDidChange
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
+import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
+import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 import us.neotechnica.panther.subsystem.modules.shared.models.send
+import java.io.File
 import java.util.Date
+import java.util.UUID
 
 /**
  * The service that queues messages for delivery and retries failed
  * sends.
  *
- * [MessageOutboxService] holds pending and failed message entries and
- * persists them to disk. It publishes a change whenever its contents
- * change.
- *
- * **Note:** this port queues text and media messages; audio payloads
- * arrive with the audio phase.
+ * [MessageOutboxService] holds pending and failed message entries,
+ * persists them to disk, and stores their payload files. It publishes
+ * a change whenever its contents change.
  */
 object MessageOutboxService {
     // MARK: - Properties
 
-    private val entries = LockIsolated(mapOf<String, OutboxEntry>())
+    /** The outbox entries, keyed by identifier. */
+    val entries = LockIsolated(mapOf<String, OutboxEntry>())
 
     @Volatile
     private var didLoad = false
+
+    // MARK: - Test Support
+
+    /** Clears state and reloads the persisted outbox; for tests only. */
+    internal fun reloadForTesting() {
+        entries.wrappedValue = emptyMap()
+        didLoad = false
+        loadIfNeeded()
+    }
 
     // MARK: - Computed Properties
 
@@ -64,22 +73,9 @@ object MessageOutboxService {
 
     // MARK: - Mutation Methods
 
-    /** Adds the given entry to the outbox. */
-    fun enqueue(entry: OutboxEntry) {
-        loadIfNeeded()
-        entries.withValue { it.value = it.value + (entry.id to entry) }
-        persist()
-        Logger.log("Enqueued outbox entry ${entry.id} for conversation ${entry.conversationIDKey}.")
-        emit()
-    }
-
     /**
-     * Atomically claims the entry with the given identifier for retry,
-     * transitioning it to `sending` and reserving [candidateRemoteID]
-     * for its message if none is reserved.
-     *
-     * @return The claimed entry, or `null` if the entry is missing or
-     *   already claimed.
+     * Atomically claims the entry with the given identifier for
+     * retry, transitioning it to `sending`.
      */
     fun claimForRetry(
         id: String,
@@ -103,11 +99,20 @@ object MessageOutboxService {
             }
 
         if (claimed != null) {
-            persist()
-            Logger.log("Claimed outbox entry $id for retry (attempt ${claimed.attemptCount}).")
+            persistArchive()
+            Logger.log("Claimed outbox entry $id for retry (attempt ${claimed.attemptCount}).", domain = LoggerDomain.outbox)
             emit()
         }
         return claimed
+    }
+
+    /** Adds the given entry to the outbox. */
+    fun enqueue(entry: OutboxEntry) {
+        loadIfNeeded()
+        entries.withValue { it.value = it.value + (entry.id to entry) }
+        persistArchive()
+        Logger.log("Enqueued outbox entry ${entry.id} for conversation ${entry.conversationIDKey}.", domain = LoggerDomain.outbox)
+        emit()
     }
 
     /** Marks the outbox entry with the given identifier as failed. */
@@ -121,12 +126,12 @@ object MessageOutboxService {
                 updated
             } ?: return
 
-        persist()
-        Logger.log("Marked outbox entry $id as failed (attempt ${failed.attemptCount}).")
+        persistArchive()
+        Logger.log("Marked outbox entry $id as failed (attempt ${failed.attemptCount}).", domain = LoggerDomain.outbox)
         emit()
     }
 
-    /** Removes the outbox entry with the given identifier. */
+    /** Removes the outbox entry with the given identifier, deleting its payload files. */
     fun remove(id: String) {
         loadIfNeeded()
         val removed =
@@ -136,12 +141,13 @@ object MessageOutboxService {
                 entry
             } ?: return
 
-        persist()
-        Logger.log("Removed outbox entry ${removed.id}.")
+        removePayloadFile(removed)
+        persistArchive()
+        Logger.log("Removed outbox entry $id.", domain = LoggerDomain.outbox)
         emit()
     }
 
-    /** Removes every outbox entry. */
+    /** Removes every outbox entry, deleting their payload files. */
     fun removeAll() {
         loadIfNeeded()
         val removed =
@@ -152,16 +158,79 @@ object MessageOutboxService {
             }
 
         if (removed.isEmpty()) return
-        persist()
-        Logger.log("Removed all outbox entries (${removed.size}).")
+        removed.values.forEach { removePayloadFile(it) }
+        persistArchive()
+        Logger.log("Removed all outbox entries (${removed.size}).", domain = LoggerDomain.outbox)
         emit()
     }
+
+    // MARK: - Payload Directory Methods
+
+    /**
+     * Copies the file at the given path into the outbox payload
+     * directory and returns the destination file name.
+     *
+     * When a thumbnail image exists alongside the source file, it is
+     * copied into the payload directory as well, so retried sends
+     * upload it with the primary file.
+     */
+    fun storePayloadFile(from: File): String {
+        val directory = FileStore.resolve("outbox") ?: error("File store is not initialized.")
+        directory.mkdirs()
+
+        val fileName = "${UUID.randomUUID()}_${from.name}"
+        val destination = File(directory, fileName)
+        from.copyTo(destination, overwrite = true)
+
+        val sourceThumbnail = from.thumbnailPath
+        val destinationThumbnail = destination.thumbnailPath
+        if (sourceThumbnail.exists()) {
+            sourceThumbnail.copyTo(destinationThumbnail, overwrite = true)
+        }
+
+        Logger.log("Stored payload file $fileName.", domain = LoggerDomain.outbox)
+        return fileName
+    }
+
+    /** Returns the file for the payload with the given name. */
+    fun payloadFileURL(fileName: String): File? = FileStore.resolve("outbox/$fileName")
 
     // MARK: - Auxiliary
 
     private fun emit() {
-        DependencyValues.current.sharedEvents.messageOutboxDidChange
-            .send()
+        DependencyValues.current.sharedEvents.messageOutboxDidChange.send()
+    }
+
+    private fun garbageCollectPayloadFiles() {
+        val directory = FileStore.resolve("outbox") ?: return
+        val fileNames = directory.listFiles()?.map { it.name } ?: return
+
+        val referencedFileNames =
+            entries.wrappedValue.values
+                .flatMap { entry ->
+                    when (val payload = entry.payload) {
+                        is OutboxEntry.Payload.Audio -> listOf(payload.inputFileName)
+                        is OutboxEntry.Payload.Media -> {
+                            // Media payloads may carry a thumbnail sibling;
+                            // reference it so collection preserves both.
+                            val thumbnailName = payloadFileURL(payload.fileName)?.thumbnailPath?.name
+                            if (thumbnailName == null) listOf(payload.fileName) else listOf(payload.fileName, thumbnailName)
+                        }
+                        is OutboxEntry.Payload.Text -> emptyList()
+                    }
+                }.toSet()
+
+        var removedCount = 0
+        for (fileName in fileNames) {
+            if (fileName !in referencedFileNames) {
+                File(directory, fileName).delete()
+                removedCount += 1
+            }
+        }
+
+        if (removedCount > 0) {
+            Logger.log("Garbage-collected $removedCount orphaned payload files.", domain = LoggerDomain.outbox)
+        }
     }
 
     private fun loadIfNeeded() {
@@ -170,94 +239,56 @@ object MessageOutboxService {
             if (didLoad) return
             didLoad = true
 
-            val archive = Persistent.string(PersistentStorageKey.messageOutbox) ?: return
-            val decoded = runCatching { decode(archive) }.getOrNull() ?: return
+            Persistent.string(PersistentStorageKey.messageOutbox)?.let { archive ->
+                val decoded = runCatching { decodeOutboxArchive(archive) }.getOrNull()
+                if (decoded != null) {
+                    // Reconcile: any entry still marked SENDING at launch
+                    // means the app died mid-attempt.
+                    val reconciled =
+                        decoded.associateBy { it.id }.mapValues { (_, entry) ->
+                            if (entry.state == OutboxEntry.State.SENDING) {
+                                Logger.log(
+                                    "Reconciled stale SENDING entry ${entry.id} to FAILED.",
+                                    domain = LoggerDomain.outbox,
+                                )
+                                entry.copy(state = OutboxEntry.State.FAILED)
+                            } else {
+                                entry
+                            }
+                        }
 
-            // Reconcile: any entry still marked SENDING at launch means
-            // the app died mid-attempt.
-            val reconciled =
-                decoded.associateBy { it.id }.mapValues { (_, entry) ->
-                    if (entry.state == OutboxEntry.State.SENDING) {
-                        Logger.log("Reconciled stale SENDING entry ${entry.id} to FAILED.")
-                        entry.copy(state = OutboxEntry.State.FAILED)
-                    } else {
-                        entry
-                    }
+                    entries.wrappedValue = reconciled
+                    Logger.log("Loaded ${reconciled.size} outbox entries into memory.", domain = LoggerDomain.outbox)
                 }
+            }
 
-            entries.wrappedValue = reconciled
-            Logger.log("Loaded ${reconciled.size} outbox entries into memory.")
+            garbageCollectPayloadFiles()
         }
     }
 
-    private fun persist() {
-        Persistent.setString(PersistentStorageKey.messageOutbox, encode(entries.wrappedValue.values.toList()))
+    private fun persistArchive() {
+        Persistent.setString(PersistentStorageKey.messageOutbox, encodeOutboxArchive(entries.wrappedValue.values.toList()))
     }
 
-    // MARK: - Serialization
+    private fun removePayloadFile(entry: OutboxEntry) {
+        val fileName =
+            when (val payload = entry.payload) {
+                is OutboxEntry.Payload.Audio -> payload.inputFileName
+                is OutboxEntry.Payload.Media -> payload.fileName
+                is OutboxEntry.Payload.Text -> null
+            } ?: return
 
-    private fun encode(entries: List<OutboxEntry>): String {
-        val array = JSONArray()
-        for (entry in entries) {
-            val obj = JSONObject()
-            obj.put(KEY_ID, entry.id)
-            obj.put(KEY_CONVERSATION_ID_KEY, entry.conversationIDKey)
-            obj.put(KEY_FROM_ACCOUNT_ID, entry.fromAccountID)
-            obj.put(KEY_RECIPIENT_USER_IDS, JSONArray(entry.recipientUserIDs))
-            obj.put(KEY_TEXT, entry.text)
-            obj.put(KEY_MEDIA_RELATIVE_PATH, entry.mediaRelativePath ?: JSONObject.NULL)
-            obj.put(KEY_IS_PEN_PALS, entry.isPenPalsConversation)
-            obj.put(KEY_CREATED_DATE, entry.createdDate.time)
-            obj.put(KEY_ATTEMPT_COUNT, entry.attemptCount)
-            obj.put(KEY_LAST_ATTEMPT_DATE, entry.lastAttemptDate?.time ?: JSONObject.NULL)
-            obj.put(KEY_RESERVED_REMOTE_ID, entry.reservedRemoteID ?: JSONObject.NULL)
-            obj.put(KEY_STATE, entry.state.rawValue)
-            array.put(obj)
-        }
-        return array.toString()
+        val file = payloadFileURL(fileName) ?: return
+        file.delete()
+        file.thumbnailPath.delete()
+
+        Logger.log("Removed payload file $fileName for entry ${entry.id}.", domain = LoggerDomain.outbox)
     }
 
-    private fun decode(archive: String): List<OutboxEntry> {
-        val array = JSONArray(archive)
-        val result = mutableListOf<OutboxEntry>()
-        for (index in 0 until array.length()) {
-            val obj = array.getJSONObject(index)
-            val recipientsArray = obj.getJSONArray(KEY_RECIPIENT_USER_IDS)
-            val recipients = (0 until recipientsArray.length()).map { recipientsArray.getString(it) }
-            val state = OutboxEntry.State.from(obj.getString(KEY_STATE)) ?: continue
-
-            result.add(
-                OutboxEntry(
-                    id = obj.getString(KEY_ID),
-                    conversationIDKey = obj.getString(KEY_CONVERSATION_ID_KEY),
-                    fromAccountID = obj.getString(KEY_FROM_ACCOUNT_ID),
-                    recipientUserIDs = recipients,
-                    text = obj.getString(KEY_TEXT),
-                    mediaRelativePath = if (obj.isNull(KEY_MEDIA_RELATIVE_PATH)) null else obj.getString(KEY_MEDIA_RELATIVE_PATH),
-                    isPenPalsConversation = obj.getBoolean(KEY_IS_PEN_PALS),
-                    createdDate = Date(obj.getLong(KEY_CREATED_DATE)),
-                    attemptCount = obj.getInt(KEY_ATTEMPT_COUNT),
-                    lastAttemptDate = if (obj.isNull(KEY_LAST_ATTEMPT_DATE)) null else Date(obj.getLong(KEY_LAST_ATTEMPT_DATE)),
-                    reservedRemoteID = if (obj.isNull(KEY_RESERVED_REMOTE_ID)) null else obj.getString(KEY_RESERVED_REMOTE_ID),
-                    state = state,
-                ),
-            )
-        }
-        return result
-    }
-
-    // MARK: - Companion
-
-    private const val KEY_ID = "id"
-    private const val KEY_CONVERSATION_ID_KEY = "conversationIDKey"
-    private const val KEY_FROM_ACCOUNT_ID = "fromAccountID"
-    private const val KEY_RECIPIENT_USER_IDS = "recipientUserIDs"
-    private const val KEY_TEXT = "text"
-    private const val KEY_MEDIA_RELATIVE_PATH = "mediaRelativePath"
-    private const val KEY_IS_PEN_PALS = "isPenPalsConversation"
-    private const val KEY_CREATED_DATE = "createdDate"
-    private const val KEY_ATTEMPT_COUNT = "attemptCount"
-    private const val KEY_LAST_ATTEMPT_DATE = "lastAttemptDate"
-    private const val KEY_RESERVED_REMOTE_ID = "reservedRemoteID"
-    private const val KEY_STATE = "state"
 }
+
+// MARK: - File
+
+/** The file's thumbnail sibling, named with the thumbnail suffix. */
+private val File.thumbnailPath: File
+    get() = File(parentFile, "${name.substringBeforeLast(".")}-thumbnail.jpeg")

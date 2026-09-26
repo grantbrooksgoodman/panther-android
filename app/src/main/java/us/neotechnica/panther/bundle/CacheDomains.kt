@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.bundle
 
+import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.CacheDomainListDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.models.CacheDomain
@@ -23,6 +24,9 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.CacheDomain
 object CacheDomainList : CacheDomainListDelegate {
     override val appCacheDomains: List<CacheDomain> =
         listOf(
+            CacheDomain("conversationArchive") { SessionStore.clearConversationArchive() },
+            CacheDomain("messageArchive") { SessionStore.clearMessageArchive() },
+            CacheDomain("userArchive") { SessionStore.clearUserArchive() },
             CacheDomain.Networking.database,
         )
 }

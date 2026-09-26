@@ -29,6 +29,8 @@ object SignOutService {
         UserSessionService.stopObservingCurrentUserChanges()
         ConversationSessionService.setCurrentConversation(null)
         Persistent.setString(PersistentStorageKey.currentUserID, null)
-        SessionStore.clear()
+        SessionStore.clearConversationArchive()
+        SessionStore.clearMessageArchive()
+        SessionStore.clearUserArchive()
     }
 }

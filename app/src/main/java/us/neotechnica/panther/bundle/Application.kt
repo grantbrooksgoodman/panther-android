@@ -98,7 +98,7 @@ object Application {
         onCompletion: ResetCompletionProcedure? = null,
     ) {
         MessageOutboxService.removeAll()
-        SessionStore.clear()
+        SessionStore.advanceEpoch()
         ConversationObserverService.stopObserving()
 
         if (!preserveCurrentUserID) {

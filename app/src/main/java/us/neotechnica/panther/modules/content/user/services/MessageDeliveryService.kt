@@ -27,6 +27,8 @@ import us.neotechnica.panther.modules.session.entity.services.ConversationSessio
 import us.neotechnica.panther.modules.session.entity.services.MessageSessionService
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.modules.session.clientSession
 
 /**
  * Sends messages from the chat page, staging each in the outbox so
@@ -89,13 +91,14 @@ object MessageDeliveryService {
                     conversationIDKey = currentConversation.id.key,
                     fromAccountID = currentUser.id,
                     recipientUserIDs = recipients.map { it.id },
-                    text = text.trimEnd(),
+                    payload = OutboxEntry.Payload.Text(text.trimEnd()),
                     isPenPalsConversation = currentConversation.metadata.isPenPalsConversation,
                     createdDate = Date(),
                     attemptCount = 1,
                     lastAttemptDate = Date(),
                     reservedRemoteID = null,
                     state = OutboxEntry.State.SENDING,
+                    transcription = null,
                 )
             outboxEntryID = entry.id
             MessageOutboxService.enqueue(entry)
@@ -103,7 +106,7 @@ object MessageDeliveryService {
 
         internalIsSendingMessage.value = true
         withContext(Dispatchers.Main) {
-            MessageSessionService.deliveryProgressIndicator?.startAnimatingDeliveryProgress()
+            DependencyValues.current.clientSession.deliveryProgressIndicator?.startAnimatingDeliveryProgress()
         }
 
         try {
@@ -144,25 +147,27 @@ object MessageDeliveryService {
         val users = conversation.users.orEmpty()
         if (users.isEmpty()) return
 
+        val stagedFileName =
+            mediaFile.localPathFile?.let { MessageOutboxService.storePayloadFile(from = it) } ?: return
         val entry =
             OutboxEntry(
                 id = "${OutboxEntry.ID_PREFIX}${UUID.randomUUID()}",
                 conversationIDKey = conversation.id.key,
                 fromAccountID = currentUser.id,
                 recipientUserIDs = users.map { it.id },
-                text = "",
-                mediaRelativePath = mediaFile.relativePath,
+                payload = OutboxEntry.Payload.Media(stagedFileName, mediaFile.fileExtension),
                 isPenPalsConversation = conversation.metadata.isPenPalsConversation,
                 createdDate = Date(),
                 attemptCount = 1,
                 lastAttemptDate = Date(),
                 reservedRemoteID = null,
                 state = OutboxEntry.State.SENDING,
+                transcription = null,
             )
         MessageOutboxService.enqueue(entry)
         internalIsSendingMessage.value = true
         withContext(Dispatchers.Main) {
-            MessageSessionService.deliveryProgressIndicator?.startAnimatingDeliveryProgress()
+            DependencyValues.current.clientSession.deliveryProgressIndicator?.startAnimatingDeliveryProgress()
         }
 
         try {
@@ -195,7 +200,7 @@ object MessageDeliveryService {
     private suspend fun cleanUpAfterSend() {
         internalIsSendingMessage.value = false
         withContext(Dispatchers.Main) {
-            MessageSessionService.deliveryProgressIndicator?.stopAnimatingDeliveryProgress()
+            DependencyValues.current.clientSession.deliveryProgressIndicator?.stopAnimatingDeliveryProgress()
         }
     }
 }

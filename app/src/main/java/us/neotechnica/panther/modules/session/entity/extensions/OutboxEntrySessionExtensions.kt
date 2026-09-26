@@ -7,12 +7,14 @@
 
 package us.neotechnica.panther.modules.session.entity.extensions
 
-import us.neotechnica.panther.modules.common.models.MediaFileExtension
+import us.neotechnica.panther.modules.common.extensions.shortened
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
+import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.message.models.TranslationReference
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.Translation
@@ -25,40 +27,68 @@ import us.neotechnica.panther.networking.modules.translation.models.TranslationR
  */
 val OutboxEntry.asDisplayMessage: Message
     get() {
-        // A media entry renders as a media message pointing at its staged
-        // local file (id = the staging name, so the path resolves before
-        // the upload re-keys it by content hash).
-        mediaRelativePath?.let { relativePath ->
-            val fileName = relativePath.substringAfterLast("/")
-            MediaFileExtension.from(fileName.substringAfterLast("."))?.let { fileExtension ->
-                return Message(
+        val languageCode = UserSessionService.currentUser?.languageCode ?: RuntimeStorage.languageCode
+        val selfTranslationPair = LanguagePair(from = languageCode, to = languageCode)
+
+        return when (val payload = payload) {
+            is OutboxEntry.Payload.Audio -> {
+                // Audio sending is cut; no audio entry is enqueued. This
+                // defensive branch renders the transcription as text.
+                val transcriptionText = transcription.orEmpty()
+                val translation =
+                    Translation(
+                        input = TranslationInput(transcriptionText),
+                        output = transcriptionText,
+                        languagePair = selfTranslationPair,
+                    )
+                Message(
                     id = id,
                     fromAccountID = fromAccountID,
-                    contentType = HostedContentType.Media(id = fileName.substringBeforeLast("."), fileExtension = fileExtension),
+                    contentType = HostedContentType.Text,
+                    translationReferences = listOf(TranslationReference(HostedTranslationReference.from(translation).hostingKey)),
+                    readReceipts = null,
+                    sentDate = createdDate,
+                    translations = listOf(translation),
+                )
+            }
+
+            is OutboxEntry.Payload.Media -> {
+                // A media entry renders as a media message pointing at its
+                // staged local file, keyed by content hash so the id matches
+                // the delivered message.
+                val mediaFile =
+                    MediaFile(
+                        relativePath = "outbox/${payload.fileName}",
+                        name = payload.fileName,
+                        fileExtension = payload.fileExtension,
+                    )
+                Message(
+                    id = id,
+                    fromAccountID = fromAccountID,
+                    contentType = HostedContentType.Media(id = mediaFile.encodedHash.shortened, fileExtension = payload.fileExtension),
                     translationReferences = null,
                     readReceipts = null,
                     sentDate = createdDate,
                     translations = null,
                 )
             }
+
+            is OutboxEntry.Payload.Text -> {
+                val translation =
+                    Translation(
+                        input = TranslationInput(payload.value),
+                        output = payload.value,
+                        languagePair = selfTranslationPair,
+                    )
+                Message(
+                    id = id,
+                    fromAccountID = fromAccountID,
+                    contentType = HostedContentType.Text,
+                    translationReferences = listOf(TranslationReference(HostedTranslationReference.from(translation).hostingKey)),
+                    readReceipts = null,
+                    sentDate = createdDate,
+                    translations = listOf(translation),
+                )
+            }
         }
-
-        val languageCode = UserSessionService.currentUser?.languageCode ?: RuntimeStorage.languageCode
-        val selfPair = LanguagePair(from = languageCode, to = languageCode)
-        val translation =
-            Translation(
-                input = TranslationInput(text),
-                output = text,
-                languagePair = selfPair,
-            )
-
-        return Message(
-            id = id,
-            fromAccountID = fromAccountID,
-            contentType = HostedContentType.Text,
-            translationReferences = listOf(TranslationReference(HostedTranslationReference.from(translation).hostingKey)),
-            readReceipts = null,
-            sentDate = createdDate,
-            translations = listOf(translation),
-        )
     }

@@ -7,58 +7,54 @@
 
 package us.neotechnica.panther.modules.session.state.models
 
-import us.neotechnica.panther.modules.networking.message.models.MediaFile
+import us.neotechnica.panther.modules.common.models.MediaFileExtension
 import java.util.Date
 
 /**
  * A message queued in the outbox for delivery.
- *
- * An entry carries either a text payload or a media payload (its staged
- * local media path); audio payloads arrive with the audio phase.
- *
- * @property id The entry's unique identifier (prefixed `outbox-`).
- * @property conversationIDKey The identifier key of the conversation the
- *   entry belongs to.
- * @property fromAccountID The identifier of the account that sent the
- *   entry.
- * @property recipientUserIDs The identifiers of the users the entry is
- *   addressed to.
- * @property text The entry's text content, or empty for a media entry.
- * @property mediaRelativePath The staged media file's path relative to the
- *   documents directory, or `null` for a text entry.
- * @property isPenPalsConversation Whether the entry belongs to a PenPals
- *   conversation.
- * @property createdDate The date the entry was created.
- * @property attemptCount The number of delivery attempts made.
- * @property lastAttemptDate The date of the last delivery attempt, or
- *   `null` if none has been made.
- * @property reservedRemoteID The remote identifier reserved for the
- *   entry's message, or `null` if none has been reserved.
- * @property state The entry's delivery state.
  */
 data class OutboxEntry(
-    val id: String,
+    /** The identifier key of the conversation the entry belongs to. */
     val conversationIDKey: String,
-    val fromAccountID: String,
-    val recipientUserIDs: List<String>,
-    val text: String,
-    val mediaRelativePath: String? = null,
-    val isPenPalsConversation: Boolean,
+    /** The date the entry was created. */
     val createdDate: Date,
+    /** The identifier of the account that sent the entry. */
+    val fromAccountID: String,
+    /** The entry's unique identifier. */
+    val id: String,
+    /** Whether the entry belongs to a PenPals conversation. */
+    val isPenPalsConversation: Boolean,
+    /** The entry's content. */
+    val payload: Payload,
+    /** The identifiers of the users the entry is addressed to. */
+    val recipientUserIDs: List<String>,
+    /** The number of delivery attempts made for the entry. */
     val attemptCount: Int,
+    /** The date of the entry's last delivery attempt, or `null` if none has been made. */
     val lastAttemptDate: Date?,
+    /** The remote identifier reserved for the entry's message, or `null` if none has been reserved. */
     val reservedRemoteID: String?,
+    /** The entry's delivery state. */
     val state: State,
+    /** The transcription of the entry's audio, or `null` if it has none. */
+    val transcription: String?,
 ) {
-    // MARK: - Computed Properties
+    // MARK: - Types
 
-    /** Whether the entry carries a media payload. */
-    val isMediaEntry: Boolean
-        get() = mediaRelativePath != null
+    /** The content of an outbox entry. */
+    sealed class Payload {
+        /** An audio message, carrying the file name of its recorded input. */
+        data class Audio(val inputFileName: String) : Payload()
 
-    /** The staged media file for a media entry, or `null` if none exists on disk. */
-    val mediaFile: MediaFile?
-        get() = mediaRelativePath?.let { MediaFile.from(it) }
+        /** A media message, carrying its file name and extension. */
+        data class Media(
+            val fileName: String,
+            val fileExtension: MediaFileExtension,
+        ) : Payload()
+
+        /** A text message, carrying its text. */
+        data class Text(val value: String) : Payload()
+    }
 
     /** The delivery state of an outbox entry. */
     enum class State(
@@ -76,6 +72,8 @@ data class OutboxEntry(
             fun from(rawValue: String): State? = entries.firstOrNull { it.rawValue == rawValue }
         }
     }
+
+    // MARK: - Companion
 
     companion object {
         /** The maximum number of times an entry is automatically retried. */

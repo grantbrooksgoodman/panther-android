@@ -100,6 +100,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
+import us.neotechnica.panther.modules.session.clientSession
 
 // MARK: - Constants Accessors
 
@@ -220,7 +221,7 @@ private fun rememberRegisteredDeliveryProgressIndicatorService(): DeliveryProgre
     val scope = rememberCoroutineScope()
     val service = remember { DeliveryProgressIndicatorService(scope) }
     DisposableEffect(service) {
-        MessageSessionService.registerDeliveryProgressIndicator(service)
+        DependencyValues.current.clientSession.registerDeliveryProgressIndicator(service)
         onDispose { service.teardown() }
     }
     return service

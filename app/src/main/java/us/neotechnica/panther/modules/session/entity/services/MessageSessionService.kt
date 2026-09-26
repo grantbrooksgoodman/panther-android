@@ -25,7 +25,7 @@ import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.constants.MessageSessionServiceFloats
-import us.neotechnica.panther.modules.session.entity.interfaces.DeliveryProgressIndicator
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.networking.modules.translation.models.ArchiveStrategy
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -38,6 +38,7 @@ import us.neotechnica.panther.translator.services.LanguageRecognitionService
 import us.neotechnica.panther.networking.modules.translation.models.TranslationReference as HostedTranslationReference
 import us.neotechnica.panther.modules.common.services.NotificationSessionService
 import us.neotechnica.panther.modules.session.state.services.PendingTranslationArchive
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 
 // MARK: - Constants Accessors
 
@@ -57,38 +58,7 @@ object MessageSessionService {
 
     private val hostedTranslation get() = Networking.config.hostedTranslationDelegate
 
-    private val internalDeliveryProgressIndicator = LockIsolated<DeliveryProgressIndicator?>(null)
-
     private val notificationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
-    // MARK: - Computed Properties
-
-    /**
-     * The indicator that displays the progress of the current
-     * message delivery, if one is registered.
-     *
-     * **Important:** [DeliveryProgressIndicator] is a main-thread
-     * type. Access its members only from the main thread.
-     */
-    val deliveryProgressIndicator: DeliveryProgressIndicator?
-        get() = internalDeliveryProgressIndicator.wrappedValue
-
-    // MARK: - Register Delivery Progress Indicator
-
-    /**
-     * Registers the indicator that displays the progress of the
-     * current message delivery.
-     *
-     * Call this method when a screen capable of showing delivery
-     * progress becomes active. The registered indicator replaces any
-     * previously registered one and is returned by
-     * [deliveryProgressIndicator].
-     *
-     * @param deliveryProgressIndicator The indicator to register.
-     */
-    fun registerDeliveryProgressIndicator(deliveryProgressIndicator: DeliveryProgressIndicator) {
-        internalDeliveryProgressIndicator.wrappedValue = deliveryProgressIndicator
-    }
 
     // MARK: - Send Text Message
 
@@ -230,7 +200,7 @@ object MessageSessionService {
     ) {
         if (!shouldAnimateDeliveryProgress(conversation)) return
         deliveryProgressScope.launch {
-            deliveryProgressIndicator?.incrementDeliveryProgress(by)
+            DependencyValues.current.clientSession.deliveryProgressIndicator?.incrementDeliveryProgress(by)
         }
     }
 
