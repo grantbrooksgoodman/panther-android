@@ -10,6 +10,7 @@ package us.neotechnica.panther.modules.content.onboarding.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,11 +30,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
+import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.onboarding.constants.WheelPickerFloats
 import kotlin.math.abs
@@ -56,6 +60,7 @@ fun WheelPicker(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalPantherColors.current
+    val isDarkMode = ThemeService.isDarkModeActive(isSystemInDarkTheme())
     val rowHeightPx = with(LocalDensity.current) { WheelPickerFloats.rowHeight.toPx() }
 
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex.coerceAtLeast(0))
@@ -91,7 +96,8 @@ fun WheelPicker(
                     .fillMaxWidth()
                     .height(WheelPickerFloats.rowHeight)
                     .clip(RoundedCornerShape(WheelPickerFloats.pillCornerRadius))
-                    .background(colors.groupedContentBackground),
+                    .background(if (isDarkMode) Color.Gray else Color.LightGray)
+                    .alpha(WheelPickerFloats.SELECTION_PILL_ALPHA),
         )
 
         LazyColumn(

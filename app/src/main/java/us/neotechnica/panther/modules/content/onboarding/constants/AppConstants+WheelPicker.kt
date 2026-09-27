@@ -18,6 +18,7 @@ object WheelPickerFloats {
     val rowHeight: Dp = 40.dp
 
     const val MIN_ROW_ALPHA = 0.12f
+    const val SELECTION_PILL_ALPHA = 0.4f
     const val VISIBLE_ROW_COUNT = 7
     const val HALF_ROW_COUNT = VISIBLE_ROW_COUNT / 2
 }

@@ -257,7 +257,7 @@ private fun ActionButton(
 ) {
     val color =
         when {
-            action.style.isDestructive -> MaterialTheme.colorScheme.error
+            action.style.isDestructive -> ACTION_SHEET_DESTRUCTIVE_COLOR
             else -> Color.Unspecified
         }
 

@@ -63,7 +63,7 @@ fun ChangeLanguagePageView(modifier: Modifier = Modifier) {
         Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
             Header(
                 title = state.strings.value(ChangeLanguagePageViewStrings.navigationTitle),
-                onDone = { viewModel.send(ChangeLanguagePageReducer.Action.BackTapped) },
+                onBack = { viewModel.send(ChangeLanguagePageReducer.Action.BackTapped) },
             )
 
             InstructionView(state.instructionViewStrings)
@@ -80,7 +80,11 @@ fun ChangeLanguagePageView(modifier: Modifier = Modifier) {
                             viewModel.send(ChangeLanguagePageReducer.Action.SelectedLanguageNameChanged(it))
                         }
                     },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = Floats.pickerHorizontalPadding),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Floats.pickerHorizontalPadding)
+                            .padding(bottom = Floats.headerVerticalPadding),
                 )
 
                 Components.CapsuleButton(
@@ -101,7 +105,7 @@ fun ChangeLanguagePageView(modifier: Modifier = Modifier) {
 @Composable
 private fun Header(
     title: String,
-    onDone: () -> Unit,
+    onBack: () -> Unit,
 ) {
     val colors = LocalPantherColors.current
     Box(
@@ -117,10 +121,10 @@ private fun Header(
             modifier = Modifier.align(Alignment.Center),
         )
         CircleChipButton(
-            systemName = "checkmark",
-            contentDescription = title,
-            onClick = onDone,
-            modifier = Modifier.align(Alignment.CenterEnd),
+            systemName = "chevron.left",
+            contentDescription = "Back",
+            onClick = onBack,
+            modifier = Modifier.align(Alignment.CenterStart),
             tint = colors.titleText,
             glyphSize = Floats.doneButtonGlyphSize,
         )

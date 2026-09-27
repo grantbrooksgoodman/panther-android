@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.views.changelanguagepageview
 
+import us.neotechnica.panther.bundle.Application
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.content.onboarding.models.InstructionViewStrings
@@ -175,7 +176,10 @@ class ChangeLanguagePageReducer : Reducer<ChangeLanguagePageReducer.State, Chang
 
             try {
                 LanguageChangeService.changeLanguage(languageCode)
-                DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
+                Application.reset(
+                    preserveCurrentUserID = true,
+                    onCompletion = Application.ResetCompletionProcedure.EXIT_GRACEFULLY,
+                )
             } catch (exception: Exception) {
                 Logger.log(exception)
             }

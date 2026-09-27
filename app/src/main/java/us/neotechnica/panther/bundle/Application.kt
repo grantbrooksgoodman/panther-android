@@ -123,8 +123,10 @@ object Application {
         )
         RuntimeStorage.remove(StoredItemKey.populatedTemporaryCaches)
 
-        runCatching { Networking.config.authDelegate.signOut() }
-            .onFailure { Logger.log("Failed to sign out during reset. ${it.message}") }
+        if (!preserveCurrentUserID) {
+            runCatching { Networking.config.authDelegate.signOut() }
+                .onFailure { Logger.log("Failed to sign out during reset. ${it.message}") }
+        }
 
         val procedure = onCompletion ?: return
         dismissSheets()

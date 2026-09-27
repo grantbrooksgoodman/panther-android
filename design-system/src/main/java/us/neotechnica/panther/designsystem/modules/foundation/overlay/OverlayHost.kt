@@ -49,4 +49,4 @@ fun OverlayHost() {
     }
 }
 
-private const val SCRIM_ALPHA = 0.5f
+private const val SCRIM_ALPHA = 1f

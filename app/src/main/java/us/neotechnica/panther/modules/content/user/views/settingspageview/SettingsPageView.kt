@@ -247,7 +247,7 @@ private fun SettingsActionCards(
         SettingsRowDivider()
         SettingsIconRow("star.fill", Colors.iconYellow, Strings.LEAVE_REVIEW, enabled) { launchLeaveReview(context) }
         SettingsRowDivider()
-        SettingsIconRow("globe", Colors.iconPink, Strings.CHANGE_LANGUAGE, enabled) {
+        SettingsIconRow("globe", Colors.iconPink, Strings.CHANGE_LANGUAGE, enabled, showsDisclosure = true) {
             send(SettingsPageReducer.Action.ChangeLanguageTapped)
         }
     }
@@ -293,11 +293,13 @@ private fun SettingsCard(content: @Composable () -> Unit) {
 }
 
 @Composable
+@Suppress("LongParameterList")
 private fun SettingsIconRow(
     symbol: String,
     iconColor: Color,
     title: String,
     enabled: Boolean,
+    showsDisclosure: Boolean = false,
     onClick: () -> Unit,
 ) {
     val colors = LocalPantherColors.current
@@ -319,7 +321,18 @@ private fun SettingsIconRow(
         ) {
             Components.Symbol(symbol, color = Color.White, modifier = Modifier.size(Floats.iconGlyphSize))
         }
-        Components.Text(title, color = colors.titleText, modifier = Modifier.padding(start = Floats.iconTitleStartPadding))
+        Components.Text(
+            title,
+            color = colors.titleText,
+            modifier = Modifier.weight(1f).padding(start = Floats.iconTitleStartPadding),
+        )
+        if (showsDisclosure) {
+            Components.Symbol(
+                "chevron.right",
+                color = colors.subtitleText,
+                modifier = Modifier.size(Floats.disclosureChevronSize),
+            )
+        }
     }
 }
 

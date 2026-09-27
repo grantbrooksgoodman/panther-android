@@ -8,6 +8,8 @@
 
 package us.neotechnica.panther.modules.content.user.views.settingspageview
 
+import us.neotechnica.panther.bundle.Application
+import us.neotechnica.panther.bundle.Application.ResetCompletionProcedure
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
@@ -169,6 +171,10 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
             CacheClearingService.clearCaches()
             Alert(message = SettingsPageViewStrings.CLEAR_CACHES_DONE_MESSAGE).present()
             send(Action.Finished)
+            Application.reset(
+                preserveCurrentUserID = true,
+                onCompletion = ResetCompletionProcedure.EXIT_GRACEFULLY,
+            )
         }
 
     private fun unblockUsersEffect(): Effect<Action> =
