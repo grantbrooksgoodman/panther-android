@@ -21,9 +21,11 @@ import us.neotechnica.panther.modules.networking.message.models.ReadReceipt
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.modules.networking.message.services.MessageTranslationCache
 import us.neotechnica.panther.networking.modules.translation.services.TranslationResolver
+import us.neotechnica.panther.translator.Translator
+import us.neotechnica.panther.translator.interfaces.TranslationArchiverDelegate
 import us.neotechnica.panther.translator.models.Translation
+import us.neotechnica.panther.translator.services.LocalTranslationArchiver
 import java.io.File
 import us.neotechnica.panther.networking.modules.translation.models.TranslationReference as HostedTranslationReference
 
@@ -145,41 +147,58 @@ suspend fun Message.resolvedTranslation(languageCode: String): Translation? {
         return pickInlineTranslation(inline, languageCode) ?: inline.firstOrNull()
     }
 
-    MessageTranslationCache.get(id, languageCode)?.let { return it }
+    val reference = translationReference(languageCode) ?: return null
+    archivedTranslation(reference)?.let { return it }
 
-    val parsed =
-        translationReferences
-            .orEmpty()
-            .mapNotNull { HostedTranslationReference.fromString(it.hostingKey) }
-    if (parsed.isEmpty()) return null
+    val resolved = runCatching { TranslationResolver.resolve(reference) }.getOrNull() ?: return null
 
-    val reference =
-        if (isFromCurrentUser) {
-            parsed.firstOrNull { it.languagePair.from == languageCode } ?: parsed.first()
-        } else {
-            parsed.firstOrNull { it.languagePair.to == languageCode } ?: parsed.first()
-        }
-
-    return runCatching { TranslationResolver.resolve(reference) }
-        .getOrNull()
-        ?.also { MessageTranslationCache.put(id, languageCode, it) }
+    // Idempotent (same-language) references are never written to the archive.
+    if (reference.type is HostedTranslationReference.Type.Archived) translationArchiver.addValue(resolved)
+    return resolved
 }
 
 /**
  * The message's translation resolved for [languageCode] from local
- * sources only – its inline translations or the process cache – with no
- * archive read.
+ * sources only – its inline translations or the persistent translation
+ * archive – with no network read.
  *
  * Returns `null` when a hosted message's translation has not yet been
- * resolved, letting the caller seed what is already known synchronously
+ * archived, letting the caller seed what is already known synchronously
  * and fall back to the asynchronous [resolvedTranslation] for the rest.
  */
 fun Message.cachedTranslation(languageCode: String): Translation? {
     translations?.let { inline ->
         return pickInlineTranslation(inline, languageCode) ?: inline.firstOrNull()
     }
-    return MessageTranslationCache.get(id, languageCode)
+    return translationReference(languageCode)?.let { archivedTranslation(it) }
 }
+
+/**
+ * The hosted translation reference targeting [languageCode], or `null`
+ * when the message carries no references.
+ */
+private fun Message.translationReference(languageCode: String): HostedTranslationReference? {
+    val parsed =
+        translationReferences
+            .orEmpty()
+            .mapNotNull { HostedTranslationReference.fromString(it.hostingKey) }
+    if (parsed.isEmpty()) return null
+
+    return if (isFromCurrentUser) {
+        parsed.firstOrNull { it.languagePair.from == languageCode } ?: parsed.first()
+    } else {
+        parsed.firstOrNull { it.languagePair.to == languageCode } ?: parsed.first()
+    }
+}
+
+/** Reads an archived reference from the persistent translation archive, or `null` on a miss. */
+private fun archivedTranslation(reference: HostedTranslationReference): Translation? {
+    val archived = reference.type as? HostedTranslationReference.Type.Archived ?: return null
+    return translationArchiver.getValue(archived.hash, reference.languagePair)
+}
+
+private val translationArchiver: TranslationArchiverDelegate
+    get() = Translator.config.archiverDelegate ?: LocalTranslationArchiver
 
 private fun Message.pickInlineTranslation(
     inline: List<Translation>,

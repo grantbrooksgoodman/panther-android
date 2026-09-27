@@ -51,6 +51,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
@@ -71,6 +72,8 @@ internal data class ActiveContextMenu(
     val actions: List<ContextMenuAction>,
     val reactionChoices: List<ReactionChoice>,
     val liftScale: Float,
+    val liftedBackground: Color?,
+    val menuLeadingOffset: Dp,
     val content: @Composable () -> Unit,
 )
 
@@ -135,6 +138,15 @@ fun ContextMenuHost(
  *   row is omitted when empty.
  * @param liftScale The fraction the lifted copy scales up by; pass `0`
  *   to lift a full-width row without scaling it past the screen edge.
+ * @param liftedBackground An opaque background painted behind the lifted
+ *   copy, so a transparent row (such as a list cell) stays readable over
+ *   the dimmed backdrop. Pass `null` when the content paints its own
+ *   background, such as a message bubble.
+ * @param menuLeadingOffset For [ContextMenuAlignment.LEADING], the inset
+ *   from the content's leading edge at which the menu's leading text (and
+ *   the reaction row's leading edge) is aligned, so a full-width row can
+ *   line its menu text up with an inner element such as an avatar rather
+ *   than the screen edge.
  * @param onTap The action performed on a single tap, or `null` when the
  *   bubble has none. Handling it here (rather than a `clickable` inside
  *   [content]) keeps the tap from consuming the long-press and double-tap.
@@ -148,6 +160,8 @@ fun MessageContextMenu(
     alignment: ContextMenuAlignment,
     reactionChoices: List<ReactionChoice> = emptyList(),
     liftScale: Float = LIFT_SCALE_BONUS,
+    liftedBackground: Color? = null,
+    menuLeadingOffset: Dp = 0.dp,
     onTap: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
@@ -182,7 +196,16 @@ fun MessageContextMenu(
                         if (hasMenu && controller?.canBegin == true && anchorBounds != Rect.Zero) {
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                             controller.present(
-                                ActiveContextMenu(anchorBounds, alignment, actions, reactionChoices, liftScale, content),
+                                ActiveContextMenu(
+                                    anchorBounds,
+                                    alignment,
+                                    actions,
+                                    reactionChoices,
+                                    liftScale,
+                                    liftedBackground,
+                                    menuLeadingOffset,
+                                    content,
+                                ),
                             )
                         }
                     },
@@ -220,6 +243,7 @@ private fun ContextMenuOverlay(
         val gapPx = with(density) { MENU_GAP.toPx() }
         val reactionGapPx = with(density) { REACTION_ROW_GAP.toPx() }
         val edgeMarginPx = with(density) { EDGE_MARGIN.toPx() }
+        val menuLeadingOffsetPx = with(density) { active.menuLeadingOffset.toPx() }
         val topLimitPx = WindowInsets.systemBars.getTop(density) + edgeMarginPx
         val bottomLimitPx = constraints.maxHeight - WindowInsets.systemBars.getBottom(density) - edgeMarginPx
 
@@ -247,7 +271,8 @@ private fun ContextMenuOverlay(
                         reactionRowWidthPx = it.size.width
                         reactionRowHeightPx = it.size.height
                     }.offset {
-                        val x = if (active.alignment == ContextMenuAlignment.LEADING) bounds.left else bounds.right - reactionRowWidthPx
+                        val leadingX = bounds.left + menuLeadingOffsetPx
+                        val x = if (active.alignment == ContextMenuAlignment.LEADING) leadingX else bounds.right - reactionRowWidthPx
                         val y = bounds.top - reactionRowHeightPx - reactionGapPx + shiftPx
                         IntOffset(x.roundToInt().coerceAtLeast(0), y.roundToInt().coerceAtLeast(0))
                     }.graphicsLayer {
@@ -274,7 +299,7 @@ private fun ContextMenuOverlay(
                     scaleX = scale
                     scaleY = scale
                     transformOrigin = TransformOrigin(originX, 0f)
-                },
+                }.then(active.liftedBackground?.let { Modifier.background(it) } ?: Modifier),
         ) { active.content() }
 
         // Action menu, below the scaled bubble, aligned to its side.
@@ -284,7 +309,9 @@ private fun ContextMenuOverlay(
                     .onGloballyPositioned { menuHeightPx = it.size.height }
                     .offset {
                         val menuWidthPx = with(density) { MENU_WIDTH.toPx() }
-                        val x = if (active.alignment == ContextMenuAlignment.LEADING) bounds.left else bounds.right - menuWidthPx
+                        // Pull the card left by its text inset so the text lands at the offset.
+                        val leadingX = bounds.left + menuLeadingOffsetPx - with(density) { MENU_ROW_START_PADDING.toPx() }
+                        val x = if (active.alignment == ContextMenuAlignment.LEADING) leadingX else bounds.right - menuWidthPx
                         val y = bubbleBottomPx + gapPx + shiftPx
                         IntOffset(x.roundToInt().coerceAtLeast(0), y.roundToInt())
                     }.graphicsLayer {
@@ -326,7 +353,7 @@ private fun ContextMenuCard(
                         .fillMaxWidth()
                         .height(MENU_ROW_HEIGHT)
                         .clickable { onSelect(action) }
-                        .padding(start = 16.dp, end = 12.dp),
+                        .padding(start = MENU_ROW_START_PADDING, end = 12.dp),
             ) {
                 Components.Text(
                     action.title,
@@ -353,6 +380,7 @@ private val MENU_GAP = 8.dp
 private val EDGE_MARGIN = 12.dp
 private val MENU_CORNER_RADIUS = 12.dp
 private val MENU_ROW_HEIGHT = 44.dp
+private val MENU_ROW_START_PADDING = 16.dp
 private val MENU_ICON_SIZE = 22.dp
 private val MENU_DIVIDER_THICKNESS = 0.6.dp
 private const val SCRIM_ALPHA = 0.45f

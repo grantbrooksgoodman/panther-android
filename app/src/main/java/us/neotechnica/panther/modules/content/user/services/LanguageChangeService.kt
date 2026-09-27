@@ -7,10 +7,12 @@
 
 package us.neotechnica.panther.modules.content.user.services
 
+import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
-import us.neotechnica.panther.modules.networking.user.services.UserMutationService
+import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpdatableKey
+import us.neotechnica.panther.modules.networking.user.remotelyupdatable.updateValues
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 
 /**
@@ -41,7 +43,12 @@ object LanguageChangeService {
         if (outgoingLanguageCode != languageCode) previousLanguageCodes = previousLanguageCodes + outgoingLanguageCode
         previousLanguageCodes = previousLanguageCodes.distinct().reversed()
 
-        UserMutationService.updateLanguageForCurrentUser(languageCode, previousLanguageCodes)
+        currentUser.updateValues(
+            mapOf(
+                UserUpdatableKey.LANGUAGE_CODE to languageCode,
+                UserUpdatableKey.PREVIOUS_LANGUAGE_CODES to previousLanguageCodes.ifEmpty { bangQualifiedEmptyList },
+            ),
+        )
         RuntimeStorage.languageCode = languageCode
     }
 }

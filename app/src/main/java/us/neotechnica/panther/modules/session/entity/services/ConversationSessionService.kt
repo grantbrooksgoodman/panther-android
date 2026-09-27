@@ -19,6 +19,8 @@ import us.neotechnica.panther.modules.common.constants.CommonConstants
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
 import us.neotechnica.panther.modules.networking.conversation.models.Participant
+import us.neotechnica.panther.modules.networking.conversation.remotelyupdatable.ConversationUpdatableKey
+import us.neotechnica.panther.modules.networking.conversation.remotelyupdatable.update
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.asDisplayMessage
@@ -163,46 +165,12 @@ object ConversationSessionService {
             throw Exception("No messages provided.", metadata = ExceptionMetadata(this))
         }
 
-        val existingIDs = conversation.messageIDs.toSet()
-        val newMessages =
-            messages
-                .filteringSystemMessages
-                .filter { !it.isMockOrOutbox && it.id !in existingIDs }
-        if (newMessages.isEmpty()) return conversation
+        val appendedMessages =
+            ((conversation.messages ?: emptyList()) + messages)
+                .filter { !it.isMockOrOutbox }
+                .sortedByAscendingSentDate
 
-        val currentUserParticipant =
-            conversation.participants.firstOrNull { it.userID == User.currentUserID }
-                ?: throw Exception(
-                    "Failed to resolve current user participant.",
-                    metadata = ExceptionMetadata(this),
-                )
-
-        // Reset typing for current user + un-delete all participants
-        // (sending revives the conversation).
-        val revivedParticipants =
-            conversation.participants.map { participant ->
-                participant.copy(
-                    hasDeletedConversation = false,
-                    isTyping = if (participant.userID == currentUserParticipant.userID) false else participant.isTyping,
-                )
-            }
-
-        val updatedContent =
-            conversation.copy(
-                messageIDs = (conversation.messageIDs + newMessages.map { it.id }).distinct(),
-                participants = revivedParticipants,
-            )
-        val newHash = updatedContent.encodedHash
-        val updated = updatedContent.copy(id = ConversationID(key = conversation.id.key, hash = newHash))
-
-        val updates = buildMessageFanOut(updated, newMessages, currentUserParticipant, newHash)
-
-        SelfWriteRegistry.record(updated.id)
-        database.commit(updates)
-
-        SessionStore.upsertMessages(newMessages.toSet())
-        SessionStore.upsertConversation(updated)
-        return updated
+        return conversation.update(ConversationUpdatableKey.MESSAGES, to = appendedMessages)
     }
 
     // MARK: - Deletion
@@ -299,51 +267,6 @@ object ConversationSessionService {
     private val Message.isMockOrOutbox: Boolean
         get() = id == CommonConstants.NEW_MESSAGE_ID || id.startsWith("outbox-")
 
-    private fun buildMessageFanOut(
-        conversation: Conversation,
-        newMessages: List<Message>,
-        currentUserParticipant: Participant,
-        newHash: String,
-    ): Map<String, Any?> {
-        val conversationPath = "${PATH_CONVERSATIONS}/${conversation.id.key}"
-        val updates = mutableMapOf<String, Any?>()
-
-        // Message node data + conversation index entries.
-        for (message in newMessages) {
-            updates["${PATH_MESSAGES}/${message.id}"] = message.encoded.filterKeys { it != KEY_ID }
-            updates["$conversationPath/$KEY_MESSAGES/${message.id}"] = true
-        }
-
-        // Un-delete participants who had deleted the conversation.
-        for (participant in conversation.participants.filter { it.hasDeletedConversation }) {
-            updates["$conversationPath/$KEY_PARTICIPANTS/${participant.userID}/$KEY_HAS_DELETED"] = false
-        }
-
-        // Reset typing status for the current user.
-        updates["$conversationPath/$KEY_PARTICIPANTS/${currentUserParticipant.userID}/$KEY_IS_TYPING"] = false
-
-        // Conversation hash + last-modified date.
-        updates["$conversationPath/$KEY_HASH"] = newHash
-        updates["$conversationPath/$KEY_METADATA/$KEY_LAST_MODIFIED"] =
-            DependencyValues.current.timestampDateFormatter.format(java.util.Date())
-
-        // Participant hash tokens.
-        for (participant in conversation.participants) {
-            updates["${PATH_USERS}/${participant.userID}/$KEY_OPEN_CONVERSATIONS/${conversation.id.key}"] = newHash
-        }
-
-        // Drain pending hosted-archive entries so a message node never
-        // commits without its translations being resolvable.
-        for (message in newMessages) {
-            for (translationReference in message.translationReferences ?: emptyList()) {
-                val entry = PendingTranslationArchive.drain(translationReference.hostingKey) ?: continue
-                updates[entry.first] = entry.second
-            }
-        }
-
-        return updates
-    }
-
     private suspend fun hideConversation(
         conversation: Conversation,
         userID: String,
@@ -435,13 +358,8 @@ object ConversationSessionService {
     private const val PATH_MESSAGES = "messages"
     private const val PATH_USERS = "users"
 
-    private const val KEY_ID = "id"
-    private const val KEY_MESSAGES = "messages"
-    private const val KEY_METADATA = "metadata"
     private const val KEY_PARTICIPANTS = "participants"
     private const val KEY_HASH = "hash"
-    private const val KEY_LAST_MODIFIED = "lastModified"
     private const val KEY_HAS_DELETED = "hasDeletedConversation"
-    private const val KEY_IS_TYPING = "isTyping"
     private const val KEY_OPEN_CONVERSATIONS = "openConversations"
 }

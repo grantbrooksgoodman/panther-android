@@ -11,9 +11,10 @@ import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIE
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.conversation.models.ReactionMetadata
+import us.neotechnica.panther.modules.networking.conversation.remotelyupdatable.ConversationUpdatableKey
+import us.neotechnica.panther.modules.networking.conversation.remotelyupdatable.update
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.extensions.commitFieldUpdates
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.modules.session.entity.extensions.isMock
 import us.neotechnica.panther.modules.session.entity.extensions.isOutboxMessage
@@ -85,33 +86,55 @@ object ReactionSessionService {
             User.currentUserID
                 ?: throw Exception("Current user ID has not been set.", metadata = ExceptionMetadata(this))
 
-        // Strip sentinel entries, then remove the current user's reactions
-        // to this message, dropping entries that become empty.
-        var metadata =
-            (conversation.reactionMetadata ?: emptyList())
-                .filter { it.messageID != BANG_QUALIFIED_EMPTY }
-                .mapNotNull { entry ->
-                    if (entry.messageID != message.id) return@mapNotNull entry
-                    val reactions = entry.reactions.filter { it.userID != currentUserID }
-                    if (reactions.isEmpty()) null else entry.copy(reactions = reactions)
-                }
+        val messageID = message.id
+        val encodedReactionStyle = newReaction?.style?.encodedValue
+        val reactionUserID = newReaction?.userID
 
-        // Add the new reaction, if provided.
-        if (newReaction != null) {
-            val index = metadata.indexOfFirst { it.messageID == message.id }
+        // Atomically read-modify-write the reactionMetadata node; didWrite
+        // commits the hash and participant token fan-out and upserts to the
+        // session store.
+        conversation.update(ConversationUpdatableKey.REACTION_METADATA, applyingRaw = { currentValue ->
+            @Suppress("UNCHECKED_CAST")
+            val current = (currentValue as? List<Map<String, Any?>>) ?: emptyList()
+
+            // Strip sentinel entries.
+            var metadata = current.filter { (it[KEY_MESSAGE_ID] as? String) != BANG_QUALIFIED_EMPTY }
+
+            // Remove the current user's reactions to this message.
             metadata =
-                if (index >= 0) {
-                    metadata.toMutableList().also { it[index] = it[index].copy(reactions = it[index].reactions + newReaction) }
-                } else {
-                    metadata + ReactionMetadata(messageID = message.id, reactions = listOf(newReaction))
+                metadata.mapNotNull { entry ->
+                    if ((entry[KEY_MESSAGE_ID] as? String) != messageID) return@mapNotNull entry
+                    @Suppress("UNCHECKED_CAST")
+                    val reactions =
+                        ((entry[KEY_REACTIONS] as? List<Map<String, Any?>>) ?: emptyList())
+                            .filter { (it[KEY_USER_ID] as? String) != currentUserID }
+                    if (reactions.isEmpty()) null else entry + (KEY_REACTIONS to reactions)
                 }
-        }
 
-        val updated = conversation.copy(reactionMetadata = metadata.ifEmpty { listOf(ReactionMetadata.empty) })
-        conversation.commitFieldUpdates(updated, setOf(REACTION_METADATA_KEY))
+            // Add the new reaction, if provided.
+            if (encodedReactionStyle != null && reactionUserID != null) {
+                val reactionStyle = Reaction.Style.from(encodedReactionStyle) ?: Reaction.Style.LOVE
+                val reaction = Reaction(style = reactionStyle, userID = reactionUserID)
+                val index = metadata.indexOfFirst { (it[KEY_MESSAGE_ID] as? String) == messageID }
+                metadata =
+                    if (index >= 0) {
+                        @Suppress("UNCHECKED_CAST")
+                        val reactions =
+                            ((metadata[index][KEY_REACTIONS] as? List<Map<String, Any?>>) ?: emptyList()) + reaction.encoded
+                        metadata.toMutableList().also { it[index] = it[index] + (KEY_REACTIONS to reactions) }
+                    } else {
+                        metadata + ReactionMetadata(messageID = messageID, reactions = listOf(reaction)).encoded
+                    }
+            }
+
+            // Return the empty sentinel if no reactions remain.
+            if (metadata.isEmpty()) listOf(ReactionMetadata.empty.encoded) else metadata
+        })
     }
 
     // MARK: - Companion
 
-    private const val REACTION_METADATA_KEY = "reactionMetadata"
+    private const val KEY_MESSAGE_ID = "messageID"
+    private const val KEY_REACTIONS = "reactions"
+    private const val KEY_USER_ID = "userID"
 }

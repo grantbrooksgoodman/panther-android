@@ -22,9 +22,11 @@ import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.modules.session.entity.extensions.resolveMessages
 import us.neotechnica.panther.modules.session.entity.extensions.resolveUsers
+import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
+import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import java.util.UUID
 import us.neotechnica.panther.modules.session.state.services.SessionStore
@@ -71,15 +73,20 @@ object ConversationObserverService {
                     }
                 }
             reference.value = ObservationState(conversationIDKey, generation, job)
-        }
 
-        Logger.log("Started observing conversation $conversationIDKey.")
+            Logger.log(
+                "Started observing conversation. (ConversationIDKey: $conversationIDKey)",
+                domain = LoggerDomain.conversationObserver,
+            )
+        }
     }
 
     /** Stops observing the currently observed conversation, if any. */
     fun stopObserving() {
         state.withValue {
-            if (it.value != null) Logger.log("Stopped observing conversation.")
+            if (it.value != null) {
+                Logger.log("Stopped observing conversation.", domain = LoggerDomain.conversationObserver)
+            }
             it.value?.job?.cancel()
             it.value = null
         }
@@ -105,7 +112,10 @@ object ConversationObserverService {
         // user-node pipeline remains the safety net.
         if (isRetry) return
         delay(RETRY_DELAY_MILLIS)
-        Logger.log("Retrying conversation observation after stream termination.")
+        Logger.log(
+            "Retrying conversation observation after stream termination. (ConversationIDKey: $conversationIDKey)",
+            domain = LoggerDomain.conversationObserver,
+        )
         observe(conversationIDKey, isRetry = true)
     }
 
@@ -117,7 +127,11 @@ object ConversationObserverService {
         val decodable = data.toMutableMap().apply { put(KEY_ID, "$conversationIDKey | $hash") }
 
         if (!Conversation.canDecode(decodable)) {
-            Logger.log("Received non-decodable conversation snapshot for $conversationIDKey.")
+            Logger.log(
+                "Received non-decodable conversation snapshot. (ConversationIDKey: $conversationIDKey)",
+                domain = LoggerDomain.conversationObserver,
+                with = AlertType.toastInPrerelease,
+            )
             return
         }
 
@@ -125,14 +139,31 @@ object ConversationObserverService {
             val conversation = Conversation.decode(decodable)
             val existingIDs = SessionStore.getConversation(conversationIDKey)?.messageIDs?.toSet() ?: emptySet()
             val newMessageIDs = conversation.messageIDs.toSet() - existingIDs
-            if (newMessageIDs.isNotEmpty()) conversation.resolveMessages(newMessageIDs)
+            if (newMessageIDs.isNotEmpty()) {
+                Logger.log(
+                    "Resolving ${newMessageIDs.size} new message(s) from observer snapshot. " +
+                        "(ConversationIDKey: $conversationIDKey)",
+                    domain = LoggerDomain.conversationObserver,
+                )
+                conversation.resolveMessages(newMessageIDs)
+            }
 
             // Received from real-time observer; bypasses the update path.
             SessionStore.upsertConversation(conversation)
 
+            // Backfill users for any participants not yet in the session
+            // store. The user-node pipeline normally handles this, but the
+            // observer guard makes that path skip this conversation.
             val participantUserIDs =
                 conversation.participants.map { it.userID }.filter { it != User.currentUserID }
-            if (participantUserIDs.any { SessionStore.users[it] == null }) conversation.resolveUsers()
+            if (participantUserIDs.any { SessionStore.users[it] == null }) {
+                Logger.log(
+                    "Backfilling missing participant user(s) from observer snapshot. " +
+                        "(ConversationIDKey: $conversationIDKey)",
+                    domain = LoggerDomain.conversationObserver,
+                )
+                conversation.resolveUsers()
+            }
         } catch (exception: Exception) {
             Logger.log(exception)
         }

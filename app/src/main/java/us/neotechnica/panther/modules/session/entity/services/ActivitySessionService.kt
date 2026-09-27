@@ -15,8 +15,9 @@ import us.neotechnica.panther.modules.networking.conversation.models.Conversatio
 import us.neotechnica.panther.modules.networking.conversation.models.MessageRecipientConsentAcknowledgementData
 import us.neotechnica.panther.modules.networking.conversation.models.Participant
 import us.neotechnica.panther.modules.networking.conversation.models.PenPalsSharingData
+import us.neotechnica.panther.modules.networking.conversation.remotelyupdatable.ConversationUpdatableKey
+import us.neotechnica.panther.modules.networking.conversation.remotelyupdatable.updateValues
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.extensions.commitFieldUpdates
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -56,22 +57,26 @@ object ActivitySessionService {
         val newPenPalsData =
             conversation.metadata.penPalsSharingData + PenPalsSharingData(userID = userID, sharesDataWithUserIDs = null)
 
-        val updated =
-            conversation.copy(
-                activities = ((conversation.activities ?: emptyList()) + activity).filter { it != Activity.empty },
-                metadata =
-                    conversation.metadata.copyWith(
-                        messageRecipientConsentAcknowledgementData = newConsentData,
-                        penPalsSharingData = newPenPalsData,
-                    ),
-                participants = conversation.participants + Participant(userID = userID),
+        val newActivities = ((conversation.activities ?: emptyList()) + activity).filter { it != Activity.empty }
+        val newMetadata =
+            conversation.metadata.copyWith(
+                messageRecipientConsentAcknowledgementData = newConsentData,
+                penPalsSharingData = newPenPalsData,
             )
+        val newParticipants = conversation.participants + Participant(userID = userID)
 
-        val committed = conversation.commitFieldUpdates(updated, CHANGED_KEYS)
+        val updatedConversation =
+            conversation.updateValues(
+                mapOf(
+                    ConversationUpdatableKey.ACTIVITIES to newActivities,
+                    ConversationUpdatableKey.METADATA to newMetadata,
+                    ConversationUpdatableKey.PARTICIPANTS to newParticipants,
+                ),
+            )
         database.commit(
-            mapOf("$USERS_PATH/$userID/$OPEN_CONVERSATIONS_KEY/${committed.id.key}" to committed.id.hash),
+            mapOf("$USERS_PATH/$userID/$OPEN_CONVERSATIONS_KEY/${updatedConversation.id.key}" to updatedConversation.id.hash),
         )
-        return committed
+        return updatedConversation
     }
 
     // MARK: - Remove User
@@ -99,32 +104,35 @@ object ActivitySessionService {
             }
         val activity = activity(action)
 
+        val newActivities = ((conversation.activities ?: emptyList()) + activity).filter { it != Activity.empty }
         val newParticipants = conversation.participants.filter { it.userID != userID }
-        val updated =
-            conversation.copy(
-                activities = ((conversation.activities ?: emptyList()) + activity).filter { it != Activity.empty },
-                metadata =
-                    conversation.metadata.copyWith(
-                        name = if (newParticipants.size == 2) BANG_QUALIFIED_EMPTY else conversation.metadata.name,
-                        imageData = if (newParticipants.size == 2) null else conversation.metadata.imageData,
-                        messageRecipientConsentAcknowledgementData =
-                            conversation.metadata.messageRecipientConsentAcknowledgementData.filter { it.userID != userID },
-                        penPalsSharingData = conversation.metadata.penPalsSharingData.filter { it.userID != userID },
-                        requiresConsentFromInitiator =
-                            if (conversation.metadata.requiresConsentFromInitiator == userID) {
-                                null
-                            } else {
-                                conversation.metadata.requiresConsentFromInitiator
-                            },
-                    ),
-                participants = newParticipants,
+        val newMetadata =
+            conversation.metadata.copyWith(
+                name = if (newParticipants.size == 2) BANG_QUALIFIED_EMPTY else conversation.metadata.name,
+                imageData = if (newParticipants.size == 2) null else conversation.metadata.imageData,
+                messageRecipientConsentAcknowledgementData =
+                    conversation.metadata.messageRecipientConsentAcknowledgementData.filter { it.userID != userID },
+                penPalsSharingData = conversation.metadata.penPalsSharingData.filter { it.userID != userID },
+                requiresConsentFromInitiator =
+                    if (conversation.metadata.requiresConsentFromInitiator == userID) {
+                        null
+                    } else {
+                        conversation.metadata.requiresConsentFromInitiator
+                    },
             )
 
-        val committed = conversation.commitFieldUpdates(updated, CHANGED_KEYS)
+        val updatedConversation =
+            conversation.updateValues(
+                mapOf(
+                    ConversationUpdatableKey.ACTIVITIES to newActivities,
+                    ConversationUpdatableKey.METADATA to newMetadata,
+                    ConversationUpdatableKey.PARTICIPANTS to newParticipants,
+                ),
+            )
         if (removeFromUser) {
-            database.commit(mapOf("$USERS_PATH/$userID/$OPEN_CONVERSATIONS_KEY/${committed.id.key}" to null))
+            database.commit(mapOf("$USERS_PATH/$userID/$OPEN_CONVERSATIONS_KEY/${updatedConversation.id.key}" to null))
         }
-        return committed
+        return updatedConversation
     }
 
     // MARK: - Update Metadata
@@ -143,12 +151,13 @@ object ActivitySessionService {
         newMetadata: ConversationMetadata,
     ): Conversation {
         val activity = activity(action)
-        val updated =
-            conversation.copy(
-                activities = ((conversation.activities ?: emptyList()) + activity).filter { it != Activity.empty },
-                metadata = newMetadata,
-            )
-        return conversation.commitFieldUpdates(updated, CHANGED_KEYS)
+        val newActivities = ((conversation.activities ?: emptyList()) + activity).filter { it != Activity.empty }
+        return conversation.updateValues(
+            mapOf(
+                ConversationUpdatableKey.ACTIVITIES to newActivities,
+                ConversationUpdatableKey.METADATA to newMetadata,
+            ),
+        )
     }
 
     // MARK: - Auxiliary
@@ -165,5 +174,4 @@ object ActivitySessionService {
     private const val USERS_PATH = "users"
     private const val OPEN_CONVERSATIONS_KEY = "openConversations"
     private const val BANG_QUALIFIED_EMPTY = "!"
-    private val CHANGED_KEYS = setOf("activities", "metadata", "participants")
 }

@@ -35,6 +35,9 @@ value class PersistentStorageKey(
         /** The persisted contact-match archive (JSON). */
         val contactArchive = PersistentStorageKey("contactArchive")
 
+        /** The persisted translation archive (JSON). */
+        val translationArchive = PersistentStorageKey("translationArchive")
+
         /** Whether the build-info overlay is hidden. */
         val hidesBuildInfoOverlay = PersistentStorageKey("hidesBuildInfoOverlay")
 

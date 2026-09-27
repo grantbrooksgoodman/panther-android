@@ -11,7 +11,8 @@ import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
-import us.neotechnica.panther.modules.networking.user.services.UserMutationService
+import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpdatableKey
+import us.neotechnica.panther.modules.networking.user.remotelyupdatable.update
 
 /**
  * Blocks, unblocks, and reports users.
@@ -31,8 +32,11 @@ object ModerationSessionService {
         val cleaned = userIDs.filter { it.isNotBlank() }
         if (cleaned.isEmpty()) throw Exception("No user IDs provided.", metadata = ExceptionMetadata(this))
 
-        val current = UserSessionService.currentUser?.blockedUserIDs ?: emptyList()
-        UserMutationService.setBlockedUserIDsForCurrentUser((current + cleaned).distinct())
+        val currentUser =
+            UserSessionService.currentUser
+                ?: throw Exception("Current user has not been set.", metadata = ExceptionMetadata(this))
+        val current = currentUser.blockedUserIDs ?: emptyList()
+        currentUser.update(UserUpdatableKey.BLOCKED_USER_IDS, to = (current + cleaned).distinct())
     }
 
     /** Unblocks the users with the given identifiers for the current user. */
@@ -40,8 +44,11 @@ object ModerationSessionService {
         val cleaned = userIDs.filter { it.isNotBlank() }
         if (cleaned.isEmpty()) throw Exception("No user IDs provided.", metadata = ExceptionMetadata(this))
 
-        val current = UserSessionService.currentUser?.blockedUserIDs ?: emptyList()
-        UserMutationService.setBlockedUserIDsForCurrentUser(current.filter { it !in cleaned })
+        val currentUser =
+            UserSessionService.currentUser
+                ?: throw Exception("Current user has not been set.", metadata = ExceptionMetadata(this))
+        val current = currentUser.blockedUserIDs ?: emptyList()
+        currentUser.update(UserUpdatableKey.BLOCKED_USER_IDS, to = current.filter { it !in cleaned })
     }
 
     // MARK: - Report

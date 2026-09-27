@@ -23,6 +23,7 @@ import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.services.AlertKitTranslationService
+import us.neotechnica.panther.modules.networking.translation.delegates.LocalTranslationArchiverDelegate
 import us.neotechnica.panther.modules.common.services.CommonPropertyLists
 import us.neotechnica.panther.modules.common.services.ExceptionMetadataService
 import us.neotechnica.panther.modules.common.services.InviteService
@@ -97,6 +98,7 @@ class PantherApplication : Application() {
         AppSubsystem.delegates.registerLoggerDomainSubscriptionDelegate(LoggerDomainSubscription)
         AppSubsystem.delegates.registerPermanentPersistentStorageKeyDelegate(PermanentKeyDelegate)
         AlertKitConfig.registerTranslationDelegate(AlertKitTranslationService)
+        LocalTranslationArchiverDelegate.registerWithDependencies()
 
         Networking.initialize(
             context = this,

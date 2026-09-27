@@ -19,6 +19,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestam
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import java.util.Date
 
 /**
@@ -30,7 +32,7 @@ import java.util.Date
  * @throws Exception if the current user is unset or the write fails.
  */
 suspend fun Conversation.updateReadDate(messages: List<Message>) {
-    if (messages.isEmpty()) return
+    if (messages.isEmpty()) throw Exception("No messages provided.", metadata = ExceptionMetadata(this))
     val currentUserID =
         User.currentUserID
             ?: throw Exception("Current user ID has not been set.", metadata = ExceptionMetadata(this))
@@ -73,4 +75,9 @@ suspend fun Conversation.updateReadDate(messages: List<Message>) {
     database.commit(updates)
     SessionStore.upsertMessages(updatedMessages.toSet())
     updatedConversation?.let { SessionStore.upsertConversation(it) }
+
+    Logger.log(
+        "Updated read date for ${unreadMessages.size} message${if (unreadMessages.size == 1) "" else "s"}.",
+        domain = LoggerDomain.conversation,
+    )
 }

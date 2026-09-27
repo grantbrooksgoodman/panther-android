@@ -17,17 +17,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.pullToRefresh
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
@@ -72,17 +79,11 @@ private typealias Floats = ConversationsPageViewFloats
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ConversationsPageView(modifier: Modifier = Modifier) {
-    val viewModel =
-        remember {
-            ViewModel(ConversationsPageReducer.State(), ConversationsPageReducer())
-                .observing(DependencyValues.current.sharedEvents.sessionStoreDidChange.events) {
-                    ConversationsPageReducer.Action.SessionStoreDidChange
-                }
-        }
-    DisposableEffect(Unit) { onDispose { viewModel.close() } }
-    LaunchedEffect(Unit) { viewModel.send(ConversationsPageReducer.Action.ViewFirstAppeared) }
-
+fun ConversationsPageView(
+    viewModel: ViewModel<ConversationsPageReducer.State, ConversationsPageReducer.Action>,
+    listState: LazyListState,
+    modifier: Modifier = Modifier,
+) {
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
     val languageCode = RuntimeStorage.languageCode
@@ -90,7 +91,9 @@ fun ConversationsPageView(modifier: Modifier = Modifier) {
 
     ContextMenuHost(modifier = modifier) {
         StatefulView(state = state.viewState) {
-            Column(modifier = Modifier.fillMaxSize()) {
+            // The host fills the screen so the cell context menu's scrim covers
+            // the system bars; the list content insets itself below them here.
+            Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
                 Header(
                     onSettings = {
                         navigation.navigate(
@@ -120,10 +123,33 @@ fun ConversationsPageView(modifier: Modifier = Modifier) {
 
                 Spacer(modifier = Modifier.height(Floats.searchBottomSpacing))
 
-                PullToRefreshBox(
-                    isRefreshing = state.isRefreshing,
-                    onRefresh = { viewModel.send(ConversationsPageReducer.Action.PulledToRefresh) },
-                    modifier = Modifier.fillMaxSize(),
+                // Arm pull-to-refresh only when a scroll gesture begins with the
+                // list already at its top. This keeps scrolling back up to the top
+                // from converting into a refresh once the top is reached mid-drag.
+                var isPullToRefreshEnabled by remember { mutableStateOf(true) }
+                LaunchedEffect(listState) {
+                    snapshotFlow { listState.isScrollInProgress }
+                        .collect { isScrolling ->
+                            if (isScrolling) {
+                                isPullToRefreshEnabled =
+                                    listState.firstVisibleItemIndex == 0 &&
+                                    listState.firstVisibleItemScrollOffset == 0
+                            }
+                        }
+                }
+
+                val pullToRefreshState = rememberPullToRefreshState()
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .pullToRefresh(
+                                isRefreshing = state.isRefreshing,
+                                state = pullToRefreshState,
+                                enabled = isPullToRefreshEnabled,
+                                threshold = Floats.pullToRefreshThreshold,
+                                onRefresh = { viewModel.send(ConversationsPageReducer.Action.PulledToRefresh) },
+                            ),
                 ) {
                     val conversations = state.conversations
                     if (conversations.isEmpty()) {
@@ -134,7 +160,11 @@ fun ConversationsPageView(modifier: Modifier = Modifier) {
                             )
                         }
                     } else {
-                        LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Top) {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.Top,
+                        ) {
                             item {
                                 HorizontalDivider(
                                     color = colors.groupedContentBackground,
@@ -150,11 +180,29 @@ fun ConversationsPageView(modifier: Modifier = Modifier) {
                             }
                         }
                     }
+
+                    PullToRefreshDefaults.Indicator(
+                        isRefreshing = state.isRefreshing,
+                        state = pullToRefreshState,
+                        maxDistance = Floats.pullToRefreshThreshold,
+                        modifier = Modifier.align(Alignment.TopCenter),
+                    )
                 }
             }
         }
     }
 }
+
+/**
+ * Builds the conversations page view-model, wired to session-store
+ * changes. Hoisted to [UserContentContainer] so it – and the list's
+ * scroll position – survive pushing to a chat and back.
+ */
+internal fun buildConversationsPageViewModel(): ViewModel<ConversationsPageReducer.State, ConversationsPageReducer.Action> =
+    ViewModel(ConversationsPageReducer.State(), ConversationsPageReducer())
+        .observing(DependencyValues.current.sharedEvents.sessionStoreDidChange.events) {
+            ConversationsPageReducer.Action.SessionStoreDidChange
+        }
 
 // MARK: - Conversation Cell Menu
 
@@ -171,8 +219,13 @@ private fun ConversationCellMenu(
         }
     DisposableEffect(viewModel) { onDispose { viewModel.close() } }
     val cellState by viewModel.state.collectAsState()
+    val colors = LocalPantherColors.current
 
     MessageContextMenu(
+        liftedBackground = colors.background,
+        // Align the menu with the avatar's leading edge, past the row's start
+        // padding and the unread-indicator slot that precede it.
+        menuLeadingOffset = ConversationCellViewFloats.rowStartPadding + ConversationCellViewFloats.unreadSlotWidth,
         actions =
             listOf(
                 ContextMenuAction(

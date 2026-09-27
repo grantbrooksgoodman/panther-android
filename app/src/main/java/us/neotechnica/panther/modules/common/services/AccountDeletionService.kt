@@ -9,7 +9,10 @@ package us.neotechnica.panther.modules.common.services
 
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
 import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpdatableKey
+import us.neotechnica.panther.modules.networking.user.remotelyupdatable.update
 import us.neotechnica.panther.modules.session.entity.extensions.conversations
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -17,7 +20,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetad
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
-import us.neotechnica.panther.modules.networking.user.services.UserMutationService
 import us.neotechnica.panther.modules.session.entity.services.ActivitySessionService
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
@@ -72,7 +74,12 @@ object AccountDeletionService {
             }
         }
 
-        runStep(exceptions) { UserMutationService.clearConversationIDsForCurrentUser() }
+        // Zero-out conversation IDs after all conversation operations
+        // complete to avoid a self-race where a concurrent didWrite
+        // fan-out re-adds entries.
+        runStep(exceptions) {
+            UserSessionService.currentUser?.update(UserUpdatableKey.CONVERSATION_IDS, to = emptyList<ConversationID>())
+        }
 
         Persistent.setString(PersistentStorageKey.currentUserID, null)
         runStep(exceptions) {

@@ -19,6 +19,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.modules.networking.conversation.services.ConversationService
+import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.conversations
@@ -29,9 +30,12 @@ import us.neotechnica.panther.modules.networking.user.services.UserService
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
+import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.modules.session.state.services.SelfWriteRegistry
 import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.modules.session.sync.models.SyncSession
 import us.neotechnica.panther.modules.session.sync.services.ConversationObserverService
 
 /**
@@ -83,6 +87,10 @@ object UserSessionService {
 
             UserService.getUser(currentUserID)
 
+            // Apply the user's stored language before resolving messages, so
+            // translation warming targets the language the chat will display.
+            currentUser?.languageCode?.let { RuntimeStorage.languageCode = it }
+
             if (DataType.CONVERSATIONS in dataTypes) resolveConversations()
             if (DataType.MESSAGES in dataTypes) resolveMessagesOnConversations()
             if (DataType.USERS in dataTypes) resolveParticipantUsers()
@@ -120,19 +128,100 @@ object UserSessionService {
 
     // MARK: - Auxiliary
 
+    /**
+     * Resolves the current user's conversation objects into the store.
+     *
+     * Conversations already present in the store are used directly.
+     * Conversations whose identifier key matches a stored entry but
+     * whose hash token has changed are synchronized – reconciled
+     * against the server without a full refetch. Remaining
+     * conversations are fetched from the network. The resolved set is
+     * committed to the session store.
+     *
+     * This method resolves conversation objects only; it does not
+     * fetch their associated messages or users.
+     */
     private suspend fun resolveConversations() {
-        val conversationIDs = currentUser?.conversationIDs ?: return
-        val conversations = ConversationService.getConversations(conversationIDs.map { it.key })
-        val reconciled =
+        val user = currentUser ?: return
+        if (user.id != User.currentUserID) return
+        val conversationIDs = user.conversationIDs ?: return
+
+        val conversationsNeedingFetch = mutableSetOf<ConversationID>()
+        val conversationsNeedingUpdate = mutableSetOf<Conversation>()
+        val decodedConversations = mutableSetOf<Conversation>()
+
+        for (conversationID in conversationIDs) {
+            val exactMatch = SessionStore.getConversation(conversationID)
+            if (exactMatch != null) {
+                decodedConversations.add(exactMatch)
+                continue
+            }
+
+            val keyMatch = SessionStore.getConversation(conversationID.key)
+            if (keyMatch == null) {
+                conversationsNeedingFetch.add(conversationID)
+            } else if (SelfWriteRegistry.contains(conversationID) ||
+                ConversationObserverService.isActivelyObserving(conversationID.key)
+            ) {
+                // Self-written or actively observed: the owning
+                // pipeline settles the store; no network sync needed.
+                decodedConversations.add(keyMatch)
+            } else {
+                conversationsNeedingUpdate.add(keyMatch)
+            }
+        }
+
+        Logger.log(
+            "Conversations needing update: ${conversationsNeedingUpdate.size}\n" +
+                "Conversations needing fetch: ${conversationsNeedingFetch.size}\n" +
+                "Decoded conversations: ${decodedConversations.size}",
+            domain = LoggerDomain.userSession,
+        )
+
+        if (conversationsNeedingFetch.isEmpty() && conversationsNeedingUpdate.isEmpty()) {
+            val existingConversations = user.conversations
+            if (!existingConversations.isNullOrEmpty() && existingConversations.toSet() == decodedConversations) {
+                return
+            }
+            SessionStore.upsertConversations(decodedConversations)
+            return
+        }
+
+        if (conversationsNeedingUpdate.isNotEmpty()) {
+            val synchronized =
+                coroutineScope {
+                    conversationsNeedingUpdate
+                        .map { conversation -> async { SyncSession.conversationSync.synchronizeConversation(conversation) } }
+                        .awaitAll()
+                }
+            decodedConversations.addAll(synchronized)
+        }
+
+        if (conversationsNeedingFetch.isEmpty()) {
+            SessionStore.upsertConversations(decodedConversations)
+            return
+        }
+
+        val conversations = ConversationService.getConversations(conversationsNeedingFetch.map { it.key })
+
+        // Stamp fetched conversations with the user-record token when
+        // it differs from the node hash. Atomic fan-out keeps the two
+        // equal at rest, but this read path is not atomic: the user
+        // record is snapshotted before the node fetch, and the fetch
+        // may be served from cache, so the two can transiently
+        // disagree. The user-record token is canonical.
+        val reconciledConversations =
             conversations.map { conversation ->
-                val recordID = conversationIDs.firstOrNull { it.key == conversation.id.key }
-                if (recordID != null && recordID.hash != conversation.id.hash) {
-                    conversation.copy(id = conversation.id.copy(hash = recordID.hash))
+                val userRecordID = conversationsNeedingFetch.firstOrNull { it.key == conversation.id.key }
+                if (userRecordID != null && userRecordID.hash != conversation.id.hash) {
+                    conversation.copy(id = conversation.id.copy(hash = userRecordID.hash))
                 } else {
                     conversation
                 }
             }
-        SessionStore.upsertConversations(reconciled.toSet())
+
+        decodedConversations.addAll(reconciledConversations)
+        SessionStore.upsertConversations(decodedConversations)
     }
 
     private suspend fun resolveMessagesOnConversations() {

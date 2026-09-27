@@ -17,9 +17,34 @@ package us.neotechnica.panther.designsystem.modules.foundation.hud
  * ```kotlin
  * HUD.showSuccess()
  * ```
+ *
+ * For longer operations, present a progress spinner and dismiss it
+ * yourself when the work completes. Pass `isModal = true` to block
+ * interaction with the underlying content while it is visible:
+ *
+ * ```kotlin
+ * HUD.showProgress(isModal = true)
+ * // ... perform work ...
+ * HUD.hide()
+ * ```
  */
 object HUD {
     // MARK: - Methods
+
+    /** Dismisses the currently presented heads-up display. */
+    fun hide() {
+        HUDPresenter.hide()
+    }
+
+    /**
+     * Presents the progress heads-up display.
+     *
+     * @param isModal Whether the display blocks interaction with the
+     *   underlying content while visible. The default is `false`.
+     */
+    fun showProgress(isModal: Boolean = false) {
+        HUDPresenter.showProgress(isModal)
+    }
 
     /** Presents the success heads-up display. */
     fun showSuccess() {

@@ -38,8 +38,9 @@ import us.neotechnica.panther.translator.services.TranslationService
  * the hosted archive, falls back to a live web/API translation, and
  * writes the result to both archives.
  *
- * **Note:** the iOS original also performs AI (Gemini) enhancement and
- * shows a HUD; both are deferred here per the Phase 4 plan.
+ * **Note:** the iOS original also performs AI (Gemini) enhancement,
+ * which is deferred here per the Phase 4 plan. The translation HUD is
+ * presented by AlertKit.
  */
 class HostedTranslationService private constructor() : HostedTranslationDelegate {
     // MARK: - Types
