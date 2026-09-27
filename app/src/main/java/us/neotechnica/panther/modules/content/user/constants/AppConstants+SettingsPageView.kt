@@ -24,7 +24,7 @@ object SettingsPageViewFloats {
     val contactChevronSize: Dp = 18.dp
     val contactCornerRadius: Dp = 28.dp
     val contactNameStartPadding: Dp = 12.dp
-    val disclosureChevronSize: Dp = 14.dp
+    val disclosureChevronSize: Dp = 24.dp
     val doneButtonGlyphSize: Dp = 20.dp
     val headerHorizontalPadding: Dp = 16.dp
     val headerVerticalPadding: Dp = 12.dp

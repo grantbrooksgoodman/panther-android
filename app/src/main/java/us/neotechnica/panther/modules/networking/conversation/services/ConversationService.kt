@@ -9,6 +9,7 @@ package us.neotechnica.panther.modules.networking.conversation.services
 
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import kotlinx.coroutines.coroutineScope
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
@@ -102,15 +103,17 @@ object ConversationService {
     /** Returns the conversations with the given keys, upserting them into the store. */
     suspend fun getConversations(idKeys: List<String>): List<Conversation> =
         coroutineScope {
-            idKeys
-                .map { idKey -> async { runCatching { getConversation(idKey) }.getOrNull() } }
-                .awaitAll()
-                .filterNotNull()
+            // Fail the batch if any conversation cannot be fetched, matching iOS.
+            idKeys.map { idKey -> async { getConversation(idKey) } }.awaitAll()
         }
 
     /** Returns the conversation with the given key, upserting it into the store. */
     suspend fun getConversation(idKey: String): Conversation {
-        val data: Map<String, Any?> = database.getValues("${NetworkPath.conversations.rawValue}/$idKey")
+        val data: Map<String, Any?> =
+            database.getValues(
+                "${NetworkPath.conversations.rawValue}/$idKey",
+                cacheStrategy = CacheStrategy.DISREGARD_CACHE,
+            )
         val hash = data[ENCODED_HASH_KEY] as? String ?: BANG_QUALIFIED_EMPTY
         val childData = data.toMutableMap().apply { put(ID_KEY, "$idKey | $hash") }
 

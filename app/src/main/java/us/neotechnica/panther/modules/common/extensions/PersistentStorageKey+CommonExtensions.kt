@@ -42,8 +42,11 @@ enum class MetadataServiceStorageKey(
     APP_STORE_BUILD_NUMBER("appStoreBuildNumber"),
     GEMINI_API_KEY("geminiAPIKey"),
     IS_PREVARICATION_MODE_ENABLED("isPrevaricationModeEnabled"),
+    PLAY_STORE_BUILD_NUMBER("playStoreBuildNumber"),
+    PLAY_STORE_SHARE_LINK("playStoreShareLink"),
     REDIRECTION_KEY("redirectionKey"),
     SHOULD_FORCE_UPDATE("shouldForceUpdate"),
+    SHOULD_FORCE_UPDATE_ANDROID("shouldForceUpdateAndroid"),
     STORAGE_REFERENCE_URL("storageReferenceURL"),
 }
 

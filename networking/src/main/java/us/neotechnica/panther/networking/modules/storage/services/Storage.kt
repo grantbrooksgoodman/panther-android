@@ -9,9 +9,11 @@ package us.neotechnica.panther.networking.modules.storage.services
 
 import android.net.Uri
 import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageMetadata as FirebaseStorageMetadata
 import kotlinx.coroutines.tasks.await
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.storage.interfaces.StorageDelegate
+import us.neotechnica.panther.networking.modules.storage.models.StorageMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import java.io.File
@@ -33,30 +35,60 @@ class Storage : StorageDelegate {
     override suspend fun downloadBytes(
         path: String,
         maxBytes: Long,
-    ): ByteArray = runGuarded { reference.child(environmentPath(path)).getBytes(maxBytes).await() }
+    ): ByteArray {
+        val start = System.currentTimeMillis()
+        val bytes = runGuarded { reference.child(environmentPath(path)).getBytes(maxBytes).await() }
+        recordThroughput(bytes.size, start)
+        return bytes
+    }
 
     override suspend fun download(
         path: String,
         toFile: File,
     ) {
+        val start = System.currentTimeMillis()
         runGuarded {
             toFile.parentFile?.mkdirs()
             reference.child(environmentPath(path)).getFile(toFile).await()
         }
+        recordThroughput(toFile.length().toInt(), start)
     }
 
     override suspend fun uploadBytes(
         bytes: ByteArray,
         path: String,
+        metadata: StorageMetadata?,
     ) {
-        runGuarded { reference.child(environmentPath(path)).putBytes(bytes).await() }
+        val start = System.currentTimeMillis()
+        runGuarded {
+            val ref = reference.child(environmentPath(path))
+            val firebaseMetadata = metadata?.let(::firebaseMetadata)
+            if (firebaseMetadata != null) {
+                ref.putBytes(bytes, firebaseMetadata).await()
+            } else {
+                ref.putBytes(bytes).await()
+            }
+        }
+        recordThroughput(bytes.size, start)
     }
 
     override suspend fun upload(
         file: File,
         path: String,
+        metadata: StorageMetadata?,
     ) {
-        runGuarded { reference.child(environmentPath(path)).putFile(Uri.fromFile(file)).await() }
+        val start = System.currentTimeMillis()
+        runGuarded {
+            val ref = reference.child(environmentPath(path))
+            val uri = Uri.fromFile(file)
+            val firebaseMetadata = metadata?.let(::firebaseMetadata)
+            if (firebaseMetadata != null) {
+                ref.putFile(uri, firebaseMetadata).await()
+            } else {
+                ref.putFile(uri).await()
+            }
+        }
+        recordThroughput(file.length().toInt(), start)
     }
 
     override suspend fun itemExists(path: String): Boolean =
@@ -75,6 +107,22 @@ class Storage : StorageDelegate {
      */
     private fun environmentPath(path: String): String = "${Networking.config.environment.shortString}/${path.trim('/')}"
 
+    private fun firebaseMetadata(metadata: StorageMetadata): FirebaseStorageMetadata =
+        FirebaseStorageMetadata
+            .Builder()
+            .apply {
+                metadata.contentType?.let { setContentType(it) }
+                metadata.customValues.forEach { (key, value) -> setCustomMetadata(key, value) }
+            }.build()
+
+    private fun recordThroughput(
+        byteCount: Int,
+        startMillis: Long,
+    ) {
+        val seconds = (System.currentTimeMillis() - startMillis) / MILLIS_PER_SECOND
+        Networking.health.recordThroughputSample(byteCount, seconds)
+    }
+
     private suspend fun <T> runGuarded(operation: suspend () -> T): T {
         if (!Networking.isReadWriteEnabled) {
             throw Exception(
@@ -91,5 +139,11 @@ class Storage : StorageDelegate {
         } finally {
             Networking.config.activityIndicatorDelegate.hide()
         }
+    }
+
+    // MARK: - Companion
+
+    private companion object {
+        private const val MILLIS_PER_SECOND = 1000.0
     }
 }

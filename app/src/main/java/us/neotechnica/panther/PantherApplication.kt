@@ -25,12 +25,14 @@ import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.services.AlertKitTranslationService
 import us.neotechnica.panther.modules.networking.translation.delegates.LocalTranslationArchiverDelegate
 import us.neotechnica.panther.modules.common.services.CommonPropertyLists
+import us.neotechnica.panther.modules.common.services.ErrorReportingService
 import us.neotechnica.panther.modules.common.services.ExceptionMetadataService
 import us.neotechnica.panther.modules.common.services.InviteService
 import us.neotechnica.panther.modules.common.services.LoggerPresentationService
 import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.common.services.UpdateService
 import us.neotechnica.panther.modules.content.user.services.AudioMessagePlaybackService
+import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
 import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
@@ -42,10 +44,14 @@ import us.neotechnica.panther.bundle.PermanentKeyDelegate
 import us.neotechnica.panther.modules.notifications.services.PantherMessagingService
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkEnvironment
+import us.neotechnica.panther.networking.modules.health.models.NetworkHealthConfiguration
+import us.neotechnica.panther.networking.modules.health.models.NetworkHealthProbeConfiguration
 import us.neotechnica.panther.modules.common.services.AnalyticsService
+import us.neotechnica.panther.modules.common.models.ConnectionStatusServiceEffectID
 import us.neotechnica.panther.modules.common.services.ConnectionStatusService
+import us.neotechnica.panther.modules.common.services.NetworkActivityIndicatorService
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
-import us.neotechnica.panther.modules.networking.user.services.UserMutationService
+import us.neotechnica.panther.modules.common.services.PushTokenService
 import us.neotechnica.panther.modules.session.state.services.retryAllEligible
 import us.neotechnica.panther.subsystem.AppSubsystem
 import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
@@ -98,6 +104,7 @@ class PantherApplication : Application() {
         AppSubsystem.delegates.registerLoggerDomainSubscriptionDelegate(LoggerDomainSubscription)
         AppSubsystem.delegates.registerPermanentPersistentStorageKeyDelegate(PermanentKeyDelegate)
         AlertKitConfig.registerTranslationDelegate(AlertKitTranslationService)
+        AlertKitConfig.registerReportDelegate(ErrorReportingService)
         LocalTranslationArchiverDelegate.registerWithDependencies()
 
         Networking.initialize(
@@ -105,11 +112,21 @@ class PantherApplication : Application() {
             defaultEnvironment = NetworkEnvironment.from(BuildConfig.NETWORK_ENVIRONMENT),
             useDebugAppCheckProvider = BuildConfig.DEBUG,
         )
+        Networking.config.setNetworkHealthConfiguration(
+            NetworkHealthConfiguration.default.copy(
+                probeConfiguration = NetworkHealthProbeConfiguration(url = "https://www.apple.com"),
+            ),
+        )
+        Networking.config.registerActivityIndicatorDelegate(NetworkActivityIndicatorService)
 
         registerTranslatorActivityProvider()
         setUpConnectionStatusEffects()
         setUpPushNotifications()
         observeProcessLifecycle()
+
+        // iOS starts this in SplashPageViewService.initializeBundle (Phase 6); wired here as a
+        // stand-in so the notification name map stays fresh. Relocate to the splash in Phase 6.
+        UICacheInvalidationService.startObserving()
 
         AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.OPEN_APP)
     }
@@ -172,7 +189,7 @@ class PantherApplication : Application() {
     private fun setUpPushNotifications() {
         PantherMessagingService.createChannel(this)
         FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
-            UserMutationService.setCurrentToken(token)
+            PushTokenService.setCurrentToken(token)
         }
     }
 
@@ -182,17 +199,17 @@ class PantherApplication : Application() {
         ConnectionStatusService.initialize(this)
 
         // Retry eligible entries when connectivity is restored.
-        ConnectionStatusService.addEffectUponConnectionChanged(RETRY_OUTBOX_EFFECT_ID) {
+        ConnectionStatusService.addEffectUponConnectionChanged(ConnectionStatusServiceEffectID.RETRY_MESSAGE_OUTBOX) {
             if (ConnectionStatusService.isOnline) outboxScope.launch { MessageOutboxService.retryAllEligible() }
         }
 
         // Show an offline toast when connectivity is lost.
-        ConnectionStatusService.addEffectUponConnectionChanged(SHOW_OFFLINE_MODE_TOAST_EFFECT_ID) {
+        ConnectionStatusService.addEffectUponConnectionChanged(ConnectionStatusServiceEffectID.SHOW_OFFLINE_MODE_TOAST) {
             if (!ConnectionStatusService.isOnline) showOfflineModeToast()
         }
 
         // Re-check for available updates when connectivity is restored.
-        ConnectionStatusService.addEffectUponConnectionChanged(CHECK_FOR_UPDATES_EFFECT_ID) {
+        ConnectionStatusService.addEffectUponConnectionChanged(ConnectionStatusServiceEffectID.CHECK_FOR_UPDATES) {
             if (ConnectionStatusService.isOnline) outboxScope.launch { runCatching { UpdateService.promptToUpdateIfNeeded() } }
         }
 
@@ -248,10 +265,6 @@ class PantherApplication : Application() {
     // MARK: - Companion
 
     private companion object {
-        const val CHECK_FOR_UPDATES_EFFECT_ID = "checkForUpdates"
-        const val RETRY_OUTBOX_EFFECT_ID = "retryMessageOutbox"
-        const val SHOW_OFFLINE_MODE_TOAST_EFFECT_ID = "showOfflineModeToast"
-
         const val OFFLINE_TOAST_SECONDS = 10L
 
         const val BUILD_INFO_ASSET = "build_info.properties"

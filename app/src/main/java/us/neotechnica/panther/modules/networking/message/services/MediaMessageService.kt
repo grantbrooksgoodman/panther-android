@@ -11,7 +11,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import android.webkit.MimeTypeMap
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
+import us.neotechnica.panther.networking.modules.storage.models.StorageMetadata
 import us.neotechnica.panther.modules.networking.message.models.LocalMediaFilePath
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
@@ -143,7 +145,11 @@ object MediaMessageService {
             mediaComponent.localPathFile
                 ?: throw Exception("Failed to resolve local media path.", metadata = ExceptionMetadata(this))
         if (!storage.itemExists(relativePath)) {
-            storage.upload(sourceFile, relativePath)
+            storage.upload(
+                sourceFile,
+                relativePath,
+                StorageMetadata(filePath = relativePath, contentType = contentType(mediaComponent)),
+            )
         }
         moveIntoPlace(sourceFile, relativePath)
     }
@@ -155,10 +161,17 @@ object MediaMessageService {
     ) {
         val thumbnailFile = mediaComponent.thumbnailFile ?: return
         if (!storage.itemExists(thumbnailRelativePath)) {
-            storage.upload(thumbnailFile, thumbnailRelativePath)
+            storage.upload(
+                thumbnailFile,
+                thumbnailRelativePath,
+                StorageMetadata(filePath = thumbnailRelativePath, contentType = "image/jpeg"),
+            )
         }
         moveIntoPlace(thumbnailFile, thumbnailRelativePath)
     }
+
+    private fun contentType(mediaComponent: MediaFile): String? =
+        MimeTypeMap.getSingleton().getMimeTypeFromExtension(mediaComponent.fileExtension.rawValue.lowercase())
 
     private fun moveIntoPlace(
         source: File,

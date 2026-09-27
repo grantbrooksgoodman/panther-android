@@ -36,7 +36,7 @@ import us.neotechnica.panther.translator.models.Translation
 import us.neotechnica.panther.translator.models.TranslationInput
 import us.neotechnica.panther.translator.services.LanguageRecognitionService
 import us.neotechnica.panther.networking.modules.translation.models.TranslationReference as HostedTranslationReference
-import us.neotechnica.panther.modules.common.services.NotificationSessionService
+import us.neotechnica.panther.modules.common.services.NotificationService
 import us.neotechnica.panther.modules.session.state.services.PendingTranslationArchive
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 
@@ -181,7 +181,7 @@ object MessageSessionService {
         // otherwise leave a mock lingering beside the committed message.
         notificationScope.launch {
             runCatching {
-                NotificationSessionService.notify(
+                NotificationService.notify(
                     users = otherUsers.filter { !(it.blockedUserIDs ?: emptyList()).contains(initiatingUser.id) },
                     message = message,
                     conversationIDKey = resolvedConversation.id.key,

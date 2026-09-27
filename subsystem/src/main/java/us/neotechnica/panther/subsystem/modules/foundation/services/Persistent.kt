@@ -85,6 +85,13 @@ object Persistent {
         return preferences()?.getBoolean(key.rawValue, default) ?: default
     }
 
+    /** The stored boolean for [key], or `null` if unset. */
+    fun booleanOrNull(key: PersistentStorageKey): Boolean? {
+        testScalars?.let { return it.wrappedValue[key.rawValue] as? Boolean }
+        val preferences = preferences() ?: return null
+        return if (preferences.contains(key.rawValue)) preferences.getBoolean(key.rawValue, false) else null
+    }
+
     /** Stores [value] for [key]. */
     fun setBoolean(
         key: PersistentStorageKey,

@@ -11,10 +11,13 @@ package us.neotechnica.panther.modules.content.user.extensions
 import us.neotechnica.panther.modules.common.contacts.services.ContactPairArchiveService
 import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.models.ContactPair
+import us.neotechnica.panther.modules.common.services.PushTokenService
 import us.neotechnica.panther.modules.networking.user.models.DeviceID
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpdatableKey
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.update
+import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList
+import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 
 // MARK: - Properties
@@ -46,6 +49,25 @@ val User.displayName: String
     }
 
 // MARK: - Methods
+
+/**
+ * Removes the device's current push token from the user's push
+ * tokens.
+ *
+ * This method has no effect when no current push token is available.
+ *
+ * @throws Exception if updating the user fails.
+ */
+suspend fun User.removeCurrentPushToken() {
+    val currentPushToken = PushTokenService.currentToken ?: return
+
+    var filteredPushTokens = (pushTokens ?: emptyList()).filter { it != currentPushToken }
+    if (filteredPushTokens.isBangQualifiedEmpty) {
+        filteredPushTokens = bangQualifiedEmptyList
+    }
+
+    update(UserUpdatableKey.PUSH_TOKENS, to = filteredPushTokens)
+}
 
 /**
  * Updates the user's device identifier to the current device's, if it

@@ -38,7 +38,7 @@ import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentNavigatorState
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
-import us.neotechnica.panther.modules.networking.user.services.UserMutationService
+import us.neotechnica.panther.modules.common.services.PushTokenService
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
@@ -81,7 +81,7 @@ fun SplashView(modifier: Modifier = Modifier) {
         runCatching {
             UserSessionService.resolveCurrentUser(UserSessionService.DataType.entries.toSet())
             UserSessionService.currentUser?.languageCode?.let { RuntimeStorage.languageCode = it }
-            runCatching { UserMutationService.updatePushTokensForCurrentUser() }
+            runCatching { PushTokenService.updatePushTokensForCurrentUser() }
             runCatching { ContactService.syncIfNeeded() }
         }
 

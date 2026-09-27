@@ -11,6 +11,7 @@ package us.neotechnica.panther.designsystem.modules.alertkit
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import us.neotechnica.panther.designsystem.modules.alertkit.interfaces.ReportDelegate
 import us.neotechnica.panther.designsystem.modules.alertkit.interfaces.TranslationDelegate
 import us.neotechnica.panther.designsystem.modules.alertkit.models.HUDConfig
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
@@ -31,6 +32,9 @@ import kotlin.time.Duration.Companion.seconds
  */
 object AlertKitConfig {
     // MARK: - Properties
+
+    /** The registered report delegate, or `null` if none. */
+    var reportDelegate: ReportDelegate? = null
 
     /** The registered translation delegate, or `null` if none. */
     var translationDelegate: TranslationDelegate? = null
@@ -78,6 +82,15 @@ object AlertKitConfig {
      */
     fun registerTranslationDelegate(translationDelegate: TranslationDelegate) {
         this.translationDelegate = translationDelegate
+    }
+
+    /**
+     * Registers the delegate that files error reports.
+     *
+     * @param reportDelegate The delegate to register.
+     */
+    fun registerReportDelegate(reportDelegate: ReportDelegate) {
+        this.reportDelegate = reportDelegate
     }
 
     // MARK: - Internal

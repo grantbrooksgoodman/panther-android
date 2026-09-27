@@ -31,7 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.extensions.isForcedUpdateRequired
-import us.neotechnica.panther.modules.common.services.MetadataService
+import us.neotechnica.panther.modules.common.services.UpdateService
 import us.neotechnica.panther.subsystem.modules.shared.models.SharedState
 
 /**
@@ -75,10 +75,10 @@ fun ForcedUpdateView() {
             textAlign = TextAlign.Center,
         )
 
-        MetadataService.appShareLink?.let { appShareLink ->
+        UpdateService.installButtonRedirectURL?.let { installURL ->
             Button(
                 modifier = Modifier.fillMaxWidth(),
-                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(appShareLink))) },
+                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(installURL))) },
             ) {
                 Text("Update")
             }

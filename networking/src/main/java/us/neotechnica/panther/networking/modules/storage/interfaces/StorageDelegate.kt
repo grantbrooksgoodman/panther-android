@@ -7,6 +7,7 @@
 
 package us.neotechnica.panther.networking.modules.storage.interfaces
 
+import us.neotechnica.panther.networking.modules.storage.models.StorageMetadata
 import java.io.File
 
 /**
@@ -72,6 +73,7 @@ interface StorageDelegate {
      *
      * @param bytes The bytes to upload.
      * @param path The storage path to upload to.
+     * @param metadata Optional metadata to attach to the file.
      *
      * @throws us.neotechnica.panther.subsystem.modules.foundation.models.Exception
      *   if the upload fails.
@@ -79,6 +81,7 @@ interface StorageDelegate {
     suspend fun uploadBytes(
         bytes: ByteArray,
         path: String,
+        metadata: StorageMetadata? = null,
     )
 
     /**
@@ -87,6 +90,7 @@ interface StorageDelegate {
      *
      * @param file The local file to upload.
      * @param path The storage path to upload to.
+     * @param metadata Optional metadata to attach to the file.
      *
      * @throws us.neotechnica.panther.subsystem.modules.foundation.models.Exception
      *   if the upload fails.
@@ -94,6 +98,7 @@ interface StorageDelegate {
     suspend fun upload(
         file: File,
         path: String,
+        metadata: StorageMetadata? = null,
     )
 
     /**

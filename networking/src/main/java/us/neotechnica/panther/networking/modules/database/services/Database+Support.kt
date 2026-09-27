@@ -15,6 +15,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetad
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration
 
+private const val MILLIS_PER_SECOND = 1000.0
+
 /**
  * Returns a Boolean value that indicates whether the value can be
  * stored in Firebase Realtime Database.
@@ -59,9 +61,13 @@ internal suspend fun <T> guardedFirebaseOperation(
     }
 
     Networking.config.activityIndicatorDelegate.show()
+    val start = System.currentTimeMillis()
     return try {
-        withTimeout(timeout) { operation() }
+        val result = withTimeout(timeout) { operation() }
+        Networking.health.recordLatencySample((System.currentTimeMillis() - start) / MILLIS_PER_SECOND)
+        result
     } catch (exception: TimeoutCancellationException) {
+        Networking.health.recordCensoredLatencySample(timeout.inWholeMilliseconds / MILLIS_PER_SECOND)
         throw Exception(
             "The operation timed out.",
             underlyingExceptions = listOf(Exception.from(exception, ExceptionMetadata(sender))),

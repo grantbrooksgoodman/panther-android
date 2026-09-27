@@ -7,32 +7,44 @@
 
 package us.neotechnica.panther.modules.common.services
 
-import us.neotechnica.panther.networking.Networking
-import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ProgressAlert
+import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
+import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpdatableKey
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.update
 import us.neotechnica.panther.modules.session.entity.extensions.conversations
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
+import us.neotechnica.panther.modules.session.entity.services.ActivitySessionService
+import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
+import us.neotechnica.panther.modules.session.entity.services.UserSessionService
+import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
-import us.neotechnica.panther.modules.session.entity.services.ActivitySessionService
-import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 
 /**
  * Permanently deletes the current user's account and its data.
  *
- * Adds the user to the deleted-users registry, leaves group chats and
- * deletes one-to-one chats, clears the conversation list, then removes
- * the persisted identifier and the remote user record.
+ * While a progress alert and overlay are displayed, adds the user to
+ * the deleted-users registry and resolves their conversations, leaves
+ * group chats and deletes one-to-one chats, clears the conversation
+ * list, then removes the persisted identifier and the remote user
+ * record. Individual failures are accumulated and a single compiled
+ * exception is thrown at the end.
  *
- * **Note:** unlike iOS, this Phase 8 port does not run a database
- * integrity-repair pass; individual failures are accumulated and logged.
+ * **Note:** the two database integrity-repair passes iOS performs are
+ * absent – `IntegrityService` is deferred to a separate plan (D-II-2).
+ * The Android progress alert is indeterminate, so no completion
+ * percentage is reported.
  */
 object AccountDeletionService {
     // MARK: - Properties
@@ -55,43 +67,77 @@ object AccountDeletionService {
         UserSessionService.stopObservingCurrentUserChanges()
 
         val exceptions = mutableListOf<Exception>()
+        Overlay.show()
+        val progressAlert =
+            ProgressAlert(
+                title = LocalizedStringKey.DeletingData.localized(),
+                message = LocalizedStringKey.PleaseWait.localized(),
+            )
+        progressAlert.present()
 
-        runStep(exceptions) { addToDeletedUsers(currentUserID) }
-        runStep(exceptions) { UserSessionService.resolveCurrentUser(setOf(UserSessionService.DataType.CONVERSATIONS)) }
-
-        val conversations = UserSessionService.currentUser?.conversations ?: emptyList()
-        for (conversation in conversations) {
-            runStep(exceptions) {
-                if (conversation.participants.size > 2) {
-                    ActivitySessionService.removeFromConversation(
-                        userID = currentUserID,
-                        conversation = conversation,
-                        removeFromUser = false,
-                    )
-                } else {
-                    ConversationSessionService.deleteConversation(conversation, forced = true)
-                }
+        try {
+            // Add to deleted users + resolve conversations, in parallel.
+            coroutineScope {
+                listOf(
+                    async { runCatchingException { addToDeletedUsers(currentUserID) } },
+                    async {
+                        runCatchingException {
+                            UserSessionService.resolveCurrentUser(setOf(UserSessionService.DataType.CONVERSATIONS))
+                        }
+                    },
+                ).awaitAll().forEach { exception -> exception?.let(exceptions::add) }
             }
-        }
 
-        // Zero-out conversation IDs after all conversation operations
-        // complete to avoid a self-race where a concurrent didWrite
-        // fan-out re-adds entries.
-        runStep(exceptions) {
-            UserSessionService.currentUser?.update(UserUpdatableKey.CONVERSATION_IDS, to = emptyList<ConversationID>())
-        }
+            val conversations = UserSessionService.currentUser?.conversations ?: emptyList()
 
-        Persistent.setString(PersistentStorageKey.currentUserID, null)
-        runStep(exceptions) {
-            database.setValue(value = null, key = "${NetworkPath.users.rawValue}/$currentUserID")
+            // Remove from group chats, delete one-to-one chats, in parallel.
+            coroutineScope {
+                conversations
+                    .map { conversation ->
+                        async {
+                            runCatchingException {
+                                if (conversation.participants.size > GROUP_PARTICIPANT_THRESHOLD) {
+                                    ActivitySessionService.removeFromConversation(
+                                        userID = currentUserID,
+                                        conversation = conversation,
+                                        removeFromUser = false,
+                                    )
+                                } else {
+                                    ConversationSessionService.deleteConversation(conversation, forced = true)
+                                }
+                            }
+                        }
+                    }.awaitAll()
+                    .forEach { exception -> exception?.let(exceptions::add) }
+            }
+
+            // Zero-out conversation IDs after all conversation operations
+            // complete to avoid a self-race where a concurrent didWrite
+            // fan-out re-adds entries.
+            runCatchingException {
+                UserSessionService.currentUser?.update(UserUpdatableKey.CONVERSATION_IDS, to = emptyList<ConversationID>())
+            }?.let(exceptions::add)
+
+            // iOS repairs database integrity here; deferred per D-II-2.
+
+            Persistent.setString(PersistentStorageKey.currentUserID, null)
+            runCatchingException {
+                database.setValue(value = null, key = "${NetworkPath.users.rawValue}/$currentUserID")
+            }?.let(exceptions::add)
+
+            // iOS repairs database integrity again on errors; deferred per D-II-2.
+        } finally {
+            progressAlert.dismiss()
+            Overlay.hide()
         }
 
         val first = exceptions.firstOrNull() ?: return
+        Logger.log(first)
         throw Exception(
             "Account deletion completed with ${exceptions.size} error(s).",
             underlyingExceptions = exceptions,
             metadata = ExceptionMetadata(this),
-        ).also { Logger.log(first) }
+        )
     }
 
     // MARK: - Auxiliary
@@ -104,15 +150,13 @@ object AccountDeletionService {
         }
     }
 
-    private suspend fun runStep(
-        exceptions: MutableList<Exception>,
-        step: suspend () -> Unit,
-    ) {
+    private suspend fun runCatchingException(block: suspend () -> Unit): Exception? =
         try {
-            step()
+            block()
+            null
         } catch (exception: Exception) {
-            exceptions.add(exception)
-            Logger.log(exception)
+            exception
         }
-    }
+
+    private const val GROUP_PARTICIPANT_THRESHOLD = 2
 }

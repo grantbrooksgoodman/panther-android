@@ -11,6 +11,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import us.neotechnica.panther.modules.common.models.ConnectionStatusServiceEffectID
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 
@@ -28,8 +29,9 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 object ConnectionStatusService {
     // MARK: - Properties
 
+    private val awaitingConnectionRestoration = LockIsolated(false)
     private val online = LockIsolated(true)
-    private val uponConnectionChanged = LockIsolated(mapOf<String, () -> Unit>())
+    private val uponConnectionChanged = LockIsolated(mapOf<ConnectionStatusServiceEffectID, () -> Unit>())
 
     private var connectivityManager: ConnectivityManager? = null
 
@@ -48,6 +50,7 @@ object ConnectionStatusService {
                 ?: return
         connectivityManager = manager
         online.wrappedValue = manager.hasInternet()
+        awaitingConnectionRestoration.wrappedValue = !online.wrappedValue
 
         manager.registerDefaultNetworkCallback(
             object : ConnectivityManager.NetworkCallback() {
@@ -79,7 +82,7 @@ object ConnectionStatusService {
      * this is not the desired behavior.
      */
     fun addEffectUponConnectionChanged(
-        id: String,
+        id: ConnectionStatusServiceEffectID,
         effect: () -> Unit,
     ) {
         uponConnectionChanged.withValue { it.value = it.value + (id to effect) }
@@ -91,7 +94,7 @@ object ConnectionStatusService {
     }
 
     /** Removes the effect registered under the given identifier. */
-    fun removeEffect(id: String) {
+    fun removeEffect(id: ConnectionStatusServiceEffectID) {
         uponConnectionChanged.withValue { it.value = it.value - id }
     }
 
@@ -100,10 +103,23 @@ object ConnectionStatusService {
     private fun setOnline(value: Boolean) {
         val wasOnline = online.wrappedValue
         online.wrappedValue = value
-        if (value != wasOnline) {
-            Logger.log("Connection status changed (online: $value); running effects.")
-            uponConnectionChanged.wrappedValue.values.forEach { it() }
+        if (value == wasOnline) return
+
+        if (!value) {
+            Logger.log("Connection status changed (online: false); running effects.")
+            runEffects()
+            awaitingConnectionRestoration.wrappedValue = true
+            return
         }
+
+        if (!awaitingConnectionRestoration.wrappedValue) return
+        Logger.log("Connection status changed (online: true); running effects.")
+        runEffects()
+        awaitingConnectionRestoration.wrappedValue = false
+    }
+
+    private fun runEffects() {
+        uponConnectionChanged.wrappedValue.values.forEach { it() }
     }
 
     private fun ConnectivityManager.hasInternet(): Boolean {

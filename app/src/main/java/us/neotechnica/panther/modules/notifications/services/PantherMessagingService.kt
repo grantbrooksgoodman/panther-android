@@ -34,9 +34,13 @@ import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
-import us.neotechnica.panther.modules.networking.user.services.UserMutationService
+import us.neotechnica.panther.modules.common.services.PushTokenService
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.modules.common.constants.NotificationExtensionConstants
+import org.json.JSONObject
+import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 
 /**
  * Receives FCM messages and token updates.
@@ -51,10 +55,10 @@ class PantherMessagingService : FirebaseMessagingService() {
     // MARK: - Token
 
     override fun onNewToken(token: String) {
-        UserMutationService.setCurrentToken(token)
+        PushTokenService.setCurrentToken(token)
         if (User.currentUserID == null) return
         scope.launch {
-            runCatching { UserMutationService.updatePushTokensForCurrentUser() }
+            runCatching { PushTokenService.updatePushTokensForCurrentUser() }
                 .onFailure { Logger.log(Exception.from(it, exceptionMetadata())) }
         }
     }
@@ -78,6 +82,7 @@ class PantherMessagingService : FirebaseMessagingService() {
                 ?.metadata
                 ?.name
                 ?.takeUnless { it.isBangQualifiedEmpty || it.isBlank() }
+                ?: persistedConversationName(conversationIDKey)
 
         showNotification(this, conversationIDKey, title, body, subtitle)
     }
@@ -101,6 +106,15 @@ class PantherMessagingService : FirebaseMessagingService() {
             fullName
         }
     }
+
+    /**
+     * The persisted group conversation name for cold-start subtitle
+     * resolution, when the session store has not yet loaded.
+     */
+    private fun persistedConversationName(conversationIDKey: String): String? =
+        Persistent.string(PersistentStorageKey(NotificationExtensionConstants.CONVERSATION_NAME_MAP_KEY))
+            ?.let { runCatching { JSONObject(it).optString(conversationIDKey) }.getOrNull() }
+            ?.takeUnless { it.isBlank() }
 
     // MARK: - Companion
 

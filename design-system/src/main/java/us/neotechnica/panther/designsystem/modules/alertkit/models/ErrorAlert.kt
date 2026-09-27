@@ -8,6 +8,7 @@
 package us.neotechnica.panther.designsystem.modules.alertkit.models
 
 import kotlinx.coroutines.suspendCancellableCoroutine
+import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.services.AlertPresenter
 import us.neotechnica.panther.designsystem.modules.alertkit.services.PresentedAlert
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -24,9 +25,9 @@ import kotlin.coroutines.resume
  * ErrorAlert(exception).present()
  * ```
  *
- * **Note:** filing the report and translating content are deferred to
- * later phases; the send-report action currently invokes the provided
- * callback only.
+ * The send-report action invokes the provided callback, or files a
+ * report through the [ReportDelegate][us.neotechnica.panther.designsystem.modules.alertkit.interfaces.ReportDelegate]
+ * registered with `AlertKitConfig` when no callback is given.
  */
 class ErrorAlert(
     private val exception: Exception,
@@ -55,7 +56,7 @@ class ErrorAlert(
                         if (exception.isReportable) {
                             {
                                 AlertPresenter.dismiss()
-                                onSendReport?.invoke()
+                                (onSendReport ?: { AlertKitConfig.reportDelegate?.fileReport(exception) }).invoke()
                                 if (continuation.isActive) continuation.resume(Unit)
                             }
                         } else {

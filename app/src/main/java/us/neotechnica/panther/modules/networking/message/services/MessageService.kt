@@ -41,10 +41,8 @@ object MessageService {
     /** Returns the messages with the given IDs, upserting them into the store. */
     suspend fun getMessages(ids: List<String>): List<Message> =
         coroutineScope {
-            ids
-                .map { id -> async { runCatching { getMessage(id) }.getOrNull() } }
-                .awaitAll()
-                .filterNotNull()
+            // Fail the batch if any message cannot be fetched, matching iOS.
+            ids.map { id -> async { getMessage(id) } }.awaitAll()
         }
 
     /** Returns the message with the given ID, upserting it into the store. */

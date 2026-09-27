@@ -7,6 +7,9 @@
 
 package us.neotechnica.panther.networking.modules.common.models
 
+import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.health.models.NetworkHealthResolver
+
 /**
  * A value that specifies how cached data is used during a
  * network operation.
@@ -25,11 +28,10 @@ enum class CacheStrategy(
      * Resolves to a concrete strategy at operation time based on
      * the current network health.
      *
-     * **Note:** The network Health module is deferred, so
-     * `adaptive` currently resolves to [returnCacheOnFailure]
-     * unconditionally. When Health lands, this resolves to
-     * [returnCacheFirst] under poor health and
-     * [returnCacheOnFailure] otherwise.
+     * Resolves to [RETURN_CACHE_FIRST] when the network health
+     * score falls below the configured adaptive threshold, and to
+     * [RETURN_CACHE_ON_FAILURE] otherwise (including when health is
+     * unknown).
      */
     ADAPTIVE("adaptive"),
 
@@ -54,8 +56,17 @@ enum class CacheStrategy(
     /**
      * The concrete strategy this value resolves to at operation
      * time. Every strategy other than [ADAPTIVE] resolves to
-     * itself.
+     * itself; [ADAPTIVE] resolves against the current network
+     * health.
      */
     val resolved: CacheStrategy
-        get() = if (this == ADAPTIVE) RETURN_CACHE_ON_FAILURE else this
+        get() =
+            if (this == ADAPTIVE) {
+                NetworkHealthResolver.resolve(
+                    Networking.health.health,
+                    Networking.config.networkHealthConfiguration,
+                )
+            } else {
+                this
+            }
 }

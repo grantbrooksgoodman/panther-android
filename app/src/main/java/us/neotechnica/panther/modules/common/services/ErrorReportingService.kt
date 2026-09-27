@@ -1,9 +1,8 @@
 //
 //  ErrorReportingService.kt
-//  Panther
 //
-//  Created by Grant Brooks Goodman on 01/09/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.common.services
@@ -12,9 +11,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import us.neotechnica.panther.designsystem.modules.alertkit.interfaces.ReportDelegate
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
 import us.neotechnica.panther.networking.Networking
-import us.neotechnica.panther.modules.common.services.ConnectionStatusService
+import us.neotechnica.panther.networking.modules.storage.models.StorageMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
@@ -32,15 +32,10 @@ import android.os.Build as AndroidBuild
  * Uploads error reports to remote storage.
  *
  * A report consists of the current logger session record, uploaded
- * with a header describing the error, build, device, language, and
- * current user.
- *
- * **Note:** the Android `StorageDelegate` upload does not yet carry
- * custom metadata, so the report's metadata is prepended to the
- * uploaded session record as a text header rather than attached as
- * custom storage values.
+ * with custom storage metadata describing the error, build, device,
+ * language, and current user.
  */
-object ErrorReportingService {
+object ErrorReportingService : ReportDelegate {
     // MARK: - Properties
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -56,6 +51,17 @@ object ErrorReportingService {
     val reportedErrorCodes: List<String>
         get() = _reportedErrorCodes.wrappedValue
 
+    // MARK: - ReportDelegate Conformance
+
+    /**
+     * Files a report for the given exception, showing a success toast.
+     *
+     * @param exception The exception to report.
+     */
+    override fun fileReport(exception: Exception) {
+        fileReport(exception, showsToastOnSuccess = true)
+    }
+
     // MARK: - File Report
 
     /**
@@ -64,11 +70,17 @@ object ErrorReportingService {
      * The report uploads asynchronously; this method returns
      * immediately. Exceptions whose codes have already been reported
      * during the current app session are skipped. When the upload
-     * succeeds, a success toast is shown.
+     * succeeds and `showsToastOnSuccess` is `true`, a success toast is
+     * shown.
      *
      * @param exception The exception to report.
+     * @param showsToastOnSuccess Whether a success toast is shown when
+     *   the upload succeeds.
      */
-    fun fileReport(exception: Exception) {
+    fun fileReport(
+        exception: Exception,
+        showsToastOnSuccess: Boolean,
+    ) {
         scope.launch {
             val errorCode = exception.code
             if (errorCode in _reportedErrorCodes.wrappedValue) return@launch
@@ -76,7 +88,6 @@ object ErrorReportingService {
             val recordFile = Logger.sessionRecordFilePath ?: return@launch
             val recordBytes = runCatching { recordFile.readBytes() }.getOrNull() ?: return@launch
 
-            val payload = (header(exception) + SESSION_RECORD_SEPARATOR + String(recordBytes)).toByteArray()
             val filePath =
                 listOf(
                     "reports",
@@ -86,13 +97,22 @@ object ErrorReportingService {
                 ).joinToString("/")
 
             try {
-                Networking.config.storageDelegate.uploadBytes(payload, filePath)
+                Networking.config.storageDelegate.uploadBytes(
+                    recordBytes,
+                    filePath,
+                    StorageMetadata(
+                        filePath = filePath,
+                        contentType = "text/plain",
+                        customValues = customValues(exception),
+                    ),
+                )
             } catch (uploadException: Exception) {
                 Logger.log(uploadException, with = AlertType.toast)
                 return@launch
             }
 
             _reportedErrorCodes.wrappedValue = _reportedErrorCodes.wrappedValue + errorCode
+            if (!showsToastOnSuccess) return@launch
             Toast.show(
                 Toast(
                     Toast.Type.Capsule(ToastStyle.SUCCESS),
@@ -105,24 +125,23 @@ object ErrorReportingService {
 
     // MARK: - Auxiliary
 
-    private fun header(exception: Exception): String =
-        buildString {
-            appendLine("Error Description: ${exception.userFacingDescriptor}")
-            appendLine("Error Code: ${exception.code}")
-            appendLine("Build SKU: ${Build.buildSKU}")
-            appendLine("Bundle Version: ${Build.bundleVersion} (${Build.buildNumber}${Build.milestone.shortString})")
-            appendLine("Bundle Revision: ${Build.bundleRevision} (${Build.revisionBuildNumber})")
-            appendLine("Connection Status: ${if (ConnectionStatusService.isOnline) "online" else "offline"}")
-            appendLine("Device Model: ${AndroidBuild.MODEL} (${AndroidBuild.DEVICE.lowercase()})")
-            appendLine("Language Code: ${RuntimeStorage.languageCode}")
-            appendLine("OS Version: ${AndroidBuild.VERSION.RELEASE.lowercase()}")
-            appendLine("Timestamp: ${SimpleDateFormat(TIMESTAMP_FORMAT, Locale.US).format(Date())}")
+    private fun customValues(exception: Exception): Map<String, String> =
+        buildMap {
+            put("Error Description", exception.userFacingDescriptor)
+            put("Error Code", exception.code)
+            put("Build SKU", Build.buildSKU)
+            put("Bundle Version", "${Build.bundleVersion} (${Build.buildNumber}${Build.milestone.shortString})")
+            put("Bundle Revision", "${Build.bundleRevision} (${Build.revisionBuildNumber})")
+            put("Connection Status", if (ConnectionStatusService.isOnline) "online" else "offline")
+            put("Device Model", "${AndroidBuild.MODEL} (${AndroidBuild.DEVICE.lowercase()})")
+            put("Language Code", RuntimeStorage.languageCode)
+            put("OS Version", AndroidBuild.VERSION.RELEASE.lowercase())
+            put("Timestamp", SimpleDateFormat(TIMESTAMP_FORMAT, Locale.US).format(Date()))
         }
 
     private fun fileNameSuffix(): String = "${Build.milestone.shortString}${Build.buildNumber}${Build.bundleRevision}"
 }
 
 private const val FILE_DATE_FORMAT = "yyMMdd"
-private const val SESSION_RECORD_SEPARATOR = "\n\n---\n\n"
 private const val SUCCESS_TOAST_SECONDS = 3L
 private const val TIMESTAMP_FORMAT = "H:mm:ss.SSSS"
