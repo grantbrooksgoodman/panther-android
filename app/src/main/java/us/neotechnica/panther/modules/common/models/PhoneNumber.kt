@@ -125,5 +125,26 @@ class PhoneNumber(
                 internalFormattedString = null,
             )
         }
+
+        /**
+         * Reconstructs a phone number from its stored encoded map
+         * without suspending, or `null` if the map is malformed. Used
+         * by the file-backed archives, whose decode step is synchronous.
+         *
+         * @param element The stored encoded map.
+         */
+        fun decodeSynchronously(element: Any?): PhoneNumber? {
+            val data = element as? Map<*, *> ?: return null
+            val callingCode = data[Keys.CALLING_CODE.rawValue] as? String ?: return null
+            val nationalNumberString = data[Keys.NATIONAL_NUMBER_STRING.rawValue] as? String ?: return null
+            val regionCode = data[Keys.REGION_CODE.rawValue] as? String ?: return null
+            return PhoneNumber(
+                callingCode = callingCode,
+                nationalNumberString = nationalNumberString,
+                regionCode = regionCode,
+                label = null,
+                internalFormattedString = null,
+            )
+        }
     }
 }

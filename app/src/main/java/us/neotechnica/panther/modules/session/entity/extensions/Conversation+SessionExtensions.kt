@@ -36,14 +36,19 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStora
 import java.util.Date
 
 /**
- * Whether the current user still has this conversation visible – i.e.
- * is a participant who has not deleted it.
+ * Whether the conversation is visible to the current user.
+ *
+ * A conversation is hidden when the current user has deleted it, or
+ * when any participant is blocked.
  */
 val Conversation.isVisibleForCurrentUser: Boolean
     get() {
         val currentUserID = User.currentUserID ?: return false
         val participant = participants.firstOrNull { it.userID == currentUserID } ?: return false
-        return !participant.hasDeletedConversation
+        if (participant.hasDeletedConversation) return false
+        val blockedUserIDs = UserSessionService.currentUser?.blockedUserIDs ?: emptyList()
+        if (participants.any { it.userID in blockedUserIDs }) return false
+        return true
     }
 
 /**

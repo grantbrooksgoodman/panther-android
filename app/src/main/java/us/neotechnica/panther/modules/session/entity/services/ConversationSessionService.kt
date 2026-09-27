@@ -28,14 +28,12 @@ import us.neotechnica.panther.modules.session.entity.extensions.currentConversat
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.modules.session.entity.extensions.filteringSystemMessages
 import us.neotechnica.panther.modules.session.entity.extensions.hydrated
-import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.session.entity.extensions.messageOutboxDidChange
 import us.neotechnica.panther.modules.session.entity.extensions.messages
 import us.neotechnica.panther.modules.session.entity.extensions.offsetFromCurrentUserAdditionDate
 import us.neotechnica.panther.modules.session.entity.extensions.sessionStoreDidChange
 import us.neotechnica.panther.modules.session.entity.extensions.sortedByAscendingSentDate
 import us.neotechnica.panther.modules.session.entity.extensions.uniquedByID
-import us.neotechnica.panther.modules.session.entity.extensions.updateReadDate
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestampDateFormatter
@@ -140,6 +138,28 @@ object ConversationSessionService {
         updateDisplayedMessages()
     }
 
+    /**
+     * Increases the number of displayed messages until the message with
+     * the given identifier is displayed.
+     *
+     * @param messageID The identifier of the message to reveal.
+     */
+    fun incrementMessageOffset(messageID: String) {
+        val conversation = currentConversation ?: return
+        if (messageID !in conversation.messageIDs) return
+        if (messageID !in (conversation.messages ?: emptyList()).map { it.id }) return
+
+        val offsetMessages = hydratedMessages.offsetFromCurrentUserAdditionDate(conversation.activities)
+        if (messageID !in offsetMessages.map { it.id }) return
+
+        while (messageID !in internalDisplayedMessages.value.map { it.id } &&
+            messageOffset.wrappedValue < offsetMessages.size
+        ) {
+            messageOffset.withValue { it.value += 1 }
+            internalDisplayedMessages.value = withMessagesOffset(offsetMessages)
+        }
+    }
+
     /** Resets the number of displayed messages to the default. */
     fun resetMessageOffset() {
         messageOffset.wrappedValue = DEFAULT_MESSAGE_OFFSET
@@ -217,36 +237,13 @@ object ConversationSessionService {
         if (currentConversation?.id?.key == key) setCurrentConversation(null)
     }
 
-    // MARK: - Read Receipts
-
-    /**
-     * Marks the current conversation's unread incoming messages as read.
-     *
-     * Has no effect when the most recent incoming message has already
-     * been read, or when there are no unread incoming messages.
-     */
-    suspend fun markCurrentConversationAsRead() {
-        val conversation = currentConversation ?: return
-        val currentUserID = User.currentUserID ?: return
-        val incoming = conversation.messages?.filter { !it.isFromCurrentUser } ?: return
-
-        val last = incoming.lastOrNull() ?: return
-        if (last.readReceipts?.any { it.userID == currentUserID } == true) return
-
-        val unread = incoming.filter { message -> message.readReceipts?.any { it.userID == currentUserID } != true }
-        if (unread.isEmpty()) return
-
-        conversation.updateReadDate(unread)
-    }
-
     // MARK: - Update Displayed Messages
 
     /** Recomputes the displayed messages, including any outbox entries. */
     fun updateDisplayedMessages() {
         val conversation = currentConversation
         val hydrated =
-            (conversation?.messages ?: emptyList())
-                .hydrated(conversation?.activities)
+            hydratedMessages
                 .offsetFromCurrentUserAdditionDate(conversation?.activities)
                 .sortedByAscendingSentDate
 
@@ -260,6 +257,12 @@ object ConversationSessionService {
     }
 
     // MARK: - Auxiliary
+
+    private val hydratedMessages: List<Message>
+        get() {
+            val conversation = currentConversation ?: return emptyList()
+            return (conversation.messages ?: emptyList()).hydrated(conversation.activities)
+        }
 
     private val Conversation.isDraft: Boolean
         get() = id.key == CommonConstants.NEW_CONVERSATION_ID || id.key.isBlank()

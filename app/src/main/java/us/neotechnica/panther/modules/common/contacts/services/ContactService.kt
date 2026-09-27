@@ -17,6 +17,9 @@ import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
 import us.neotechnica.panther.modules.common.contacts.models.ContactMatch
+import us.neotechnica.panther.modules.common.models.Contact
+import us.neotechnica.panther.modules.common.models.ContactPair
+import us.neotechnica.panther.modules.common.models.NumberPair
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.networking.user.services.UserService
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHashOf
@@ -24,6 +27,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
+import java.util.Date
 
 /**
  * Matches the device's contacts with registered users, persisting the
@@ -58,6 +62,17 @@ object ContactService {
 
     /** Returns the contact matched to the given user, or `null`. */
     fun match(userID: String): ContactMatch? = matches().firstOrNull { it.userID == userID }
+
+    /** The archive of contact pairs known to the app. */
+    val contactPairArchive: ContactPairArchiveService
+        get() = ContactPairArchiveService
+
+    /** Clears the matched-contact and contact-pair caches. */
+    fun clearCache() {
+        matchesRef.wrappedValue = emptyList()
+        persist(emptyList())
+        contactPairArchive.clearArchive()
+    }
 
     /**
      * Returns the display name of the contact whose national number hashes
@@ -121,6 +136,7 @@ object ContactService {
         if (deviceContacts.isEmpty()) return
 
         val matches = mutableListOf<ContactMatch>()
+        val contactPairs = mutableListOf<ContactPair>()
         for (user in users) {
             val name = matchName(user, deviceContacts) ?: continue
             matches.add(
@@ -131,10 +147,32 @@ object ContactService {
                     user.phoneNumber.nationalNumberString,
                 ),
             )
+            contactPairs.add(
+                ContactPair(
+                    contact =
+                        Contact(
+                            id = user.phoneNumber.compiledNumberString,
+                            firstName = name,
+                            lastName = "",
+                            phoneNumbers = listOf(user.phoneNumber),
+                            imageData = null,
+                        ),
+                    numberPairs =
+                        listOf(
+                            NumberPair(
+                                phoneNumber = user.phoneNumber,
+                                userIDs = listOf(user.id),
+                            ),
+                        ),
+                ),
+            )
         }
 
         matchesRef.wrappedValue = matches
         persist(matches)
+        contactPairArchive.clearArchive()
+        contactPairArchive.addValues(contactPairs)
+        contactPairArchive.lastContactSyncDate = Date()
         Logger.log("Updated contact archive (${matches.size} matches).")
     }
 

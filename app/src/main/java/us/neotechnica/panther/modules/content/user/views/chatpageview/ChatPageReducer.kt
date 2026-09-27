@@ -31,6 +31,7 @@ import us.neotechnica.panther.modules.session.entity.extensions.resolvedMediaFil
 import us.neotechnica.panther.modules.session.entity.extensions.resolvedTranslation
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
+import us.neotechnica.panther.modules.content.user.services.ReadReceiptService
 import us.neotechnica.panther.modules.session.entity.services.ReactionSessionService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
@@ -417,7 +418,7 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
 
     private suspend fun markCurrentConversationAsRead() {
         try {
-            ConversationSessionService.markCurrentConversationAsRead()
+            ReadReceiptService.updateReadDateForUnreadMessages()
         } catch (exception: Exception) {
             Logger.log(exception)
         }

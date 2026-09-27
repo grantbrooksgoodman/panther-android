@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
+import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationAlert
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
@@ -23,8 +24,11 @@ import us.neotechnica.panther.modules.content.user.models.ModerationType
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.networking.user.services.UserService
 import us.neotechnica.panther.modules.session.entity.extensions.users
 import us.neotechnica.panther.modules.session.entity.services.ModerationSessionService
+import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -57,7 +61,12 @@ private val moderationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
  *
  * @throws Exception if blocking fails.
  */
-suspend fun ModerationSessionService.blockUsers(inConversation: Conversation): Unit = moderate(ModerationType.BLOCK, inConversation)
+suspend fun ModerationSessionService.blockUsers(inConversation: Conversation) {
+    val users =
+        inConversation.users
+            ?: throw Exception("No data source provided.", metadata = ExceptionMetadata(this))
+    moderate(ModerationType.BLOCK, users)
+}
 
 /**
  * Prompts the user to report one or more participants in the given
@@ -68,18 +77,43 @@ suspend fun ModerationSessionService.blockUsers(inConversation: Conversation): U
  *
  * @throws Exception if reporting fails.
  */
-suspend fun ModerationSessionService.reportUsers(inConversation: Conversation): Unit = moderate(ModerationType.REPORT, inConversation)
+suspend fun ModerationSessionService.reportUsers(inConversation: Conversation) {
+    val users =
+        inConversation.users
+            ?: throw Exception("No data source provided.", metadata = ExceptionMetadata(this))
+    moderate(ModerationType.REPORT, users)
+}
+
+/**
+ * Prompts the user to unblock one or more of their blocked users.
+ *
+ * @throws Exception if the blocked users cannot be resolved or
+ *   unblocking fails.
+ */
+suspend fun ModerationSessionService.unblockUsers() {
+    val blockedUsers = getBlockedUsers()
+    if (blockedUsers.isEmpty()) {
+        Alert(message = "No blocked users.").present()
+        return
+    }
+    moderate(ModerationType.UNBLOCK, blockedUsers)
+}
 
 // MARK: - Auxiliary
 
+private suspend fun ModerationSessionService.getBlockedUsers(): List<User> {
+    val currentUser =
+        UserSessionService.currentUser
+            ?: throw Exception("Current user ID has not been set.", metadata = ExceptionMetadata(this))
+    val blockedUserIDs = (currentUser.blockedUserIDs ?: emptyList()).filter { it.isNotBlank() }
+    if (blockedUserIDs.isEmpty()) return emptyList()
+    return UserService.getUsers(blockedUserIDs)
+}
+
 private suspend fun moderate(
     type: ModerationType,
-    conversation: Conversation,
+    users: List<User>,
 ) {
-    val users =
-        conversation.users
-            ?: throw Exception("No data source provided.", metadata = ExceptionMetadata(ModerationSessionService))
-
     runCatching { ContactService.syncIfNeeded() }.onFailure { Logger.log("$it") }
 
     val entries =
@@ -88,7 +122,7 @@ private suspend fun moderate(
             .sortedBy { it.name }
             .distinctBy { it.userID }
 
-    if (entries.size <= 1) {
+    if (entries.size <= 1 && type != ModerationType.UNBLOCK) {
         val entry = entries.firstOrNull() ?: return
         if (!confirmModeration(type, "⌘${entry.name}⌘")) return
         performModeration(type, listOf(entry.userID))

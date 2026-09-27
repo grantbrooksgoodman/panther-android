@@ -182,7 +182,7 @@ object MessageSessionService {
         notificationScope.launch {
             runCatching {
                 NotificationSessionService.notify(
-                    users = otherUsers,
+                    users = otherUsers.filter { !(it.blockedUserIDs ?: emptyList()).contains(initiatingUser.id) },
                     message = message,
                     conversationIDKey = resolvedConversation.id.key,
                 )
@@ -236,7 +236,7 @@ object MessageSessionService {
     ): String {
         val candidates = recipientLanguageCodes.filter { it != currentUserLanguageCode }
         if (candidates.isEmpty() ||
-            LanguageRecognitionService.shared.matchConfidence(text, currentUserLanguageCode) >= MATCH_CONFIDENCE_THRESHOLD
+            LanguageRecognitionService.shared.matchConfidence(text, currentUserLanguageCode) >= Floats.LANGUAGE_RECOGNITION_SERVICE_MATCH_CONFIDENCE_THRESHOLD
         ) {
             return currentUserLanguageCode
         }
@@ -244,14 +244,10 @@ object MessageSessionService {
         var best: Pair<String, Float>? = null
         for (languageCode in candidates) {
             val confidence = LanguageRecognitionService.shared.matchConfidence(text, languageCode)
-            if (confidence >= MATCH_CONFIDENCE_THRESHOLD && confidence > (best?.second ?: 0f)) {
+            if (confidence >= Floats.LANGUAGE_RECOGNITION_SERVICE_MATCH_CONFIDENCE_THRESHOLD && confidence > (best?.second ?: 0f)) {
                 best = languageCode to confidence
             }
         }
         return best?.first ?: currentUserLanguageCode
     }
-
-    // MARK: - Companion
-
-    private const val MATCH_CONFIDENCE_THRESHOLD = 0.8f
 }

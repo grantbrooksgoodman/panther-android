@@ -130,6 +130,13 @@ object ReactionSessionService {
             // Return the empty sentinel if no reactions remain.
             if (metadata.isEmpty()) listOf(ReactionMetadata.empty.encoded) else metadata
         })
+
+        // Refresh the on-screen messages so the new reaction renders. The
+        // reaction is already committed to the conversation's reactionMetadata
+        // by didWrite, so recomputing the displayed messages suffices.
+        if (ConversationSessionService.currentConversation?.id?.key == conversation.id.key) {
+            ConversationSessionService.updateDisplayedMessages()
+        }
     }
 
     // MARK: - Companion
