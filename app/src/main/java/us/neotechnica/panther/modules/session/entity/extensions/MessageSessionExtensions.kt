@@ -29,6 +29,10 @@ import us.neotechnica.panther.translator.services.LocalTranslationArchiver
 import java.io.File
 import us.neotechnica.panther.networking.modules.translation.models.TranslationReference as HostedTranslationReference
 
+/** The current user's read receipt for the message, or `null` if the user has not read it. */
+val Message.currentUserReadReceipt: ReadReceipt?
+    get() = readReceipts?.firstOrNull { it.userID == User.currentUserID }
+
 /** Whether the message was sent by the current user. */
 val Message.isFromCurrentUser: Boolean
     get() = fromAccountID == User.currentUserID

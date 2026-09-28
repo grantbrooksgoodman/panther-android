@@ -40,7 +40,7 @@ enum class MetadataServiceStorageKey(
 ) {
     APP_SHARE_LINK("appShareLink"),
     APP_STORE_BUILD_NUMBER("appStoreBuildNumber"),
-    GEMINI_API_KEY("geminiAPIKey"),
+    GEMINI_API_KEY("geminiApiKey"),
     IS_PREVARICATION_MODE_ENABLED("isPrevaricationModeEnabled"),
     PLAY_STORE_BUILD_NUMBER("playStoreBuildNumber"),
     PLAY_STORE_SHARE_LINK("playStoreShareLink"),

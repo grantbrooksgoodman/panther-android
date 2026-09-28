@@ -19,6 +19,7 @@ import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.DataSample
 import us.neotechnica.panther.networking.modules.database.models.QueryStrategy
+import us.neotechnica.panther.networking.modules.common.extensions.NO_VALUE_EXISTS_ERROR_CODE
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import kotlin.coroutines.resume
@@ -173,7 +174,11 @@ internal fun noValueException(
 ): Exception =
     Exception(
         "No value exists at the specified key path.",
-        userInfo = mapOf("Path" to path),
+        userInfo =
+            mapOf(
+                Exception.UserInfo.STATIC_ERROR_CODE.rawValue to NO_VALUE_EXISTS_ERROR_CODE,
+                "Path" to path,
+            ),
         metadata = ExceptionMetadata(sender),
     )
 

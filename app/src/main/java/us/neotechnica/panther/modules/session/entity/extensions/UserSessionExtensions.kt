@@ -32,3 +32,22 @@ val User.conversations: List<Conversation>?
             SessionStore.getConversation(conversationID) ?: SessionStore.getConversation(conversationID.key)
         }
     }
+
+// MARK: - Methods
+
+/**
+ * Returns the number of unread incoming messages across the user's
+ * visible conversations.
+ *
+ * @return The unread message count, or `0` for users other than the
+ *   current user.
+ */
+fun User.calculateBadgeNumber(): Int {
+    if (id != User.currentUserID) return 0
+    val conversations = conversations ?: return 0
+    return conversations
+        .filter { it.isVisibleForCurrentUser }
+        .flatMap { it.messages ?: emptyList() }
+        .filter { !it.isFromCurrentUser && it.currentUserReadReceipt == null }
+        .count()
+}

@@ -9,9 +9,11 @@ package us.neotechnica.panther.designsystem.modules.alertkit.models
 
 import kotlinx.coroutines.suspendCancellableCoroutine
 import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
+import us.neotechnica.panther.designsystem.modules.alertkit.extensions.firstOutput
 import us.neotechnica.panther.designsystem.modules.alertkit.services.AlertPresenter
 import us.neotechnica.panther.designsystem.modules.alertkit.services.PresentedAlert
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.translator.models.TranslationInput
 import kotlin.coroutines.resume
 
 /**
@@ -28,13 +30,31 @@ import kotlin.coroutines.resume
  * The send-report action invokes the provided callback, or files a
  * report through the [ReportDelegate][us.neotechnica.panther.designsystem.modules.alertkit.interfaces.ReportDelegate]
  * registered with `AlertKitConfig` when no callback is given.
+ *
+ * Pass translation keys to [present] to translate the alert's content
+ * into the user's language before presentation.
  */
 class ErrorAlert(
     private val exception: Exception,
     private val dismissButtonTitle: String = "Dismiss",
     private val sendReportButtonTitle: String = "Send Error Report",
     private val onSendReport: (() -> Unit)? = null,
+    private val errorDescription: String = exception.userFacingDescriptor,
 ) {
+    // MARK: - Types
+
+    /** A value that identifies a translatable part of an [ErrorAlert]. */
+    sealed interface TranslationOptionKey {
+        /** The dismiss button's title. */
+        data object DismissButtonTitle : TranslationOptionKey
+
+        /** The error's description text. */
+        data object ErrorDescription : TranslationOptionKey
+
+        /** The send error report button's title. */
+        data object SendErrorReportButtonTitle : TranslationOptionKey
+    }
+
     // MARK: - Methods
 
     /**
@@ -45,7 +65,7 @@ class ErrorAlert(
             AlertPresenter.present(
                 PresentedAlert.ErrorContent(
                     title = "Error",
-                    message = exception.userFacingDescriptor,
+                    message = errorDescription,
                     dismissButtonTitle = dismissButtonTitle,
                     sendReportButtonTitle = if (exception.isReportable) sendReportButtonTitle else null,
                     onDismiss = {
@@ -67,4 +87,56 @@ class ErrorAlert(
 
             continuation.invokeOnCancellation { AlertPresenter.dismiss() }
         }
+
+    /**
+     * Translates the alert's content according to [translating], then
+     * presents it. Falls back to untranslated content if translation
+     * fails.
+     *
+     * @param translating The parts of the alert to translate. The
+     *   default includes all translatable content.
+     */
+    suspend fun present(
+        translating: List<TranslationOptionKey> =
+            listOf(
+                TranslationOptionKey.DismissButtonTitle,
+                TranslationOptionKey.ErrorDescription,
+                TranslationOptionKey.SendErrorReportButtonTitle,
+            ),
+    ): Unit =
+        AlertKitConfig.presentWithTranslation(
+            shouldTranslate = translating.isNotEmpty() && AlertKitConfig.translationDelegate != null,
+            presentDirectly = { present() },
+            translate = { translate(translating) },
+            presentTranslated = { it.present(translating = emptyList()) },
+        )
+
+    // MARK: - Auxiliary
+
+    private suspend fun translate(keys: List<TranslationOptionKey>): ErrorAlert {
+        val uniqueKeys = keys.distinct()
+        if (uniqueKeys.isEmpty()) return this
+
+        val translations = AlertKitConfig.getTranslations(translationInputs(uniqueKeys))
+        return ErrorAlert(
+            exception = exception,
+            dismissButtonTitle = translations.firstOutput(dismissButtonTitle),
+            sendReportButtonTitle = translations.firstOutput(sendReportButtonTitle),
+            onSendReport = onSendReport,
+            errorDescription = translations.firstOutput(errorDescription),
+        )
+    }
+
+    private fun translationInputs(keys: List<TranslationOptionKey>): List<TranslationInput> {
+        val inputs = mutableListOf<TranslationInput>()
+        for (key in keys) {
+            when (key) {
+                TranslationOptionKey.DismissButtonTitle -> inputs.add(TranslationInput(dismissButtonTitle))
+                TranslationOptionKey.ErrorDescription -> inputs.add(TranslationInput(errorDescription))
+                TranslationOptionKey.SendErrorReportButtonTitle -> inputs.add(TranslationInput(sendReportButtonTitle))
+            }
+        }
+
+        return inputs.distinctBy { it.value }.filter { it.value.isNotBlank() }
+    }
 }

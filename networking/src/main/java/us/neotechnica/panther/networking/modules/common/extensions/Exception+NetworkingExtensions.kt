@@ -7,8 +7,16 @@
 
 package us.neotechnica.panther.networking.modules.common.extensions
 
+import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+
+/** The error code identifying a value that does not exist at a key path. */
+internal const val NO_VALUE_EXISTS_ERROR_CODE = "BE3A"
+
+/** A catalogued error describing a value that does not exist at a key path. */
+val AppException.Companion.noValueExists: AppException
+    get() = AppException(NO_VALUE_EXISTS_ERROR_CODE)
 
 /**
  * Returns an exception describing a failure to decode a

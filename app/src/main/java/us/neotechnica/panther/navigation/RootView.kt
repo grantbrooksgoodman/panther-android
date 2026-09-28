@@ -22,9 +22,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import us.neotechnica.panther.modules.content.onboarding.views.OnboardingContainer
-import us.neotechnica.panther.modules.content.shared.views.SplashView
+import us.neotechnica.panther.modules.content.shared.views.splashpageview.SplashPageReducer
+import us.neotechnica.panther.modules.content.shared.views.splashpageview.SplashPageView
 import us.neotechnica.panther.modules.content.user.views.UserContentContainer
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 
 /**
  * The app's root view.
@@ -51,7 +53,11 @@ fun RootView(modifier: Modifier = Modifier) {
     ) { modal ->
         when (modal) {
             RootNavigatorState.ModalPath.Onboarding -> OnboardingContainer(Modifier.fillMaxSize().systemBarsPadding())
-            RootNavigatorState.ModalPath.Splash -> SplashView(Modifier.fillMaxSize().systemBarsPadding())
+            RootNavigatorState.ModalPath.Splash ->
+                SplashPageView(
+                    viewModel = remember { ViewModel(SplashPageReducer.State(), SplashPageReducer()) },
+                    modifier = Modifier.fillMaxSize().systemBarsPadding(),
+                )
             RootNavigatorState.ModalPath.UserContent -> UserContentContainer(Modifier.fillMaxSize())
             null -> Box(Modifier.fillMaxSize())
         }

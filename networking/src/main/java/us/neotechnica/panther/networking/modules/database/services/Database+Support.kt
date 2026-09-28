@@ -17,6 +17,11 @@ import kotlin.time.Duration
 
 private const val MILLIS_PER_SECOND = 1000.0
 
+// The catalogued `AppException.timedOut` code. On iOS this code is the
+// hash of the timed-out descriptor; the Android descriptor differs, so
+// the code is assigned explicitly to keep timeout matching faithful.
+private const val TIMED_OUT_ERROR_CODE = "801F"
+
 /**
  * Returns a Boolean value that indicates whether the value can be
  * stored in Firebase Realtime Database.
@@ -70,6 +75,7 @@ internal suspend fun <T> guardedFirebaseOperation(
         Networking.health.recordCensoredLatencySample(timeout.inWholeMilliseconds / MILLIS_PER_SECOND)
         throw Exception(
             "The operation timed out.",
+            userInfo = mapOf(Exception.UserInfo.STATIC_ERROR_CODE.rawValue to TIMED_OUT_ERROR_CODE),
             underlyingExceptions = listOf(Exception.from(exception, ExceptionMetadata(sender))),
             metadata = ExceptionMetadata(sender),
         )
