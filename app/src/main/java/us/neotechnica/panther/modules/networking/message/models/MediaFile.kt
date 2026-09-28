@@ -105,7 +105,24 @@ data class MediaFile(
             // Require a non-empty file so a 0-byte remnant of a failed
             // download is treated as a cache miss and re-fetched.
             if ((FileStore.resolve(relativePath)?.length() ?: 0L) <= 0L) return null
+            return reference(relativePath)
+        }
 
+        /**
+         * Creates a media file reference from the given relative path
+         * without requiring the file to exist on disk.
+         *
+         * Unlike [from], this does not treat a not-yet-downloaded file
+         * as a cache miss; use it to describe media that may still be
+         * downloading, such as a shared-media list row whose thumbnail
+         * has not resolved.
+         *
+         * @param relativePath The media file's relative path.
+         *
+         * @return The media file reference, or `null` if the path has
+         *   no recognizable extension.
+         */
+        fun reference(relativePath: String): MediaFile? {
             val fileName = relativePath.split("/").lastOrNull() ?: return null
             val components = fileName.split(".")
             if (components.size != 2) return null

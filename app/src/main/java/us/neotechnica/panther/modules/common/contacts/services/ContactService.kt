@@ -213,7 +213,8 @@ object ContactService {
         return results
     }
 
-    private fun hasContactPermission(): Boolean {
+    /** Whether the app currently holds read access to the device's contacts. */
+    fun hasContactPermission(): Boolean {
         val context = appContext ?: return false
         return ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) ==
             PackageManager.PERMISSION_GRANTED

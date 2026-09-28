@@ -253,7 +253,9 @@ private fun SettingsActionCards(
     }
 
     SettingsCard {
-        SettingsIconRow("info", Colors.iconIndigo, Strings.SEND_FEEDBACK, enabled) { launchSendFeedback(context) }
+        SettingsIconRow("info", Colors.iconIndigo, Strings.SEND_FEEDBACK, enabled) {
+            scope.launch { presentFileAReportSheet(context) }
+        }
         SettingsRowDivider()
         SettingsIconRow("command", Colors.iconMint, Strings.CLEAR_CACHES, enabled) {
             send(SettingsPageReducer.Action.ClearCachesTapped)
@@ -381,16 +383,39 @@ private fun launchLeaveReview(context: Context) {
 }
 
 /**
- * Opens the mail composer prefilled with a feedback subject and build
- * diagnostics, standing in for the iOS `sendFeedbackButtonTapped`.
+ * Presents the "File a Report" action sheet, offering to send feedback
+ * or report a bug, mirroring the iOS `sendFeedbackButtonTapped`.
+ *
+ * **Note:** the iOS actions route through `AKReportDelegate`'s in-app
+ * feedback and annotated-screenshot bug reporting; that tooling is
+ * iOS-specific, so both actions open the platform mail composer with
+ * build diagnostics.
  */
-private fun launchSendFeedback(context: Context) {
+private suspend fun presentFileAReportSheet(context: Context) {
+    ActionSheetAlert(
+        title = Strings.FILE_A_REPORT,
+        actions =
+            listOf(
+                Action(Strings.SEND_FEEDBACK) { launchMailReport(context, Strings.FEEDBACK_SUBJECT) },
+                Action(Strings.REPORT_BUG) { launchMailReport(context, Strings.BUG_REPORT_SUBJECT) },
+            ),
+    ).present(translating = listOf(ActionSheetAlert.TranslationOptionKey.Actions()))
+}
+
+/**
+ * Opens the mail composer prefilled with [subject] and build
+ * diagnostics.
+ */
+private fun launchMailReport(
+    context: Context,
+    subject: String,
+) {
     val diagnostics =
         "\n\n---\n${versionString()}\n" +
             "Device: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL} (API ${android.os.Build.VERSION.SDK_INT})"
     val mailIntent =
         Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:")).apply {
-            putExtra(Intent.EXTRA_SUBJECT, Strings.FEEDBACK_SUBJECT)
+            putExtra(Intent.EXTRA_SUBJECT, subject)
             putExtra(Intent.EXTRA_TEXT, diagnostics)
         }
     runCatching { context.startActivity(mailIntent) }

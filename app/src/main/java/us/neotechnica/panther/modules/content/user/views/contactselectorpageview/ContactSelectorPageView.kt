@@ -35,7 +35,11 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.common.contacts.components.rememberContactCardPresenter
 import us.neotechnica.panther.modules.common.contacts.models.ContactMatch
+import us.neotechnica.panther.modules.common.models.PhoneNumber
+import us.neotechnica.panther.modules.common.services.PhoneNumberService
+import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.content.user.components.ContactRow
 import us.neotechnica.panther.modules.content.user.constants.ContactSelectorPageViewFloats
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
@@ -77,6 +81,7 @@ fun ContactSelectorPageView(
 
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
+    val presentContactCard = rememberContactCardPresenter()
 
     StatefulView(state = state.viewState, modifier = modifier.background(colors.groupedContentBackground)) {
         Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
@@ -101,6 +106,7 @@ fun ContactSelectorPageView(
                     state = state,
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                     onSelect = { viewModel.send(ContactSelectorPageReducer.Action.SelectedContactPairChanged(it)) },
+                    onDetail = { presentContactCard(contactPhoneNumber(it), it.fullName) },
                 )
             } else {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -157,6 +163,7 @@ private fun ContactList(
     state: ContactSelectorPageReducer.State,
     modifier: Modifier,
     onSelect: (ContactMatch) -> Unit,
+    onDetail: (ContactMatch) -> Unit,
 ) {
     val colors = LocalPantherColors.current
     val sections = state.sections
@@ -182,6 +189,7 @@ private fun ContactList(
                     onClick = { onSelect(contact) },
                     enabled = enabled,
                     annotation = annotation,
+                    onDetail = { onDetail(contact) },
                 )
                 HorizontalDivider(color = colors.groupedContentBackground)
             }
@@ -227,4 +235,16 @@ private fun contactRowState(
             else -> null
         }
     return !(isBlocked || isCurrentUser || isSelected || isParticipant) to annotation
+}
+
+/** Builds a phone number for the given contact from the device region. */
+private fun contactPhoneNumber(contact: ContactMatch): PhoneNumber {
+    val regionCode = RegionDetailService.deviceRegionCode
+    return PhoneNumber(
+        callingCode = RegionDetailService.callingCode(regionCode) ?: PhoneNumberService.deviceCallingCode,
+        nationalNumberString = contact.nationalNumberString,
+        regionCode = regionCode,
+        label = null,
+        internalFormattedString = null,
+    )
 }

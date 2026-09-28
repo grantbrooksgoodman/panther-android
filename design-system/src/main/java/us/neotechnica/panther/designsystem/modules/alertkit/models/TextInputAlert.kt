@@ -36,12 +36,17 @@ class TextInputAlert(
     private val isSecure: Boolean = false,
     private val cancelButtonTitle: String = "Cancel",
     private val confirmButtonTitle: String = "Confirm",
+    private val isConfirmEnabled: ((String) -> Boolean)? = null,
 ) {
     // MARK: - Methods
 
     /**
      * Presents the alert and suspends until the user confirms or
      * cancels.
+     *
+     * When [isConfirmEnabled] is provided, the confirm button is
+     * enabled live as the field's text changes, only while the closure
+     * returns `true`.
      *
      * @return The entered text on confirmation, or `null` on cancel.
      */
@@ -56,6 +61,7 @@ class TextInputAlert(
                     isSecure = isSecure,
                     cancelButtonTitle = cancelButtonTitle,
                     confirmButtonTitle = confirmButtonTitle,
+                    isConfirmEnabled = isConfirmEnabled,
                 ) { result ->
                     AlertPresenter.dismiss()
                     if (continuation.isActive) continuation.resume(result)

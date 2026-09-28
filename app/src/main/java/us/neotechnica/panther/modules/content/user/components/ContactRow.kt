@@ -10,6 +10,7 @@ package us.neotechnica.panther.modules.content.user.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -36,6 +37,8 @@ import us.neotechnica.panther.modules.content.user.constants.ContactRowFloats
  *   is dimmed and ignores taps.
  * @param annotation A trailing note shown after the name, or `null` for
  *   none.
+ * @param onDetail Invoked when the trailing detail affordance is tapped,
+ *   or `null` to hide it.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -46,6 +49,7 @@ fun ContactRow(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     annotation: String? = null,
+    onDetail: (() -> Unit)? = null,
 ) {
     val colors = LocalPantherColors.current
     val foregroundColor = if (enabled) colors.titleText else colors.disabled
@@ -74,6 +78,17 @@ fun ContactRow(
                 it,
                 color = foregroundColor,
                 modifier = Modifier.padding(start = ContactRowFloats.annotationStartPadding),
+            )
+        }
+        onDetail?.let { detail ->
+            Spacer(modifier = Modifier.weight(1f))
+            Components.Symbol(
+                "info.circle",
+                color = colors.accent,
+                modifier =
+                    Modifier
+                        .size(ContactRowFloats.avatarGlyphSize)
+                        .clickable(onClick = detail),
             )
         }
     }

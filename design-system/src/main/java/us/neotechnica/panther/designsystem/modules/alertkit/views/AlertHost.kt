@@ -31,8 +31,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -84,8 +88,8 @@ private fun ActionSheetSheet(alert: PresentedAlert.ActionSheet) {
                     .padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            alert.title?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
-            alert.message?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+            alert.title?.let { Text(emphasized(it), style = MaterialTheme.typography.titleMedium) }
+            alert.message?.let { Text(emphasized(it), style = MaterialTheme.typography.bodyMedium) }
             alert.actions.forEachIndexed { index, action ->
                 SheetActionButton(
                     title = action.title,
@@ -122,7 +126,7 @@ private fun SheetActionButton(
         modifier = Modifier.fillMaxWidth(),
         onClick = onClick,
     ) {
-        Text(title)
+        Text(emphasized(title))
     }
 }
 
@@ -142,8 +146,8 @@ private fun StandardDialog(alert: PresentedAlert.Standard) {
         onDismissRequest = {
             alert.onSelect(if (cancelIndex >= 0) cancelIndex else alert.actions.lastIndex)
         },
-        text = alert.message?.let { { Text(it) } },
-        title = alert.title?.let { { Text(it) } },
+        text = alert.message?.let { { Text(emphasized(it)) } },
+        title = alert.title?.let { { Text(emphasized(it)) } },
     )
 }
 
@@ -155,8 +159,8 @@ private fun ConfirmationDialog(alert: PresentedAlert.Confirmation) {
         confirmButton = { ActionButton(alert.confirmAction) { alert.onResult(true) } },
         dismissButton = { ActionButton(alert.cancelAction) { alert.onResult(false) } },
         onDismissRequest = { alert.onResult(false) },
-        text = { Text(alert.message) },
-        title = alert.title?.let { { Text(it) } },
+        text = { Text(emphasized(alert.message)) },
+        title = alert.title?.let { { Text(emphasized(it)) } },
     )
 }
 
@@ -173,8 +177,8 @@ private fun ErrorDialog(alert: PresentedAlert.ErrorContent) {
                 { TextButton(onClick = { alert.onSendReport?.invoke() }) { Text(title) } }
             },
         onDismissRequest = alert.onDismiss,
-        text = { Text(alert.message) },
-        title = { Text(alert.title) },
+        text = { Text(emphasized(alert.message)) },
+        title = { Text(emphasized(alert.title)) },
     )
 }
 
@@ -185,7 +189,10 @@ private fun TextInputDialog(alert: PresentedAlert.TextInput) {
     var text by rememberSaveable(alert) { mutableStateOf(alert.initialText) }
     AlertDialog(
         confirmButton = {
-            TextButton(onClick = { alert.onResult(text) }) { Text(alert.confirmButtonTitle) }
+            TextButton(
+                enabled = alert.isConfirmEnabled?.invoke(text) ?: true,
+                onClick = { alert.onResult(text) },
+            ) { Text(alert.confirmButtonTitle) }
         },
         dismissButton = {
             TextButton(onClick = { alert.onResult(null) }) { Text(alert.cancelButtonTitle) }
@@ -193,7 +200,7 @@ private fun TextInputDialog(alert: PresentedAlert.TextInput) {
         onDismissRequest = { alert.onResult(null) },
         text = {
             Column {
-                Text(alert.message)
+                Text(emphasized(alert.message))
                 OutlinedTextField(
                     modifier =
                         Modifier
@@ -237,9 +244,9 @@ private fun ProgressDialog(alert: PresentedAlert.Progress) {
                 modifier = Modifier.padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                alert.title?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
+                alert.title?.let { Text(emphasized(it), style = MaterialTheme.typography.titleMedium) }
                 CircularProgressIndicator()
-                Text(alert.message)
+                Text(emphasized(alert.message))
                 alert.cancelButtonTitle?.let { title ->
                     TextButton(onClick = { alert.onCancel?.invoke() }) { Text(title) }
                 }
@@ -266,11 +273,34 @@ private fun ActionButton(
         onClick = onClick,
     ) {
         Text(
-            action.title,
+            emphasized(action.title),
             color = color,
             fontWeight = if (action.style.isPreferred) FontWeight.Bold else FontWeight.Normal,
         )
     }
 }
+
+// MARK: - Emphasis
+
+/**
+ * Builds an annotated string with `⌘…⌘`-delimited spans rendered bold,
+ * matching the AlertKit emphasis convention. The translation sentinels
+ * are removed from the displayed text.
+ */
+private fun emphasized(text: String): AnnotatedString =
+    buildAnnotatedString {
+        val cleaned = text.replace("⁂", "").replace("※", "")
+        var isBold = false
+        for (segment in cleaned.split("⌘")) {
+            if (segment.isNotEmpty()) {
+                if (isBold) {
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(segment) }
+                } else {
+                    append(segment)
+                }
+            }
+            isBold = !isBold
+        }
+    }
 
 private val ACTION_SHEET_DESTRUCTIVE_COLOR = Color(0xFFFF3B30)

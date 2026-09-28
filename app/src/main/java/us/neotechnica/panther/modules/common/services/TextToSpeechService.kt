@@ -9,6 +9,10 @@
 package us.neotechnica.panther.modules.common.services
 
 import android.content.Context
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
+import android.os.Build
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
@@ -30,7 +34,16 @@ import java.util.Locale
 object TextToSpeechService {
     // MARK: - Properties
 
+    private val audioAttributes =
+        AudioAttributes
+            .Builder()
+            .setUsage(AudioAttributes.USAGE_MEDIA)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+            .build()
+
+    private var audioManager: AudioManager? = null
     private var engine: TextToSpeech? = null
+    private var focusRequest: AudioFocusRequest? = null
     private var isInitialized = false
 
     // Backed by observable snapshot state, driven by the utterance
@@ -48,6 +61,7 @@ object TextToSpeechService {
 
     /** Prepares the service with the application context. */
     fun initialize(context: Context) {
+        audioManager = context.applicationContext.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
         val engine =
             TextToSpeech(context.applicationContext) { status ->
                 isInitialized = status == TextToSpeech.SUCCESS
@@ -59,26 +73,26 @@ object TextToSpeechService {
                 }
 
                 override fun onDone(utteranceId: String?) {
-                    speaking = false
+                    endSpeaking()
                 }
 
                 @Suppress("OVERRIDE_DEPRECATION")
                 override fun onError(utteranceId: String?) {
-                    speaking = false
+                    endSpeaking()
                 }
 
                 override fun onError(
                     utteranceId: String?,
                     errorCode: Int,
                 ) {
-                    speaking = false
+                    endSpeaking()
                 }
 
                 override fun onStop(
                     utteranceId: String?,
                     interrupted: Boolean,
                 ) {
-                    speaking = false
+                    endSpeaking()
                 }
             },
         )
@@ -105,6 +119,9 @@ object TextToSpeechService {
         val voice = highestQualityVoice(engine, languageCode)
         if (voice != null) engine.voice = voice else engine.language = locale
 
+        // Request transient audio focus before speaking, the analog of
+        // iOS's `activateAudioSession()`.
+        requestFocus()
         engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, UTTERANCE_ID)
     }
 
@@ -113,7 +130,7 @@ object TextToSpeechService {
     /** Stops any in-progress utterance. */
     fun stop() {
         engine?.stop()
-        speaking = false
+        endSpeaking()
     }
 
     // MARK: - Highest Quality Voice
@@ -132,6 +149,33 @@ object TextToSpeechService {
                 ?.filter { it.locale.language.equals(language, ignoreCase = true) && !it.isNetworkConnectionRequired }
                 ?.maxByOrNull { it.quality }
         }.getOrNull()
+    }
+
+    // MARK: - Audio Focus
+
+    private fun endSpeaking() {
+        speaking = false
+        abandonFocus()
+    }
+
+    private fun requestFocus() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val manager = audioManager ?: return
+        val request =
+            AudioFocusRequest
+                .Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                .setAudioAttributes(audioAttributes)
+                .setOnAudioFocusChangeListener { change -> if (change == AudioManager.AUDIOFOCUS_LOSS) stop() }
+                .build()
+        focusRequest = request
+        manager.requestAudioFocus(request)
+    }
+
+    private fun abandonFocus() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val manager = audioManager ?: return
+        focusRequest?.let { manager.abandonAudioFocusRequest(it) }
+        focusRequest = null
     }
 
     // MARK: - Companion

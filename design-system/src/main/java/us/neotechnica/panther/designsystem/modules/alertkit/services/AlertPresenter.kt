@@ -57,6 +57,7 @@ sealed interface PresentedAlert {
         val isSecure: Boolean,
         val cancelButtonTitle: String,
         val confirmButtonTitle: String,
+        val isConfirmEnabled: ((String) -> Boolean)?,
         val onResult: (String?) -> Unit,
     ) : PresentedAlert
 

@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.views.chatinfopageview
 
+import us.neotechnica.panther.designsystem.modules.alertkit.models.Action as AlertKitAction
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAlert
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
@@ -28,10 +29,10 @@ import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifi
 import us.neotechnica.panther.modules.networking.conversation.models.ActivityAction
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationMetadata
+import us.neotechnica.panther.modules.networking.message.models.LocalMediaFilePath
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.extensions.cachedMediaFile
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.session.entity.extensions.isMediaMessage
@@ -43,6 +44,7 @@ import us.neotechnica.panther.modules.session.entity.services.ActivitySessionSer
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.entity.services.ModerationSessionService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.subsystem.modules.effect.Send
 import us.neotechnica.panther.networking.modules.translation.interfaces.TranslatedLabelStrings
 import us.neotechnica.panther.networking.modules.translation.models.TranslatedLabelStringCollection
 import us.neotechnica.panther.networking.modules.translation.models.TranslationInputMap
@@ -270,7 +272,11 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
             .filter { it.isMediaMessage }
             .sortedByDescendingSentDate
             .mapNotNull { message ->
-                val mediaFile = message.cachedMediaFile ?: return@mapNotNull null
+                // Reference the media by its path so a not-yet-downloaded
+                // file still appears in the list with a placeholder glyph,
+                // rather than being dropped (mirrors iOS's `.missing`).
+                val relativePath = LocalMediaFilePath.from(message)?.relativePathString ?: return@mapNotNull null
+                val mediaFile = MediaFile.reference(relativePath) ?: return@mapNotNull null
                 val user = users.firstOrNull { it.id == message.fromAccountID } ?: SessionStore.users[message.fromAccountID]
                 MediaItemViewData(
                     file = mediaFile,
@@ -322,24 +328,18 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
     private fun changeMetadataEffect(state: State): Effect<Action> =
         Effect.run { send ->
             val conversation = state.conversation ?: return@run
-            val currentName =
-                conversation.metadata.name
-                    .takeUnless { it.isBangQualifiedEmpty }
-                    .orEmpty()
-            val input =
-                TextInputAlert(
-                    message = "Choose a new name for this conversation:",
-                    initialText = currentName,
-                    confirmButtonTitle = "Done",
-                ).present() ?: return@run
-            val (action, newMetadata) = resolveNameChange(conversation, input) ?: return@run
 
-            try {
-                ActivitySessionService.updateMetadata(conversation, action, newMetadata)
-                send(Action.Reload)
-            } catch (exception: Exception) {
-                send(Action.Failed(exception))
-            }
+            // A single-action sheet whose only option is "Change name";
+            // the "Change photo"/"Remove photo" actions land in Phase 8.6.
+            val didChooseChangeName =
+                ActionSheetAlert(
+                    title = "Change name and photo",
+                    actions = listOf(AlertKitAction("Change name") {}),
+                    cancelButtonTitle = "Cancel",
+                ).present(translating = listOf(ActionSheetAlert.TranslationOptionKey.Actions()))
+            if (!didChooseChangeName) return@run
+
+            presentChangeNameAlert(conversation, send)
         }
 
     private fun leaveConversationEffect(state: State): Effect<Action> =
@@ -455,6 +455,36 @@ private const val MAX_OTHER_PARTICIPANTS_FOR_ADD_CONTACT = 9
  * are rejected, an unchanged name is a no-op, and clearing the name
  * records a removed-name activity.
  */
+/**
+ * Presents the change-name text input alert, live-disabling the confirm
+ * button while the field contains reserved characters, then applies the
+ * rename.
+ */
+private suspend fun presentChangeNameAlert(
+    conversation: Conversation,
+    send: Send<ChatInfoPageReducer.Action>,
+) {
+    val currentName =
+        conversation.metadata.name
+            .takeUnless { it.isBangQualifiedEmpty }
+            .orEmpty()
+    val input =
+        TextInputAlert(
+            message = "Choose a new name for this conversation:",
+            initialText = currentName,
+            confirmButtonTitle = "Done",
+            isConfirmEnabled = { it.none { character -> character in "⌘:" } },
+        ).present() ?: return
+    val (action, newMetadata) = resolveNameChange(conversation, input) ?: return
+
+    try {
+        ActivitySessionService.updateMetadata(conversation, action, newMetadata)
+        send(ChatInfoPageReducer.Action.Reload)
+    } catch (exception: Exception) {
+        send(ChatInfoPageReducer.Action.Failed(exception))
+    }
+}
+
 private fun resolveNameChange(
     conversation: Conversation,
     input: String,

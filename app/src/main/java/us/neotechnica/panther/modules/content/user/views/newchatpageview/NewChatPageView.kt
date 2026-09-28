@@ -60,8 +60,20 @@ import us.neotechnica.panther.modules.content.user.components.DeliveryProgressVi
 import us.neotechnica.panther.modules.content.user.constants.NewChatPageViewFloats
 import us.neotechnica.panther.modules.content.user.constants.NewChatPageViewStrings
 import us.neotechnica.panther.modules.content.user.services.DeliveryProgressIndicatorService
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
+import us.neotechnica.panther.modules.common.contacts.services.ContactService
+import us.neotechnica.panther.modules.common.services.InviteService
 import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageReducer
 import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageView
+import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
+import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.modules.content.user.views.newchatpageview.NewChatPageReducer.Action
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
@@ -110,6 +122,8 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsState()
     val navState by navigation.state.collectAsState()
     val colors = LocalPantherColors.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val deliveryProgressIndicatorService = rememberRegisteredDeliveryProgressIndicatorService()
 
     Box(modifier = modifier.fillMaxSize().background(colors.groupedContentBackground)) {
@@ -131,7 +145,7 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
                 onSubmit = { viewModel.send(Action.RecipientQuerySubmitted) },
                 onBackspace = { viewModel.send(Action.RecipientBackspaced) },
                 onRemove = { viewModel.send(Action.RemoveRecipient(it)) },
-                onAdd = { navigation.navigate(Route.Chat(ChatRoute.Sheet(ChatNavigatorState.SheetPath.ContactSelector))) },
+                onAdd = { scope.launch { selectContactButtonTapped(context, navigation) } },
             )
 
             LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -185,6 +199,47 @@ private fun buildNewChatViewModel(): ViewModel<NewChatPageReducer.State, NewChat
         }
 
 private fun anyOutboxSending(): Boolean = MessageOutboxService.allEntries.any { it.state == OutboxEntry.State.SENDING }
+
+/**
+ * Opens the contact selector, mirroring the iOS `selectContactButtonTapped`:
+ * a call-to-action when contacts access is denied, a contact-pair sync and an
+ * invitation prompt when the address book is empty, and otherwise the selector.
+ */
+private suspend fun selectContactButtonTapped(
+    context: Context,
+    navigation: Navigation,
+) {
+    if (!ContactService.hasContactPermission()) {
+        presentContactsPermissionCTA(context)
+        return
+    }
+
+    if (ContactService.matches().none { it.userID != User.currentUserID }) {
+        runCatching { ContactService.syncIfNeeded() }
+        if (ContactService.matches().none { it.userID != User.currentUserID }) {
+            InviteService.presentInvitationPrompt()
+            return
+        }
+    }
+
+    navigation.navigate(Route.Chat(ChatRoute.Sheet(ChatNavigatorState.SheetPath.ContactSelector)))
+}
+
+private suspend fun presentContactsPermissionCTA(context: Context) {
+    val shouldOpenSettings =
+        ActionSheetAlert(
+            title = "Contacts Access",
+            message = "Enable contacts access in Settings to choose a recipient.",
+            confirmButtonTitle = "Open Settings",
+        ).present()
+    if (!shouldOpenSettings) return
+
+    runCatching {
+        context.startActivity(
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)),
+        )
+    }
+}
 
 // MARK: - Header
 
