@@ -50,12 +50,25 @@ object TextToSpeechService {
     // callbacks, so the context menu's Speak/Stop-Speaking title rebuilds
     // when speech starts and ends.
     private var speaking by mutableStateOf(false)
+    private var speakingMessageIDState by mutableStateOf<String?>(null)
+    private var spokenRangeState by mutableStateOf<IntRange?>(null)
 
     // MARK: - Computed Properties
 
     /** A Boolean value that indicates whether a message is being spoken aloud. */
     val isSpeaking: Boolean
         get() = speaking
+
+    /** The identifier of the message currently being spoken aloud, or `null`. */
+    val speakingMessageID: String?
+        get() = speakingMessageIDState
+
+    /**
+     * The character range of the spoken message currently being
+     * enunciated, or `null`. Reported only on API 26 and later.
+     */
+    val spokenRange: IntRange?
+        get() = spokenRangeState
 
     // MARK: - Init
 
@@ -74,6 +87,15 @@ object TextToSpeechService {
 
                 override fun onDone(utteranceId: String?) {
                     endSpeaking()
+                }
+
+                override fun onRangeStart(
+                    utteranceId: String?,
+                    start: Int,
+                    end: Int,
+                    frame: Int,
+                ) {
+                    spokenRangeState = start until end
                 }
 
                 @Suppress("OVERRIDE_DEPRECATION")
@@ -107,10 +129,12 @@ object TextToSpeechService {
      *
      * @param text The text to speak.
      * @param languageCode The language code of the voice with which to speak the text.
+     * @param messageID The identifier of the message being spoken.
      */
     fun speak(
         text: String,
         languageCode: String,
+        messageID: String,
     ) {
         val engine = engine ?: return
         if (!isInitialized || text.isBlank()) return
@@ -118,6 +142,9 @@ object TextToSpeechService {
         val locale = Locale.forLanguageTag(languageCode)
         val voice = highestQualityVoice(engine, languageCode)
         if (voice != null) engine.voice = voice else engine.language = locale
+
+        speakingMessageIDState = messageID
+        spokenRangeState = null
 
         // Request transient audio focus before speaking, the analog of
         // iOS's `activateAudioSession()`.
@@ -155,6 +182,8 @@ object TextToSpeechService {
 
     private fun endSpeaking() {
         speaking = false
+        speakingMessageIDState = null
+        spokenRangeState = null
         abandonFocus()
     }
 

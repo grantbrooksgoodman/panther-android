@@ -65,11 +65,17 @@ data class UserContentNavigatorState(
         /** The chat page for the conversation with the given key. */
         data class Chat(
             val conversationIDKey: String,
+            val focusedMessageID: String? = null,
         ) : SeguePath
 
         /** The chat-info page for the conversation with the given key. */
         data class ChatInfo(
             val conversationIDKey: String,
+        ) : SeguePath
+
+        /** The reaction-details page for the message with the given ID. */
+        data class ReactionDetails(
+            val messageID: String,
         ) : SeguePath
 
         data object NewChat : SeguePath

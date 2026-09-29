@@ -29,6 +29,17 @@ val Build.isEmulator: Boolean
             android.os.Build.HARDWARE.contains("ranchu") ||
             android.os.Build.PRODUCT.contains("sdk")
 
+/**
+ * A Boolean value that indicates whether developer mode is enabled.
+ *
+ * Developer-mode affordances – such as the conversations page's
+ * delete-conversations toolbar button – are shown only when this is
+ * `true`. The persisted developer-mode toggle that drives it arrives
+ * with the settings port.
+ */
+val Build.isDeveloperModeEnabled: Boolean
+    get() = false
+
 /** A Boolean value that indicates whether the device is online. */
 val Build.isOnline: Boolean
     get() = ConnectionStatusService.isOnline

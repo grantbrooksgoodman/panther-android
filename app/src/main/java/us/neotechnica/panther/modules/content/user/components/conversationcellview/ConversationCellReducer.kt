@@ -44,7 +44,9 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
     sealed interface Action {
         data object BlockUsersButtonTapped : Action
 
-        data object CellTapped : Action
+        data class CellTapped(
+            val searchQuery: String,
+        ) : Action
 
         data object DeleteConversationButtonTapped : Action
 
@@ -91,11 +93,15 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
             Action.BlockUsersButtonTapped ->
                 ReduceResult(state, blockUsersEffect(state.conversation))
 
-            Action.CellTapped -> {
+            is Action.CellTapped -> {
+                val focusedMessageID =
+                    action.searchQuery
+                        .takeIf { it.isNotBlank() }
+                        ?.let { ConversationCellViewData.focusedMessageID(state.conversation, it) }
                 DependencyValues.current.navigation.navigate(
                     Route.UserContent(
                         UserContentRoute.Push(
-                            UserContentNavigatorState.SeguePath.Chat(state.conversationIDKey),
+                            UserContentNavigatorState.SeguePath.Chat(state.conversationIDKey, focusedMessageID),
                         ),
                     ),
                 )

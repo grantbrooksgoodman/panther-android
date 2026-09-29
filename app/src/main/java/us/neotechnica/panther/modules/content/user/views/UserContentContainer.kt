@@ -34,6 +34,7 @@ import us.neotechnica.panther.modules.content.user.constants.UserContentContaine
 import us.neotechnica.panther.modules.content.user.constants.UserContentContainerStrings
 import us.neotechnica.panther.modules.content.user.views.changelanguagepageview.ChangeLanguagePageView
 import us.neotechnica.panther.modules.content.user.views.chatinfopageview.ChatInfoPageView
+import us.neotechnica.panther.modules.content.user.views.reactiondetailspageview.ReactionDetailsPageView
 import us.neotechnica.panther.modules.content.user.views.chatpageview.ChatPageView
 import us.neotechnica.panther.modules.content.user.views.conversationspageview.ConversationsPageReducer
 import us.neotechnica.panther.modules.content.user.views.conversationspageview.ConversationsPageView
@@ -125,12 +126,15 @@ fun UserContentContainer(modifier: Modifier = Modifier) {
                         // Drawn edge-to-edge so the context-menu scrim covers the system bars; the page
                         // insets its own content.
                         is UserContentNavigatorState.SeguePath.Chat ->
-                            ChatPageView(path.conversationIDKey, Modifier.fillMaxSize())
+                            ChatPageView(path.conversationIDKey, path.focusedMessageID, Modifier.fillMaxSize())
 
                         // Drawn edge-to-edge so its grouped background bleeds past the system bars,
                         // matching iOS; the page insets its own content.
                         is UserContentNavigatorState.SeguePath.ChatInfo ->
                             ChatInfoPageView(path.conversationIDKey, Modifier.fillMaxSize())
+
+                        is UserContentNavigatorState.SeguePath.ReactionDetails ->
+                            ReactionDetailsPageView(path.messageID, Modifier.fillMaxSize())
 
                         // Drawn edge-to-edge so its grouped background bleeds past the system bars,
                         // matching iOS; the page insets its own content.

@@ -10,6 +10,7 @@ package us.neotechnica.panther.modules.content.user.views.chatinfopageview
 
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action as AlertKitAction
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAlert
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
@@ -67,6 +68,14 @@ import java.util.Locale
  * remove, leave) and moderation (block, report, delete).
  */
 class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReducer.Action> {
+    // MARK: - Types
+
+    /** The source from which to capture a new conversation photo. */
+    enum class PhotoCaptureSource {
+        CAMERA,
+        LIBRARY,
+    }
+
     // MARK: - Action
 
     sealed interface Action {
@@ -78,6 +87,16 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
 
         data object ChangeMetadataTapped : Action
 
+        data class RequestPhotoCapture(
+            val source: PhotoCaptureSource,
+        ) : Action
+
+        data object PhotoCaptureHandled : Action
+
+        class SelectedImageChanged(
+            val imageData: ByteArray,
+        ) : Action
+
         data object ToggleExpanded : Action
 
         data object AddContactButtonTapped : Action
@@ -86,6 +105,10 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
 
         data class IsSendingMessageChanged(
             val isSendingMessage: Boolean,
+        ) : Action
+
+        data class ParticipantTapped(
+            val userID: String,
         ) : Action
 
         data class RemoveParticipant(
@@ -129,6 +152,7 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         val isExpanded: Boolean = true,
         val isBusy: Boolean = false,
         val isSendingMessage: Boolean = false,
+        val photoCaptureRequest: PhotoCaptureSource? = null,
         val strings: List<TranslationOutputMap> = ChatInfoPageViewStrings.defaultOutputMap,
         val viewState: ViewState = ViewState.Loaded,
     ) {
@@ -165,6 +189,7 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
 
     // MARK: - Reduce
 
+    @Suppress("CyclomaticComplexMethod")
     override fun reduce(
         state: State,
         action: Action,
@@ -202,6 +227,15 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
             Action.ChangeMetadataTapped ->
                 ReduceResult(state, changeMetadataEffect(state))
 
+            is Action.RequestPhotoCapture ->
+                ReduceResult(state.copy(photoCaptureRequest = action.source))
+
+            Action.PhotoCaptureHandled ->
+                ReduceResult(state.copy(photoCaptureRequest = null))
+
+            is Action.SelectedImageChanged ->
+                changePhotoMutation(state, action.imageData)
+
             Action.AddContactButtonTapped -> {
                 DependencyValues.current.navigation.navigate(Route.Chat(ChatRoute.Sheet(ChatNavigatorState.SheetPath.ContactSelector)))
                 ReduceResult(state)
@@ -212,6 +246,9 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
 
             is Action.IsSendingMessageChanged ->
                 ReduceResult(state.copy(isSendingMessage = action.isSendingMessage))
+
+            is Action.ParticipantTapped ->
+                ReduceResult(state, participantInfoEffect(state, action.userID))
 
             is Action.RemoveParticipant ->
                 mutation(state) { conversation ->
@@ -325,23 +362,6 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
             }
         }
 
-    private fun changeMetadataEffect(state: State): Effect<Action> =
-        Effect.run { send ->
-            val conversation = state.conversation ?: return@run
-
-            // A single-action sheet whose only option is "Change name";
-            // the "Change photo"/"Remove photo" actions land in Phase 8.6.
-            val didChooseChangeName =
-                ActionSheetAlert(
-                    title = "Change name and photo",
-                    actions = listOf(AlertKitAction("Change name") {}),
-                    cancelButtonTitle = "Cancel",
-                ).present(translating = listOf(ActionSheetAlert.TranslationOptionKey.Actions()))
-            if (!didChooseChangeName) return@run
-
-            presentChangeNameAlert(conversation, send)
-        }
-
     private fun leaveConversationEffect(state: State): Effect<Action> =
         Effect.run { send ->
             val conversation = state.conversation ?: return@run
@@ -446,59 +466,6 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
 // The maximum number of other participants for which the add-contact row
 // is shown; beyond it, the group is too large to keep growing inline.
 private const val MAX_OTHER_PARTICIPANTS_FOR_ADD_CONTACT = 9
-
-/**
- * Resolves [input] into the activity action and metadata for renaming
- * [conversation], or `null` when the input is invalid or a no-op.
- *
- * Mirrors the iOS change-name flow: names containing reserved characters
- * are rejected, an unchanged name is a no-op, and clearing the name
- * records a removed-name activity.
- */
-/**
- * Presents the change-name text input alert, live-disabling the confirm
- * button while the field contains reserved characters, then applies the
- * rename.
- */
-private suspend fun presentChangeNameAlert(
-    conversation: Conversation,
-    send: Send<ChatInfoPageReducer.Action>,
-) {
-    val currentName =
-        conversation.metadata.name
-            .takeUnless { it.isBangQualifiedEmpty }
-            .orEmpty()
-    val input =
-        TextInputAlert(
-            message = "Choose a new name for this conversation:",
-            initialText = currentName,
-            confirmButtonTitle = "Done",
-            isConfirmEnabled = { it.none { character -> character in "⌘:" } },
-        ).present() ?: return
-    val (action, newMetadata) = resolveNameChange(conversation, input) ?: return
-
-    try {
-        ActivitySessionService.updateMetadata(conversation, action, newMetadata)
-        send(ChatInfoPageReducer.Action.Reload)
-    } catch (exception: Exception) {
-        send(ChatInfoPageReducer.Action.Failed(exception))
-    }
-}
-
-private fun resolveNameChange(
-    conversation: Conversation,
-    input: String,
-): Pair<ActivityAction, ConversationMetadata>? {
-    if (input.any { it in "⌘:" }) return null
-    if (input == conversation.metadata.name) return null
-    if (input.isBangQualifiedEmpty && conversation.metadata.name.isBangQualifiedEmpty) return null
-
-    val trimmed = input.trim()
-    val newName = if (trimmed.isBangQualifiedEmpty) BANG_QUALIFIED_EMPTY else trimmed
-    val action =
-        if (newName.isBangQualifiedEmpty) ActivityAction.RemovedName else ActivityAction.RenamedConversation(newName)
-    return action to conversation.metadata.copyWith(name = newName)
-}
 
 /** The translated label strings for the chat info page. */
 object ChatInfoPageViewStrings : TranslatedLabelStrings {

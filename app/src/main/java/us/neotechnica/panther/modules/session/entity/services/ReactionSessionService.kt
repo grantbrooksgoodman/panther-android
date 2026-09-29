@@ -7,7 +7,12 @@
 
 package us.neotechnica.panther.modules.session.entity.services
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
+import us.neotechnica.panther.modules.common.services.NotificationService
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.conversation.models.ReactionMetadata
@@ -18,8 +23,10 @@ import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.modules.session.entity.extensions.isMock
 import us.neotechnica.panther.modules.session.entity.extensions.isOutboxMessage
+import us.neotechnica.panther.modules.session.entity.extensions.users
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 
 /**
  * Applies and removes message reactions.
@@ -27,10 +34,13 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetad
  * **Note:** the iOS original tracks an `isReactingToMessage` flag with a
  * registry of effects (`addEffectUponIsReactingToMessage`) that gate the
  * UIKit context menu's re-entrancy; the Compose context menu dismisses on
- * selection instead, so this port omits that mechanism. Notifying the
- * message's sender of a reaction arrives with notifications (Phase R6).
+ * selection instead, so this port omits that mechanism.
  */
 object ReactionSessionService {
+    // MARK: - Properties
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     // MARK: - React to Message
 
     /**
@@ -62,7 +72,43 @@ object ReactionSessionService {
                 .any { it.style == reaction.style }
         if (alreadyApplied) return removeReaction(message)
 
+        // Notify users of reaction to message
+        scope.launch {
+            try {
+                notifyUsers(reaction, message)
+            } catch (exception: Exception) {
+                Logger.log(exception)
+            }
+        }
+
         updateConversation(conversation, message, reaction)
+    }
+
+    // MARK: - Notify Users
+
+    private suspend fun notifyUsers(
+        reaction: Reaction,
+        message: Message,
+    ) {
+        if (message.fromAccountID == User.currentUserID) return
+
+        val conversation = ConversationSessionService.currentConversation
+        val currentUserID = User.currentUserID
+        val user =
+            conversation
+                ?.users
+                ?.filter { !(it.blockedUserIDs ?: emptyList()).contains(currentUserID) }
+                ?.firstOrNull { message.fromAccountID == it.id }
+        if (conversation == null || currentUserID == null || user == null || message.isMock || message.isOutboxMessage) {
+            throw Exception("Failed to resolve required values.", metadata = ExceptionMetadata(this))
+        }
+
+        NotificationService.notify(
+            users = listOf(user),
+            ofReaction = reaction,
+            message = message,
+            conversationIDKey = conversation.id.key,
+        )
     }
 
     // MARK: - Remove Reaction

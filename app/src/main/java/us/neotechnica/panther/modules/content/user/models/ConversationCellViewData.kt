@@ -91,6 +91,23 @@ data class ConversationCellViewData(
         }
 
         /**
+         * Returns the identifier of the most recent message in
+         * [conversation] whose text contains [query], or `null` if none
+         * match.
+         */
+        fun focusedMessageID(
+            conversation: Conversation,
+            query: String,
+        ): String? {
+            if (query.isBlank()) return null
+            return conversation.messages
+                .orEmpty()
+                .sortedBy { it.sentDate.time }
+                .lastOrNull { it.matchesSearchQuery(query) }
+                ?.id
+        }
+
+        /**
          * Returns whether [conversation] matches the given search
          * query by title or by any message's text content.
          */

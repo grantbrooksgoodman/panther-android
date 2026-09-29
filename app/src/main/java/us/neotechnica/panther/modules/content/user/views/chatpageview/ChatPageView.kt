@@ -45,11 +45,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.zIndex
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
 import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
@@ -57,6 +59,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.components.Conte
 import us.neotechnica.panther.designsystem.modules.componentkit.components.LocalContextMenuController
 import us.neotechnica.panther.designsystem.modules.componentkit.components.MessageInputBar
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
+import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.contacts.models.ContactMatch
@@ -71,6 +74,7 @@ import us.neotechnica.panther.modules.content.user.components.MediaPreviewOverla
 import us.neotechnica.panther.modules.content.user.components.rememberContentPickers
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
 import us.neotechnica.panther.modules.content.user.services.DeliveryProgressIndicatorService
+import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.navigation.Route
@@ -78,6 +82,7 @@ import us.neotechnica.panther.navigation.UserContentNavigatorState
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
+import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.currentConversationDidBecomeUnavailable
@@ -93,10 +98,12 @@ import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
+import us.neotechnica.panther.modules.session.state.services.retry
 import us.neotechnica.panther.modules.session.entity.services.MessageSessionService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
@@ -118,11 +125,14 @@ private const val SCROLL_SETTLE_MAX_FRAMES = 8
  * bar that sends through the outbox-backed delivery pipeline.
  *
  * @param conversationIDKey The identifier key of the conversation.
+ * @param focusedMessageID The identifier of a message to reveal and
+ *   highlight – for example, one navigated to from search – or `null`.
  * @param modifier The modifier for this view.
  */
 @Composable
 fun ChatPageView(
     conversationIDKey: String,
+    focusedMessageID: String? = null,
     modifier: Modifier = Modifier,
 ) {
     val viewModel = remember { buildChatPageViewModel() }
@@ -134,7 +144,7 @@ fun ChatPageView(
         }
     }
     LaunchedEffect(conversationIDKey) {
-        viewModel.send(ChatPageReducer.Action.ViewFirstAppeared(conversationIDKey))
+        viewModel.send(ChatPageReducer.Action.ViewFirstAppeared(conversationIDKey, focusedMessageID))
         viewModel.send(ChatPageReducer.Action.MessageOutboxChanged(anyOutboxSending()))
     }
 
@@ -184,6 +194,10 @@ fun ChatPageView(
                         onTapMedia = { previewMessageID = it },
                         onReact = { message, style -> viewModel.send(ChatPageReducer.Action.React(message, style)) },
                         onSpeak = { messageID, text -> viewModel.send(ChatPageReducer.Action.Speak(messageID, text)) },
+                        onFailedIndicatorTapped = { messageID ->
+                            scope.launch { presentFailedMessageActionSheet(messageID, scope) }
+                        },
+                        onSaveMedia = { mediaFile -> scope.launch { saveMedia(mediaFile) } },
                     )
 
                     MessageInputBar(
@@ -380,6 +394,15 @@ private fun StickToBottomEffect(
         val newestMessageIsOwn = messages.size > previousMessageCount && messages.last().isFromCurrentUser
         previousMessageCount = messages.size
 
+        // On first load, jump to a message navigated to from search rather
+        // than to the bottom, so the highlighted message is visible.
+        val focusedIndex = state.focusedMessageID?.let { id -> messages.indexOfFirst { it.id == id } } ?: -1
+        if (isInitialLoad && focusedIndex >= 0) {
+            stickToBottom = false
+            listState.scrollToItem(focusedIndex)
+            return@LaunchedEffect
+        }
+
         if (isInitialLoad || newestMessageIsOwn || stickToBottom) {
             // Re-pin across frames until multi-step content growth (async text,
             // decoded media, resolved audio, a reaction chip) settles, so the
@@ -405,6 +428,8 @@ private fun MessageList(
     onTapMedia: (String) -> Unit,
     onReact: (Message, Reaction.Style) -> Unit,
     onSpeak: (String, String) -> Unit,
+    onFailedIndicatorTapped: (String) -> Unit,
+    onSaveMedia: (MediaFile) -> Unit,
 ) {
     val listState = rememberLazyListState()
     val messages = state.messages
@@ -448,6 +473,9 @@ private fun MessageList(
                 onTapMedia = onTapMedia,
                 onReact = onReact,
                 onSpeak = onSpeak,
+                onFailedIndicatorTapped = onFailedIndicatorTapped,
+                onSaveMedia = onSaveMedia,
+                isHighlighted = message.id == state.highlightedMessageID,
             )
         }
     }
@@ -459,8 +487,8 @@ private fun buildChatPageViewModel(): ViewModel<ChatPageReducer.State, ChatPageR
     ViewModel(ChatPageReducer.State(), ChatPageReducer())
         .observing(ConversationSessionService.displayedMessages) {
             ChatPageReducer.Action.MessagesUpdated(it)
-        }.observing(DependencyValues.current.sharedEvents.sessionStoreDidChange.events) {
-            ChatPageReducer.Action.StoreChanged
+        }.observing(DependencyValues.current.sharedEvents.sessionStoreDidChange.events) { change ->
+            ChatPageReducer.Action.StoreChanged(change)
         }.observing(DependencyValues.current.sharedEvents.currentConversationDidBecomeUnavailable.events) {
             ChatPageReducer.Action.ConversationUnavailable
         }.observing(MessageDeliveryService.isSendingMessage) {
@@ -477,6 +505,41 @@ private fun senderName(
     match?.let { return it.fullName }
     val user = users.firstOrNull { it.id == message.fromAccountID } ?: SessionStore.users[message.fromAccountID]
     return user?.phoneNumber?.formattedString() ?: message.fromAccountID
+}
+
+/**
+ * Saves the given media file to the device, showing a success HUD on
+ * completion. Mirrors iOS's `handleSaveAction`.
+ */
+private suspend fun saveMedia(mediaFile: MediaFile) {
+    try {
+        MediaActionHandlerService.saveMedia(mediaFile)
+        HUD.showSuccess()
+    } catch (exception: Exception) {
+        Logger.log(exception, with = AlertType.toast)
+    }
+}
+
+/**
+ * Presents an action sheet for a failed message, offering to retry or
+ * delete it. Mirrors iOS's `presentFailedMessageActionSheet`.
+ */
+private suspend fun presentFailedMessageActionSheet(
+    messageID: String,
+    scope: CoroutineScope,
+) {
+    ActionSheetAlert(
+        actions =
+            listOf(
+                Action(
+                    title = LocalizedStringKey.Delete.localized(),
+                    style = ActionStyle.DESTRUCTIVE,
+                ) { MessageOutboxService.remove(messageID) },
+                Action(
+                    title = LocalizedStringKey.TryAgain.localized(),
+                ) { scope.launch { MessageOutboxService.retry(messageID) } },
+            ),
+    ).present(translating = emptyList())
 }
 
 // Mirrors the iOS `MediaActionHandlerService.attachMediaButtonTapped` action sheet.

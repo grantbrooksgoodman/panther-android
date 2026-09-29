@@ -9,6 +9,8 @@
 package us.neotechnica.panther.modules.content.user.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,6 +47,8 @@ import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellColors
 import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellStrings
+import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
+import us.neotechnica.panther.modules.content.user.constants.ChatPageViewStrings
 import us.neotechnica.panther.modules.content.user.services.AudioMessagePlaybackService
 import us.neotechnica.panther.modules.content.user.services.ContextMenuActionHandlerService
 import us.neotechnica.panther.modules.localization.models.LocalizationSource
@@ -52,6 +56,7 @@ import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
+import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
@@ -78,6 +83,11 @@ import androidx.compose.material3.Text as Material3Text
  * @param onTapMedia Opens the media preview for the given media message ID.
  * @param onReact Applies the given reaction style to the given message.
  * @param onSpeak Speaks the given displayed text for the given message ID.
+ * @param onFailedIndicatorTapped Presents the retry/delete action sheet
+ *   for the given failed outbox message ID.
+ * @param onSaveMedia Saves the given media file to the device.
+ * @param isHighlighted Whether the row is highlighted – for example,
+ *   after being navigated to from search.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -88,16 +98,22 @@ fun ChatMessageCell(
     onTapMedia: (String) -> Unit,
     onReact: (Message, Reaction.Style) -> Unit,
     onSpeak: (String, String) -> Unit,
+    onFailedIndicatorTapped: (String) -> Unit,
+    onSaveMedia: (MediaFile) -> Unit,
+    isHighlighted: Boolean = false,
 ) {
     val colors = LocalPantherColors.current
     val message = row.message
 
     Column(
         modifier =
-            Modifier.fillMaxWidth().padding(
-                horizontal = ChatMessageCellFloats.rowHorizontalPadding,
-                vertical = ChatMessageCellFloats.rowVerticalPadding,
-            ),
+            Modifier
+                .fillMaxWidth()
+                .background(if (isHighlighted) colors.accent.copy(alpha = HIGHLIGHT_BACKGROUND_ALPHA) else Color.Transparent)
+                .padding(
+                    horizontal = ChatMessageCellFloats.rowHorizontalPadding,
+                    vertical = ChatMessageCellFloats.rowVerticalPadding,
+                ),
     ) {
         if (message.isSystemMessage) {
             Box(
@@ -135,6 +151,8 @@ fun ChatMessageCell(
             onTapMedia = onTapMedia,
             onReact = onReact,
             onSpeak = onSpeak,
+            onFailedIndicatorTapped = onFailedIndicatorTapped,
+            onSaveMedia = onSaveMedia,
         )
 
         BottomLabel(row = row, isOwn = message.isFromCurrentUser)
@@ -156,6 +174,8 @@ private fun MessageContent(
     onTapMedia: (String) -> Unit,
     onReact: (Message, Reaction.Style) -> Unit,
     onSpeak: (String, String) -> Unit,
+    onFailedIndicatorTapped: (String) -> Unit,
+    onSaveMedia: (MediaFile) -> Unit,
 ) {
     val colors = LocalPantherColors.current
     val clipboard = LocalClipboardManager.current
@@ -165,6 +185,9 @@ private fun MessageContent(
     val reactionChoices = reactionChoicesFor(row, onReact)
     val alignment = if (isOwn) ContextMenuAlignment.TRAILING else ContextMenuAlignment.LEADING
 
+    val isSpeakingThisMessage = TextToSpeechService.speakingMessageID == message.id
+    val speakingHighlightRange = if (isSpeakingThisMessage) TextToSpeechService.spokenRange else null
+
     Row(
         horizontalArrangement = if (isOwn) Arrangement.End else Arrangement.Start,
         verticalAlignment = Alignment.Bottom,
@@ -173,9 +196,15 @@ private fun MessageContent(
         if (row.isGroup && !isOwn) {
             SenderAvatar(show = row.showSenderAvatar, initials = row.senderInitials)
         }
+        if (row.isFailed) {
+            FailedOutboxIndicator(
+                onTap = { onFailedIndicatorTapped(message.id) },
+                modifier = Modifier.align(Alignment.CenterVertically),
+            )
+        }
         if (message.isMediaMessage) {
             MessageContextMenu(
-                actions = emptyList(),
+                actions = row.mediaFile?.let { mediaActionsFor(message, it, onSaveMedia) } ?: emptyList(),
                 alignment = alignment,
                 reactionChoices = reactionChoices,
                 onTap = { onTapMedia(message.id) },
@@ -206,6 +235,8 @@ private fun MessageContent(
                             colors.receiverBubble,
                             colors.titleText,
                             isAlternate = true,
+                            isSpeaking = isSpeakingThisMessage,
+                            highlightRange = speakingHighlightRange,
                         )
                     } else {
                         AudioMessageBubble(
@@ -233,10 +264,37 @@ private fun MessageContent(
                         colors.receiverBubble,
                         colors.titleText,
                         isAlternate = row.showAlternate,
+                        isSpeaking = isSpeakingThisMessage,
+                        highlightRange = speakingHighlightRange,
                     )
                 }
             }
         }
+    }
+}
+
+/**
+ * The red indicator shown beside a failed outbox message. Tapping it
+ * presents an action sheet offering to retry or delete the message.
+ */
+@Composable
+private fun FailedOutboxIndicator(
+    onTap: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier =
+            modifier
+                .padding(end = ChatPageViewFloats.failedOutboxIndicatorButtonSpacing)
+                .size(ChatPageViewFloats.failedOutboxIndicatorButtonSize)
+                .clickable(onClick = onTap),
+        contentAlignment = Alignment.Center,
+    ) {
+        Components.Symbol(
+            ChatPageViewStrings.FAILED_OUTBOX_INDICATOR_BUTTON_IMAGE_SYSTEM_NAME,
+            color = ChatMessageCellColors.error,
+            modifier = Modifier.size(ChatPageViewFloats.failedOutboxIndicatorButtonSize),
+        )
     }
 }
 
@@ -384,6 +442,8 @@ private fun MessageBubble(
     receiverBubble: Color,
     receivedTextColor: Color,
     isAlternate: Boolean,
+    isSpeaking: Boolean = false,
+    highlightRange: IntRange? = null,
 ) {
     val shape =
         RoundedCornerShape(
@@ -392,6 +452,8 @@ private fun MessageBubble(
             bottomStart = if (isOwn) ChatMessageCellFloats.bubbleRadius else ChatMessageCellFloats.bubbleTailRadius,
             bottomEnd = if (isOwn) ChatMessageCellFloats.bubbleTailRadius else ChatMessageCellFloats.bubbleRadius,
         )
+
+    val font = if (isAlternate) Font.systemItalic() else Font.system
 
     Box(
         modifier =
@@ -404,15 +466,65 @@ private fun MessageBubble(
                     vertical = ChatMessageCellFloats.bubbleVerticalPadding,
                 ),
     ) {
-        Components.Text(
-            text.ifBlank { " " },
-            color = if (isOwn) Color.White else receivedTextColor,
-            font = if (isAlternate) Font.systemItalic() else Font.system,
-        )
+        if (isSpeaking) {
+            Material3Text(
+                text = spokenAnnotatedString(text.ifBlank { " " }, isOwn, highlightRange),
+                style = font.textStyle,
+            )
+        } else {
+            Components.Text(
+                text.ifBlank { " " },
+                color = if (isOwn) Color.White else receivedTextColor,
+                font = font,
+            )
+        }
+    }
+}
+
+/**
+ * Builds the annotated string used to highlight the message currently
+ * being spoken aloud: the whole text takes a base color – white for own
+ * messages or in dark mode, otherwise black – and the spoken range is
+ * highlighted in red. Mirrors the iOS
+ * `willSpeakRangeOfSpeechString` attributed-string rendering.
+ */
+@Composable
+private fun spokenAnnotatedString(
+    text: String,
+    isOwn: Boolean,
+    highlightRange: IntRange?,
+): AnnotatedString {
+    val baseColor = if (isOwn || isSystemInDarkTheme()) Color.White else Color.Black
+    return buildAnnotatedString {
+        append(text)
+        addStyle(SpanStyle(color = baseColor), 0, text.length)
+        highlightRange?.let { range ->
+            val start = range.first.coerceIn(0, text.length)
+            val end = (range.last + 1).coerceIn(start, text.length)
+            if (start < end) addStyle(SpanStyle(color = Color.Red), start, end)
+        }
     }
 }
 
 // MARK: - Auxiliary
+
+/**
+ * The context-menu actions for a media message, mirroring the iOS
+ * `menuForMessage` media branch: a reaction-details action when the
+ * message has reactions, followed by a save-file action.
+ */
+private fun mediaActionsFor(
+    message: Message,
+    mediaFile: MediaFile,
+    onSaveMedia: (MediaFile) -> Unit,
+): List<ContextMenuAction> =
+    listOfNotNull(
+        ContextMenuActionHandlerService.reactionDetailsAction(message),
+        ContextMenuAction(
+            title = LocalizedStringKey.SaveFile.localized(),
+            systemImageName = SAVE_ACTION_IMAGE_SYSTEM_NAME,
+        ) { onSaveMedia(mediaFile) },
+    )
 
 /**
  * The context-menu actions for an audio message, lifted from the iOS
@@ -429,6 +541,7 @@ private fun audioActionsFor(
     onCopy: () -> Unit,
 ): List<ContextMenuAction> {
     val actions = mutableListOf<ContextMenuAction>()
+    ContextMenuActionHandlerService.reactionDetailsAction(row.message)?.let { actions.add(it) }
     val isDisplayingAudioTranscription = row.isDisplayingAudioTranscription
     val isSpeaking = TextToSpeechService.isSpeaking
 
@@ -460,6 +573,7 @@ private fun actionsFor(
     onCopy: () -> Unit,
 ): List<ContextMenuAction> {
     val actions = mutableListOf<ContextMenuAction>()
+    ContextMenuActionHandlerService.reactionDetailsAction(row.message)?.let { actions.add(it) }
     actions.add(ContextMenuAction(LocalizedStringKey.Copy.localized(), "doc.on.doc") { onCopy() })
 
     val isSpeaking = TextToSpeechService.isSpeaking
@@ -684,3 +798,6 @@ private fun isSameDay(
         left.get(Calendar.DAY_OF_YEAR) == right.get(Calendar.DAY_OF_YEAR)
 
 private fun sanitized(value: String): String = value.replace("⁂", "").replace("⌘", "").replace("※", "")
+
+private const val SAVE_ACTION_IMAGE_SYSTEM_NAME = "square.and.arrow.down"
+private const val HIGHLIGHT_BACKGROUND_ALPHA = 0.12f

@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.services
 
+import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -15,7 +16,10 @@ import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
 import android.os.ParcelFileDescriptor
+import android.provider.MediaStore
 import android.provider.OpenableColumns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -31,6 +35,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
 import java.io.ByteArrayOutputStream
+import java.io.File
 
 // MARK: - Constants Accessors
 
@@ -113,7 +118,104 @@ object MediaActionHandlerService {
             MediaFile(relativePath, Strings.DEFAULT_DOCUMENT_NAME, fileExtension)
         }
 
+    // MARK: - Compress Image
+
+    /**
+     * Decodes the image at [uri] and returns its JPEG data compressed to
+     * approximately [targetKB] kilobytes.
+     *
+     * @throws Exception if the image cannot be read.
+     */
+    suspend fun compressImageToKB(
+        uri: Uri,
+        targetKB: Int,
+    ): ByteArray =
+        withContext(Dispatchers.IO) {
+            val bitmap =
+                requireContext().contentResolver.openInputStream(uri).use { BitmapFactory.decodeStream(it) }
+                    ?: throw failure("Failed to process image data.")
+            bitmap.jpegCompressedToKB(targetKB)
+        }
+
+    // MARK: - Save Media
+
+    /**
+     * Saves the given media file to the device's shared media
+     * collections: images to Pictures, videos to Movies, and other files
+     * to Downloads.
+     *
+     * @throws Exception if the file cannot be read or written.
+     */
+    suspend fun saveMedia(mediaFile: MediaFile): Unit =
+        withContext(Dispatchers.IO) {
+            val source = mediaFile.localPathFile ?: throw failure("Failed to resolve local media path.")
+            val extension = mediaFile.fileExtension
+            val collection =
+                when {
+                    extension.isImage -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                    extension.isVideo -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                    else -> downloadsContentUri()
+                }
+            val directory =
+                when {
+                    extension.isImage -> Environment.DIRECTORY_PICTURES
+                    extension.isVideo -> Environment.DIRECTORY_MOVIES
+                    else -> Environment.DIRECTORY_DOWNLOADS
+                }
+            writeToMediaStore(
+                source = source,
+                displayName = "${mediaFile.name}.${extension.rawValue}",
+                mimeType = extension.contentTypeString,
+                collection = collection,
+                directory = directory,
+            )
+        }
+
     // MARK: - Auxiliary
+
+    private fun downloadsContentUri(): Uri =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            MediaStore.Downloads.EXTERNAL_CONTENT_URI
+        } else {
+            MediaStore.Files.getContentUri("external")
+        }
+
+    @Suppress("LongParameterList")
+    private fun writeToMediaStore(
+        source: File,
+        displayName: String,
+        mimeType: String,
+        collection: Uri,
+        directory: String,
+    ) {
+        val resolver = requireContext().contentResolver
+        val values =
+            ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
+                put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, directory)
+                    put(MediaStore.MediaColumns.IS_PENDING, 1)
+                } else {
+                    val publicDirectory = Environment.getExternalStoragePublicDirectory(directory)
+                    if (!publicDirectory.exists()) publicDirectory.mkdirs()
+                    put(MediaStore.MediaColumns.DATA, File(publicDirectory, displayName).absolutePath)
+                }
+            }
+
+        val uri =
+            runCatching { resolver.insert(collection, values) }.getOrNull()
+                ?: throw failure("Failed to save media.")
+        val output = resolver.openOutputStream(uri) ?: throw failure("Failed to write media.")
+        runCatching { output.use { stream -> source.inputStream().use { it.copyTo(stream) } } }
+            .getOrElse { throw failure("Failed to write media.") }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            values.clear()
+            values.put(MediaStore.MediaColumns.IS_PENDING, 0)
+            resolver.update(uri, values, null, null)
+        }
+    }
 
     private fun imageMediaFile(uri: Uri): MediaFile {
         val bitmap =

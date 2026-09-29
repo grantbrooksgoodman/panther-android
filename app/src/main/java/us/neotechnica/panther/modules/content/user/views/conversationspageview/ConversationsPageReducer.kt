@@ -8,13 +8,19 @@
 
 package us.neotechnica.panther.modules.content.user.views.conversationspageview
 
+import us.neotechnica.panther.bundle.Application
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationAlert
+import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.session.entity.extensions.conversations
 import us.neotechnica.panther.modules.session.entity.extensions.filteredAndSorted
+import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
+import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import us.neotechnica.panther.networking.modules.translation.interfaces.TranslatedLabelStrings
 import us.neotechnica.panther.networking.modules.translation.models.TranslatedLabelStringCollection
 import us.neotechnica.panther.networking.modules.translation.models.TranslationInputMap
@@ -27,6 +33,7 @@ import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
 import us.neotechnica.panther.translator.models.TranslationInput
 import java.util.UUID
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * The reducer for the conversations list.
@@ -42,6 +49,8 @@ class ConversationsPageReducer : Reducer<ConversationsPageReducer.State, Convers
         data object ViewFirstAppeared : Action
 
         data object SessionStoreDidChange : Action
+
+        data object DeleteConversationsToolbarButtonTapped : Action
 
         data object PulledToRefresh : Action
 
@@ -97,6 +106,9 @@ class ConversationsPageReducer : Reducer<ConversationsPageReducer.State, Convers
             Action.SessionStoreDidChange ->
                 ReduceResult(state.copy(changeToken = UUID.randomUUID()))
 
+            Action.DeleteConversationsToolbarButtonTapped ->
+                ReduceResult(state, deleteConversationsEffect())
+
             Action.PulledToRefresh ->
                 if (state.isRefreshing) {
                     ReduceResult(state)
@@ -136,6 +148,49 @@ class ConversationsPageReducer : Reducer<ConversationsPageReducer.State, Convers
 
     // MARK: - Auxiliary
 
+    /**
+     * Resolves the current user's conversations and messages, then
+     * deletes all of the current user's conversations. Mirrors the iOS
+     * developer-mode delete-conversations danger-zone action.
+     */
+    private fun deleteConversationsEffect(): Effect<Action> =
+        Effect.run {
+            try {
+                UserSessionService.resolveCurrentUser(
+                    setOf(
+                        UserSessionService.DataType.CONVERSATIONS,
+                        UserSessionService.DataType.MESSAGES,
+                    ),
+                )
+                deleteCurrentUserConversations()
+            } catch (exception: Exception) {
+                Logger.log(exception, with = AlertType.toast)
+            }
+        }
+
+    private suspend fun deleteCurrentUserConversations() {
+        val didConfirm =
+            ConfirmationAlert(
+                title = DELETE_CONVERSATIONS_ALERT_TITLE,
+                message = DELETE_CONVERSATIONS_ALERT_MESSAGE,
+                confirmButtonStyle = ActionStyle.DESTRUCTIVE_PREFERRED,
+            ).present(translating = emptyList())
+        if (!didConfirm) return
+
+        val conversations = UserSessionService.currentUser?.conversations ?: return
+        for (conversation in conversations) {
+            ConversationSessionService.deleteConversation(conversation, forced = true)
+        }
+
+        HUD.showSuccess()
+        Task.delayed(by = 1.seconds) {
+            Application.reset(
+                preserveCurrentUserID = true,
+                onCompletion = Application.ResetCompletionProcedure.NAVIGATE_TO_SPLASH,
+            )
+        }
+    }
+
     private fun resolveEffect(): Effect<Action> =
         Effect.run { send ->
             try {
@@ -163,3 +218,7 @@ object ConversationsPageViewStrings : TranslatedLabelStrings {
             TranslationInputMap(searchBarPlaceholder, TranslationInput("Search")),
         )
 }
+
+private const val DELETE_CONVERSATIONS_ALERT_TITLE = "Delete Current User Conversations"
+private const val DELETE_CONVERSATIONS_ALERT_MESSAGE =
+    "This will delete all conversations for the current user.\n\nThis operation cannot be undone."

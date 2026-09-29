@@ -15,6 +15,7 @@ import us.neotechnica.panther.networking.modules.common.interfaces.Serializable
 import us.neotechnica.panther.networking.modules.common.interfaces.SerializableDecoder
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestampDateFormatter
+import java.security.MessageDigest
 import java.util.Date
 
 /**
@@ -118,6 +119,19 @@ class ConversationMetadata(
     // MARK: - Companion
 
     companion object : SerializableDecoder<ConversationMetadata, Map<String, Any?>> {
+        /**
+         * Returns the hash of the given image data.
+         *
+         * @param data The image data to hash.
+         *
+         * @return The hash of the image data.
+         */
+        fun computeImageHash(data: ByteArray): String =
+            MessageDigest
+                .getInstance("SHA-256")
+                .digest(data)
+                .joinToString("") { "%02x".format(it) }
+
         /**
          * Returns empty metadata for a new conversation among [userIDs].
          *

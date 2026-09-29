@@ -33,6 +33,7 @@ import us.neotechnica.panther.modules.session.entity.services.ConversationSessio
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.content.user.services.ReadReceiptService
 import us.neotechnica.panther.modules.session.entity.services.ReactionSessionService
+import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
@@ -42,6 +43,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
+import kotlinx.coroutines.delay
 import us.neotechnica.panther.translator.models.Translation
 import java.util.UUID
 
@@ -59,7 +61,10 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
     sealed interface Action {
         data class ViewFirstAppeared(
             val conversationIDKey: String,
+            val focusedMessageID: String? = null,
         ) : Action
+
+        data object FocusHighlightExpired : Action
 
         data class MessagesUpdated(
             val messages: List<Message>,
@@ -113,7 +118,9 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
 
         data object SendMedia : Action
 
-        data object StoreChanged : Action
+        data class StoreChanged(
+            val change: SessionStoreChange,
+        ) : Action
 
         data class IsSendingMessageChanged(
             val isSendingMessage: Boolean,
@@ -144,6 +151,8 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         val hasSendingOutboxEntry: Boolean = false,
         val languageCode: String = "en",
         val title: String = "",
+        val focusedMessageID: String? = null,
+        val highlightedMessageID: String? = null,
         val changeToken: UUID = UUID.randomUUID(),
         val viewState: ViewState = ViewState.Loading,
     )
@@ -159,28 +168,21 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             is Action.ViewFirstAppeared -> {
                 AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.ACCESS_CHAT)
                 ReduceResult(
-                    state.copy(conversationIDKey = action.conversationIDKey, languageCode = RuntimeStorage.languageCode),
-                    startEffect(action.conversationIDKey),
+                    state.copy(
+                        conversationIDKey = action.conversationIDKey,
+                        languageCode = RuntimeStorage.languageCode,
+                        focusedMessageID = action.focusedMessageID,
+                        highlightedMessageID = action.focusedMessageID,
+                    ),
+                    startEffect(action.conversationIDKey, action.focusedMessageID),
                 )
             }
 
-            is Action.MessagesUpdated -> {
-                // Seed already-cached translations and already-downloaded media
-                // synchronously, so a reopened chat presents its history on the
-                // first frame instead of visibly resolving every message again.
-                val translations = state.translationsByID + seedTranslations(action.messages, state.languageCode, state.translationsByID)
-                val media = state.mediaByID + seedMedia(action.messages, state.mediaByID)
-                ReduceResult(
-                    state.copy(
-                        messages = action.messages,
-                        translationsByID = translations,
-                        mediaByID = media,
-                        viewState = ViewState.Loaded,
-                        changeToken = UUID.randomUUID(),
-                    ),
-                    resolveEffect(action.messages, state.languageCode, translations, media, state.audioByID),
-                )
-            }
+            Action.FocusHighlightExpired ->
+                ReduceResult(state.copy(highlightedMessageID = null))
+
+            is Action.MessagesUpdated ->
+                handleMessagesUpdated(state, action.messages)
 
             is Action.TranslationsResolved ->
                 ReduceResult(state.copy(translationsByID = state.translationsByID + action.translations))
@@ -254,8 +256,12 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
                     ReduceResult(state.copy(pendingAttachment = null), sendMediaEffect(mediaFile))
                 } ?: ReduceResult(state)
 
-            Action.StoreChanged ->
-                ReduceResult(state.copy(changeToken = UUID.randomUUID()), markReadEffect())
+            is Action.StoreChanged ->
+                if (shouldReload(action.change)) {
+                    ReduceResult(state.copy(changeToken = UUID.randomUUID()), markReadEffect())
+                } else {
+                    ReduceResult(state)
+                }
 
             is Action.IsSendingMessageChanged ->
                 ReduceResult(state.copy(isSendingMessage = action.isSendingMessage))
@@ -275,6 +281,27 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         }
 
     // MARK: - Auxiliary
+
+    private fun handleMessagesUpdated(
+        state: State,
+        messages: List<Message>,
+    ): ReduceResult<State, Action> {
+        // Seed already-cached translations and already-downloaded media
+        // synchronously, so a reopened chat presents its history on the
+        // first frame instead of visibly resolving every message again.
+        val translations = state.translationsByID + seedTranslations(messages, state.languageCode, state.translationsByID)
+        val media = state.mediaByID + seedMedia(messages, state.mediaByID)
+        return ReduceResult(
+            state.copy(
+                messages = messages,
+                translationsByID = translations,
+                mediaByID = media,
+                viewState = ViewState.Loaded,
+                changeToken = UUID.randomUUID(),
+            ),
+            resolveEffect(messages, state.languageCode, translations, media, state.audioByID),
+        )
+    }
 
     private fun reactEffect(
         message: Message,
@@ -310,7 +337,10 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             }
         }
 
-    private fun startEffect(conversationIDKey: String): Effect<Action> =
+    private fun startEffect(
+        conversationIDKey: String,
+        focusedMessageID: String?,
+    ): Effect<Action> =
         Effect.run { send ->
             val conversation = SessionStore.getConversation(conversationIDKey)
             if (conversation == null) {
@@ -319,6 +349,7 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             }
 
             ConversationSessionService.setCurrentConversation(conversation)
+            focusedMessageID?.let { ConversationSessionService.incrementMessageOffset(it) }
             runCatching {
                 val title =
                     conversation.chatPageHeaderLabelText
@@ -326,6 +357,11 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
                 send(Action.TitleResolved(title))
             }
             markCurrentConversationAsRead()
+
+            if (focusedMessageID != null) {
+                delay(FOCUS_HIGHLIGHT_DURATION_MILLISECONDS)
+                send(Action.FocusHighlightExpired)
+            }
         }
 
     @Suppress("LongParameterList")
@@ -346,69 +382,6 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             markCurrentConversationAsRead()
         }
 
-    private fun seedTranslations(
-        messages: List<Message>,
-        languageCode: String,
-        existing: Map<String, Translation>,
-    ): Map<String, Translation> {
-        val seeded = mutableMapOf<String, Translation>()
-        for (message in messages) {
-            if (message.id in existing) continue
-            message.cachedTranslation(languageCode)?.let { seeded[message.id] = it }
-        }
-        return seeded
-    }
-
-    private fun seedMedia(
-        messages: List<Message>,
-        existingMedia: Map<String, MediaFile>,
-    ): Map<String, MediaFile> {
-        val seeded = mutableMapOf<String, MediaFile>()
-        for (message in messages) {
-            if (!message.isMediaMessage || message.id in existingMedia) continue
-            message.cachedMediaFile?.let { seeded[message.id] = it }
-        }
-        return seeded
-    }
-
-    private suspend fun resolveTranslations(
-        messages: List<Message>,
-        languageCode: String,
-        existing: Map<String, Translation>,
-    ): Map<String, Translation> {
-        val resolved = mutableMapOf<String, Translation>()
-        for (message in messages) {
-            if (message.id in existing) continue
-            message.resolvedTranslation(languageCode)?.let { resolved[message.id] = it }
-        }
-        return resolved
-    }
-
-    private suspend fun resolveMedia(
-        messages: List<Message>,
-        existingMedia: Map<String, MediaFile>,
-    ): Map<String, MediaFile> {
-        val resolved = mutableMapOf<String, MediaFile>()
-        for (message in messages) {
-            if (!message.isMediaMessage || message.id in existingMedia) continue
-            message.resolvedMediaFile()?.let { resolved[message.id] = it }
-        }
-        return resolved
-    }
-
-    private suspend fun resolveAudio(
-        messages: List<Message>,
-        languageCode: String,
-        existingAudio: Map<String, AudioMessageReference>,
-    ): Map<String, AudioMessageReference> {
-        val resolved = mutableMapOf<String, AudioMessageReference>()
-        for (message in messages) {
-            if (!message.isAudioMessage || message.id in existingAudio) continue
-            message.resolvedAudioReference(languageCode)?.let { resolved[message.id] = it }
-        }
-        return resolved
-    }
-
     private fun sendEffect(text: String): Effect<Action> =
         Effect.run {
             MessageDeliveryService.sendTextMessage(text)
@@ -424,3 +397,7 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         }
     }
 }
+
+// The duration for which a message navigated to from search stays
+// highlighted before the emphasis fades.
+private const val FOCUS_HIGHLIGHT_DURATION_MILLISECONDS = 2500L

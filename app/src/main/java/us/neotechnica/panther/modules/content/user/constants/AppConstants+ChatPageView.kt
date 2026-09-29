@@ -14,6 +14,8 @@ import androidx.compose.ui.unit.dp
 // MARK: - Float
 
 object ChatPageViewFloats {
+    val failedOutboxIndicatorButtonSize: Dp = 22.dp
+    val failedOutboxIndicatorButtonSpacing: Dp = 6.dp
     val headerAvatarGlyphSize: Dp = 22.dp
     val headerAvatarPillOverlap: Dp = 3.dp
     val headerAvatarSize: Dp = 44.dp
@@ -25,4 +27,10 @@ object ChatPageViewFloats {
     val pillEndPadding: Dp = 8.dp
     val pillStartPadding: Dp = 12.dp
     val pillVerticalPadding: Dp = 4.dp
+}
+
+// MARK: - String
+
+object ChatPageViewStrings {
+    const val FAILED_OUTBOX_INDICATOR_BUTTON_IMAGE_SYSTEM_NAME = "exclamationmark.circle"
 }

@@ -52,6 +52,7 @@ import us.neotechnica.panther.modules.content.user.components.conversationcellvi
 import us.neotechnica.panther.modules.content.user.components.conversationcellview.ConversationCellView
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewFloats
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewStrings
+import us.neotechnica.panther.modules.common.extensions.isDeveloperModeEnabled
 import us.neotechnica.panther.modules.content.user.constants.ConversationsPageViewFloats
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentNavigatorState
@@ -61,6 +62,7 @@ import us.neotechnica.panther.modules.networking.conversation.models.Conversatio
 import us.neotechnica.panther.modules.session.entity.extensions.sessionStoreDidChange
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
@@ -105,6 +107,7 @@ fun ConversationsPageView(
                             Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePath.NewChat)),
                         )
                     },
+                    onDeleteConversations = { viewModel.send(ConversationsPageReducer.Action.DeleteConversationsToolbarButtonTapped) },
                 )
 
                 Components.Text(
@@ -245,7 +248,7 @@ private fun ConversationCellMenu(
         alignment = ContextMenuAlignment.LEADING,
         reactionChoices = emptyList(),
         liftScale = 0f,
-        onTap = { viewModel.send(ConversationCellReducer.Action.CellTapped) },
+        onTap = { viewModel.send(ConversationCellReducer.Action.CellTapped(searchQuery)) },
     ) {
         ConversationCellView(
             conversation = conversation,
@@ -262,6 +265,7 @@ private fun ConversationCellMenu(
 private fun Header(
     onSettings: () -> Unit,
     onNewChat: () -> Unit,
+    onDeleteConversations: () -> Unit,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -275,6 +279,13 @@ private fun Header(
                 ),
     ) {
         CircleChipButton(systemName = "gearshape", contentDescription = "Settings", onClick = onSettings)
+        if (Build.isDeveloperModeEnabled) {
+            CircleChipButton(
+                systemName = "trash",
+                contentDescription = "Delete conversations",
+                onClick = onDeleteConversations,
+            )
+        }
         Spacer(modifier = Modifier.weight(1f))
         CircleChipButton(systemName = "square.and.pencil", contentDescription = "New conversation", onClick = onNewChat)
     }

@@ -16,6 +16,12 @@ import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
+import us.neotechnica.panther.modules.session.entity.extensions.reactions
+import us.neotechnica.panther.navigation.Route
+import us.neotechnica.panther.navigation.UserContentNavigatorState
+import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
@@ -82,6 +88,31 @@ object ContextMenuActionHandlerService {
         ) { ErrorReportingService.fileReport(exception) }
     }
 
+    // MARK: - Reaction Details
+
+    /**
+     * Returns the reaction-details action for [message], or `null` when
+     * the message has no reactions. Selecting it opens the reaction
+     * details page for the message.
+     *
+     * @param message The message to build the action for.
+     *
+     * @return The action, or `null`.
+     */
+    fun reactionDetailsAction(message: Message): ContextMenuAction? {
+        if (message.reactions.isNullOrEmpty()) return null
+        return ContextMenuAction(
+            title = LocalizedStringKey.ReactionDetails.localized(),
+            systemImageName = REACTION_DETAILS_ACTION_IMAGE_SYSTEM_NAME,
+        ) {
+            DependencyValues.current.navigation.navigate(
+                Route.UserContent(
+                    UserContentRoute.Push(UserContentNavigatorState.SeguePath.ReactionDetails(message.id)),
+                ),
+            )
+        }
+    }
+
     // MARK: - Speak
 
     /**
@@ -131,7 +162,7 @@ object ContextMenuActionHandlerService {
                     .firstOrNull { it != utteranceLanguageCode } ?: utteranceLanguageCode
         }
 
-        TextToSpeechService.speak(displayText, utteranceLanguageCode)
+        TextToSpeechService.speak(displayText, utteranceLanguageCode, message.id)
     }
 
     // MARK: - Auxiliary
@@ -153,6 +184,7 @@ object ContextMenuActionHandlerService {
     private val String.shortCode: String
         get() = "${take(2)}${takeLast(2)}".uppercase()
 
+    private const val REACTION_DETAILS_ACTION_IMAGE_SYSTEM_NAME = "info.circle"
     private const val REPORT_ACTION_IMAGE_SYSTEM_NAME = "flag"
     private const val LANGUAGE_RECOGNITION_MATCH_CONFIDENCE_THRESHOLD = 0.8f
 }

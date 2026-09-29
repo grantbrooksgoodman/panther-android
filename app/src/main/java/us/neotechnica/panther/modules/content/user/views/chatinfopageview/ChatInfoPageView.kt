@@ -8,6 +8,11 @@
 
 package us.neotechnica.panther.modules.content.user.views.chatinfopageview
 
+import android.content.Context
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,13 +38,17 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.core.content.FileProvider
+import kotlinx.coroutines.launch
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
 import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
@@ -73,13 +82,18 @@ import us.neotechnica.panther.modules.networking.conversation.models.Conversatio
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.modules.session.entity.extensions.users
+import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
+import java.io.File
 import androidx.compose.material3.Text as Material3Text
 
 // MARK: - Constants Accessors
@@ -120,6 +134,8 @@ fun ChatInfoPageView(
     val showMediaSegment = state.mediaItems.isNotEmpty() && state.selectedSegment == 1
     val presentContactCard = rememberContactCardPresenter()
     val singleContact = conversation?.takeUnless { state.isGroup }?.let { otherParticipants(it).firstOrNull() }
+
+    GroupPhotoCaptureEffect(state.photoCaptureRequest, viewModel)
 
     Box(modifier = modifier.fillMaxSize().background(colors.groupedContentBackground)) {
         StatefulView(state = state.viewState) {
@@ -173,7 +189,7 @@ fun ChatInfoPageView(
                         isAddContactEnabled = state.isAddContactButtonEnabled,
                         onToggle = { viewModel.send(ChatInfoPageReducer.Action.ToggleExpanded) },
                         onAddContact = { viewModel.send(ChatInfoPageReducer.Action.AddContactButtonTapped) },
-                        onParticipantTap = { presentContactCard(it.phoneNumber, it.displayName) },
+                        onParticipantTap = { viewModel.send(ChatInfoPageReducer.Action.ParticipantTapped(it.userID)) },
                     )
 
                     LeaveRow(
@@ -583,3 +599,66 @@ private fun infoTitle(conversation: Conversation): String {
     val base = ContactService.match(first.id)?.fullName ?: first.phoneNumber.formattedString()
     return if (users.size > 1) "$base${Strings.TITLE_ADDITIONAL_SEPARATOR}${users.size - 1}" else base
 }
+
+/**
+ * Sets up the camera and photo-library launchers and, on each new
+ * capture request, launches the chosen source, delivering the compressed
+ * image data on selection.
+ */
+@Composable
+private fun GroupPhotoCaptureEffect(
+    request: ChatInfoPageReducer.PhotoCaptureSource?,
+    viewModel: ViewModel<ChatInfoPageReducer.State, ChatInfoPageReducer.Action>,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val onImageData: (ByteArray) -> Unit = { viewModel.send(ChatInfoPageReducer.Action.SelectedImageChanged(it)) }
+    val galleryLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+            uri ?: return@rememberLauncherForActivityResult
+            scope.launch { compressAndDeliverGroupPhoto(uri, onImageData) }
+        }
+    var cameraUri by remember { mutableStateOf<Uri?>(null) }
+    val cameraLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+            val uri = cameraUri
+            if (success && uri != null) scope.launch { compressAndDeliverGroupPhoto(uri, onImageData) }
+        }
+    LaunchedEffect(request) {
+        val source = request ?: return@LaunchedEffect
+        viewModel.send(ChatInfoPageReducer.Action.PhotoCaptureHandled)
+        when (source) {
+            ChatInfoPageReducer.PhotoCaptureSource.CAMERA -> {
+                val uri = groupPhotoCaptureUri(context)
+                cameraUri = uri
+                cameraLauncher.launch(uri)
+            }
+
+            ChatInfoPageReducer.PhotoCaptureSource.LIBRARY ->
+                galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        }
+    }
+}
+
+private suspend fun compressAndDeliverGroupPhoto(
+    uri: Uri,
+    onImageData: (ByteArray) -> Unit,
+) {
+    try {
+        onImageData(MediaActionHandlerService.compressImageToKB(uri, GROUP_PHOTO_COMPRESSION_SIZE_KB))
+    } catch (exception: Exception) {
+        Logger.log(exception, with = AlertType.toast)
+    }
+}
+
+private fun groupPhotoCaptureUri(context: Context): Uri {
+    val file = File(context.filesDir, "$GROUP_PHOTO_DIRECTORY/$GROUP_PHOTO_CAPTURE_NAME")
+    file.parentFile?.mkdirs()
+    if (!file.exists()) file.createNewFile()
+    return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+}
+
+private const val GROUP_PHOTO_COMPRESSION_SIZE_KB = 100
+private const val GROUP_PHOTO_DIRECTORY = "media"
+private const val GROUP_PHOTO_CAPTURE_NAME = "group-photo-capture.jpg"
+
