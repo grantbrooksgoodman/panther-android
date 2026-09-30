@@ -1,0 +1,146 @@
+//
+//  ChangeLanguagePageViewService.kt
+//  Panther Android
+//
+//  Created by Grant Brooks Goodman on 30/09/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//
+
+package us.neotechnica.panther.modules.content.user.services
+
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import us.neotechnica.panther.bundle.Application
+import us.neotechnica.panther.bundle.Application.ResetCompletionProcedure
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
+import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.localization.models.localized
+import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
+import us.neotechnica.panther.modules.networking.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpdatableKey
+import us.neotechnica.panther.modules.networking.user.remotelyupdatable.updateValues
+import us.neotechnica.panther.modules.session.entity.extensions.conversations
+import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
+import us.neotechnica.panther.modules.session.entity.extensions.messages
+import us.neotechnica.panther.modules.session.entity.extensions.users
+import us.neotechnica.panther.modules.session.entity.extensions.visibleForCurrentUser
+import us.neotechnica.panther.modules.session.entity.services.UserSessionService
+import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
+import us.neotechnica.panther.translator.models.Translation
+
+/**
+ * The service that applies the user's language selection from the
+ * language change page.
+ *
+ * Use [ChangeLanguagePageViewService] to confirm and apply a new app
+ * language. Applying a language persists it to the current user's
+ * remote record and resets the app, which must restart for the change
+ * to take effect.
+ */
+object ChangeLanguagePageViewService {
+    // MARK: - Properties
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    // MARK: - Reducer Action Handlers
+
+    /**
+     * Asks the user to confirm the language change, applying it if they
+     * accept.
+     *
+     * Confirmation warns that the app must restart. If the user accepts,
+     * the new language is written to the current user's remote record in
+     * a single atomic update, together with a language history that
+     * records the outgoing language only when messages were sent or
+     * received in it. The app then resets – preserving the current
+     * user's identifier – and exits. Failures surface as a toast.
+     *
+     * @param selectedLanguageCode The language code of the selected
+     *   language.
+     */
+    fun confirmButtonTapped(selectedLanguageCode: String) {
+        scope.launch {
+            val languageName =
+                LocalizedStringResolver.languageDisplayNames()[selectedLanguageCode] ?: selectedLanguageCode.uppercase()
+
+            val confirmed =
+                ActionSheetAlert(
+                    title = "Change Language to ⌘$languageName⌘",
+                    message = "You must restart the app for this to take effect.",
+                    confirmButtonTitle = "Apply & Exit",
+                    cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
+                    isDestructive = true,
+                ).present(
+                    translating =
+                        listOf(
+                            ActionSheetAlert.TranslationOptionKey.Actions(),
+                            ActionSheetAlert.TranslationOptionKey.Message,
+                            ActionSheetAlert.TranslationOptionKey.Title,
+                        ),
+                )
+
+            if (!confirmed) return@launch
+            runCatching { changeLanguage(selectedLanguageCode) }.onFailure { Logger.log(it.toException()) }
+        }
+    }
+
+    // MARK: - Auxiliary
+
+    private suspend fun changeLanguage(languageCode: String) {
+        val currentUser =
+            UserSessionService.currentUser
+                ?: throw Exception("Current user has not been set.", metadata = ExceptionMetadata(this))
+
+        UserSessionService.resolveCurrentUser(UserSessionService.DataType.entries.toSet())
+
+        val conversations = (UserSessionService.currentUser?.conversations ?: emptyList()).visibleForCurrentUser
+        val outgoingLanguageCode = RuntimeStorage.languageCode
+
+        val hasIncomingMessagesInCurrentLanguage =
+            conversations
+                .filter { conversation ->
+                    !(conversation.users ?: emptyList()).mapNotNull { it.languageCode }.contains(outgoingLanguageCode)
+                }.messageTranslations(fromCurrentUser = false)
+                .map { it.languagePair.to }
+                .contains(outgoingLanguageCode)
+
+        val hasOutgoingMessagesInCurrentLanguage =
+            conversations
+                .messageTranslations(fromCurrentUser = true)
+                .map { it.languagePair.from }
+                .contains(outgoingLanguageCode)
+
+        var newPreviousLanguageCodes = (currentUser.previousLanguageCodes ?: emptyList()).filter { it != languageCode }
+        if (hasIncomingMessagesInCurrentLanguage || hasOutgoingMessagesInCurrentLanguage) {
+            newPreviousLanguageCodes = newPreviousLanguageCodes + outgoingLanguageCode
+        }
+        newPreviousLanguageCodes = newPreviousLanguageCodes.distinct().reversed()
+
+        currentUser.updateValues(
+            mapOf(
+                UserUpdatableKey.LANGUAGE_CODE to languageCode,
+                UserUpdatableKey.PREVIOUS_LANGUAGE_CODES to newPreviousLanguageCodes.ifEmpty { bangQualifiedEmptyList },
+            ),
+        )
+        RuntimeStorage.languageCode = languageCode
+
+        Application.reset(
+            preserveCurrentUserID = true,
+            onCompletion = ResetCompletionProcedure.EXIT_GRACEFULLY,
+        )
+    }
+
+    private fun List<Conversation>.messageTranslations(fromCurrentUser: Boolean): List<Translation> =
+        flatMap { it.messages ?: emptyList() }
+            .filter { it.isFromCurrentUser == fromCurrentUser }
+            .flatMap { it.translations ?: emptyList() }
+            .distinct()
+
+    private fun Throwable.toException(): Exception = this as? Exception ?: Exception.from(this, ExceptionMetadata(this))
+}

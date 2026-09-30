@@ -8,6 +8,7 @@
 package us.neotechnica.panther.subsystem.modules.foundation.services
 
 import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
+import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -91,6 +92,29 @@ object Build {
     val buildInfoString: String
         get() = "$codeName $bundleVersion ($buildNumber${milestone.shortString}/${bundleRevision.lowercase()})"
 
+    /**
+     * The six-digit code required to bypass build expiry.
+     *
+     * This code is derived deterministically from [codeName] and
+     * remains stable across launches of the same build.
+     */
+    val expirationOverrideCode: String
+        get() = deriveExpirationOverrideCode()
+
+    /**
+     * A Boolean value that indicates whether developer mode is
+     * enabled.
+     *
+     * Developer mode is always disabled in general-release builds.
+     */
+    val isDeveloperModeEnabled: Boolean
+        get() =
+            if (milestone == Milestone.GENERAL_RELEASE) {
+                false
+            } else {
+                Persistent.booleanOrNull(PersistentStorageKey.isDeveloperModeEnabled) ?: false
+            }
+
     // MARK: - Initialization
 
     /** Populates the build configuration. Called once at startup. */
@@ -118,7 +142,26 @@ object Build {
         isConfigured = true
     }
 
+    // MARK: - Setters
+
+    /** Enables or disables developer mode, persisting the change. */
+    fun setIsDeveloperModeEnabled(isDeveloperModeEnabled: Boolean) {
+        if (!isDeveloperModeEnabled &&
+            Persistent.booleanOrNull(PersistentStorageKey.hidesBuildInfoOverlay) == true
+        ) {
+            BuildInfoOverlay.show()
+        }
+
+        Persistent.setBoolean(PersistentStorageKey.isDeveloperModeEnabled, isDeveloperModeEnabled)
+    }
+
     // MARK: - Auxiliary
+
+    private fun alphabeticalPosition(character: Char): Int? {
+        val lowercased = character.lowercaseChar()
+        if (lowercased !in 'a'..'z') return null
+        return lowercased - 'a' + 1
+    }
 
     private fun bundleRevision(revisionBuildNumber: Int): String {
         val alphabet = ('A'..'Z').toList()
@@ -136,6 +179,18 @@ object Build {
 
         val zCount = letters.count { it == 'Z' }
         return if (zCount > MAX_TRAILING_Z) "Z$zCount${letters.filter { it != 'Z' }}" else letters.toString()
+    }
+
+    private fun deriveExpirationOverrideCode(): String {
+        if (codeName.isEmpty()) return "000000"
+
+        val firstCharacter = codeName.first()
+        val lastCharacter = codeName.last()
+        val middleCharacter = codeName[codeName.length / 2]
+
+        return listOf(firstCharacter, middleCharacter, lastCharacter)
+            .mapNotNull { character -> alphabeticalPosition(character)?.let { "%02d".format(it) } }
+            .joinToString("")
     }
 
     private fun buildSKU(): String {

@@ -8,18 +8,14 @@
 
 package us.neotechnica.panther.modules.content.user.views.changelanguagepageview
 
-import us.neotechnica.panther.bundle.Application
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.content.onboarding.models.InstructionViewStrings
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
-import us.neotechnica.panther.modules.content.user.services.LanguageChangeService
+import us.neotechnica.panther.modules.content.user.services.ChangeLanguagePageViewService
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
@@ -35,7 +31,7 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
  *
  * This page lets the user change the language the app's content is
  * translated into from Settings. The user selects a language, and the
- * reducer applies the change through [LanguageChangeService].
+ * reducer applies the change through [ChangeLanguagePageViewService].
  *
  * The page's behavior contract:
  *
@@ -119,8 +115,10 @@ class ChangeLanguagePageReducer : Reducer<ChangeLanguagePageReducer.State, Chang
                 ReduceResult(state)
             }
 
-            Action.ConfirmButtonTapped ->
-                ReduceResult(state, confirmEffect(state))
+            Action.ConfirmButtonTapped -> {
+                ChangeLanguagePageViewService.confirmButtonTapped(state.selectedLanguageCode)
+                ReduceResult(state)
+            }
 
             is Action.SelectedLanguageNameChanged -> {
                 val updated = state.copy(selectedLanguageName = action.name)
@@ -161,37 +159,4 @@ class ChangeLanguagePageReducer : Reducer<ChangeLanguagePageReducer.State, Chang
             }
         }
 
-    private fun confirmEffect(state: State): Effect<Action> =
-        Effect.run { _ ->
-            val languageCode = state.selectedLanguageCode
-            val languageName = LocalizedStringResolver.languageDisplayNames()[languageCode] ?: languageCode.uppercase()
-
-            val confirmed =
-                ActionSheetAlert(
-                    title = "Change Language to ⌘$languageName⌘",
-                    message = "You must restart the app for this to take effect.",
-                    confirmButtonTitle = "Apply",
-                    cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
-                    isDestructive = true,
-                ).present(
-                    translating =
-                        listOf(
-                            ActionSheetAlert.TranslationOptionKey.Actions(),
-                            ActionSheetAlert.TranslationOptionKey.Message,
-                            ActionSheetAlert.TranslationOptionKey.Title,
-                        ),
-                )
-
-            if (!confirmed) return@run
-
-            try {
-                LanguageChangeService.changeLanguage(languageCode)
-                Application.reset(
-                    preserveCurrentUserID = true,
-                    onCompletion = Application.ResetCompletionProcedure.EXIT_GRACEFULLY,
-                )
-            } catch (exception: Exception) {
-                Logger.log(exception)
-            }
-        }
 }

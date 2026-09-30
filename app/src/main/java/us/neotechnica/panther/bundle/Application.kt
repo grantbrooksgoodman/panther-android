@@ -132,13 +132,7 @@ object Application {
         dismissSheets()
 
         when (procedure) {
-            ResetCompletionProcedure.EXIT_GRACEFULLY -> {
-                Overlay.show()
-                DependencyValues.current.navigation.navigate(
-                    Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.Splash)),
-                )
-                Task.delayed(by = 1.seconds) { exitGracefully() }
-            }
+            ResetCompletionProcedure.EXIT_GRACEFULLY -> beginGracefulExit()
 
             ResetCompletionProcedure.NAVIGATE_TO_SPLASH -> {
                 DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
@@ -147,6 +141,23 @@ object Application {
                 )
             }
         }
+    }
+
+    /**
+     * Presents the splash page behind an activity indicator overlay,
+     * then terminates the app after a one-second delay.
+     *
+     * Use [beginGracefulExit] to complete a flow that requires the app
+     * to restart – such as clearing caches – after the user has been
+     * informed. The reset completion procedure and the settings page's
+     * exit flows share this sequence.
+     */
+    fun beginGracefulExit() {
+        Overlay.show()
+        DependencyValues.current.navigation.navigate(
+            Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.Splash)),
+        )
+        Task.delayed(by = 1.seconds) { exitGracefully() }
     }
 
     // MARK: - Auxiliary

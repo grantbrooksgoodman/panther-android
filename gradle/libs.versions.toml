@@ -22,6 +22,8 @@ mlkitLanguageId = "17.0.6"
 libphonenumber = "8.13.52"
 securityCrypto = "1.1.0-alpha06"
 playReview = "2.0.2"
+zxing = "3.5.3"
+media3 = "1.5.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -61,6 +63,10 @@ androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "w
 mlkit-language-id = { group = "com.google.mlkit", name = "language-id", version.ref = "mlkitLanguageId" }
 libphonenumber = { group = "com.googlecode.libphonenumber", name = "libphonenumber", version.ref = "libphonenumber" }
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
+androidx-media3-transformer = { group = "androidx.media3", name = "media3-transformer", version.ref = "media3" }
+androidx-media3-effect = { group = "androidx.media3", name = "media3-effect", version.ref = "media3" }
+androidx-media3-common = { group = "androidx.media3", name = "media3-common", version.ref = "media3" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

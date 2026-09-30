@@ -12,6 +12,8 @@ import kotlinx.coroutines.coroutineScope
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import android.webkit.MimeTypeMap
+import us.neotechnica.panther.modules.common.models.DocumentFileExtension
+import us.neotechnica.panther.modules.common.models.MediaFileExtension
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
 import us.neotechnica.panther.networking.modules.storage.models.StorageMetadata
 import us.neotechnica.panther.modules.networking.message.models.LocalMediaFilePath
@@ -22,15 +24,19 @@ import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHas
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.lzfse.Lzfse
 import java.io.File
 
 /**
  * The service that uploads, downloads, and deletes media message content.
  *
- * **Note:** iOS LZFSE-compresses plain-text document payloads on the wire;
- * Android has no LZFSE, so plain-text documents are uploaded and stored
- * uncompressed (see `DEVIATIONS.md`). The Android `StorageDelegate` also
- * carries no content-type metadata, so uploads omit it.
+ * **Note:** plain-text document payloads are LZFSE-compressed before
+ * upload and decompressed on download, while the local file stays
+ * uncompressed. [Lzfse] emits uncompressed LZFSE blocks, which Apple's
+ * decoder reads verbatim; decoding Apple's FSE- and LZVN-compressed
+ * blocks is pending cross-platform vector validation (see
+ * `DEVIATIONS.md`).
  */
 object MediaMessageService {
     // MARK: - Get Media Component
@@ -145,11 +151,21 @@ object MediaMessageService {
             mediaComponent.localPathFile
                 ?: throw Exception("Failed to resolve local media path.", metadata = ExceptionMetadata(this))
         if (!storage.itemExists(relativePath)) {
-            storage.upload(
-                sourceFile,
-                relativePath,
-                StorageMetadata(filePath = relativePath, contentType = contentType(mediaComponent)),
-            )
+            if (isPlainTextDocument(mediaComponent.fileExtension)) {
+                // Hosted plain-text payloads are always LZFSE-compressed,
+                // while the local file stays uncompressed.
+                storage.uploadBytes(
+                    Lzfse.encode(sourceFile.readBytes()),
+                    relativePath,
+                    StorageMetadata(filePath = relativePath, contentType = "application/octet-stream"),
+                )
+            } else {
+                storage.upload(
+                    sourceFile,
+                    relativePath,
+                    StorageMetadata(filePath = relativePath, contentType = contentType(mediaComponent)),
+                )
+            }
         }
         moveIntoPlace(sourceFile, relativePath)
     }
@@ -172,6 +188,9 @@ object MediaMessageService {
 
     private fun contentType(mediaComponent: MediaFile): String? =
         MimeTypeMap.getSingleton().getMimeTypeFromExtension(mediaComponent.fileExtension.rawValue.lowercase())
+
+    private fun isPlainTextDocument(fileExtension: MediaFileExtension?): Boolean =
+        (fileExtension as? MediaFileExtension.Document)?.fileExtension is DocumentFileExtension.PlainText
 
     private fun moveIntoPlace(
         source: File,
@@ -213,6 +232,15 @@ object MediaMessageService {
                 )
 
         storage.download(localPath.relativePathString, destination)
+
+        // Hosted plain-text payloads are stored LZFSE-compressed; decompress
+        // in place so the local file is the plain text. Legacy uncompressed
+        // uploads and payloads whose compressed block type is not yet
+        // supported are left as downloaded.
+        if (isPlainTextDocument(MediaFileExtension.from(localPath.relativePathString.substringAfterLast('.', "")))) {
+            runCatching { destination.writeBytes(Lzfse.decode(destination.readBytes())) }
+                .onFailure { Logger.log("Failed to LZFSE-decompress document; leaving as-is. ${it.message}") }
+        }
 
         // The thumbnail is a best-effort companion object; a missing one
         // does not prevent the primary media from resolving.

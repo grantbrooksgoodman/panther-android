@@ -52,7 +52,6 @@ import us.neotechnica.panther.modules.content.user.components.conversationcellvi
 import us.neotechnica.panther.modules.content.user.components.conversationcellview.ConversationCellView
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewFloats
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewStrings
-import us.neotechnica.panther.modules.common.extensions.isDeveloperModeEnabled
 import us.neotechnica.panther.modules.content.user.constants.ConversationsPageViewFloats
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentNavigatorState

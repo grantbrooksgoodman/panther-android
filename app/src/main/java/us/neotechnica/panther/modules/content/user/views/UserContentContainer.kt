@@ -32,6 +32,8 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.modules.content.user.constants.UserContentContainerFloats
 import us.neotechnica.panther.modules.content.user.constants.UserContentContainerStrings
 import us.neotechnica.panther.modules.content.user.views.changelanguagepageview.ChangeLanguagePageView
+import us.neotechnica.panther.modules.content.user.views.invitelanguagepickerview.InviteLanguagePickerView
+import us.neotechnica.panther.modules.content.user.views.inviteqrcodepageview.InviteQRCodePageView
 import us.neotechnica.panther.modules.content.user.views.chatinfopageview.ChatInfoPageView
 import us.neotechnica.panther.modules.content.user.views.reactiondetailspageview.ReactionDetailsPageView
 import us.neotechnica.panther.modules.content.user.views.chatpageview.ChatPageView
@@ -168,6 +170,16 @@ fun UserContentContainer(modifier: Modifier = Modifier) {
                         // matching iOS; the page insets its own content.
                         UserContentNavigatorState.SeguePath.ChangeLanguage ->
                             ChangeLanguagePageView(Modifier.fillMaxSize())
+
+                        // Drawn edge-to-edge so its grouped background bleeds past the system bars,
+                        // matching iOS; the page insets its own content.
+                        UserContentNavigatorState.SeguePath.InviteQRCode ->
+                            InviteQRCodePageView(Modifier.fillMaxSize())
+
+                        // Drawn edge-to-edge so its grouped background bleeds past the system bars,
+                        // matching iOS; the page insets its own content.
+                        UserContentNavigatorState.SeguePath.InviteLanguagePicker ->
+                            InviteLanguagePickerView(Modifier.fillMaxSize())
                     }
                 }
             }

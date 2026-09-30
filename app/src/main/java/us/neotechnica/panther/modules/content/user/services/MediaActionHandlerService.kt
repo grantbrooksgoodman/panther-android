@@ -21,7 +21,19 @@ import android.os.Environment
 import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
 import android.provider.OpenableColumns
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
+import androidx.media3.common.audio.AudioProcessor
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.effect.Presentation
+import androidx.media3.transformer.Composition
+import androidx.media3.transformer.EditedMediaItem
+import androidx.media3.transformer.Effects
+import androidx.media3.transformer.ExportException
+import androidx.media3.transformer.ExportResult
+import androidx.media3.transformer.Transformer
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import us.neotechnica.panther.modules.content.user.constants.MediaActionHandlerFloats
 import us.neotechnica.panther.modules.content.user.constants.MediaActionHandlerStrings
@@ -34,8 +46,11 @@ import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import java.io.ByteArrayOutputStream
 import java.io.File
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 // MARK: - Constants Accessors
 
@@ -88,7 +103,14 @@ object MediaActionHandlerService {
         withContext(Dispatchers.IO) {
             val fileExtension = MediaFileExtension.Video(VideoFileExtension.MP4)
             val relativePath = "${NetworkPath.media.rawValue}/${Strings.DEFAULT_VIDEO_NAME}.${fileExtension.rawValue}"
-            copyToFile(uri, relativePath)
+            val destination = FileStore.resolve(relativePath) ?: throw failure("Failed to resolve local media path.")
+
+            runCatching { compressVideo(uri, destination) }
+                .onFailure {
+                    Logger.log("Failed to transcode video; staging unchanged. ${it.message}")
+                    copyToFile(uri, relativePath)
+                }
+
             writeThumbnail(videoThumbnail(uri), relativePath)
             MediaFile(relativePath, Strings.DEFAULT_VIDEO_NAME, fileExtension)
         }
@@ -237,6 +259,65 @@ object MediaActionHandlerService {
         requireContext().contentResolver.openInputStream(uri)?.use { input ->
             destination.outputStream().use { output -> input.copyTo(output) }
         } ?: throw failure("Failed to read media.")
+    }
+
+    /**
+     * Transcodes the video at [inputUri] to [outputFile] as an H.264/AAC
+     * MP4, scaling the short side to a medium quality target.
+     *
+     * Mirrors the iOS `compressVideo(at:outputURL:)`, which exports with
+     * `AVAssetExportPresetMediumQuality`.
+     *
+     * @throws Exception if the existing output cannot be removed.
+     */
+    @OptIn(UnstableApi::class)
+    private suspend fun compressVideo(
+        inputUri: Uri,
+        outputFile: File,
+    ) {
+        outputFile.parentFile?.mkdirs()
+        if (outputFile.exists() && !outputFile.delete()) {
+            throw failure("Failed to remove existing video output.")
+        }
+
+        withContext(Dispatchers.Main) {
+            suspendCancellableCoroutine { continuation ->
+                val transformer =
+                    Transformer.Builder(requireContext())
+                        .setVideoMimeType(MimeTypes.VIDEO_H264)
+                        .setAudioMimeType(MimeTypes.AUDIO_AAC)
+                        .addListener(
+                            object : Transformer.Listener {
+                                override fun onCompleted(
+                                    composition: Composition,
+                                    exportResult: ExportResult,
+                                ) {
+                                    if (continuation.isActive) continuation.resume(Unit)
+                                }
+
+                                override fun onError(
+                                    composition: Composition,
+                                    exportResult: ExportResult,
+                                    exportException: ExportException,
+                                ) {
+                                    if (continuation.isActive) continuation.resumeWithException(exportException)
+                                }
+                            },
+                        ).build()
+
+                val editedMediaItem =
+                    EditedMediaItem
+                        .Builder(MediaItem.fromUri(inputUri))
+                        .setEffects(
+                            Effects(
+                                emptyList<AudioProcessor>(),
+                                listOf(Presentation.createForHeight(Floats.VIDEO_TARGET_HEIGHT)),
+                            ),
+                        ).build()
+
+                transformer.start(editedMediaItem, outputFile.absolutePath)
+            }
+        }
     }
 
     private fun writeThumbnail(

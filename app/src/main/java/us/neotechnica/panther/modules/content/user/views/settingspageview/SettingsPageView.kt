@@ -8,9 +8,6 @@
 
 package us.neotechnica.panther.modules.content.user.views.settingspageview
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -31,42 +28,37 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
-import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
 import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
+import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.contacts.components.rememberContactCardPresenter
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.formattedString
-import us.neotechnica.panther.modules.common.services.InviteService
+import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewColors
-import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewFloats
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewConstants
+import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewFloats
+import us.neotechnica.panther.modules.content.user.services.DeveloperModeListItem
+import us.neotechnica.panther.modules.content.user.services.SettingsPageViewService
 import us.neotechnica.panther.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.modules.localization.models.localized
+import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
-import us.neotechnica.panther.modules.common.models.PhoneNumber
-import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.BuildInfoOverlay
@@ -82,10 +74,6 @@ private typealias Strings = SettingsPageViewConstants
  * The settings page: the current user's contact header followed by
  * grouped action cards, mirroring the iOS `SettingsPageView`.
  *
- * **Note:** the iOS original also offers invite/review/language/theme/
- * feedback/cache/blocked-users rows; those are deferred with their
- * underlying layers. The contact header's chevron is a no-op for now.
- *
  * @param modifier The modifier for this view.
  */
 @Composable
@@ -97,10 +85,8 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
     val presentContactCard = rememberContactCardPresenter()
-    val context = LocalContext.current
     val haptics = LocalHapticFeedback.current
     val clipboard = LocalClipboardManager.current
-    val scope = rememberCoroutineScope()
 
     Box(modifier = modifier.fillMaxSize().background(colors.groupedContentBackground)) {
         StatefulView(state = state.viewState) {
@@ -111,20 +97,13 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
                         .systemBarsPadding()
                         .verticalScroll(rememberScrollState()),
             ) {
-                Header(
-                    onDone = { viewModel.send(SettingsPageReducer.Action.BackTapped) },
-                    enabled = !state.isBusy,
-                )
+                Header(onDone = { viewModel.send(SettingsPageReducer.Action.BackTapped) })
 
                 ContactDetailCard(onTap = presentContactCard)
 
-                SettingsActionCards(
-                    enabled = !state.isBusy,
-                    context = context,
-                    scope = scope,
-                    strings = state.strings,
-                    send = viewModel::send,
-                )
+                SettingsActionCards(strings = state.strings, send = viewModel::send)
+
+                DeveloperModeCards()
 
                 // Prerelease-only affordance to restore the build-info overlay after it has been
                 // long-press–dismissed (mirrors iOS Developer Mode).
@@ -140,7 +119,6 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
                                 } else {
                                     Strings.HIDE_BUILD_INFO_OVERLAY
                                 },
-                            enabled = !state.isBusy,
                             onClick = { if (isOverlayHidden) BuildInfoOverlay.show() else BuildInfoOverlay.hide() },
                         )
                     }
@@ -171,10 +149,7 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
 // MARK: - Header
 
 @Composable
-private fun Header(
-    onDone: () -> Unit,
-    enabled: Boolean,
-) {
+private fun Header(onDone: () -> Unit) {
     val colors = LocalPantherColors.current
     Box(
         modifier =
@@ -195,7 +170,6 @@ private fun Header(
             modifier = Modifier.align(Alignment.CenterEnd),
             tint = colors.titleText,
             glyphSize = Floats.doneButtonGlyphSize,
-            enabled = enabled,
         )
     }
 }
@@ -243,47 +217,59 @@ private fun ContactDetailCard(onTap: (PhoneNumber?, String?) -> Unit) {
 
 @Composable
 private fun SettingsActionCards(
-    enabled: Boolean,
-    context: Context,
-    scope: CoroutineScope,
     strings: List<TranslationOutputMap>,
     send: (SettingsPageReducer.Action) -> Unit,
 ) {
     SettingsCard {
-        SettingsIconRow("location.fill", Colors.iconBlue, strings.value(SettingsPageViewStrings.inviteFriends), enabled) {
-            scope.launch { presentInviteSheet() }
+        SettingsIconRow("location.fill", Colors.iconBlue, strings.value(SettingsPageViewStrings.inviteFriends)) {
+            SettingsPageViewService.inviteFriendsButtonTapped()
         }
         SettingsRowDivider()
-        SettingsIconRow("star.fill", Colors.iconYellow, strings.value(SettingsPageViewStrings.leaveReview), enabled) {
-            launchLeaveReview(context)
+        SettingsIconRow("star.fill", Colors.iconYellow, strings.value(SettingsPageViewStrings.leaveReview)) {
+            SettingsPageViewService.leaveReviewButtonTapped()
         }
         SettingsRowDivider()
-        SettingsIconRow("globe", Colors.iconPink, strings.value(SettingsPageViewStrings.changeLanguage), enabled, showsDisclosure = true) {
+        SettingsIconRow("globe", Colors.iconPink, strings.value(SettingsPageViewStrings.changeLanguage), showsDisclosure = true) {
             send(SettingsPageReducer.Action.ChangeLanguageTapped)
         }
     }
 
     SettingsCard {
-        SettingsIconRow("info", Colors.iconIndigo, LocalizedStringKey.SendFeedback.localized(), enabled) {
-            scope.launch { presentFileAReportSheet(context) }
+        SettingsIconRow("info", Colors.iconIndigo, LocalizedStringKey.SendFeedback.localized()) {
+            SettingsPageViewService.sendFeedbackButtonTapped()
         }
         SettingsRowDivider()
-        SettingsIconRow("command", Colors.iconMint, strings.value(SettingsPageViewStrings.clearCaches), enabled) {
+        SettingsIconRow("command", Colors.iconMint, strings.value(SettingsPageViewStrings.clearCaches)) {
             send(SettingsPageReducer.Action.ClearCachesTapped)
         }
     }
 
     SettingsCard {
-        SettingsIconRow("flag.fill", Colors.iconGray, strings.value(SettingsPageViewStrings.blockedUsers), enabled) {
+        SettingsIconRow("flag.fill", Colors.iconGray, strings.value(SettingsPageViewStrings.blockedUsers)) {
             send(SettingsPageReducer.Action.BlockedUsersTapped)
         }
         SettingsRowDivider()
-        SettingsIconRow("trash.fill", Colors.iconOrange, strings.value(SettingsPageViewStrings.deleteAccount), enabled) {
+        SettingsIconRow("trash.fill", Colors.iconOrange, strings.value(SettingsPageViewStrings.deleteAccount)) {
             send(SettingsPageReducer.Action.DeleteAccountTapped)
         }
         SettingsRowDivider()
-        SettingsIconRow("hand.raised.fill", Colors.iconRed, strings.value(SettingsPageViewStrings.signOut), enabled) {
+        SettingsIconRow("hand.raised.fill", Colors.iconRed, strings.value(SettingsPageViewStrings.signOut)) {
             send(SettingsPageReducer.Action.SignOutTapped)
+        }
+    }
+}
+
+// MARK: - Developer Mode
+
+@Composable
+private fun DeveloperModeCards() {
+    val items: List<DeveloperModeListItem> = SettingsPageViewService.developerModeListItems() ?: return
+    if (items.isEmpty()) return
+
+    SettingsCard {
+        items.forEachIndexed { index, item ->
+            if (index > 0) SettingsRowDivider()
+            SettingsIconRow(item.systemName, Colors.iconGray, item.title, onClick = item.action)
         }
     }
 }
@@ -306,12 +292,10 @@ private fun SettingsCard(content: @Composable () -> Unit) {
 }
 
 @Composable
-@Suppress("LongParameterList")
 private fun SettingsIconRow(
     symbol: String,
     iconColor: Color,
     title: String,
-    enabled: Boolean,
     showsDisclosure: Boolean = false,
     onClick: () -> Unit,
 ) {
@@ -321,7 +305,7 @@ private fun SettingsIconRow(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable(enabled = enabled) { onClick() }
+                .clickable { onClick() }
                 .padding(horizontal = Floats.cardPadding, vertical = Floats.iconRowVerticalPadding),
     ) {
         Box(
@@ -363,91 +347,3 @@ private fun SettingsRowDivider() {
 private fun versionString(): String =
     "${LocalizedStringKey.Version.localized()} ${Build.bundleVersion} " +
         "(${Build.buildNumber}${Build.milestone.shortString}/${Build.bundleRevision.lowercase()})"
-
-/**
- * Presents the invite-friends action sheet, offering to share the app to
- * another app, mirroring the iOS `inviteFriendsButtonTapped`.
- *
- * **Note:** the iOS original also offers a "Show QR Code" action; that is
- * deferred with the invite-QR-code page.
- */
-private suspend fun presentInviteSheet() {
-    ActionSheetAlert(
-        title = Strings.INVITE_FRIENDS,
-        actions = listOf(Action(Strings.SHARE_TO_ANOTHER_APP) { InviteService.presentInvitationPrompt() }),
-        cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
-    ).present(
-        translating =
-            listOf(
-                ActionSheetAlert.TranslationOptionKey.Actions(),
-                ActionSheetAlert.TranslationOptionKey.Title,
-            ),
-    )
-}
-
-/**
- * Opens the app's Play Store listing, standing in for the iOS App Store
- * write-review page.
- *
- * Prefers the Play Store app's `market://` scheme, falling back to the
- * web listing when it is unavailable.
- */
-private fun launchLeaveReview(context: Context) {
-    val marketIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${context.packageName}"))
-    val didLaunch = runCatching { context.startActivity(marketIntent) }.isSuccess
-    if (!didLaunch) {
-        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(playStoreUrl(context)))) }
-    }
-}
-
-/**
- * Presents the "File a Report" action sheet, offering to send feedback
- * or report a bug, mirroring the iOS `sendFeedbackButtonTapped`.
- *
- * **Note:** the iOS actions route through `AKReportDelegate`'s in-app
- * feedback and annotated-screenshot bug reporting; that tooling is
- * iOS-specific, so both actions open the platform mail composer with
- * build diagnostics.
- */
-private suspend fun presentFileAReportSheet(context: Context) {
-    // "Send feedback" is pre-localized; only the "Report Bug" action and the
-    // title are translated on the fly, mirroring iOS.
-    val reportBugAction = Action(Strings.REPORT_BUG) { launchMailReport(context, Strings.BUG_REPORT_SUBJECT) }
-    ActionSheetAlert(
-        title = Strings.FILE_A_REPORT,
-        actions =
-            listOf(
-                Action(LocalizedStringKey.SendFeedback.localized()) { launchMailReport(context, Strings.FEEDBACK_SUBJECT) },
-                reportBugAction,
-            ),
-        cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
-    ).present(
-        translating =
-            listOf(
-                ActionSheetAlert.TranslationOptionKey.Actions(listOf(reportBugAction)),
-                ActionSheetAlert.TranslationOptionKey.Title,
-            ),
-    )
-}
-
-/**
- * Opens the mail composer prefilled with [subject] and build
- * diagnostics.
- */
-private fun launchMailReport(
-    context: Context,
-    subject: String,
-) {
-    val diagnostics =
-        "\n\n---\n${versionString()}\n" +
-            "Device: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL} (API ${android.os.Build.VERSION.SDK_INT})"
-    val mailIntent =
-        Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:")).apply {
-            putExtra(Intent.EXTRA_SUBJECT, subject)
-            putExtra(Intent.EXTRA_TEXT, diagnostics)
-        }
-    runCatching { context.startActivity(mailIntent) }
-}
-
-/** The web URL of the app's Play Store listing. */
-private fun playStoreUrl(context: Context): String = "https://play.google.com/store/apps/details?id=${context.packageName}"

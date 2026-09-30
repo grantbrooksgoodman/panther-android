@@ -24,6 +24,10 @@ import us.neotechnica.panther.translator.Translator
 object ReviewService {
     // MARK: - Computed Properties
 
+    /** The persisted count of app launches. */
+    val appOpenCount: Int
+        get() = Persistent.int(scopedKey(ReviewServiceStorageKey.APP_OPEN_COUNT)) ?: 0
+
     private val canPromptToReview: Boolean
         get() {
             val appOpenCount = Persistent.int(scopedKey(ReviewServiceStorageKey.APP_OPEN_COUNT))

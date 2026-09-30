@@ -15,6 +15,11 @@ object MediaActionHandlerFloats {
     const val THUMBNAIL_IMAGE_SIZE = 500
     const val THUMBNAIL_IMAGE_SCALE = 2
     const val THUMBNAIL_FRAME_TIME_MICROSECONDS = 1_000_000L
+
+    // Maps the iOS `AVAssetExportPresetMediumQuality` transcode target: the
+    // video height is scaled to 480 px (H.264 video, AAC audio), preserving
+    // the aspect ratio, with the encoder's default medium bitrate.
+    const val VIDEO_TARGET_HEIGHT = 480
 }
 
 // MARK: - String

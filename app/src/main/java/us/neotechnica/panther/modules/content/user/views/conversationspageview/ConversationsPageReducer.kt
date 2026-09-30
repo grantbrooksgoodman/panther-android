@@ -13,6 +13,8 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationAlert
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
+import us.neotechnica.panther.modules.common.services.InviteService
+import us.neotechnica.panther.modules.common.services.ReviewService
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
@@ -137,8 +139,10 @@ class ConversationsPageReducer : Reducer<ConversationsPageReducer.State, Convers
             is Action.SearchQueryChanged ->
                 ReduceResult(state.copy(searchQuery = action.query))
 
-            is Action.ResolveReturned ->
+            is Action.ResolveReturned -> {
+                Task.delayed(by = 1.seconds) { showPromptsIfNeeded() }
                 ReduceResult(state.copy(strings = action.strings, viewState = ViewState.Loaded))
+            }
 
             is Action.ResolveFailed -> {
                 Logger.log(action.exception)
@@ -188,6 +192,21 @@ class ConversationsPageReducer : Reducer<ConversationsPageReducer.State, Convers
                 preserveCurrentUserID = true,
                 onCompletion = Application.ResetCompletionProcedure.NAVIGATE_TO_SPLASH,
             )
+        }
+    }
+
+    /**
+     * Evaluates the startup prompt flow after the conversations page
+     * finishes its initial load.
+     *
+     * Suggests inviting contacts when the user has none registered;
+     * otherwise, prompts the user to review the app when a review may be
+     * requested. The review service self-gates on the app launch count
+     * and the once-per-build rule.
+     */
+    private suspend fun showPromptsIfNeeded() {
+        if (!InviteService.suggestInvitationIfNeeded()) {
+            ReviewService.promptToReview()
         }
     }
 

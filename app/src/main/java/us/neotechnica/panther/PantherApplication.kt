@@ -32,6 +32,7 @@ import us.neotechnica.panther.modules.common.services.LoggerPresentationService
 import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.common.services.UpdateService
 import us.neotechnica.panther.modules.content.user.services.AudioMessagePlaybackService
+import us.neotechnica.panther.modules.content.user.services.SettingsPageViewService
 import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
 import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
@@ -93,6 +94,7 @@ class PantherApplication : Application() {
         ContactService.initialize(this)
         DeviceID.initialize(this)
         InviteService.initialize(this)
+        SettingsPageViewService.initialize(this)
         TextToSpeechService.initialize(this)
         AudioMessagePlaybackService.initialize(this)
         MediaActionHandlerService.initialize(this)

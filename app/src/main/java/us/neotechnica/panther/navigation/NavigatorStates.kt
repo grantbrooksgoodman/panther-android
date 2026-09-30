@@ -83,6 +83,10 @@ data class UserContentNavigatorState(
         data object Settings : SeguePath
 
         data object ChangeLanguage : SeguePath
+
+        data object InviteQRCode : SeguePath
+
+        data object InviteLanguagePicker : SeguePath
     }
 }
 

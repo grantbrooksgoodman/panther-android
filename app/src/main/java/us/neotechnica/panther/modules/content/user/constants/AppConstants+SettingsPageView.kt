@@ -53,10 +53,16 @@ object SettingsPageViewColors {
 // MARK: - String
 
 object SettingsPageViewConstants {
+    const val ACCOUNT_DELETED_MESSAGE = "Your account has been deleted. You must now restart the app."
     const val BLOCKED_USERS = "Blocked users"
     const val BLOCKED_USERS_EMPTY = "No blocked users."
     const val CHANGE_LANGUAGE = "Change language"
     const val CLEAR_CACHES = "Clear caches"
+    const val DELETE_ACCOUNT_ACTION = "Delete Account"
+    const val EXIT = "Exit"
+    const val RELOAD = "Reload"
+    const val SHOW_QR_CODE = "Show QR Code"
+    const val TOGGLE_DEVELOPER_MODE = "Toggle Developer Mode"
     const val CLEAR_CACHES_CONFIRM_MESSAGE =
         "Are you sure you'd like to clear all caches?\n\n" +
             "This may fix some issues, but can also temporarily slow down the app while indexes rebuild.\n\n" +
