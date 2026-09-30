@@ -74,6 +74,7 @@ internal data class ActiveContextMenu(
     val liftScale: Float,
     val liftedBackground: Color?,
     val menuLeadingOffset: Dp,
+    val alignsMenuCardToLeadingEdge: Boolean,
     val content: @Composable () -> Unit,
 )
 
@@ -162,8 +163,10 @@ fun MessageContextMenu(
     liftScale: Float = LIFT_SCALE_BONUS,
     liftedBackground: Color? = null,
     menuLeadingOffset: Dp = 0.dp,
+    alignsMenuCardToLeadingEdge: Boolean = false,
     onTap: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    header: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     val controller = LocalContextMenuController.current
@@ -175,11 +178,21 @@ fun MessageContextMenu(
     val isLifted =
         controller?.active?.anchorBounds == anchorBounds && controller?.active != null && anchorBounds != Rect.Zero
 
-    Box(
-        modifier
-            .onGloballyPositioned { coordinates ->
-                anchorBounds = Rect(coordinates.positionInRoot(), coordinates.size.toSize())
-            }.pointerInput(actions, reactionChoices, controller, onTap) {
+    Column(
+        modifier,
+        horizontalAlignment = if (alignment == ContextMenuAlignment.LEADING) Alignment.Start else Alignment.End,
+    ) {
+        // The header (a group message's sender name) shows in the origin cell
+        // but is hidden while the bubble is lifted, and is excluded from the
+        // measured bounds so the reaction row hugs the bubble rather than
+        // clearing the name above it.
+        header?.let { Box(Modifier.alpha(if (isLifted) 0f else 1f)) { it() } }
+
+        Box(
+            Modifier
+                .onGloballyPositioned { coordinates ->
+                    anchorBounds = Rect(coordinates.positionInRoot(), coordinates.size.toSize())
+                }.pointerInput(actions, reactionChoices, controller, onTap) {
                 // A non-null onDoubleTap delays single taps, so install one only for a double-tap-default reaction.
                 val doubleTapChoice = reactionChoices.firstOrNull { it.isDoubleTapDefault }
                 detectTapGestures(
@@ -204,6 +217,7 @@ fun MessageContextMenu(
                                     liftScale,
                                     liftedBackground,
                                     menuLeadingOffset,
+                                    alignsMenuCardToLeadingEdge,
                                     content,
                                 ),
                             )
@@ -211,7 +225,8 @@ fun MessageContextMenu(
                     },
                 )
             }.alpha(if (isLifted) 0f else 1f),
-    ) { content() }
+        ) { content() }
+    }
 }
 
 @Composable
@@ -309,8 +324,11 @@ private fun ContextMenuOverlay(
                     .onGloballyPositioned { menuHeightPx = it.size.height }
                     .offset {
                         val menuWidthPx = with(density) { MENU_WIDTH.toPx() }
-                        // Pull the card left by its text inset so the text lands at the offset.
-                        val leadingX = bounds.left + menuLeadingOffsetPx - with(density) { MENU_ROW_START_PADDING.toPx() }
+                        // Pull the card left by its text inset so the text lands at the offset,
+                        // unless the caller wants the card's leading edge itself at the offset
+                        // (aligning the menu with the message bubble's leading edge).
+                        val textInsetPx = if (active.alignsMenuCardToLeadingEdge) 0f else with(density) { MENU_ROW_START_PADDING.toPx() }
+                        val leadingX = bounds.left + menuLeadingOffsetPx - textInsetPx
                         val x = if (active.alignment == ContextMenuAlignment.LEADING) leadingX else bounds.right - menuWidthPx
                         val y = bubbleBottomPx + gapPx + shiftPx
                         IntOffset(x.roundToInt().coerceAtLeast(0), y.roundToInt())

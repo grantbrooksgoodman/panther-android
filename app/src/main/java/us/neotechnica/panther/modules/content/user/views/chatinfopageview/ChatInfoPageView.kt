@@ -16,6 +16,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,6 +56,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.components.Circl
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
+import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.contacts.components.rememberContactCardPresenter
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
@@ -285,6 +287,8 @@ private fun SegmentedControl(
     onSelect: (Int) -> Unit,
 ) {
     val colors = LocalPantherColors.current
+    val isDarkMode = ThemeService.isDarkModeActive(isSystemInDarkTheme())
+
     Row(
         modifier =
             Modifier
@@ -304,7 +308,7 @@ private fun SegmentedControl(
                     Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(Floats.segmentCornerRadius))
-                        .background(if (isSelected) colors.groupedRowBackground else Color.Transparent)
+                        .background(if (isSelected) (if (isDarkMode) Color.Gray else Colors.segmentedControlTrack) else Color.Transparent)
                         .clickable { onSelect(index) }
                         .padding(vertical = Floats.segmentVerticalPadding),
             ) {

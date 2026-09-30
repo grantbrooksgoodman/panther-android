@@ -13,6 +13,7 @@ import us.neotechnica.panther.modules.content.user.extensions.chatPageHeaderLabe
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.content.user.services.ContextMenuActionHandlerService
 import us.neotechnica.panther.navigation.Route
+import us.neotechnica.panther.navigation.UserContentNavigatorState
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.modules.common.services.AnalyticsService
@@ -275,12 +276,34 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             }
 
             Action.ViewDisappeared -> {
-                ConversationSessionService.setCurrentConversation(null)
+                // Mirror iOS (ChatPageViewService): clear the current-conversation
+                // pointer only when the page is truly being dismissed – not when it
+                // is covered by a sub-page of the same conversation, which on Android
+                // is a push that disposes the chat. Clearing it there would strand
+                // chat info's own actions, such as adding a participant, that read the
+                // current conversation.
+                if (!isCoveredBySubPage(state.conversationIDKey)) {
+                    ConversationSessionService.setCurrentConversation(null)
+                }
                 ReduceResult(state)
             }
         }
 
     // MARK: - Auxiliary
+
+    /**
+     * Whether the chat page is being disposed because a sub-page of the
+     * same conversation – its chat info or a message's reaction details –
+     * was pushed over it, as opposed to the conversation being left.
+     */
+    private fun isCoveredBySubPage(conversationIDKey: String): Boolean {
+        val topPath = DependencyValues.current.navigation.state.value.userContent.stack.lastOrNull()
+        return when (topPath) {
+            is UserContentNavigatorState.SeguePath.ChatInfo -> topPath.conversationIDKey == conversationIDKey
+            is UserContentNavigatorState.SeguePath.ReactionDetails -> true
+            else -> false
+        }
+    }
 
     private fun handleMessagesUpdated(
         state: State,

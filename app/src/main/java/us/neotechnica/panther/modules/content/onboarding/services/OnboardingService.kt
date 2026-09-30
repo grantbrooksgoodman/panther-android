@@ -13,6 +13,8 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationAlert
 import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.models.PhoneNumber
+import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.networking.user.services.UserService
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -110,27 +112,51 @@ object OnboardingService {
     suspend fun presentAccountDoesNotExistAlert(): Boolean =
         !ConfirmationAlert(
             message = "There is no account registered with this phone number. Please sign up instead.",
+            cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
             confirmButtonTitle = "Sign Up",
             confirmButtonStyle = ActionStyle.PREFERRED,
-        ).present()
+        ).present(
+            translating =
+                listOf(
+                    ConfirmationAlert.TranslationOptionKey.ConfirmButtonTitle,
+                    ConfirmationAlert.TranslationOptionKey.Message,
+                ),
+        )
 
     /** Offers to sign in when an account exists; returns `true` if cancelled. */
     suspend fun presentAccountExistsAlert(): Boolean =
         !ConfirmationAlert(
             message = "There is already an account registered with this phone number. Please sign in instead.",
+            cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
             confirmButtonTitle = "Sign In",
             confirmButtonStyle = ActionStyle.PREFERRED,
-        ).present()
+        ).present(
+            translating =
+                listOf(
+                    ConfirmationAlert.TranslationOptionKey.ConfirmButtonTitle,
+                    ConfirmationAlert.TranslationOptionKey.Message,
+                ),
+        )
 
     /** Asks the user to agree to the conduct policy; returns `true` if declined. */
     suspend fun presentEulaAlert(): Boolean =
+        // iOS presents this with a bare `.present()`, which translates everything;
+        // the Android no-arg `present()` translates nothing, so opt in explicitly.
         !ActionSheetAlert(
             message =
                 "I agree to help maintain a community of respect towards others " +
                     "via my personal conduct on this app.",
             confirmButtonTitle = "I Agree",
             cancelButtonTitle = "I Do Not Agree",
-        ).present()
+        ).present(
+            translating =
+                listOf(
+                    ActionSheetAlert.TranslationOptionKey.Actions(),
+                    ActionSheetAlert.TranslationOptionKey.CancelButtonTitle,
+                    ActionSheetAlert.TranslationOptionKey.Message,
+                    ActionSheetAlert.TranslationOptionKey.Title,
+                ),
+        )
 
     // MARK: - Auxiliary
 

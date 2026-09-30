@@ -12,6 +12,8 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.Action as Ale
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAlert
+import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.modules.networking.conversation.models.ActivityAction
@@ -48,8 +50,14 @@ internal fun ChatInfoPageReducer.changeMetadataEffect(state: ChatInfoPageReducer
         ActionSheetAlert(
             title = "Change name and photo",
             actions = actions,
-            cancelButtonTitle = "Cancel",
-        ).present(translating = listOf(ActionSheetAlert.TranslationOptionKey.Actions()))
+            cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
+        ).present(
+            translating =
+                listOf(
+                    ActionSheetAlert.TranslationOptionKey.Actions(),
+                    ActionSheetAlert.TranslationOptionKey.Title,
+                ),
+        )
 
         when (choice) {
             MetadataChoice.CHANGE_NAME -> presentChangeNameAlert(conversation, send)
@@ -105,8 +113,14 @@ private suspend fun presentPhotoSourceSheet(): ChatInfoPageReducer.PhotoCaptureS
                 AlertKitAction("Take photo") { source = ChatInfoPageReducer.PhotoCaptureSource.CAMERA },
                 AlertKitAction("Choose photo from library") { source = ChatInfoPageReducer.PhotoCaptureSource.LIBRARY },
             ),
-        cancelButtonTitle = "Cancel",
-    ).present(translating = listOf(ActionSheetAlert.TranslationOptionKey.Actions()))
+        cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
+    ).present(
+        translating =
+            listOf(
+                ActionSheetAlert.TranslationOptionKey.Actions(),
+                ActionSheetAlert.TranslationOptionKey.Title,
+            ),
+    )
     return source
 }
 
@@ -141,9 +155,10 @@ private suspend fun presentChangeNameAlert(
         TextInputAlert(
             message = "Choose a new name for this conversation:",
             initialText = currentName,
-            confirmButtonTitle = "Done",
+            cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
+            confirmButtonTitle = LocalizedStringKey.Done.localized(),
             isConfirmEnabled = { it.none { character -> character in "⌘:" } },
-        ).present() ?: return
+        ).present(translating = listOf(TextInputAlert.TranslationOptionKey.Message)) ?: return
     val (action, newMetadata) = resolveNameChange(conversation, input) ?: return
 
     try {

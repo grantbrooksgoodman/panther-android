@@ -18,8 +18,8 @@ object ChatInfoPageViewFloats {
     val addContactButtonCircleFrameMaxHeight: Dp = 40.dp
     val addContactButtonCircleFrameMaxWidth: Dp = 40.dp
     val addContactButtonCircleTrailingPadding: Dp = 2.dp
-    val addContactButtonImageHeight: Dp = 15.dp
-    val addContactButtonImageWidth: Dp = 15.dp
+    val addContactButtonImageHeight: Dp = 24.dp
+    val addContactButtonImageWidth: Dp = 24.dp
     val avatarGlyphSize: Dp = 52.dp
     val avatarSize: Dp = 100.dp
     val avatarTopPadding: Dp = 20.dp

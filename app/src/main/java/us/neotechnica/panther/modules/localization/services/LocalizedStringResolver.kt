@@ -11,8 +11,8 @@ package us.neotechnica.panther.modules.localization.services
 import android.content.Context
 import org.json.JSONObject
 import us.neotechnica.panther.modules.localization.models.LocalizationSource
+import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.localization.interfaces.LocalizedStringKeyRepresentable
-import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -41,11 +41,14 @@ object LocalizedStringResolver {
     /**
      * The language strings are resolved for.
      *
-     * Defaults to the device language; later phases set this from the
-     * user's stored preference.
+     * Delegates to [RuntimeStorage.languageCode] – the single source of
+     * truth for the user's selected language, shared with the on-the-fly
+     * translation path – so pre-localized strings resolve in the same
+     * language as translated ones. It defaults to the device language
+     * until the user's stored preference is applied at launch.
      */
-    @Volatile
-    var languageCode: String = Locale.getDefault().language
+    val languageCode: String
+        get() = RuntimeStorage.languageCode
 
     private val tables = ConcurrentHashMap<LocalizationSource, Map<String, Map<String, String>>>()
 
@@ -79,10 +82,27 @@ object LocalizedStringResolver {
         source: LocalizationSource = LocalizationSource.APP,
         language: String = languageCode,
     ): String {
-        val translations = table(source)[key.referent] ?: return MISSING
-        return translations[language]
-            ?: translations[FALLBACK_LANGUAGE_CODE]
-            ?: MISSING
+        resolve(key, source, language)?.let { return it }
+
+        // A key filed under a different table than the one requested – for
+        // example, a subsystem string ("cancel", "done") resolved with the
+        // default app source – still resolves here from the other table
+        // instead of showing the MISSING placeholder.
+        for (other in LocalizationSource.entries) {
+            if (other == source) continue
+            resolve(key, other, language)?.let { return it }
+        }
+
+        return MISSING
+    }
+
+    private fun resolve(
+        key: LocalizedStringKeyRepresentable,
+        source: LocalizationSource,
+        language: String,
+    ): String? {
+        val translations = table(source)[key.referent] ?: return null
+        return translations[language] ?: translations[FALLBACK_LANGUAGE_CODE]
     }
 
     // MARK: - Language Names

@@ -62,7 +62,19 @@ object LoggerPresentationService : LoggerPresentationDelegate {
     ) {
         val exception = exception ?: return presentNormalAlert(null, text)
         scope.launch {
-            ErrorAlert(exception, onSendReport = { ErrorReportingService.fileReport(exception) }).present()
+            // iOS presents the error via `Logger` translating the dynamic description; the
+            // Android alert's dismiss/report titles default to raw English rather than being
+            // pre-localized, so translate those too.
+            ErrorAlert(exception, onSendReport = { ErrorReportingService.fileReport(exception) })
+                .present(
+                    translating =
+                        listOf(
+                            ErrorAlert.TranslationOptionKey.DismissButtonTitle,
+                            ErrorAlert.TranslationOptionKey.ErrorDescription,
+                            ErrorAlert.TranslationOptionKey.SendErrorReportButtonTitle,
+                            ErrorAlert.TranslationOptionKey.Title,
+                        ),
+                )
         }
     }
 
@@ -71,7 +83,11 @@ object LoggerPresentationService : LoggerPresentationDelegate {
         text: String?,
     ) {
         val message = exception?.userFacingDescriptor ?: text ?: return
-        scope.launch { Alert(message = message).present() }
+        scope.launch {
+            Alert(message = message).present(
+                translating = listOf(Alert.TranslationOptionKey.Actions(), Alert.TranslationOptionKey.Message),
+            )
+        }
     }
 
     private fun presentToast(
@@ -98,15 +114,18 @@ object LoggerPresentationService : LoggerPresentationDelegate {
 
         // Reportable exceptions invite the user to file a report by tapping.
         val reportableException = exception?.takeIf { it.isReportable }
-        Toast.show(
-            Toast(
-                type,
-                title = reportableException?.let { descriptor },
-                message = if (reportableException != null) "Tap to report" else descriptor,
-                perpetuation = perpetuation,
-            ),
-            onTap = reportableException?.let { ex -> { ErrorReportingService.fileReport(ex) } },
-        )
+        scope.launch {
+            Toast.show(
+                Toast(
+                    type,
+                    title = reportableException?.let { descriptor },
+                    message = if (reportableException != null) "Tap to report" else descriptor,
+                    perpetuation = perpetuation,
+                ),
+                translating = listOf(Toast.TranslationOptionKey.Message, Toast.TranslationOptionKey.Title),
+                onTap = reportableException?.let { ex -> { ErrorReportingService.fileReport(ex) } },
+            )
+        }
     }
 }
 

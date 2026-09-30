@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -29,10 +30,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.SearchBar
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
+import us.neotechnica.panther.designsystem.modules.componentkit.models.TextFit
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.contacts.components.rememberContactCardPresenter
@@ -132,27 +135,53 @@ private fun Header(
     onCancel: () -> Unit,
 ) {
     val colors = LocalPantherColors.current
-    Box(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = Floats.headerHorizontalPadding, vertical = Floats.headerVerticalPadding),
+    val buttonFit =
+        TextFit(
+            maxLines = 1,
+            minimumScaleFactor = Floats.titleMinimumScaleFactor,
+            overflow = TextOverflow.Ellipsis,
+        )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier.fillMaxWidth().padding(
+                horizontal = Floats.headerHorizontalPadding,
+                vertical = Floats.headerVerticalPadding,
+            ),
     ) {
-        if (showInvite) {
-            Components.Text(
-                inviteText,
-                color = colors.accent,
-                modifier = Modifier.align(Alignment.CenterStart).clickable(onClick = onInvite),
-            )
+        Box(modifier = Modifier.weight(1f)) {
+            if (showInvite) {
+                Components.FittedText(
+                    inviteText,
+                    color = colors.accent,
+                    fit = buttonFit,
+                    modifier = Modifier.align(Alignment.CenterStart).clickable(onClick = onInvite),
+                )
+            }
         }
-        Components.Text(
+
+        Components.FittedText(
             title,
             color = colors.titleText,
+            fit =
+                TextFit(
+                    maxLines = if (title.length >= Floats.titleLongCharacterThreshold) Floats.titleLongLineLimit else 1,
+                    minimumScaleFactor = Floats.titleMinimumScaleFactor,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                ),
             font = Font.systemBold(FontScale.Large),
-            modifier = Modifier.align(Alignment.Center),
+            modifier = Modifier.weight(1f),
         )
-        Components.Text(
-            LocalizedStringKey.Cancel.localized(),
-            color = colors.accent,
-            modifier = Modifier.align(Alignment.CenterEnd).clickable(onClick = onCancel),
-        )
+
+        Box(modifier = Modifier.weight(1f)) {
+            Components.FittedText(
+                LocalizedStringKey.Cancel.localized(),
+                color = colors.accent,
+                fit = buttonFit,
+                modifier = Modifier.align(Alignment.CenterEnd).clickable(onClick = onCancel),
+            )
+        }
     }
 }
 

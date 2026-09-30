@@ -83,7 +83,7 @@ fun ContactRow(
         onDetail?.let { detail ->
             Spacer(modifier = Modifier.weight(1f))
             Components.Symbol(
-                "info.circle",
+                "info",
                 color = colors.accent,
                 modifier =
                     Modifier

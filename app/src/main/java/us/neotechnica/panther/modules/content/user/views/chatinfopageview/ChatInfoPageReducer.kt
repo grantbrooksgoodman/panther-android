@@ -369,15 +369,17 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
             val name =
                 conversation.metadata.name
                     .takeUnless { it.isBangQualifiedEmpty }
-                    ?.ifBlank { null } ?: "Conversation"
+                    ?.ifBlank { null }
+                    ?.let { "⌘$it⌘" } ?: "Conversation"
 
             val confirmed =
                 ActionSheetAlert(
                     title = "Leave $name",
                     message = "Are you sure you'd like to leave this conversation?",
                     confirmButtonTitle = "Confirm",
+                    cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
                     isDestructive = true,
-                ).present()
+                ).present(translating = binaryConfirmTranslationKeys)
             if (!confirmed) return@run
 
             try {
@@ -420,8 +422,9 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
                         title = title,
                         message = message,
                         confirmButtonTitle = "Confirm",
+                        cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
                         isDestructive = true,
-                    ).present()
+                    ).present(translating = binaryConfirmTranslationKeys)
                 if (!confirmed) return@run
 
                 try {
@@ -448,8 +451,9 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
                         title = title,
                         message = message,
                         confirmButtonTitle = "Confirm",
+                        cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
                         isDestructive = true,
-                    ).present()
+                    ).present(translating = binaryConfirmTranslationKeys)
                 if (!confirmed) return@run
 
                 try {
@@ -466,6 +470,16 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
 // The maximum number of other participants for which the add-contact row
 // is shown; beyond it, the group is too large to keep growing inline.
 private const val MAX_OTHER_PARTICIPANTS_FOR_ADD_CONTACT = 9
+
+// Translation keys for a binary confirm/cancel ActionSheetAlert: its confirm
+// action's title, its message, and its title. Mirrors iOS's
+// `[.confirmButtonTitle, .message, .title]`.
+private val binaryConfirmTranslationKeys =
+    listOf(
+        ActionSheetAlert.TranslationOptionKey.Actions(),
+        ActionSheetAlert.TranslationOptionKey.Message,
+        ActionSheetAlert.TranslationOptionKey.Title,
+    )
 
 /** The translated label strings for the chat info page. */
 object ChatInfoPageViewStrings : TranslatedLabelStrings {

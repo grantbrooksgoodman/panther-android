@@ -44,6 +44,4 @@ object NewChatPageViewFloats {
 
 object NewChatPageViewStrings {
     const val CLOSE = "Close"
-    const val TITLE = "New Message"
-    const val TO_LABEL = "To:"
 }

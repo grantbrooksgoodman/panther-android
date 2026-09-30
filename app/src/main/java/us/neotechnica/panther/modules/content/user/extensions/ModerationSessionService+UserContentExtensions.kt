@@ -93,7 +93,9 @@ suspend fun ModerationSessionService.reportUsers(inConversation: Conversation) {
 suspend fun ModerationSessionService.unblockUsers() {
     val blockedUsers = getBlockedUsers()
     if (blockedUsers.isEmpty()) {
-        Alert(message = "No blocked users.").present()
+        Alert(message = "No blocked users.").present(
+            translating = listOf(Alert.TranslationOptionKey.Actions(), Alert.TranslationOptionKey.Message),
+        )
         return
     }
     moderate(ModerationType.UNBLOCK, blockedUsers)

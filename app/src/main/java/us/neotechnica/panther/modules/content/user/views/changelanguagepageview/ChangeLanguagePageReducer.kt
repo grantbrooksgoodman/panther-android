@@ -12,6 +12,8 @@ import us.neotechnica.panther.bundle.Application
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.content.onboarding.models.InstructionViewStrings
+import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentRoute
@@ -166,11 +168,19 @@ class ChangeLanguagePageReducer : Reducer<ChangeLanguagePageReducer.State, Chang
 
             val confirmed =
                 ActionSheetAlert(
-                    title = "Change language to $languageName",
+                    title = "Change Language to ⌘$languageName⌘",
                     message = "You must restart the app for this to take effect.",
                     confirmButtonTitle = "Apply",
+                    cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
                     isDestructive = true,
-                ).present()
+                ).present(
+                    translating =
+                        listOf(
+                            ActionSheetAlert.TranslationOptionKey.Actions(),
+                            ActionSheetAlert.TranslationOptionKey.Message,
+                            ActionSheetAlert.TranslationOptionKey.Title,
+                        ),
+                )
 
             if (!confirmed) return@run
 

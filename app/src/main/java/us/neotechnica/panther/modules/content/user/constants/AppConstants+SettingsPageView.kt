@@ -52,7 +52,7 @@ object SettingsPageViewColors {
 
 // MARK: - String
 
-object SettingsPageViewStrings {
+object SettingsPageViewConstants {
     const val BLOCKED_USERS = "Blocked users"
     const val BLOCKED_USERS_EMPTY = "No blocked users."
     const val CHANGE_LANGUAGE = "Change language"
@@ -62,7 +62,6 @@ object SettingsPageViewStrings {
             "This may fix some issues, but can also temporarily slow down the app while indexes rebuild.\n\n" +
             "You will need to restart the app for this to take effect."
     const val CLEAR_CACHES_DONE_MESSAGE = "Caches have been cleared. You must now restart the app."
-    const val DEFAULT_TITLE = "You"
     const val BUG_REPORT_SUBJECT = "Hello — Bug Report"
     const val DELETE_ACCOUNT = "Delete account"
     const val FEEDBACK_SUBJECT = "Hello — Feedback"
@@ -71,11 +70,8 @@ object SettingsPageViewStrings {
     const val INVITE_FRIENDS = "Invite friends"
     const val LEAVE_REVIEW = "Leave review"
     const val REPORT_BUG = "Report Bug"
-    const val SEND_FEEDBACK = "Send feedback"
     const val SHARE_TO_ANOTHER_APP = "Share to Another App"
     const val SHOW_BUILD_INFO_OVERLAY = "Show Build Info Overlay"
     const val SIGN_OUT = "Sign out"
     const val UNBLOCK = "Unblock"
-    const val UNKNOWN = "Unknown"
-    const val VERSION_PREFIX = "Version "
 }

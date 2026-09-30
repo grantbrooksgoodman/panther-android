@@ -13,8 +13,6 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -29,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.user.constants.UserContentContainerFloats
 import us.neotechnica.panther.modules.content.user.constants.UserContentContainerStrings
@@ -104,12 +103,13 @@ fun UserContentContainer(modifier: Modifier = Modifier) {
             modifier = Modifier.fillMaxSize(),
             targetState = topPath,
             transitionSpec = {
-                val enter =
-                    slideInHorizontally(tween(Floats.TRANSITION_MILLIS)) { width -> if (isPush) width else -width } +
-                        fadeIn(tween(Floats.TRANSITION_MILLIS))
-                val exit =
-                    slideOutHorizontally(tween(Floats.TRANSITION_MILLIS)) { width -> if (isPush) -width else width } +
-                        fadeOut(tween(Floats.TRANSITION_MILLIS))
+                // A pure horizontal slide (no fade): the outgoing and incoming
+                // pages are opaque and meet edge-to-edge, so they fully cover the
+                // screen throughout the transition. Fading them would briefly make
+                // both translucent, revealing the always-composed conversations
+                // layer behind the overlay.
+                val enter = slideInHorizontally(tween(Floats.TRANSITION_MILLIS)) { width -> if (isPush) width else -width }
+                val exit = slideOutHorizontally(tween(Floats.TRANSITION_MILLIS)) { width -> if (isPush) -width else width }
                 enter.togetherWith(exit).using(SizeTransform(clip = false))
             },
         ) { path ->
@@ -121,7 +121,25 @@ fun UserContentContainer(modifier: Modifier = Modifier) {
             if (path == null) {
                 Box(modifier = Modifier.fillMaxSize())
             } else {
-                Box(modifier = Modifier.fillMaxSize().background(colors.background)) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(colors.background)
+                            .pointerInput(Unit) {
+                                // Consume any touch the pushed page's own content leaves
+                                // unhandled – the navigation-bar and input-bar negative space –
+                                // so it never falls through to the always-composed conversations
+                                // layer behind this opaque overlay. The page's own widgets still
+                                // receive input first (children run before this parent on the main
+                                // pass); only otherwise-unhandled touches are swallowed here.
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        awaitPointerEvent().changes.forEach { it.consume() }
+                                    }
+                                }
+                            },
+                ) {
                     when (path) {
                         // Drawn edge-to-edge so the context-menu scrim covers the system bars; the page
                         // insets its own content.

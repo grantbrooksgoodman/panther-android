@@ -231,7 +231,15 @@ private suspend fun presentContactsPermissionCTA(context: Context) {
             title = "Contacts Access",
             message = "Enable contacts access in Settings to choose a recipient.",
             confirmButtonTitle = "Open Settings",
-        ).present()
+            cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
+        ).present(
+            translating =
+                listOf(
+                    ActionSheetAlert.TranslationOptionKey.Actions(),
+                    ActionSheetAlert.TranslationOptionKey.Message,
+                    ActionSheetAlert.TranslationOptionKey.Title,
+                ),
+        )
     if (!shouldOpenSettings) return
 
     runCatching {
@@ -253,7 +261,7 @@ private fun Header(onClose: () -> Unit) {
                 .padding(horizontal = Floats.headerHorizontalPadding, vertical = Floats.headerVerticalPadding),
     ) {
         Components.Text(
-            Strings.TITLE,
+            LocalizedStringKey.NewMessage.localized(),
             color = colors.titleText,
             font = Font.systemBold(FontScale.Large),
             modifier = Modifier.align(Alignment.Center),
@@ -302,7 +310,7 @@ private fun RecipientBar(
                 ),
     ) {
         Components.Text(
-            Strings.TO_LABEL,
+            LocalizedStringKey.To.localized(),
             color = colors.subtitleText,
             modifier = Modifier.padding(end = Floats.toLabelEndPadding),
         )

@@ -539,6 +539,7 @@ private suspend fun presentFailedMessageActionSheet(
                     title = LocalizedStringKey.TryAgain.localized(),
                 ) { scope.launch { MessageOutboxService.retry(messageID) } },
             ),
+        cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
     ).present(translating = emptyList())
 }
 
@@ -552,5 +553,12 @@ private suspend fun presentAttachMediaSheet(pickers: ContentPickers) {
                 Action("Select document") { pickers.launchDocument() },
                 Action("Select photo or video") { pickers.launchPhotoOrVideo() },
             ),
-    ).present()
+        cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
+    ).present(
+        translating =
+            listOf(
+                ActionSheetAlert.TranslationOptionKey.Title,
+                ActionSheetAlert.TranslationOptionKey.Actions(),
+            ),
+    )
 }

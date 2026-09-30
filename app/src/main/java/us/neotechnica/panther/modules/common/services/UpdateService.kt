@@ -20,6 +20,8 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.modules.common.extensions.MetadataServiceStorageKey
 import us.neotechnica.panther.modules.common.extensions.isForcedUpdateRequired
+import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -198,7 +200,7 @@ object UpdateService {
             actions =
                 listOf(
                     updateAction,
-                    Action("Cancel", style = ActionStyle.CANCEL) {
+                    Action(LocalizedStringKey.Cancel.localized(), style = ActionStyle.CANCEL) {
                         if (Persistent.long(PersistentStorageKey.firstPostponedUpdate) == null) {
                             Persistent.setLong(PersistentStorageKey.firstPostponedUpdate, Date().time)
                         }

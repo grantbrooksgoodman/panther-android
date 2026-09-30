@@ -207,12 +207,11 @@ private fun MessageContent(
                 actions = row.mediaFile?.let { mediaActionsFor(message, it, onSaveMedia) } ?: emptyList(),
                 alignment = alignment,
                 reactionChoices = reactionChoices,
+                alignsMenuCardToLeadingEdge = true,
                 onTap = { onTapMedia(message.id) },
+                header = { SenderNameLabel(row) },
             ) {
-                Column(horizontalAlignment = if (isOwn) Alignment.End else Alignment.Start) {
-                    SenderNameLabel(row)
-                    MediaMessageBubble(mediaFile = row.mediaFile, isOwn = isOwn)
-                }
+                MediaMessageBubble(mediaFile = row.mediaFile, isOwn = isOwn)
             }
         } else if (row.audioReference != null) {
             val isPlaying = AudioMessagePlaybackService.playingMessageID == message.id
@@ -224,29 +223,28 @@ private fun MessageContent(
                     },
                 alignment = alignment,
                 reactionChoices = reactionChoices,
+                alignsMenuCardToLeadingEdge = true,
+                header = { SenderNameLabel(row) },
             ) {
-                Column(horizontalAlignment = if (isOwn) Alignment.End else Alignment.Start) {
-                    SenderNameLabel(row)
-                    if (row.isDisplayingAudioTranscription) {
-                        MessageBubble(
-                            transcriptionText,
-                            isOwn,
-                            colors.senderBubble,
-                            colors.receiverBubble,
-                            colors.titleText,
-                            isAlternate = true,
-                            isSpeaking = isSpeakingThisMessage,
-                            highlightRange = speakingHighlightRange,
-                        )
-                    } else {
-                        AudioMessageBubble(
-                            reference = row.audioReference,
-                            isOwn = isOwn,
-                            isPlaying = isPlaying,
-                            progress = if (isPlaying) AudioMessagePlaybackService.progress else 0f,
-                            onPlay = { AudioMessagePlaybackService.didTapPlayButton(message, row.audioReference) },
-                        )
-                    }
+                if (row.isDisplayingAudioTranscription) {
+                    MessageBubble(
+                        transcriptionText,
+                        isOwn,
+                        colors.senderBubble,
+                        colors.receiverBubble,
+                        colors.titleText,
+                        isAlternate = true,
+                        isSpeaking = isSpeakingThisMessage,
+                        highlightRange = speakingHighlightRange,
+                    )
+                } else {
+                    AudioMessageBubble(
+                        reference = row.audioReference,
+                        isOwn = isOwn,
+                        isPlaying = isPlaying,
+                        progress = if (isPlaying) AudioMessagePlaybackService.progress else 0f,
+                        onPlay = { AudioMessagePlaybackService.didTapPlayButton(message, row.audioReference) },
+                    )
                 }
             }
         } else {
@@ -254,20 +252,19 @@ private fun MessageContent(
                 actions = actionsFor(row, displayText, onToggleAlternate, onSpeak) { clipboard.setText(AnnotatedString(displayText)) },
                 alignment = alignment,
                 reactionChoices = reactionChoices,
+                alignsMenuCardToLeadingEdge = true,
+                header = { SenderNameLabel(row) },
             ) {
-                Column(horizontalAlignment = if (isOwn) Alignment.End else Alignment.Start) {
-                    SenderNameLabel(row)
-                    MessageBubble(
-                        displayText,
-                        isOwn,
-                        colors.senderBubble,
-                        colors.receiverBubble,
-                        colors.titleText,
-                        isAlternate = row.showAlternate,
-                        isSpeaking = isSpeakingThisMessage,
-                        highlightRange = speakingHighlightRange,
-                    )
-                }
+                MessageBubble(
+                    displayText,
+                    isOwn,
+                    colors.senderBubble,
+                    colors.receiverBubble,
+                    colors.titleText,
+                    isAlternate = row.showAlternate,
+                    isSpeaking = isSpeakingThisMessage,
+                    highlightRange = speakingHighlightRange,
+                )
             }
         }
     }

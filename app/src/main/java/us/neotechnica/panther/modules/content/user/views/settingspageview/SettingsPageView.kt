@@ -27,6 +27,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -57,10 +58,13 @@ import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.services.InviteService
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewFloats
-import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewStrings
+import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewConstants
 import us.neotechnica.panther.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.modules.localization.models.localized
+import us.neotechnica.panther.networking.modules.translation.extensions.value
+import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
@@ -72,7 +76,7 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 
 private typealias Floats = SettingsPageViewFloats
 private typealias Colors = SettingsPageViewColors
-private typealias Strings = SettingsPageViewStrings
+private typealias Strings = SettingsPageViewConstants
 
 /**
  * The settings page: the current user's contact header followed by
@@ -88,6 +92,7 @@ private typealias Strings = SettingsPageViewStrings
 fun SettingsPageView(modifier: Modifier = Modifier) {
     val viewModel = remember { ViewModel(SettingsPageReducer.State(), SettingsPageReducer()) }
     DisposableEffect(Unit) { onDispose { viewModel.close() } }
+    LaunchedEffect(Unit) { viewModel.send(SettingsPageReducer.Action.ViewAppeared) }
 
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
@@ -98,63 +103,66 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
 
     Box(modifier = modifier.fillMaxSize().background(colors.groupedContentBackground)) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .systemBarsPadding()
-                    .verticalScroll(rememberScrollState()),
-        ) {
-            Header(
-                onDone = { viewModel.send(SettingsPageReducer.Action.BackTapped) },
-                enabled = !state.isBusy,
-            )
+        StatefulView(state = state.viewState) {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .systemBarsPadding()
+                        .verticalScroll(rememberScrollState()),
+            ) {
+                Header(
+                    onDone = { viewModel.send(SettingsPageReducer.Action.BackTapped) },
+                    enabled = !state.isBusy,
+                )
 
-            ContactDetailCard(onTap = presentContactCard)
+                ContactDetailCard(onTap = presentContactCard)
 
-            SettingsActionCards(
-                enabled = !state.isBusy,
-                context = context,
-                scope = scope,
-                send = viewModel::send,
-            )
+                SettingsActionCards(
+                    enabled = !state.isBusy,
+                    context = context,
+                    scope = scope,
+                    strings = state.strings,
+                    send = viewModel::send,
+                )
 
-            // Prerelease-only affordance to restore the build-info overlay after it has been
-            // long-press–dismissed (mirrors iOS Developer Mode).
-            if (Build.isConfigured && Build.milestone != Milestone.GENERAL_RELEASE) {
-                val isOverlayHidden by BuildInfoOverlay.isHidden.collectAsState()
-                SettingsCard {
-                    SettingsIconRow(
-                        symbol = "gearshape.fill",
-                        iconColor = Colors.iconGray,
-                        title =
-                            if (isOverlayHidden) {
-                                Strings.SHOW_BUILD_INFO_OVERLAY
-                            } else {
-                                Strings.HIDE_BUILD_INFO_OVERLAY
-                            },
-                        enabled = !state.isBusy,
-                        onClick = { if (isOverlayHidden) BuildInfoOverlay.show() else BuildInfoOverlay.hide() },
+                // Prerelease-only affordance to restore the build-info overlay after it has been
+                // long-press–dismissed (mirrors iOS Developer Mode).
+                if (Build.isConfigured && Build.milestone != Milestone.GENERAL_RELEASE) {
+                    val isOverlayHidden by BuildInfoOverlay.isHidden.collectAsState()
+                    SettingsCard {
+                        SettingsIconRow(
+                            symbol = "gearshape.fill",
+                            iconColor = Colors.iconGray,
+                            title =
+                                if (isOverlayHidden) {
+                                    Strings.SHOW_BUILD_INFO_OVERLAY
+                                } else {
+                                    Strings.HIDE_BUILD_INFO_OVERLAY
+                                },
+                            enabled = !state.isBusy,
+                            onClick = { if (isOverlayHidden) BuildInfoOverlay.show() else BuildInfoOverlay.hide() },
+                        )
+                    }
+                }
+
+                if (Build.isConfigured) {
+                    // The build-info row copies its text on tap, with haptics, mirroring iOS.
+                    val buildInfo = versionString()
+                    Components.Text(
+                        buildInfo,
+                        color = colors.subtitleText,
+                        font = Font.system(FontScale.Small),
+                        textAlign = TextAlign.Center,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    clipboard.setText(AnnotatedString(buildInfo))
+                                }.padding(top = Floats.versionTopPadding, bottom = Floats.versionBottomPadding),
                     )
                 }
-            }
-
-            if (Build.isConfigured) {
-                // The build-info row copies its text on tap, with haptics, mirroring iOS.
-                val buildInfo = versionString()
-                Components.Text(
-                    buildInfo,
-                    color = colors.subtitleText,
-                    font = Font.system(FontScale.Small),
-                    textAlign = TextAlign.Center,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                clipboard.setText(AnnotatedString(buildInfo))
-                            }.padding(top = Floats.versionTopPadding, bottom = Floats.versionBottomPadding),
-                )
             }
         }
     }
@@ -200,7 +208,7 @@ private fun ContactDetailCard(onTap: (PhoneNumber?, String?) -> Unit) {
     val currentUser = UserSessionService.currentUser
     val number = currentUser?.phoneNumber?.formattedString()
     val contactName = currentUser?.id?.let { ContactService.match(it)?.fullName }
-    val title = contactName ?: number ?: Strings.DEFAULT_TITLE
+    val title = contactName ?: number ?: LocalizedStringKey.You.localized()
     val subtitle = if (contactName != null) number else null
 
     Row(
@@ -238,40 +246,43 @@ private fun SettingsActionCards(
     enabled: Boolean,
     context: Context,
     scope: CoroutineScope,
+    strings: List<TranslationOutputMap>,
     send: (SettingsPageReducer.Action) -> Unit,
 ) {
     SettingsCard {
-        SettingsIconRow("location.fill", Colors.iconBlue, Strings.INVITE_FRIENDS, enabled) {
+        SettingsIconRow("location.fill", Colors.iconBlue, strings.value(SettingsPageViewStrings.inviteFriends), enabled) {
             scope.launch { presentInviteSheet() }
         }
         SettingsRowDivider()
-        SettingsIconRow("star.fill", Colors.iconYellow, Strings.LEAVE_REVIEW, enabled) { launchLeaveReview(context) }
+        SettingsIconRow("star.fill", Colors.iconYellow, strings.value(SettingsPageViewStrings.leaveReview), enabled) {
+            launchLeaveReview(context)
+        }
         SettingsRowDivider()
-        SettingsIconRow("globe", Colors.iconPink, Strings.CHANGE_LANGUAGE, enabled, showsDisclosure = true) {
+        SettingsIconRow("globe", Colors.iconPink, strings.value(SettingsPageViewStrings.changeLanguage), enabled, showsDisclosure = true) {
             send(SettingsPageReducer.Action.ChangeLanguageTapped)
         }
     }
 
     SettingsCard {
-        SettingsIconRow("info", Colors.iconIndigo, Strings.SEND_FEEDBACK, enabled) {
+        SettingsIconRow("info", Colors.iconIndigo, LocalizedStringKey.SendFeedback.localized(), enabled) {
             scope.launch { presentFileAReportSheet(context) }
         }
         SettingsRowDivider()
-        SettingsIconRow("command", Colors.iconMint, Strings.CLEAR_CACHES, enabled) {
+        SettingsIconRow("command", Colors.iconMint, strings.value(SettingsPageViewStrings.clearCaches), enabled) {
             send(SettingsPageReducer.Action.ClearCachesTapped)
         }
     }
 
     SettingsCard {
-        SettingsIconRow("flag.fill", Colors.iconGray, Strings.BLOCKED_USERS, enabled) {
+        SettingsIconRow("flag.fill", Colors.iconGray, strings.value(SettingsPageViewStrings.blockedUsers), enabled) {
             send(SettingsPageReducer.Action.BlockedUsersTapped)
         }
         SettingsRowDivider()
-        SettingsIconRow("trash.fill", Colors.iconOrange, Strings.DELETE_ACCOUNT, enabled) {
+        SettingsIconRow("trash.fill", Colors.iconOrange, strings.value(SettingsPageViewStrings.deleteAccount), enabled) {
             send(SettingsPageReducer.Action.DeleteAccountTapped)
         }
         SettingsRowDivider()
-        SettingsIconRow("hand.raised.fill", Colors.iconRed, Strings.SIGN_OUT, enabled) {
+        SettingsIconRow("hand.raised.fill", Colors.iconRed, strings.value(SettingsPageViewStrings.signOut), enabled) {
             send(SettingsPageReducer.Action.SignOutTapped)
         }
     }
@@ -350,7 +361,7 @@ private fun SettingsRowDivider() {
 // MARK: - Auxiliary
 
 private fun versionString(): String =
-    "${Strings.VERSION_PREFIX}${Build.bundleVersion} " +
+    "${LocalizedStringKey.Version.localized()} ${Build.bundleVersion} " +
         "(${Build.buildNumber}${Build.milestone.shortString}/${Build.bundleRevision.lowercase()})"
 
 /**
@@ -364,7 +375,14 @@ private suspend fun presentInviteSheet() {
     ActionSheetAlert(
         title = Strings.INVITE_FRIENDS,
         actions = listOf(Action(Strings.SHARE_TO_ANOTHER_APP) { InviteService.presentInvitationPrompt() }),
-    ).present()
+        cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
+    ).present(
+        translating =
+            listOf(
+                ActionSheetAlert.TranslationOptionKey.Actions(),
+                ActionSheetAlert.TranslationOptionKey.Title,
+            ),
+    )
 }
 
 /**
@@ -392,14 +410,24 @@ private fun launchLeaveReview(context: Context) {
  * build diagnostics.
  */
 private suspend fun presentFileAReportSheet(context: Context) {
+    // "Send feedback" is pre-localized; only the "Report Bug" action and the
+    // title are translated on the fly, mirroring iOS.
+    val reportBugAction = Action(Strings.REPORT_BUG) { launchMailReport(context, Strings.BUG_REPORT_SUBJECT) }
     ActionSheetAlert(
         title = Strings.FILE_A_REPORT,
         actions =
             listOf(
-                Action(Strings.SEND_FEEDBACK) { launchMailReport(context, Strings.FEEDBACK_SUBJECT) },
-                Action(Strings.REPORT_BUG) { launchMailReport(context, Strings.BUG_REPORT_SUBJECT) },
+                Action(LocalizedStringKey.SendFeedback.localized()) { launchMailReport(context, Strings.FEEDBACK_SUBJECT) },
+                reportBugAction,
             ),
-    ).present(translating = listOf(ActionSheetAlert.TranslationOptionKey.Actions()))
+        cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
+    ).present(
+        translating =
+            listOf(
+                ActionSheetAlert.TranslationOptionKey.Actions(listOf(reportBugAction)),
+                ActionSheetAlert.TranslationOptionKey.Title,
+            ),
+    )
 }
 
 /**

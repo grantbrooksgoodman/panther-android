@@ -36,6 +36,7 @@ import kotlin.coroutines.resume
  */
 class ErrorAlert(
     private val exception: Exception,
+    private val title: String = "Error",
     private val dismissButtonTitle: String = "Dismiss",
     private val sendReportButtonTitle: String = "Send Error Report",
     private val onSendReport: (() -> Unit)? = null,
@@ -53,6 +54,9 @@ class ErrorAlert(
 
         /** The send error report button's title. */
         data object SendErrorReportButtonTitle : TranslationOptionKey
+
+        /** The alert's title. */
+        data object Title : TranslationOptionKey
     }
 
     // MARK: - Methods
@@ -64,7 +68,7 @@ class ErrorAlert(
         suspendCancellableCoroutine { continuation ->
             AlertPresenter.present(
                 PresentedAlert.ErrorContent(
-                    title = "Error",
+                    title = title,
                     message = errorDescription,
                     dismissButtonTitle = dismissButtonTitle,
                     sendReportButtonTitle = if (exception.isReportable) sendReportButtonTitle else null,
@@ -102,6 +106,7 @@ class ErrorAlert(
                 TranslationOptionKey.DismissButtonTitle,
                 TranslationOptionKey.ErrorDescription,
                 TranslationOptionKey.SendErrorReportButtonTitle,
+                TranslationOptionKey.Title,
             ),
     ): Unit =
         AlertKitConfig.presentWithTranslation(
@@ -120,6 +125,7 @@ class ErrorAlert(
         val translations = AlertKitConfig.getTranslations(translationInputs(uniqueKeys))
         return ErrorAlert(
             exception = exception,
+            title = translations.firstOutput(title),
             dismissButtonTitle = translations.firstOutput(dismissButtonTitle),
             sendReportButtonTitle = translations.firstOutput(sendReportButtonTitle),
             onSendReport = onSendReport,
@@ -134,6 +140,7 @@ class ErrorAlert(
                 TranslationOptionKey.DismissButtonTitle -> inputs.add(TranslationInput(dismissButtonTitle))
                 TranslationOptionKey.ErrorDescription -> inputs.add(TranslationInput(errorDescription))
                 TranslationOptionKey.SendErrorReportButtonTitle -> inputs.add(TranslationInput(sendReportButtonTitle))
+                TranslationOptionKey.Title -> inputs.add(TranslationInput(title))
             }
         }
 

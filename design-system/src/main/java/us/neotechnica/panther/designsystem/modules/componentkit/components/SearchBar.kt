@@ -22,9 +22,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
+import us.neotechnica.panther.designsystem.modules.componentkit.models.TextFit
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 
 /**
@@ -60,7 +62,16 @@ fun SearchBar(
         Components.Symbol("magnifyingglass", color = colors.subtitleText, modifier = Modifier.size(18.dp))
         Box(modifier = Modifier.weight(1f).padding(start = 6.dp)) {
             if (value.isEmpty()) {
-                Components.Text(placeholder, color = colors.subtitleText)
+                Components.FittedText(
+                    placeholder,
+                    color = colors.subtitleText,
+                    fit =
+                        TextFit(
+                            maxLines = 1,
+                            minimumScaleFactor = PLACEHOLDER_MINIMUM_SCALE_FACTOR,
+                            overflow = TextOverflow.Ellipsis,
+                        ),
+                )
             }
             BasicTextField(
                 value = value,
@@ -74,4 +85,5 @@ fun SearchBar(
     }
 }
 
+private const val PLACEHOLDER_MINIMUM_SCALE_FACTOR = 0.5f
 private val SEARCH_BAR_HEIGHT = 38.dp

@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -21,8 +22,10 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.SFSymbol
+import us.neotechnica.panther.designsystem.modules.componentkit.models.TextFit
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import androidx.compose.material3.Text as Material3Text
 
@@ -61,12 +64,53 @@ object Components {
         modifier: Modifier = Modifier,
         textAlign: TextAlign? = null,
     ) {
+        FittedText(
+            text = text,
+            color = color,
+            fit = TextFit(textAlign = textAlign),
+            font = font,
+            modifier = modifier,
+        )
+    }
+
+    // MARK: - Fitted Text
+
+    /**
+     * Displays a styled string that shrinks, wraps, and truncates to
+     * fit the space it is given, per its [fit].
+     *
+     * @param text The string to display.
+     * @param color The color of the text.
+     * @param fit How the text fits its bounds — its line, shrink,
+     *   overflow, and alignment behavior.
+     * @param font The font to apply. Defaults to [Font.system].
+     * @param modifier The modifier for this component.
+     */
+    @Composable
+    fun FittedText(
+        text: String,
+        color: Color,
+        fit: TextFit,
+        font: Font = Font.system,
+        modifier: Modifier = Modifier,
+    ) {
         Material3Text(
             text = text,
             color = color,
+            autoSize =
+                if (fit.minimumScaleFactor < 1f) {
+                    TextAutoSize.StepBased(
+                        minFontSize = (font.scale.points * fit.minimumScaleFactor).sp,
+                        maxFontSize = font.scale.points.sp,
+                    )
+                } else {
+                    null
+                },
+            maxLines = fit.maxLines,
             modifier = modifier,
+            overflow = fit.overflow,
             style = font.textStyle,
-            textAlign = textAlign,
+            textAlign = fit.textAlign,
         )
     }
 

@@ -7,7 +7,10 @@
 
 package us.neotechnica.panther.designsystem.modules.foundation.toast
 
+import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
+import us.neotechnica.panther.designsystem.modules.alertkit.extensions.firstOutput
 import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
+import us.neotechnica.panther.translator.models.TranslationInput
 import kotlin.time.Duration
 
 /**
@@ -78,6 +81,15 @@ data class Toast(
         ) : Type
     }
 
+    /** A value that identifies a translatable part of a [Toast]. */
+    sealed interface TranslationOptionKey {
+        /** The toast's body text. */
+        data object Message : TranslationOptionKey
+
+        /** The toast's headline. */
+        data object Title : TranslationOptionKey
+    }
+
     /** The strategy that controls how long a toast remains visible. */
     sealed interface Perpetuation {
         /** The toast auto-dismisses after the given duration. */
@@ -87,6 +99,25 @@ data class Toast(
 
         /** The toast remains on screen until the user dismisses it. */
         data object Persistent : Perpetuation
+    }
+
+    // MARK: - Translation
+
+    private suspend fun translated(keys: List<TranslationOptionKey>): Toast {
+        val inputs = mutableListOf<TranslationInput>()
+        for (key in keys.distinct()) {
+            when (key) {
+                TranslationOptionKey.Message -> inputs.add(TranslationInput(message))
+                TranslationOptionKey.Title -> title?.let { inputs.add(TranslationInput(it)) }
+            }
+        }
+        if (inputs.isEmpty()) return this
+
+        val translations = AlertKitConfig.getTranslations(inputs.distinctBy { it.value })
+        return copy(
+            title = title?.let { translations.firstOutput(it) },
+            message = translations.firstOutput(message),
+        )
     }
 
     // MARK: - Companion
@@ -108,6 +139,27 @@ data class Toast(
             onTap: (() -> Unit)? = null,
         ) {
             ToastPresenter.show(toast, onTap)
+        }
+
+        /**
+         * Translates the toast's content according to [translating],
+         * then presents it. Falls back to the untranslated toast if
+         * translation fails.
+         *
+         * @param toast The toast to present.
+         * @param translating The parts of the toast to translate.
+         * @param onTap A closure executed when the user taps the toast,
+         *   or `null` for a non-interactive toast.
+         */
+        suspend fun show(
+            toast: Toast,
+            translating: List<TranslationOptionKey>,
+            onTap: (() -> Unit)? = null,
+        ) {
+            if (translating.isEmpty() || AlertKitConfig.translationDelegate == null) {
+                return ToastPresenter.show(toast, onTap)
+            }
+            ToastPresenter.show(runCatching { toast.translated(translating) }.getOrDefault(toast), onTap)
         }
 
         /** Dismisses the currently visible toast, if any. */

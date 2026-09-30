@@ -15,9 +15,12 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationAlert
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
+import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.formattedString
-import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewStrings
+import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewConstants
+import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.navigation.RootNavigatorState
 import us.neotechnica.panther.navigation.RootRoute
 import us.neotechnica.panther.navigation.Route
@@ -30,6 +33,12 @@ import us.neotechnica.panther.modules.common.services.AccountDeletionService
 import us.neotechnica.panther.modules.content.user.services.CacheClearingService
 import us.neotechnica.panther.modules.session.entity.services.ModerationSessionService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.translation.interfaces.TranslatedLabelStrings
+import us.neotechnica.panther.networking.modules.translation.models.TranslatedLabelStringCollection
+import us.neotechnica.panther.networking.modules.translation.models.TranslationInputMap
+import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
+import us.neotechnica.panther.translator.models.TranslationInput
 import us.neotechnica.panther.modules.content.user.services.SignOutService
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.modules.networking.user.services.UserService
@@ -51,6 +60,8 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
     // MARK: - Action
 
     sealed interface Action {
+        data object ViewAppeared : Action
+
         data object BackTapped : Action
 
         data object SignOutTapped : Action
@@ -64,12 +75,22 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
         data object ChangeLanguageTapped : Action
 
         data object Finished : Action
+
+        data class ResolveReturned(
+            val strings: List<TranslationOutputMap>,
+        ) : Action
+
+        data class ResolveFailed(
+            val exception: Exception,
+        ) : Action
     }
 
     // MARK: - State
 
     data class State(
         val isBusy: Boolean = false,
+        val strings: List<TranslationOutputMap> = SettingsPageViewStrings.defaultOutputMap,
+        val viewState: ViewState = ViewState.Loading,
     )
 
     // MARK: - Reduce
@@ -79,6 +100,17 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
         action: Action,
     ): ReduceResult<State, Action> =
         when (action) {
+            Action.ViewAppeared ->
+                ReduceResult(state.copy(viewState = ViewState.Loading), resolveEffect())
+
+            is Action.ResolveReturned ->
+                ReduceResult(state.copy(strings = action.strings, viewState = ViewState.Loaded))
+
+            is Action.ResolveFailed -> {
+                Logger.log(action.exception)
+                ReduceResult(state.copy(viewState = ViewState.Loaded))
+            }
+
             Action.BackTapped -> {
                 DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
                 ReduceResult(state)
@@ -109,13 +141,23 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
 
     // MARK: - Auxiliary
 
+    private fun resolveEffect(): Effect<Action> =
+        Effect.run { send ->
+            try {
+                send(Action.ResolveReturned(Networking.config.hostedTranslationDelegate.resolve(SettingsPageViewStrings)))
+            } catch (exception: Exception) {
+                send(Action.ResolveFailed(exception))
+            }
+        }
+
     private fun signOutEffect(): Effect<Action> =
         Effect.run { send ->
             val confirmed =
                 ActionSheetAlert(
                     confirmButtonTitle = "Sign Out",
+                    cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
                     isDestructive = true,
-                ).present()
+                ).present(translating = listOf(ActionSheetAlert.TranslationOptionKey.Actions()))
 
             if (!confirmed) {
                 send(Action.Finished)
@@ -135,10 +177,18 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
                     title = "Delete Account",
                     message =
                         "Are you sure you'd like to delete your account? All user data will be deleted.\n\n" +
-                            "If you wish to continue using Hello, you will need to create a new account.\n\n" +
+                            "If you wish to continue using ⌘Hello⌘, you will need to create a new account.\n\n" +
                             "An app restart is required for this process to complete.",
+                    cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
                     confirmButtonStyle = ActionStyle.DESTRUCTIVE_PREFERRED,
-                ).present()
+                ).present(
+                    translating =
+                        listOf(
+                            ConfirmationAlert.TranslationOptionKey.ConfirmButtonTitle,
+                            ConfirmationAlert.TranslationOptionKey.Message,
+                            ConfirmationAlert.TranslationOptionKey.Title,
+                        ),
+                )
 
             if (!confirmed) {
                 send(Action.Finished)
@@ -157,10 +207,18 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
         Effect.run { send ->
             val confirmed =
                 ConfirmationAlert(
-                    title = SettingsPageViewStrings.CLEAR_CACHES,
-                    message = SettingsPageViewStrings.CLEAR_CACHES_CONFIRM_MESSAGE,
+                    title = SettingsPageViewConstants.CLEAR_CACHES,
+                    message = SettingsPageViewConstants.CLEAR_CACHES_CONFIRM_MESSAGE,
+                    cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
                     confirmButtonStyle = ActionStyle.DESTRUCTIVE_PREFERRED,
-                ).present()
+                ).present(
+                    translating =
+                        listOf(
+                            ConfirmationAlert.TranslationOptionKey.ConfirmButtonTitle,
+                            ConfirmationAlert.TranslationOptionKey.Message,
+                            ConfirmationAlert.TranslationOptionKey.Title,
+                        ),
+                )
 
             if (!confirmed) {
                 send(Action.Finished)
@@ -169,7 +227,16 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
 
             AnalyticsService.logEvent(AnalyticsEvent.CLEAR_CACHES)
             CacheClearingService.clearCaches()
-            Alert(message = SettingsPageViewStrings.CLEAR_CACHES_DONE_MESSAGE).present()
+            // iOS presents this with a bare `.present()`, which translates everything
+            // (including the default "OK" action); opt in explicitly on Android.
+            Alert(message = SettingsPageViewConstants.CLEAR_CACHES_DONE_MESSAGE).present(
+                translating =
+                    listOf(
+                        Alert.TranslationOptionKey.Actions(),
+                        Alert.TranslationOptionKey.Message,
+                        Alert.TranslationOptionKey.Title,
+                    ),
+            )
             send(Action.Finished)
             Application.reset(
                 preserveCurrentUserID = true,
@@ -187,7 +254,7 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
                     .distinct()
 
             if (blockedIDs.isEmpty()) {
-                Alert(message = SettingsPageViewStrings.BLOCKED_USERS_EMPTY).present()
+                Alert(message = SettingsPageViewConstants.BLOCKED_USERS_EMPTY).present(translating = listOf(Alert.TranslationOptionKey.Message))
                 send(Action.Finished)
                 return@run
             }
@@ -199,18 +266,27 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
                 return@run
             }
 
+            // Protect a single user's name from translation with ⌘…⌘; the
+            // "All Users" label is a translatable phrase, so it is left bare.
             val name =
                 if (selection.size > 1) {
                     ALL_USERS
                 } else {
-                    pairs.firstOrNull { it.userIDs == selection }?.displayName.orEmpty()
+                    pairs.firstOrNull { it.userIDs == selection }?.displayName?.let { "⌘$it⌘" }.orEmpty()
                 }
             val confirmed =
                 ConfirmationAlert(
-                    message = "${SettingsPageViewStrings.UNBLOCK} $name",
-                    confirmButtonTitle = SettingsPageViewStrings.UNBLOCK,
+                    message = "${SettingsPageViewConstants.UNBLOCK} $name",
+                    cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
+                    confirmButtonTitle = SettingsPageViewConstants.UNBLOCK,
                     confirmButtonStyle = ActionStyle.DESTRUCTIVE_PREFERRED,
-                ).present()
+                ).present(
+                    translating =
+                        listOf(
+                            ConfirmationAlert.TranslationOptionKey.ConfirmButtonTitle,
+                            ConfirmationAlert.TranslationOptionKey.Message,
+                        ),
+                )
 
             if (!confirmed) {
                 send(Action.Finished)
@@ -240,17 +316,27 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
         blockedIDs: List<String>,
     ): List<String>? {
         var selection: List<String>? = null
+        // Per-user actions are display names (data); only the "Unblock All
+        // Users" action and the title are translatable, mirroring iOS.
+        val allUsersAction =
+            AlertAction("${SettingsPageViewConstants.UNBLOCK} $ALL_USERS", style = ActionStyle.DESTRUCTIVE) {
+                selection = blockedIDs
+            }
         val actions =
-            pairs.map { pair -> AlertAction(pair.displayName) { selection = pair.userIDs } } +
-                AlertAction("${SettingsPageViewStrings.UNBLOCK} $ALL_USERS", style = ActionStyle.DESTRUCTIVE) {
-                    selection = blockedIDs
-                }
+            pairs.map { pair -> AlertAction(pair.displayName) { selection = pair.userIDs } } + allUsersAction
 
         val selected =
             ActionSheetAlert(
-                title = "${SettingsPageViewStrings.UNBLOCK} Users",
+                title = "${SettingsPageViewConstants.UNBLOCK} Users",
                 actions = actions,
-            ).present()
+                cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
+            ).present(
+                translating =
+                    listOf(
+                        ActionSheetAlert.TranslationOptionKey.Actions(listOf(allUsersAction)),
+                        ActionSheetAlert.TranslationOptionKey.Title,
+                    ),
+            )
 
         return if (selected) selection else null
     }
@@ -283,3 +369,27 @@ private data class BlockedUserPair(
     val displayName: String,
     val userIDs: List<String>,
 )
+
+// MARK: - Strings
+
+/** The translated label strings for the settings page. */
+object SettingsPageViewStrings : TranslatedLabelStrings {
+    val blockedUsers = TranslatedLabelStringCollection("settingsPageView.blockedUsers")
+    val changeLanguage = TranslatedLabelStringCollection("settingsPageView.changeLanguage")
+    val clearCaches = TranslatedLabelStringCollection("settingsPageView.clearCaches")
+    val deleteAccount = TranslatedLabelStringCollection("settingsPageView.deleteAccount")
+    val inviteFriends = TranslatedLabelStringCollection("settingsPageView.inviteFriends")
+    val leaveReview = TranslatedLabelStringCollection("settingsPageView.leaveReview")
+    val signOut = TranslatedLabelStringCollection("settingsPageView.signOut")
+
+    override val keyPairs: List<TranslationInputMap> =
+        listOf(
+            TranslationInputMap(blockedUsers, TranslationInput(SettingsPageViewConstants.BLOCKED_USERS)),
+            TranslationInputMap(changeLanguage, TranslationInput(SettingsPageViewConstants.CHANGE_LANGUAGE)),
+            TranslationInputMap(clearCaches, TranslationInput(SettingsPageViewConstants.CLEAR_CACHES)),
+            TranslationInputMap(deleteAccount, TranslationInput(SettingsPageViewConstants.DELETE_ACCOUNT)),
+            TranslationInputMap(inviteFriends, TranslationInput(SettingsPageViewConstants.INVITE_FRIENDS)),
+            TranslationInputMap(leaveReview, TranslationInput(SettingsPageViewConstants.LEAVE_REVIEW)),
+            TranslationInputMap(signOut, TranslationInput(SettingsPageViewConstants.SIGN_OUT)),
+        )
+}

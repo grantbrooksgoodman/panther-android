@@ -184,7 +184,7 @@ object ContextMenuActionHandlerService {
     private val String.shortCode: String
         get() = "${take(2)}${takeLast(2)}".uppercase()
 
-    private const val REACTION_DETAILS_ACTION_IMAGE_SYSTEM_NAME = "info.circle"
+    private const val REACTION_DETAILS_ACTION_IMAGE_SYSTEM_NAME = "info"
     private const val REPORT_ACTION_IMAGE_SYSTEM_NAME = "flag"
     private const val LANGUAGE_RECOGNITION_MATCH_CONFIDENCE_THRESHOLD = 0.8f
 }

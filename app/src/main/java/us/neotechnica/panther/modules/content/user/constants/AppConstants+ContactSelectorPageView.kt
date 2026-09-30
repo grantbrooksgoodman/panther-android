@@ -22,4 +22,7 @@ object ContactSelectorPageViewFloats {
     val searchVerticalPadding: Dp = 4.dp
     val sectionHeaderHorizontalPadding: Dp = 20.dp
     val sectionHeaderVerticalPadding: Dp = 6.dp
+    const val titleLongCharacterThreshold: Int = 20
+    const val titleLongLineLimit: Int = 2
+    const val titleMinimumScaleFactor: Float = 0.5f
 }

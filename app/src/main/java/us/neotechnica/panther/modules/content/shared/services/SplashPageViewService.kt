@@ -356,7 +356,10 @@ object SplashPageViewService {
         val shouldTranslate = hasUserFacingDescriptor && notGenericDescriptor && notTimedOutDescriptor
 
         val translationOptionKeys = mutableListOf<ErrorAlert.TranslationOptionKey>()
-        if (shouldTranslate) translationOptionKeys.add(ErrorAlert.TranslationOptionKey.ErrorDescription)
+        if (shouldTranslate) {
+            translationOptionKeys.add(ErrorAlert.TranslationOptionKey.ErrorDescription)
+            translationOptionKeys.add(ErrorAlert.TranslationOptionKey.Title)
+        }
         if (exception.isReportable) translationOptionKeys.add(ErrorAlert.TranslationOptionKey.SendErrorReportButtonTitle)
 
         ErrorAlert(

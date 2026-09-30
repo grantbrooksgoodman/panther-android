@@ -50,13 +50,19 @@ internal fun ChatInfoPageReducer.participantInfoEffect(
             message = participantInfoMessage(user),
             actions = actions,
             cancelButtonTitle = LocalizedStringKey.Dismiss.localized(),
-        ).present(translating = emptyList())
+        ).present(
+            // The title is the user's name and the message's labels are
+            // pre-localized, but the group "Remove from conversation" action
+            // is raw English, so translate the actions.
+            translating = if (actions.isEmpty()) emptyList() else listOf(ActionSheetAlert.TranslationOptionKey.Actions()),
+        )
         if (!didChooseRemove) return@run
 
         val didConfirm =
             ConfirmationAlert(
                 title = user.displayName,
                 message = "Are you sure you'd like to remove this person from the conversation?",
+                cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
                 confirmButtonStyle = ActionStyle.DESTRUCTIVE_PREFERRED,
             ).present(
                 translating =
