@@ -1,5 +1,5 @@
 //
-//  ConversationReadReceiptExtensions.kt
+//  Conversation+ReadReceiptExtensions.kt
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.

@@ -97,7 +97,7 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
                         .systemBarsPadding()
                         .verticalScroll(rememberScrollState()),
             ) {
-                Header(onDone = { viewModel.send(SettingsPageReducer.Action.BackTapped) })
+                Header(onDone = { viewModel.send(SettingsPageReducer.Action.DoneToolbarButtonTapped) })
 
                 ContactDetailCard(onTap = presentContactCard)
 
@@ -240,21 +240,21 @@ private fun SettingsActionCards(
         }
         SettingsRowDivider()
         SettingsIconRow("command", Colors.iconMint, strings.value(SettingsPageViewStrings.clearCaches)) {
-            send(SettingsPageReducer.Action.ClearCachesTapped)
+            send(SettingsPageReducer.Action.ClearCachesButtonTapped)
         }
     }
 
     SettingsCard {
         SettingsIconRow("flag.fill", Colors.iconGray, strings.value(SettingsPageViewStrings.blockedUsers)) {
-            send(SettingsPageReducer.Action.BlockedUsersTapped)
+            send(SettingsPageReducer.Action.BlockedUsersButtonTapped)
         }
         SettingsRowDivider()
         SettingsIconRow("trash.fill", Colors.iconOrange, strings.value(SettingsPageViewStrings.deleteAccount)) {
-            send(SettingsPageReducer.Action.DeleteAccountTapped)
+            send(SettingsPageReducer.Action.DeleteAccountButtonTapped)
         }
         SettingsRowDivider()
         SettingsIconRow("hand.raised.fill", Colors.iconRed, strings.value(SettingsPageViewStrings.signOut)) {
-            send(SettingsPageReducer.Action.SignOutTapped)
+            send(SettingsPageReducer.Action.SignOutButtonTapped)
         }
     }
 }

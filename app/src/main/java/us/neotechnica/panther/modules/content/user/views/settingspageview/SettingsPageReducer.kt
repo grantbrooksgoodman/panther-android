@@ -51,17 +51,17 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
     sealed interface Action {
         data object ViewAppeared : Action
 
-        data object BackTapped : Action
+        data object DoneToolbarButtonTapped : Action
 
-        data object BlockedUsersTapped : Action
+        data object BlockedUsersButtonTapped : Action
 
         data object ChangeLanguageTapped : Action
 
-        data object ClearCachesTapped : Action
+        data object ClearCachesButtonTapped : Action
 
-        data object DeleteAccountTapped : Action
+        data object DeleteAccountButtonTapped : Action
 
-        data object SignOutTapped : Action
+        data object SignOutButtonTapped : Action
 
         data class ResolveReturned(
             val strings: List<TranslationOutputMap>,
@@ -97,12 +97,12 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
                 ReduceResult(state.copy(viewState = ViewState.Loaded))
             }
 
-            Action.BackTapped -> {
+            Action.DoneToolbarButtonTapped -> {
                 DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
                 ReduceResult(state)
             }
 
-            Action.BlockedUsersTapped -> {
+            Action.BlockedUsersButtonTapped -> {
                 SettingsPageViewService.blockedUsersButtonTapped()
                 ReduceResult(state)
             }
@@ -114,17 +114,17 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
                 ReduceResult(state)
             }
 
-            Action.ClearCachesTapped -> {
+            Action.ClearCachesButtonTapped -> {
                 SettingsPageViewService.clearCachesButtonTapped()
                 ReduceResult(state)
             }
 
-            Action.DeleteAccountTapped -> {
+            Action.DeleteAccountButtonTapped -> {
                 SettingsPageViewService.deleteAccountButtonTapped()
                 ReduceResult(state)
             }
 
-            Action.SignOutTapped -> {
+            Action.SignOutButtonTapped -> {
                 SettingsPageViewService.signOutButtonTapped()
                 ReduceResult(state)
             }

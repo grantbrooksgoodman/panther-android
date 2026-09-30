@@ -1,5 +1,5 @@
 //
-//  ConversationUserContentExtensions.kt
+//  Conversation+UserContentExtensions.kt
 //  Panther
 //
 //  Created by Grant Brooks Goodman on 23/08/2026.

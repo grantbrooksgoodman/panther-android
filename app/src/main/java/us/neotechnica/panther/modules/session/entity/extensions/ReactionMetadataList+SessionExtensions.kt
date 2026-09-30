@@ -1,5 +1,5 @@
 //
-//  ReactionMetadataListSessionExtensions.kt
+//  ReactionMetadataList+SessionExtensions.kt
 //  Panther Android
 //
 //  Created by Grant Brooks Goodman on 26/09/2026.

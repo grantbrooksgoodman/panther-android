@@ -1,5 +1,5 @@
 //
-//  UserSessionExtensions.kt
+//  User+SessionExtensions.kt
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
