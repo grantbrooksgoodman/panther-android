@@ -22,14 +22,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
-import us.neotechnica.panther.BuildConfig
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.onboarding.components.InstructionView
-import us.neotechnica.panther.modules.content.onboarding.constants.AuthCodePageViewColors
 import us.neotechnica.panther.modules.content.onboarding.constants.AuthCodePageViewFloats
 import us.neotechnica.panther.modules.content.shared.components.UnderlinedTextField
 import us.neotechnica.panther.networking.modules.translation.extensions.value
@@ -37,7 +35,6 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 
 // MARK: - Constants Accessors
 
-private typealias Colors = AuthCodePageViewColors
 private typealias Floats = AuthCodePageViewFloats
 private typealias Strings = us.neotechnica.panther.modules.content.onboarding.constants.AuthCodePageViewStrings
 
@@ -105,16 +102,6 @@ fun AuthCodePageView(modifier: Modifier = Modifier) {
                     font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),
                     modifier = Modifier.padding(top = Floats.backButtonTopPadding),
                 )
-
-                if (BuildConfig.DEBUG && state.hasError) {
-                    Components.Button(
-                        text = Strings.FORCE_CONTINUE_DEBUG,
-                        color = Colors.debugForeground,
-                        onClick = { viewModel.send(AuthCodePageReducer.Action.DebugForceContinueTapped) },
-                        font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),
-                        modifier = Modifier.padding(top = Floats.backButtonTopPadding),
-                    )
-                }
             }
 
             Spacer(Modifier.weight(1f))

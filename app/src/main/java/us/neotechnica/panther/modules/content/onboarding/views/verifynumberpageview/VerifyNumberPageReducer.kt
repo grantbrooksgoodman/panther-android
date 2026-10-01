@@ -61,9 +61,6 @@ class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNum
 
         data object RunContinueButtonEffect : Action
 
-        /** Debug-only: skips verification and advances to the code page. */
-        data object DebugForceContinueTapped : Action
-
         data class AccountExistsAlertDismissed(
             val cancelled: Boolean,
         ) : Action
@@ -100,7 +97,6 @@ class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNum
     // MARK: - State
 
     data class State(
-        val hasError: Boolean = false,
         val instructionViewStrings: InstructionViewStrings = InstructionViewStrings.empty,
         val isBackButtonEnabled: Boolean = true,
         val isContinueButtonEnabled: Boolean = false,
@@ -149,16 +145,9 @@ class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNum
 
             Action.ContinueButtonTapped ->
                 ReduceResult(
-                    state.copy(hasError = false),
+                    state,
                     Effect.task(delay = CONTINUE_DELAY_MILLIS.milliseconds) { Action.RunContinueButtonEffect },
                 )
-
-            Action.DebugForceContinueTapped -> {
-                OnboardingService.setPhoneNumber(state.phoneNumber)
-                OnboardingService.setRegionCode(state.selectedRegionCode)
-                navigate(OnboardingRoute.Push(OnboardingNavigatorState.SeguePath.AuthCode))
-                ReduceResult(state.copy(hasError = false))
-            }
 
             Action.RunContinueButtonEffect -> {
                 Overlay.show()
@@ -213,7 +202,6 @@ class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNum
                 )
                 ReduceResult(
                     state.copy(
-                        hasError = true,
                         isBackButtonEnabled = true,
                         isContinueButtonEnabled = state.numberIsValidLength,
                     ),

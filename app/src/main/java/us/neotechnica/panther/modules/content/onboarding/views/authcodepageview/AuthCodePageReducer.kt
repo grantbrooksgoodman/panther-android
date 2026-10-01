@@ -50,9 +50,6 @@ class AuthCodePageReducer : Reducer<AuthCodePageReducer.State, AuthCodePageReduc
 
         data object RunContinueButtonEffect : Action
 
-        /** Debug-only: skips authentication and advances to the permission page. */
-        data object DebugForceContinueTapped : Action
-
         data class AuthenticateUserFailed(
             val exception: Exception,
         ) : Action
@@ -77,7 +74,6 @@ class AuthCodePageReducer : Reducer<AuthCodePageReducer.State, AuthCodePageReduc
     // MARK: - State
 
     data class State(
-        val hasError: Boolean = false,
         val instructionViewStrings: InstructionViewStrings = InstructionViewStrings.empty,
         val isBackButtonEnabled: Boolean = true,
         val isContinueButtonEnabled: Boolean = false,
@@ -103,14 +99,9 @@ class AuthCodePageReducer : Reducer<AuthCodePageReducer.State, AuthCodePageReduc
 
             Action.ContinueButtonTapped ->
                 ReduceResult(
-                    state.copy(hasError = false),
+                    state,
                     Effect.task(delay = CONTINUE_DELAY_MILLIS.milliseconds) { Action.RunContinueButtonEffect },
                 )
-
-            Action.DebugForceContinueTapped -> {
-                navigate(OnboardingRoute.Push(OnboardingNavigatorState.SeguePath.Permission))
-                ReduceResult(state.copy(hasError = false))
-            }
 
             Action.RunContinueButtonEffect -> {
                 Overlay.show()
@@ -149,7 +140,6 @@ class AuthCodePageReducer : Reducer<AuthCodePageReducer.State, AuthCodePageReduc
                 )
                 ReduceResult(
                     state.copy(
-                        hasError = true,
                         isBackButtonEnabled = true,
                         isContinueButtonEnabled = state.verificationCode.length == VERIFICATION_CODE_LENGTH,
                     ),
