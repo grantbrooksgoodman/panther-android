@@ -33,10 +33,10 @@ import java.io.File
  *
  * **Note:** plain-text document payloads are LZFSE-compressed before
  * upload and decompressed on download, while the local file stays
- * uncompressed. [Lzfse] emits uncompressed LZFSE blocks, which Apple's
- * decoder reads verbatim; decoding Apple's FSE- and LZVN-compressed
- * blocks is pending cross-platform vector validation (see
- * `DEVIATIONS.md`).
+ * uncompressed. [Lzfse] emits uncompressed LZFSE blocks on encode (valid
+ * and Apple-decodable, without a compression ratio) and decodes every
+ * block type – uncompressed, LZVN, and FSE-compressed (v2) – so a
+ * document compressed by iOS opens on Android and vice versa.
  */
 object MediaMessageService {
     // MARK: - Get Media Component

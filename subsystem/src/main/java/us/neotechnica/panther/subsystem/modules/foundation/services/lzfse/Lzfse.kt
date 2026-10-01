@@ -6,7 +6,7 @@
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
-// The LZFSE stream format (block magics and layout) is defined by Apple's
+// The LZFSE stream format and decoder algorithm are defined by Apple's
 // LZFSE reference implementation, released under the following license:
 //
 // Copyright (c) 2015-2016, Apple Inc. All rights reserved.
@@ -39,20 +39,10 @@ import java.io.ByteArrayOutputStream
  *
  * **Important:** [encode] emits a single uncompressed block – a valid
  * LZFSE stream that Apple's decoder reads back verbatim, but without a
- * compression ratio. [decode] reads uncompressed and end-of-stream
- * blocks; decoding the FSE- and LZVN-compressed block types is pending
- * cross-platform test-vector validation and throws
- * [LzfseException] until then.
+ * compression ratio. [decode] reads every block type: uncompressed,
+ * end-of-stream, LZVN, and FSE-compressed (v1 and v2).
  */
 object Lzfse {
-    // MARK: - Block Magics
-
-    private const val ENDOFSTREAM_BLOCK_MAGIC = 0x24787662 // 'bvx$'
-    private const val UNCOMPRESSED_BLOCK_MAGIC = 0x2d787662 // 'bvx-'
-    private const val COMPRESSED_V1_BLOCK_MAGIC = 0x31787662 // 'bvx1'
-    private const val COMPRESSED_V2_BLOCK_MAGIC = 0x32787662 // 'bvx2'
-    private const val COMPRESSED_LZVN_BLOCK_MAGIC = 0x6e787662 // 'bvxn'
-
     // MARK: - Methods
 
     /**
@@ -68,10 +58,10 @@ object Lzfse {
      */
     fun encode(source: ByteArray): ByteArray {
         val output = ByteArrayOutputStream(source.size + BLOCK_OVERHEAD_BYTES)
-        writeUInt32LE(output, UNCOMPRESSED_BLOCK_MAGIC)
+        writeUInt32LE(output, LzfseBlockMagic.UNCOMPRESSED)
         writeUInt32LE(output, source.size)
         output.write(source)
-        writeUInt32LE(output, ENDOFSTREAM_BLOCK_MAGIC)
+        writeUInt32LE(output, LzfseBlockMagic.ENDOFSTREAM)
         return output.toByteArray()
     }
 
@@ -82,58 +72,11 @@ object Lzfse {
      *
      * @return The decoded bytes.
      *
-     * @throws LzfseException if the stream is malformed, truncated, or
-     *   contains a compressed block whose decoding is not yet supported.
+     * @throws LzfseException if the stream is malformed or truncated.
      */
-    fun decode(source: ByteArray): ByteArray {
-        val output = ByteArrayOutputStream(source.size)
-        var offset = 0
-
-        while (offset + UINT32_BYTES <= source.size) {
-            val magic = readUInt32LE(source, offset)
-            offset += UINT32_BYTES
-
-            when (magic) {
-                ENDOFSTREAM_BLOCK_MAGIC -> return output.toByteArray()
-
-                UNCOMPRESSED_BLOCK_MAGIC -> {
-                    if (offset + UINT32_BYTES > source.size) {
-                        throw LzfseException("Truncated LZFSE uncompressed block header.")
-                    }
-                    val rawByteCount = readUInt32LE(source, offset)
-                    offset += UINT32_BYTES
-                    if (rawByteCount < 0 || offset + rawByteCount > source.size) {
-                        throw LzfseException("Truncated LZFSE uncompressed block.")
-                    }
-                    output.write(source, offset, rawByteCount)
-                    offset += rawByteCount
-                }
-
-                COMPRESSED_V1_BLOCK_MAGIC,
-                COMPRESSED_V2_BLOCK_MAGIC,
-                COMPRESSED_LZVN_BLOCK_MAGIC,
-                ->
-                    throw LzfseException("LZFSE compressed-block decoding is pending cross-platform vector validation.")
-
-                else -> throw LzfseException("Unknown LZFSE block magic: 0x${magic.toUInt().toString(RADIX_HEX)}.")
-            }
-        }
-
-        throw LzfseException("Missing LZFSE end-of-stream marker.")
-    }
+    fun decode(source: ByteArray): ByteArray = LzfseDecoder.decode(source)
 
     // MARK: - Auxiliary
-
-    private fun readUInt32LE(
-        bytes: ByteArray,
-        offset: Int,
-    ): Int {
-        var result = 0
-        for (index in 0 until UINT32_BYTES) {
-            result = result or ((bytes[offset + index].toInt() and BYTE_MASK) shl (BITS_PER_BYTE * index))
-        }
-        return result
-    }
 
     private fun writeUInt32LE(
         output: ByteArrayOutputStream,
@@ -149,8 +92,18 @@ object Lzfse {
     private const val BITS_PER_BYTE = 8
     private const val BLOCK_OVERHEAD_BYTES = 12
     private const val BYTE_MASK = 0xFF
-    private const val RADIX_HEX = 16
     private const val UINT32_BYTES = 4
+}
+
+// MARK: - LzfseBlockMagic
+
+/** The four-byte magics that tag each LZFSE block. */
+internal object LzfseBlockMagic {
+    const val ENDOFSTREAM = 0x24787662 // 'bvx$'
+    const val UNCOMPRESSED = 0x2d787662 // 'bvx-'
+    const val COMPRESSED_V1 = 0x31787662 // 'bvx1'
+    const val COMPRESSED_V2 = 0x32787662 // 'bvx2'
+    const val COMPRESSED_LZVN = 0x6e787662 // 'bvxn'
 }
 
 // MARK: - LzfseException
