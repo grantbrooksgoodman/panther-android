@@ -239,35 +239,52 @@ object MessageOutboxService {
             if (didLoad) return
             didLoad = true
 
-            Persistent.string(PersistentStorageKey.messageOutbox)?.let { archive ->
-                val decoded = runCatching { decodeOutboxArchive(archive) }.getOrNull()
-                if (decoded != null) {
-                    // Reconcile: any entry still marked SENDING at launch
-                    // means the app died mid-attempt.
-                    val reconciled =
-                        decoded.associateBy { it.id }.mapValues { (_, entry) ->
-                            if (entry.state == OutboxEntry.State.SENDING) {
-                                Logger.log(
-                                    "Reconciled stale SENDING entry ${entry.id} to FAILED.",
-                                    domain = LoggerDomain.outbox,
-                                )
-                                entry.copy(state = OutboxEntry.State.FAILED)
-                            } else {
-                                entry
-                            }
-                        }
+            migrateLegacyArchiveIfNeeded()
 
-                    entries.wrappedValue = reconciled
-                    Logger.log("Loaded ${reconciled.size} outbox entries into memory.", domain = LoggerDomain.outbox)
-                }
+            val decoded =
+                Persistent
+                    .archive(PersistentStorageKey.messageOutbox) { it }
+                    ?.mapNotNull { runCatching { decodeEntry(it) }.getOrNull() }
+            if (decoded != null) {
+                // Reconcile: any entry still marked SENDING at launch
+                // means the app died mid-attempt.
+                val reconciled =
+                    decoded.associateBy { it.id }.mapValues { (_, entry) ->
+                        if (entry.state == OutboxEntry.State.SENDING) {
+                            Logger.log(
+                                "Reconciled stale SENDING entry ${entry.id} to FAILED.",
+                                domain = LoggerDomain.outbox,
+                            )
+                            entry.copy(state = OutboxEntry.State.FAILED)
+                        } else {
+                            entry
+                        }
+                    }
+
+                entries.wrappedValue = reconciled
+                Logger.log("Loaded ${reconciled.size} outbox entries into memory.", domain = LoggerDomain.outbox)
             }
 
             garbageCollectPayloadFiles()
         }
     }
 
+    private fun migrateLegacyArchiveIfNeeded() {
+        // The outbox previously persisted as a preferences string; move
+        // any such payload into the file-backed archive once, then clear
+        // the string so later launches load only from the archive.
+        val legacyArchive = Persistent.string(PersistentStorageKey.messageOutbox) ?: return
+        runCatching { decodeOutboxArchive(legacyArchive) }.getOrNull()?.let { decoded ->
+            Persistent.setArchive(PersistentStorageKey.messageOutbox, decoded.map { encodeEntry(it) })
+        }
+        Persistent.setString(PersistentStorageKey.messageOutbox, null)
+    }
+
     private fun persistArchive() {
-        Persistent.setString(PersistentStorageKey.messageOutbox, encodeOutboxArchive(entries.wrappedValue.values.toList()))
+        Persistent.setArchive(
+            PersistentStorageKey.messageOutbox,
+            entries.wrappedValue.values.map { encodeEntry(it) },
+        )
     }
 
     private fun removePayloadFile(entry: OutboxEntry) {

@@ -20,7 +20,7 @@ package us.neotechnica.panther.networking.modules.common.interfaces
  * data class MyModel(val name: String) {
  *     companion object : SerializableDecoder<MyModel, Map<String, Any?>> {
  *         override fun canDecode(data: Map<String, Any?>): Boolean = …
- *         override suspend fun decode(data: Map<String, Any?>): MyModel = …
+ *         override fun decode(data: Map<String, Any?>): MyModel = …
  *     }
  * }
  *
@@ -34,8 +34,7 @@ package us.neotechnica.panther.networking.modules.common.interfaces
  *
  * **Note:** In Kotlin the decode side lives on a companion
  * [SerializableDecoder] rather than an initializer, because
- * decoding is `suspend` (nested references may resolve over the
- * network) and interfaces cannot declare constructors.
+ * interfaces cannot declare constructors.
  */
 interface Serializable<out Representation> {
     // MARK: - Properties
@@ -77,9 +76,8 @@ interface SerializableDecoder<out Model, in Representation> {
      * Creates a new instance by decoding from the specified
      * serialized data.
      *
-     * Decoding may involve network requests – for example,
-     * resolving nested references – so it is a suspending
-     * function.
+     * Decoding parses the serialized representation, delegating
+     * any nested references to their own decoders.
      *
      * @param data The serialized data to decode.
      *
@@ -88,5 +86,5 @@ interface SerializableDecoder<out Model, in Representation> {
      * @throws us.neotechnica.panther.subsystem.modules.foundation.models.Exception
      *   if decoding fails.
      */
-    suspend fun decode(data: Representation): Model
+    fun decode(data: Representation): Model
 }

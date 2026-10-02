@@ -42,7 +42,7 @@ data class ReadReceipt(
                 DependencyValues.current.timestampDateFormatter.parse(components[1]) != null
         }
 
-        override suspend fun decode(data: String): ReadReceipt {
+        override fun decode(data: String): ReadReceipt {
             val components = data.split(" | ")
             val readDate =
                 components.getOrNull(1)?.let {

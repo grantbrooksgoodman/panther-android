@@ -35,7 +35,7 @@ data class ConversationID(
     companion object : SerializableDecoder<ConversationID, String> {
         override fun canDecode(data: String): Boolean = data.split(" | ").size == 2
 
-        override suspend fun decode(data: String): ConversationID {
+        override fun decode(data: String): ConversationID {
             val components = data.split(" | ")
             if (components.size != 2) throw decodingFailure(this, data)
             return ConversationID(

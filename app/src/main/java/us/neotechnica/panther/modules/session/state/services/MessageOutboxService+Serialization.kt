@@ -13,8 +13,6 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
-import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -23,56 +21,85 @@ import us.neotechnica.panther.modules.common.models.MediaFileExtension
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import java.util.Date
 
-internal fun encodeOutboxArchive(entries: List<OutboxEntry>): String =
-    buildJsonArray {
-        for (entry in entries) {
-            add(
-                buildJsonObject {
-                    put(KEY_ID, JsonPrimitive(entry.id))
-                    put(KEY_CONVERSATION_ID_KEY, JsonPrimitive(entry.conversationIDKey))
-                    put(KEY_FROM_ACCOUNT_ID, JsonPrimitive(entry.fromAccountID))
-                    put(KEY_RECIPIENT_USER_IDS, JsonArray(entry.recipientUserIDs.map { JsonPrimitive(it) }))
-                    put(KEY_IS_PEN_PALS, JsonPrimitive(entry.isPenPalsConversation))
-                    put(KEY_CREATED_DATE, JsonPrimitive(entry.createdDate.time))
-                    put(KEY_ATTEMPT_COUNT, JsonPrimitive(entry.attemptCount))
-                    put(KEY_LAST_ATTEMPT_DATE, entry.lastAttemptDate?.let { JsonPrimitive(it.time) } ?: JsonNull)
-                    put(KEY_RESERVED_REMOTE_ID, entry.reservedRemoteID?.let { JsonPrimitive(it) } ?: JsonNull)
-                    put(KEY_STATE, JsonPrimitive(entry.state.rawValue))
-                    put(KEY_TRANSCRIPTION, entry.transcription?.let { JsonPrimitive(it) } ?: JsonNull)
-                    put(KEY_PAYLOAD, encodePayload(entry.payload))
-                },
+// MARK: - Archive Codec
+
+internal fun encodeEntry(entry: OutboxEntry): Map<String, Any?> =
+    buildMap {
+        put(KEY_ID, entry.id)
+        put(KEY_CONVERSATION_ID_KEY, entry.conversationIDKey)
+        put(KEY_FROM_ACCOUNT_ID, entry.fromAccountID)
+        put(KEY_RECIPIENT_USER_IDS, entry.recipientUserIDs)
+        put(KEY_IS_PEN_PALS, entry.isPenPalsConversation)
+        put(KEY_CREATED_DATE, entry.createdDate.time)
+        put(KEY_ATTEMPT_COUNT, entry.attemptCount)
+        put(KEY_LAST_ATTEMPT_DATE, entry.lastAttemptDate?.time)
+        put(KEY_RESERVED_REMOTE_ID, entry.reservedRemoteID)
+        put(KEY_STATE, entry.state.rawValue)
+        put(KEY_TRANSCRIPTION, entry.transcription)
+        put(KEY_PAYLOAD, encodePayload(entry.payload))
+    }
+
+internal fun decodeEntry(map: Map<String, Any?>): OutboxEntry? {
+    val id = map[KEY_ID] as? String ?: return null
+    val state = OutboxEntry.State.from(map[KEY_STATE] as? String ?: return null) ?: return null
+    val payload = decodePayload(map) ?: return null
+
+    return OutboxEntry(
+        conversationIDKey = map[KEY_CONVERSATION_ID_KEY] as? String ?: return null,
+        createdDate = Date((map[KEY_CREATED_DATE] as? Number ?: return null).toLong()),
+        fromAccountID = map[KEY_FROM_ACCOUNT_ID] as? String ?: return null,
+        id = id,
+        isPenPalsConversation = map[KEY_IS_PEN_PALS] as? Boolean ?: false,
+        payload = payload,
+        recipientUserIDs = (map[KEY_RECIPIENT_USER_IDS] as? List<*>)?.mapNotNull { it as? String } ?: emptyList(),
+        attemptCount = (map[KEY_ATTEMPT_COUNT] as? Number)?.toInt() ?: 1,
+        lastAttemptDate = (map[KEY_LAST_ATTEMPT_DATE] as? Number)?.let { Date(it.toLong()) },
+        reservedRemoteID = map[KEY_RESERVED_REMOTE_ID] as? String,
+        state = state,
+        transcription = map[KEY_TRANSCRIPTION] as? String,
+    )
+}
+
+private fun encodePayload(payload: OutboxEntry.Payload): Map<String, Any?> =
+    when (payload) {
+        is OutboxEntry.Payload.Audio ->
+            mapOf(KEY_PAYLOAD_TYPE to PAYLOAD_AUDIO, KEY_INPUT_FILE_NAME to payload.inputFileName)
+        is OutboxEntry.Payload.Media ->
+            mapOf(
+                KEY_PAYLOAD_TYPE to PAYLOAD_MEDIA,
+                KEY_FILE_NAME to payload.fileName,
+                KEY_FILE_EXTENSION to payload.fileExtension.rawValue,
             )
+        is OutboxEntry.Payload.Text ->
+            mapOf(KEY_PAYLOAD_TYPE to PAYLOAD_TEXT, KEY_VALUE to payload.value)
+    }
+
+private fun decodePayload(map: Map<String, Any?>): OutboxEntry.Payload? {
+    @Suppress("UNCHECKED_CAST")
+    val payloadMap = map[KEY_PAYLOAD] as? Map<String, Any?> ?: return null
+    return when (payloadMap[KEY_PAYLOAD_TYPE] as? String) {
+        PAYLOAD_AUDIO -> (payloadMap[KEY_INPUT_FILE_NAME] as? String)?.let { OutboxEntry.Payload.Audio(it) }
+        PAYLOAD_MEDIA -> {
+            val fileName = payloadMap[KEY_FILE_NAME] as? String ?: return null
+            val fileExtension = MediaFileExtension.from(payloadMap[KEY_FILE_EXTENSION] as? String ?: return null) ?: return null
+            OutboxEntry.Payload.Media(fileName, fileExtension)
         }
-    }.toString()
+        PAYLOAD_TEXT -> (payloadMap[KEY_VALUE] as? String)?.let { OutboxEntry.Payload.Text(it) }
+        else -> null
+    }
+}
+
+// MARK: - Legacy String Decoder
 
 internal fun decodeOutboxArchive(archive: String): List<OutboxEntry> {
     val array = Json.parseToJsonElement(archive) as? JsonArray ?: return emptyList()
-    return array.mapNotNull { element -> runCatching { decodeEntry(element.jsonObject) }.getOrNull() }
+    return array.mapNotNull { element -> runCatching { decodeLegacyEntry(element.jsonObject) }.getOrNull() }
 }
 
-private fun encodePayload(payload: OutboxEntry.Payload): JsonObject =
-    buildJsonObject {
-        when (payload) {
-            is OutboxEntry.Payload.Audio -> {
-                put(KEY_PAYLOAD_TYPE, JsonPrimitive(PAYLOAD_AUDIO))
-                put(KEY_INPUT_FILE_NAME, JsonPrimitive(payload.inputFileName))
-            }
-            is OutboxEntry.Payload.Media -> {
-                put(KEY_PAYLOAD_TYPE, JsonPrimitive(PAYLOAD_MEDIA))
-                put(KEY_FILE_NAME, JsonPrimitive(payload.fileName))
-                put(KEY_FILE_EXTENSION, JsonPrimitive(payload.fileExtension.rawValue))
-            }
-            is OutboxEntry.Payload.Text -> {
-                put(KEY_PAYLOAD_TYPE, JsonPrimitive(PAYLOAD_TEXT))
-                put(KEY_VALUE, JsonPrimitive(payload.value))
-            }
-        }
-    }
-
-private fun decodeEntry(obj: JsonObject): OutboxEntry? {
+private fun decodeLegacyEntry(obj: JsonObject): OutboxEntry? {
     val id = obj[KEY_ID]?.jsonPrimitive?.content ?: return null
     val state = OutboxEntry.State.from(obj[KEY_STATE]?.jsonPrimitive?.content ?: return null) ?: return null
-    val payload = decodePayload(obj) ?: return null
+    val payload = decodeLegacyPayload(obj) ?: return null
 
     return OutboxEntry(
         conversationIDKey = obj[KEY_CONVERSATION_ID_KEY]?.jsonPrimitive?.content ?: return null,
@@ -90,7 +117,7 @@ private fun decodeEntry(obj: JsonObject): OutboxEntry? {
     )
 }
 
-private fun decodePayload(obj: JsonObject): OutboxEntry.Payload? {
+private fun decodeLegacyPayload(obj: JsonObject): OutboxEntry.Payload? {
     val payloadObject = obj[KEY_PAYLOAD]?.jsonObject
     if (payloadObject != null) {
         return when (payloadObject[KEY_PAYLOAD_TYPE]?.jsonPrimitive?.content) {

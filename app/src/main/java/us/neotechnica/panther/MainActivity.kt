@@ -30,6 +30,8 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.designsystem.modules.theming.views.PantherTheme
 import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.content.shared.views.ForcedUpdateView
+import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
+import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.navigation.PendingChatNavigation
 import us.neotechnica.panther.navigation.RootView
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
@@ -83,11 +85,11 @@ class MainActivity : ComponentActivity() {
         capturePendingChat(intent)
     }
 
-    // Approximates applicationWillTerminate; the store flush lands with the
-    // session store in a later phase.
     override fun onDestroy() {
         super.onDestroy()
         if (isFinishing) {
+            ClientSession.store.flushNow()
+            UICacheInvalidationService.refreshNotificationExtensionNameMap()
             AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.TERMINATE_APP)
         }
     }

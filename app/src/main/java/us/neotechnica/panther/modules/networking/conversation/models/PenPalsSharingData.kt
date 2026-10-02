@@ -50,7 +50,7 @@ data class PenPalsSharingData(
             return components.size == 2 && components.all { it.isNotBlank() }
         }
 
-        override suspend fun decode(data: String): PenPalsSharingData {
+        override fun decode(data: String): PenPalsSharingData {
             if (!canDecode(data)) throw decodingFailure(this, data)
 
             val components = data.split(": ")

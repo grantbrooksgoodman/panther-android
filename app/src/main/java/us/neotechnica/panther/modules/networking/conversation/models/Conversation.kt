@@ -126,7 +126,7 @@ data class Conversation(
             return reactionMetadata.all { ReactionMetadata.canDecode(it) }
         }
 
-        override suspend fun decode(data: Map<String, Any?>): Conversation {
+        override fun decode(data: Map<String, Any?>): Conversation {
             val idString = data[Keys.ID.rawValue] as? String
             val encodedActivities = mapList(data, Keys.ACTIVITIES)
             val encodedMetadata =

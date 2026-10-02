@@ -85,7 +85,6 @@ import us.neotechnica.panther.modules.networking.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.extensions.currentConversationDidBecomeUnavailable
 import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.session.entity.extensions.isMediaMessage
 import us.neotechnica.panther.modules.session.entity.extensions.isOutboxMessage
@@ -489,8 +488,6 @@ private fun buildChatPageViewModel(): ViewModel<ChatPageReducer.State, ChatPageR
             ChatPageReducer.Action.MessagesUpdated(it)
         }.observing(DependencyValues.current.sharedEvents.sessionStoreDidChange.events) { change ->
             ChatPageReducer.Action.StoreChanged(change)
-        }.observing(DependencyValues.current.sharedEvents.currentConversationDidBecomeUnavailable.events) {
-            ChatPageReducer.Action.ConversationUnavailable
         }.observing(MessageDeliveryService.isSendingMessage) {
             ChatPageReducer.Action.IsSendingMessageChanged(it)
         }.observing(DependencyValues.current.sharedEvents.messageOutboxDidChange.events) {

@@ -110,4 +110,10 @@ interface StorageDelegate {
      *   (including when the existence check itself fails).
      */
     suspend fun itemExists(path: String): Boolean
+
+    /**
+     * Establishes the underlying connection to remote storage
+     * without performing a user-facing operation.
+     */
+    fun prewarm()
 }

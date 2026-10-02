@@ -54,17 +54,14 @@ object ConnectionStatusService {
 
         manager.registerDefaultNetworkCallback(
             object : ConnectivityManager.NetworkCallback() {
-                override fun onAvailable(network: Network) = setOnline(true)
+                override fun onAvailable(network: Network) = setOnline(manager.getNetworkCapabilities(network).hasInternet())
 
                 override fun onLost(network: Network) = setOnline(manager.hasInternet())
 
                 override fun onCapabilitiesChanged(
                     network: Network,
                     networkCapabilities: NetworkCapabilities,
-                ) = setOnline(
-                    networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-                        networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED),
-                )
+                ) = setOnline(networkCapabilities.hasInternet())
             },
         )
     }
@@ -122,8 +119,10 @@ object ConnectionStatusService {
         uponConnectionChanged.wrappedValue.values.forEach { it() }
     }
 
-    private fun ConnectivityManager.hasInternet(): Boolean {
-        val capabilities = getNetworkCapabilities(activeNetwork) ?: return false
+    private fun ConnectivityManager.hasInternet(): Boolean = getNetworkCapabilities(activeNetwork).hasInternet()
+
+    private fun NetworkCapabilities?.hasInternet(): Boolean {
+        val capabilities = this ?: return false
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
             capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }

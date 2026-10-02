@@ -10,12 +10,18 @@ package us.neotechnica.panther.networking.modules.storage.services
 import android.net.Uri
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageMetadata as FirebaseStorageMetadata
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.storage.interfaces.StorageDelegate
 import us.neotechnica.panther.networking.modules.storage.models.StorageMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import java.io.File
 
 /**
@@ -25,6 +31,8 @@ class Storage : StorageDelegate {
     // MARK: - Properties
 
     private val reference by lazy { FirebaseStorage.getInstance().reference }
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // MARK: - StorageDelegate Conformance
 
@@ -96,6 +104,22 @@ class Storage : StorageDelegate {
             reference.child(environmentPath(path)).metadata.await()
             true
         }.getOrDefault(false)
+
+    override fun prewarm() {
+        Logger.log(
+            "Prewarming storage connection.",
+            domain = LoggerDomain.Networking.storage,
+        )
+
+        scope.launch {
+            Networking.config.activityIndicatorDelegate.show()
+            try {
+                runCatching { reference.child(environmentPath("prewarm")).metadata.await() }
+            } finally {
+                Networking.config.activityIndicatorDelegate.hide()
+            }
+        }
+    }
 
     // MARK: - Auxiliary
 

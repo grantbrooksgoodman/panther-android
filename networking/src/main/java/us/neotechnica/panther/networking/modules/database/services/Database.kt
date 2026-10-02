@@ -29,6 +29,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.KeyedCoalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
+import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import kotlin.time.Duration
 
 /**
@@ -130,7 +132,46 @@ class Database : DatabaseDelegate {
         }.buffer(Channel.UNLIMITED)
 
     override fun prewarm() {
-        reference.child(".info/connected").get()
+        Logger.log(
+            "Prewarming database connection.",
+            domain = LoggerDomain.Networking.database,
+        )
+
+        // Retain a persistent observer on the special .info/connected
+        // location until the realtime socket first reports connected,
+        // then detach. A one-shot read fires on the immediate local
+        // "false" and detaches without holding the connection
+        // establishing; a retained observer forces the SDK to open and
+        // keep the authenticated socket from launch, so it is ready
+        // sooner for the first writes and for the observers that stream
+        // fresh data. Long-lived connection tracking is owned by the
+        // connection-stability observer, so this releases as soon as the
+        // connection is up.
+        val connectedReference = reference.child(".info/connected")
+        val listenerHolder = LockIsolated<ValueEventListener?>(null)
+        val listener =
+            object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    if (snapshot.getValue(Boolean::class.java) != true) return
+
+                    // Atomically take the listener so only the first
+                    // connected event detaches, and re-entrant events
+                    // see null.
+                    val listenerToRemove =
+                        listenerHolder.withValue { holder ->
+                            val current = holder.value
+                            holder.value = null
+                            current
+                        } ?: return
+
+                    connectedReference.removeEventListener(listenerToRemove)
+                }
+
+                override fun onCancelled(error: DatabaseError) = Unit
+            }
+
+        listenerHolder.wrappedValue = listener
+        connectedReference.addValueEventListener(listener)
     }
 
     override suspend fun <T> queryValues(

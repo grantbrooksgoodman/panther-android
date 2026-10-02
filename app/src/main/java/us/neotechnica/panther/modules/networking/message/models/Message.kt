@@ -121,7 +121,7 @@ data class Message(
             return !(contentType == HostedContentType.Text && translations.isBangQualifiedEmpty)
         }
 
-        override suspend fun decode(data: Map<String, Any?>): Message {
+        override fun decode(data: Map<String, Any?>): Message {
             val id = data[Keys.ID.rawValue] as? String
             val fromAccountID = data[Keys.FROM_ACCOUNT_ID.rawValue] as? String
             val contentTypeString = data[Keys.CONTENT_TYPE.rawValue] as? String

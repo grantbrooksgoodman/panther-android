@@ -77,7 +77,7 @@ data class Activity(
                 userID.isNotBlank()
         }
 
-        override suspend fun decode(data: Map<String, Any?>): Activity {
+        override fun decode(data: Map<String, Any?>): Activity {
             val actionString = data[Keys.ACTION.rawValue] as? String
             val action = actionString?.let { ActivityAction.from(it) }
             val dateString = data[Keys.DATE.rawValue] as? String

@@ -72,7 +72,7 @@ data class ReactionMetadata(
             return encodedReactions.all { Reaction.canDecode(it) }
         }
 
-        override suspend fun decode(data: Map<String, Any?>): ReactionMetadata {
+        override fun decode(data: Map<String, Any?>): ReactionMetadata {
             val messageID = data[Keys.MESSAGE_ID.rawValue] as? String
             val encodedReactions = reactionMaps(data)
 

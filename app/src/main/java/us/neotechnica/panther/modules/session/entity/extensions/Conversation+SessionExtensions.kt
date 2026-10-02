@@ -11,6 +11,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.modules.common.constants.CommonConstants
 import us.neotechnica.panther.modules.networking.conversation.services.ConversationService
@@ -286,7 +287,11 @@ private suspend fun Conversation.fetchAndCommitUsers(forceUpdate: Boolean) {
 
     val fetchedUsers =
         try {
-            UserService.getUsers(userIDs)
+            UserService.getUsers(
+                userIDs,
+                bypassSnapshotCache = forceUpdate,
+                cacheStrategy = if (forceUpdate) CacheStrategy.DISREGARD_CACHE else null,
+            )
         } catch (exception: Exception) {
             throw exception.appending(userInfo)
         }

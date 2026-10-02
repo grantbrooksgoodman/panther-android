@@ -97,7 +97,7 @@ object UpdateService {
                                 dictionary[MetadataServiceStorageKey.SHOULD_FORCE_UPDATE_ANDROID.rawValue] as? Boolean
                                     ?: return@collect
 
-                            if (playStoreBuildNumber > Build.appStoreBuildNumber && shouldForceUpdateAndroid) {
+                            if (playStoreBuildNumber > Build.buildNumber && shouldForceUpdateAndroid) {
                                 triggerForcedUpdateModal()
                             }
                         }
@@ -155,7 +155,7 @@ object UpdateService {
         val playStoreBuildNumber = MetadataService.playStoreBuildNumber ?: return null
         val overrideForceUpdate = MetadataService.shouldForceUpdateAndroid ?: return null
 
-        val isUpdateAvailable = playStoreBuildNumber > Build.appStoreBuildNumber
+        val isUpdateAvailable = playStoreBuildNumber > Build.buildNumber
         val shouldPrompt =
             (Persistent.int(PersistentStorageKey.relaunchesSinceLastPostponedUpdate) ?: 0) >= RELAUNCH_PROMPT_THRESHOLD
 

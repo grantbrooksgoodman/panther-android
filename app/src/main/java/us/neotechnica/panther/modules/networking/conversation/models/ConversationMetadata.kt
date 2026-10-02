@@ -184,7 +184,7 @@ class ConversationMetadata(
                 data[Keys.REQUIRES_CONSENT_FROM_INITIATOR.rawValue] is String
         }
 
-        override suspend fun decode(data: Map<String, Any?>): ConversationMetadata {
+        override fun decode(data: Map<String, Any?>): ConversationMetadata {
             val name = data[Keys.NAME.rawValue] as? String
             val imageDataString = data[Keys.IMAGE_DATA.rawValue] as? String
             val isPenPalsConversation = data[Keys.IS_PEN_PALS_CONVERSATION.rawValue] as? Boolean

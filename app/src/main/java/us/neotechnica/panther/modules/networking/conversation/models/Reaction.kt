@@ -109,7 +109,7 @@ data class Reaction(
             return Style.from(encodedStyle) != null && data[Keys.USER_ID.rawValue] is String
         }
 
-        override suspend fun decode(data: Map<String, Any?>): Reaction {
+        override fun decode(data: Map<String, Any?>): Reaction {
             val encodedStyle = data[Keys.STYLE.rawValue] as? String
             val style = encodedStyle?.let { Style.from(it) }
             val userID = data[Keys.USER_ID.rawValue] as? String

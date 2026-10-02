@@ -39,8 +39,8 @@ import java.io.ByteArrayOutputStream
  *
  * **Important:** [encode] emits a single uncompressed block – a valid
  * LZFSE stream that Apple's decoder reads back verbatim, but without a
- * compression ratio. [decode] reads every block type: uncompressed,
- * end-of-stream, LZVN, and FSE-compressed (v1 and v2).
+ * compression ratio. [decode] reads uncompressed, end-of-stream, LZVN,
+ * and FSE-compressed (v2) blocks; legacy v1 compressed blocks throw.
  */
 object Lzfse {
     // MARK: - Methods
@@ -72,7 +72,8 @@ object Lzfse {
      *
      * @return The decoded bytes.
      *
-     * @throws LzfseException if the stream is malformed or truncated.
+     * @throws LzfseException if the stream is malformed or truncated,
+     *   or contains a legacy v1 compressed block.
      */
     fun decode(source: ByteArray): ByteArray = LzfseDecoder.decode(source)
 

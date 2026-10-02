@@ -53,7 +53,7 @@ data class MessageRecipientConsentAcknowledgementData(
                 booleanString.isBangQualifiedEmpty
         }
 
-        override suspend fun decode(data: String): MessageRecipientConsentAcknowledgementData {
+        override fun decode(data: String): MessageRecipientConsentAcknowledgementData {
             val components = data.split(": ")
             if (components.size != 2) throw decodingFailure(this, data)
 

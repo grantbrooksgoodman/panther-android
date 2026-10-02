@@ -7,7 +7,6 @@
 
 package us.neotechnica.panther.modules.session.state.services
 
-import kotlinx.coroutines.runBlocking
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
 import us.neotechnica.panther.modules.networking.message.models.Message
@@ -88,7 +87,7 @@ object SessionStore {
     private var persistedConversationArchive: Set<Conversation>?
         get() =
             Persistent.archive(PersistentStorageKey.sessionStore(SessionStoreStorageKey.CONVERSATION_ARCHIVE)) { it }?.let { maps ->
-                runBlocking { maps.mapNotNull { runCatching { Conversation.decode(it) }.getOrNull() } }.toSet()
+                maps.mapNotNull { runCatching { Conversation.decode(it) }.getOrNull() }.toSet()
             }
         set(value) {
             Persistent.setArchive(PersistentStorageKey.sessionStore(SessionStoreStorageKey.CONVERSATION_ARCHIVE), value?.map { it.encoded })
@@ -97,7 +96,7 @@ object SessionStore {
     private var persistedMessageArchive: Set<Message>?
         get() =
             Persistent.archive(PersistentStorageKey.sessionStore(SessionStoreStorageKey.MESSAGE_ARCHIVE)) { it }?.let { maps ->
-                runBlocking { maps.mapNotNull { runCatching { Message.decode(it) }.getOrNull() } }.toSet()
+                maps.mapNotNull { runCatching { Message.decode(it) }.getOrNull() }.toSet()
             }
         set(value) {
             Persistent.setArchive(PersistentStorageKey.sessionStore(SessionStoreStorageKey.MESSAGE_ARCHIVE), value?.map { it.encoded })
@@ -106,7 +105,7 @@ object SessionStore {
     private var persistedUserArchive: Set<User>?
         get() =
             Persistent.archive(PersistentStorageKey.sessionStore(SessionStoreStorageKey.USER_ARCHIVE)) { it }?.let { maps ->
-                runBlocking { maps.mapNotNull { runCatching { User.decode(it) }.getOrNull() } }.toSet()
+                maps.mapNotNull { runCatching { User.decode(it) }.getOrNull() }.toSet()
             }
         set(value) {
             Persistent.setArchive(PersistentStorageKey.sessionStore(SessionStoreStorageKey.USER_ARCHIVE), value?.map { it.encoded })

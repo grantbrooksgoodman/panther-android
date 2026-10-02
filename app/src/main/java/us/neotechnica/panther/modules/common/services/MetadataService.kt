@@ -17,6 +17,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetad
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.models.SingleSlotCoalescer
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
+import java.net.URI
 
 /**
  * Reads app configuration values hosted in the remote database.
@@ -135,9 +136,10 @@ object MetadataService {
 
     // MARK: - Auxiliary
 
+    @Suppress("CyclomaticComplexMethod")
     private fun assignValues(dictionary: Map<String, Any>) {
         val appShareLink =
-            dictionary[MetadataServiceStorageKey.APP_SHARE_LINK.rawValue] as? String
+            (dictionary[MetadataServiceStorageKey.APP_SHARE_LINK.rawValue] as? String)?.takeIf { it.isValidURL() }
                 ?: throw Exception("Failed to read hosted app share link.", metadata = ExceptionMetadata(this))
         val appStoreBuildNumber =
             (dictionary[MetadataServiceStorageKey.APP_STORE_BUILD_NUMBER.rawValue] as? Number)?.toInt()
@@ -148,41 +150,38 @@ object MetadataService {
         val isPrevaricationModeEnabled =
             dictionary[MetadataServiceStorageKey.IS_PREVARICATION_MODE_ENABLED.rawValue] as? Boolean
                 ?: throw Exception("Failed to read hosted prevarication mode flag.", metadata = ExceptionMetadata(this))
+        val playStoreBuildNumber =
+            (dictionary[MetadataServiceStorageKey.PLAY_STORE_BUILD_NUMBER.rawValue] as? Number)?.toInt()
+                ?: throw Exception("Failed to read hosted Play Store build number.", metadata = ExceptionMetadata(this))
+        val playStoreShareLink =
+            dictionary[MetadataServiceStorageKey.PLAY_STORE_SHARE_LINK.rawValue] as? String
+                ?: throw Exception("Failed to read hosted Play Store share link.", metadata = ExceptionMetadata(this))
         val redirectionKey =
             dictionary[MetadataServiceStorageKey.REDIRECTION_KEY.rawValue] as? String
                 ?: throw Exception("Failed to read hosted redirection key.", metadata = ExceptionMetadata(this))
         val shouldForceUpdate =
             dictionary[MetadataServiceStorageKey.SHOULD_FORCE_UPDATE.rawValue] as? Boolean
                 ?: throw Exception("Failed to read hosted force-update flag.", metadata = ExceptionMetadata(this))
+        val shouldForceUpdateAndroid =
+            dictionary[MetadataServiceStorageKey.SHOULD_FORCE_UPDATE_ANDROID.rawValue] as? Boolean
+                ?: throw Exception("Failed to read hosted Android force-update flag.", metadata = ExceptionMetadata(this))
         val storageReferenceURL =
-            dictionary[MetadataServiceStorageKey.STORAGE_REFERENCE_URL.rawValue] as? String
+            (dictionary[MetadataServiceStorageKey.STORAGE_REFERENCE_URL.rawValue] as? String)?.takeIf { it.isValidURL() }
                 ?: throw Exception("Failed to read hosted storage reference URL.", metadata = ExceptionMetadata(this))
 
         Persistent.setString(scopedKey(MetadataServiceStorageKey.APP_SHARE_LINK), appShareLink)
         Persistent.setInt(scopedKey(MetadataServiceStorageKey.APP_STORE_BUILD_NUMBER), appStoreBuildNumber)
         Persistent.setString(scopedKey(MetadataServiceStorageKey.GEMINI_API_KEY), geminiAPIKey)
         Persistent.setBoolean(scopedKey(MetadataServiceStorageKey.IS_PREVARICATION_MODE_ENABLED), isPrevaricationModeEnabled)
+        Persistent.setInt(scopedKey(MetadataServiceStorageKey.PLAY_STORE_BUILD_NUMBER), playStoreBuildNumber)
+        Persistent.setString(scopedKey(MetadataServiceStorageKey.PLAY_STORE_SHARE_LINK), playStoreShareLink)
         Persistent.setString(scopedKey(MetadataServiceStorageKey.REDIRECTION_KEY), redirectionKey)
         Persistent.setBoolean(scopedKey(MetadataServiceStorageKey.SHOULD_FORCE_UPDATE), shouldForceUpdate)
+        Persistent.setBoolean(scopedKey(MetadataServiceStorageKey.SHOULD_FORCE_UPDATE_ANDROID), shouldForceUpdateAndroid)
         Persistent.setString(scopedKey(MetadataServiceStorageKey.STORAGE_REFERENCE_URL), storageReferenceURL)
-
-        assignAndroidValues(dictionary)
     }
 
-    // The Android-only keys (D-II-4) are tolerated absent until Grant
-    // adds them server-side; their absence leaves the value unresolved
-    // rather than throwing.
-    private fun assignAndroidValues(dictionary: Map<String, Any>) {
-        (dictionary[MetadataServiceStorageKey.PLAY_STORE_BUILD_NUMBER.rawValue] as? Number)?.toInt()?.let {
-            Persistent.setInt(scopedKey(MetadataServiceStorageKey.PLAY_STORE_BUILD_NUMBER), it)
-        }
-        (dictionary[MetadataServiceStorageKey.PLAY_STORE_SHARE_LINK.rawValue] as? String)?.let {
-            Persistent.setString(scopedKey(MetadataServiceStorageKey.PLAY_STORE_SHARE_LINK), it)
-        }
-        (dictionary[MetadataServiceStorageKey.SHOULD_FORCE_UPDATE_ANDROID.rawValue] as? Boolean)?.let {
-            Persistent.setBoolean(scopedKey(MetadataServiceStorageKey.SHOULD_FORCE_UPDATE_ANDROID), it)
-        }
-    }
+    private fun String.isValidURL(): Boolean = runCatching { URI(this).scheme }.getOrNull() != null
 
     private fun scopedKey(key: MetadataServiceStorageKey): PersistentStorageKey =
         PersistentStorageKey.metadataService(key)

@@ -1,6 +1,6 @@
 //
 //  PantherApplication.kt
-//  Panther
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman on 19/08/2026.
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
@@ -14,66 +14,44 @@ import android.os.Bundle
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
+import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
+import us.neotechnica.panther.bundle.traitCollectionChanged
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
-import us.neotechnica.panther.modules.common.contacts.services.ContactService
-import us.neotechnica.panther.modules.common.services.AlertKitTranslationService
-import us.neotechnica.panther.modules.networking.translation.delegates.LocalTranslationArchiverDelegate
-import us.neotechnica.panther.modules.common.services.CommonPropertyLists
-import us.neotechnica.panther.modules.common.services.ErrorReportingService
-import us.neotechnica.panther.modules.common.services.ExceptionMetadataService
-import us.neotechnica.panther.modules.common.services.InviteService
-import us.neotechnica.panther.modules.common.services.LoggerPresentationService
-import us.neotechnica.panther.modules.common.services.TextToSpeechService
+import us.neotechnica.panther.modules.common.models.ConnectionStatusServiceEffectID
+import us.neotechnica.panther.modules.common.services.AnalyticsService
+import us.neotechnica.panther.modules.common.services.ConnectionStatusService
+import us.neotechnica.panther.modules.common.services.NotificationService
+import us.neotechnica.panther.modules.common.services.PushTokenService
 import us.neotechnica.panther.modules.common.services.UpdateService
-import us.neotechnica.panther.modules.content.user.services.AudioMessagePlaybackService
-import us.neotechnica.panther.modules.content.user.services.SettingsPageViewService
 import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
-import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
-import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
-import us.neotechnica.panther.modules.networking.user.models.DeviceID
-import us.neotechnica.panther.bundle.CacheDomainList
-import us.neotechnica.panther.bundle.LoggerDomainSubscription
-import us.neotechnica.panther.bundle.PermanentKeyDelegate
 import us.neotechnica.panther.modules.notifications.services.PantherMessagingService
-import us.neotechnica.panther.networking.Networking
-import us.neotechnica.panther.networking.modules.common.models.NetworkEnvironment
-import us.neotechnica.panther.networking.modules.health.models.NetworkHealthConfiguration
-import us.neotechnica.panther.networking.modules.health.models.NetworkHealthProbeConfiguration
-import us.neotechnica.panther.modules.common.services.AnalyticsService
-import us.neotechnica.panther.modules.common.models.ConnectionStatusServiceEffectID
-import us.neotechnica.panther.modules.common.services.ConnectionStatusService
-import us.neotechnica.panther.modules.common.services.NetworkActivityIndicatorService
-import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
-import us.neotechnica.panther.modules.common.services.PushTokenService
+import us.neotechnica.panther.modules.session.ClientSession
+import us.neotechnica.panther.modules.session.entity.extensions.calculateBadgeNumber
 import us.neotechnica.panther.modules.session.state.services.retryAllEligible
-import us.neotechnica.panther.subsystem.AppSubsystem
-import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
-import us.neotechnica.panther.subsystem.modules.foundation.services.Build
-import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
-import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
+import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 import us.neotechnica.panther.translator.Translator
-import java.util.Date
-import java.util.Properties
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration.Companion.seconds
 
 /**
  * The application entry point.
  *
- * Initializes the Networking framework with the environment
- * baked into the active build flavor and the App Check provider
- * appropriate to the build type, prepares localization, and gives the
- * translator's web-view harness a way to reach the current activity.
+ * Performs one-time launch setup through
+ * [us.neotechnica.panther.bundle.Application], gates Firebase
+ * analytics collection, wires connection-status effects and push
+ * notifications, gives the translator's web-view harness a way to
+ * reach the current activity, and observes the process lifecycle.
  */
 class PantherApplication : Application() {
     // MARK: - Properties
@@ -86,49 +64,12 @@ class PantherApplication : Application() {
         super.onCreate()
 
         us.neotechnica.panther.bundle.Application.initialize(this)
-        AnalyticsService.initialize(this)
-        LocalizedStringResolver.initialize(this)
-        Persistent.initialize(this)
-        FileStore.initialize(this)
-        CommonPropertyLists.initialize(this)
-        ContactService.initialize(this)
-        DeviceID.initialize(this)
-        InviteService.initialize(this)
-        SettingsPageViewService.initialize(this)
-        TextToSpeechService.initialize(this)
-        AudioMessagePlaybackService.initialize(this)
-        MediaActionHandlerService.initialize(this)
-        configureBuild()
 
-        Logger.setPresentationDelegate(LoggerPresentationService)
-        AppSubsystem.delegates.registerCacheDomainListDelegate(CacheDomainList)
-        AppSubsystem.delegates.registerExceptionMetadataDelegate(ExceptionMetadataService)
-        AppSubsystem.delegates.registerLoggerDomainSubscriptionDelegate(LoggerDomainSubscription)
-        AppSubsystem.delegates.registerPermanentPersistentStorageKeyDelegate(PermanentKeyDelegate)
-        AlertKitConfig.registerTranslationDelegate(AlertKitTranslationService)
-        AlertKitConfig.registerReportDelegate(ErrorReportingService)
-        LocalTranslationArchiverDelegate.registerWithDependencies()
-
-        Networking.initialize(
-            context = this,
-            defaultEnvironment = NetworkEnvironment.from(BuildConfig.NETWORK_ENVIRONMENT),
-            useDebugAppCheckProvider = BuildConfig.DEBUG,
-        )
-        Networking.config.setNetworkHealthConfiguration(
-            NetworkHealthConfiguration.default.copy(
-                probeConfiguration = NetworkHealthProbeConfiguration(url = "https://www.apple.com"),
-            ),
-        )
-        Networking.config.registerActivityIndicatorDelegate(NetworkActivityIndicatorService)
-
-        registerTranslatorActivityProvider()
+        setUpFirebaseAnalytics()
         setUpConnectionStatusEffects()
         setUpPushNotifications()
+        registerTranslatorActivityProvider()
         observeProcessLifecycle()
-
-        // iOS starts this in SplashPageViewService.initializeBundle (Phase 6); wired here as a
-        // stand-in so the notification name map stays fresh. Relocate to the splash in Phase 6.
-        UICacheInvalidationService.startObserving()
 
         AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.OPEN_APP)
     }
@@ -138,53 +79,35 @@ class PantherApplication : Application() {
     private fun observeProcessLifecycle() {
         ProcessLifecycleOwner.get().lifecycle.addObserver(
             object : DefaultLifecycleObserver {
-                // Mirrors sceneDidBecomeActive.
                 override fun onStart(owner: LifecycleOwner) {
-                    outboxScope.launch { MessageOutboxService.retryAllEligible() }
+                    val sharedEvents = DependencyValues.current.sharedEvents
+                    sharedEvents.traitCollectionChanged.send(Unit)
+                    outboxScope.launch { ClientSession.outbox.retryAllEligible() }
                 }
 
-                // Mirrors sceneDidEnterBackground. The store flush, badge
-                // update, and notification-extension name-map refresh are
-                // wired as the session store and those services land in
-                // later phases.
-                override fun onStop(owner: LifecycleOwner) = Unit
+                override fun onStop(owner: LifecycleOwner) {
+                    ClientSession.store.flushNow()
+                    UICacheInvalidationService.refreshNotificationExtensionNameMap()
+                    outboxScope.launch {
+                        val currentUser = ClientSession.entity.user.currentUser ?: return@launch
+                        try {
+                            NotificationService.setBadgeNumber(currentUser.calculateBadgeNumber())
+                        } catch (exception: Exception) {
+                            Logger.log(exception)
+                        }
+                    }
+                }
             },
         )
     }
 
-    // MARK: - Build Configuration
+    // MARK: - Firebase Analytics
 
-    /**
-     * Populates [Build] from the per-compile `build_info.properties`
-     * asset (stamped by the app module's Gradle script, the analog of
-     * the iOS Run Script build-number bump).
-     */
-    private fun configureBuild() {
-        val (buildNumber, buildDate, firstCompileDate) = readBuildInfo()
-        Build.initialize(
-            appStoreBuildNumber = APP_STORE_BUILD_NUMBER,
-            buildNumber = buildNumber,
-            codeName = CODE_NAME,
-            finalName = FINAL_NAME,
-            bundleVersion = BuildConfig.VERSION_NAME,
-            environment = BuildConfig.NETWORK_ENVIRONMENT,
-            milestone = if (BuildConfig.DEBUG) Milestone.ALPHA else Milestone.GENERAL_RELEASE,
-            buildDate = Date(buildDate * MILLIS_PER_SECOND),
-            firstCompileDate = Date(firstCompileDate * MILLIS_PER_SECOND),
-        )
+    private fun setUpFirebaseAnalytics() {
+        FirebaseAnalytics
+            .getInstance(this)
+            .setAnalyticsCollectionEnabled(AnalyticsService.shouldEnableDataCollection)
     }
-
-    private fun readBuildInfo(): Triple<Int, Long, Long> =
-        runCatching {
-            assets.open(BUILD_INFO_ASSET).use { stream ->
-                val properties = Properties().apply { load(stream) }
-                Triple(
-                    properties.getProperty("buildNumber", "0").toInt(),
-                    properties.getProperty("buildDate", "0").toLong(),
-                    properties.getProperty("firstCompileDate", "0").toLong(),
-                )
-            }
-        }.getOrDefault(Triple(0, 0L, 0L))
 
     // MARK: - Push Notifications
 
@@ -202,7 +125,7 @@ class PantherApplication : Application() {
 
         // Retry eligible entries when connectivity is restored.
         ConnectionStatusService.addEffectUponConnectionChanged(ConnectionStatusServiceEffectID.RETRY_MESSAGE_OUTBOX) {
-            if (ConnectionStatusService.isOnline) outboxScope.launch { MessageOutboxService.retryAllEligible() }
+            if (ConnectionStatusService.isOnline) outboxScope.launch { ClientSession.outbox.retryAllEligible() }
         }
 
         // Show an offline toast when connectivity is lost.
@@ -268,11 +191,5 @@ class PantherApplication : Application() {
 
     private companion object {
         const val OFFLINE_TOAST_SECONDS = 10L
-
-        const val BUILD_INFO_ASSET = "build_info.properties"
-        const val CODE_NAME = "Panther"
-        const val FINAL_NAME = "Hello"
-        const val APP_STORE_BUILD_NUMBER = 0
-        const val MILLIS_PER_SECOND = 1_000L
     }
 }

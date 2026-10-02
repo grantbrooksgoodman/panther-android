@@ -108,7 +108,7 @@ class PhoneNumber(
                 data[Keys.REGION_CODE.rawValue] is String
         }
 
-        override suspend fun decode(data: Map<String, Any?>): PhoneNumber {
+        override fun decode(data: Map<String, Any?>): PhoneNumber {
             val callingCode = data[Keys.CALLING_CODE.rawValue] as? String
             val nationalNumberString = data[Keys.NATIONAL_NUMBER_STRING.rawValue] as? String
             val regionCode = data[Keys.REGION_CODE.rawValue] as? String

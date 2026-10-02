@@ -10,6 +10,7 @@ package us.neotechnica.panther.modules.session.state.services
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -94,5 +95,49 @@ class MessageOutboxServiceTest {
 
         assertTrue(File(outboxDirectory, "referenced.jpeg").exists())
         assertFalse(File(outboxDirectory, "orphan.jpeg").exists())
+    }
+
+    @Test
+    fun `migrates legacy archive to file store and clears the string`() {
+        Persistent.setString(
+            PersistentStorageKey.messageOutbox,
+            """[{"id":"outbox-4","conversationIDKey":"c1","fromAccountID":"u1","recipientUserIDs":["u2"],""" +
+                """"text":"migrated","mediaRelativePath":null,"isPenPalsConversation":false,"createdDate":1000,""" +
+                """"attemptCount":1,"lastAttemptDate":null,"reservedRemoteID":null,"state":"failed"}]""",
+        )
+        MessageOutboxService.reloadForTesting()
+
+        assertNull(Persistent.string(PersistentStorageKey.messageOutbox))
+        val entry = MessageOutboxService.entry("outbox-4")
+        assertNotNull(entry)
+        assertTrue(entry!!.payload is OutboxEntry.Payload.Text)
+        assertEquals("migrated", (entry.payload as OutboxEntry.Payload.Text).value)
+    }
+
+    @Test
+    fun `round-trips an enqueued entry through the archive`() {
+        val entry =
+            OutboxEntry(
+                conversationIDKey = "c1",
+                createdDate = Date(1000),
+                fromAccountID = "u1",
+                id = "outbox-5",
+                isPenPalsConversation = false,
+                payload = OutboxEntry.Payload.Text("archived"),
+                recipientUserIDs = listOf("u2"),
+                attemptCount = 2,
+                lastAttemptDate = Date(2000),
+                reservedRemoteID = "remote-5",
+                state = OutboxEntry.State.FAILED,
+                transcription = null,
+            )
+        MessageOutboxService.enqueue(entry)
+        MessageOutboxService.reloadForTesting()
+
+        val reloaded = MessageOutboxService.entry("outbox-5")
+        assertNotNull(reloaded)
+        assertEquals("archived", (reloaded!!.payload as OutboxEntry.Payload.Text).value)
+        assertEquals(2, reloaded.attemptCount)
+        assertEquals("remote-5", reloaded.reservedRemoteID)
     }
 }

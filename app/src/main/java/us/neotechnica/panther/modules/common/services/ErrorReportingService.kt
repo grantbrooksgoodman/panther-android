@@ -15,6 +15,7 @@ import us.neotechnica.panther.designsystem.modules.alertkit.interfaces.ReportDel
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.storage.models.StorageMetadata
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.ErrorReportDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
@@ -35,7 +36,7 @@ import android.os.Build as AndroidBuild
  * with custom storage metadata describing the error, build, device,
  * language, and current user.
  */
-object ErrorReportingService : ReportDelegate {
+object ErrorReportingService : ReportDelegate, ErrorReportDelegate {
     // MARK: - Properties
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

@@ -234,9 +234,9 @@ object MediaMessageService {
         storage.download(localPath.relativePathString, destination)
 
         // Hosted plain-text payloads are stored LZFSE-compressed; decompress
-        // in place so the local file is the plain text. Legacy uncompressed
-        // uploads and payloads whose compressed block type is not yet
-        // supported are left as downloaded.
+        // in place so the local file is the plain text. Non-LZFSE legacy
+        // uploads are left as downloaded, since the decode falls back to the
+        // raw bytes on failure.
         if (isPlainTextDocument(MediaFileExtension.from(localPath.relativePathString.substringAfterLast('.', "")))) {
             runCatching { destination.writeBytes(Lzfse.decode(destination.readBytes())) }
                 .onFailure { Logger.log("Failed to LZFSE-decompress document; leaving as-is. ${it.message}") }

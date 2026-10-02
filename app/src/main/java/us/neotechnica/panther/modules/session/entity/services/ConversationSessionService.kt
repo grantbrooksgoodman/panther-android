@@ -14,7 +14,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.bundle.shouldNotifyOfConversationAvailability
+import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
 import us.neotechnica.panther.modules.common.constants.CommonConstants
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
@@ -24,7 +25,6 @@ import us.neotechnica.panther.modules.networking.conversation.remotelyupdatable.
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.asDisplayMessage
-import us.neotechnica.panther.modules.session.entity.extensions.currentConversationDidBecomeUnavailable
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.modules.session.entity.extensions.filteringSystemMessages
 import us.neotechnica.panther.modules.session.entity.extensions.hydrated
@@ -35,6 +35,15 @@ import us.neotechnica.panther.modules.session.entity.extensions.sessionStoreDidC
 import us.neotechnica.panther.modules.session.entity.extensions.sortedByAscendingSentDate
 import us.neotechnica.panther.modules.session.entity.extensions.uniquedByID
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
+import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
+import us.neotechnica.panther.modules.session.state.services.PendingTranslationArchive
+import us.neotechnica.panther.modules.session.state.services.SelfWriteRegistry
+import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.modules.session.sync.services.ConversationObserverService
+import us.neotechnica.panther.navigation.Route
+import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestampDateFormatter
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
@@ -42,14 +51,12 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
+import us.neotechnica.panther.subsystem.modules.foundation.models.StoredItemKey
+import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
+import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
-import us.neotechnica.panther.subsystem.modules.shared.models.send
-import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
-import us.neotechnica.panther.modules.session.state.services.PendingTranslationArchive
-import us.neotechnica.panther.modules.session.state.services.SelfWriteRegistry
-import us.neotechnica.panther.modules.session.state.services.SessionStore
-import us.neotechnica.panther.modules.session.sync.services.ConversationObserverService
 
 /**
  * Manages the current conversation and the messages displayed for it.
@@ -328,9 +335,37 @@ object ConversationSessionService {
         when (change) {
             is SessionStoreChange.Conversations -> {
                 if (idKey in change.removedIDKeys) {
-                    clearPointer()
-                    sharedEvents.currentConversationDidBecomeUnavailable.send()
-                    return
+                    Logger.log(
+                        Exception(
+                            "Current conversation was removed from the store.",
+                            isReportable = false,
+                            userInfo = mapOf("ConversationIDKey" to idKey),
+                            metadata = ExceptionMetadata(this),
+                        ),
+                    )
+
+                    // Dismiss the chat page when the current conversation is
+                    // removed (for example, deleted remotely by another
+                    // participant). Navigation and toast presentation are
+                    // StateFlow-backed, so no main-thread hop is required.
+                    observationScope.launch {
+                        DependencyValues.current.navigation.navigate(
+                            Route.UserContent(UserContentRoute.Stack(emptyList())),
+                        )
+                        if (RuntimeStorage.shouldNotifyOfConversationAvailability) {
+                            Toast.show(
+                                Toast(
+                                    Toast.Type.Banner(ToastStyle.INFO),
+                                    message = "This conversation is no longer available.",
+                                ),
+                                translating = listOf(Toast.TranslationOptionKey.Message, Toast.TranslationOptionKey.Title),
+                            )
+                        } else {
+                            RuntimeStorage.remove(StoredItemKey.shouldNotifyOfConversationAvailability)
+                        }
+                    }
+
+                    return clearPointer()
                 }
                 if (idKey in change.upsertedIDKeys) updateDisplayedMessages()
             }

@@ -24,10 +24,3 @@ val SharedEvents.sessionStoreDidChange: EventStream<SessionStoreChange>
  */
 val SharedEvents.messageOutboxDidChange: EventStream<Unit>
     get() = event("messageOutboxDidChange")
-
-/**
- * An event that fires when the current conversation is removed from the
- * store (for example, deleted remotely), so open chat UI can dismiss.
- */
-val SharedEvents.currentConversationDidBecomeUnavailable: EventStream<Unit>
-    get() = event("currentConversationDidBecomeUnavailable")

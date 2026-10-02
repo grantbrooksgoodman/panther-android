@@ -128,7 +128,7 @@ data class User(
             return PhoneNumber.canDecode(phoneNumber)
         }
 
-        override suspend fun decode(data: Map<String, Any?>): User {
+        override fun decode(data: Map<String, Any?>): User {
             val id = data[Keys.ID.rawValue] as? String
             val aiEnhanced = data[Keys.AI_ENHANCED_TRANSLATIONS_ENABLED.rawValue] as? Boolean
             val deviceID = data[Keys.DEVICE_ID.rawValue] as? String
