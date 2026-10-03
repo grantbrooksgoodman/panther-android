@@ -14,6 +14,7 @@ import us.neotechnica.panther.modules.common.models.Contact
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.models.NumberPair
 import us.neotechnica.panther.modules.common.models.PhoneNumber
+import us.neotechnica.panther.modules.content.user.services.RecipientBarContactSelectionUIService
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
@@ -40,8 +41,7 @@ val ContactPair.containsCurrentUser: Boolean
  * selected as a recipient.
  */
 val ContactPair.isSelected: Boolean
-    // Always false while no recipient selection is active.
-    get() = false
+    get() = RecipientBarContactSelectionUIService.selectedContactPairs.value.contains(this)
 
 /**
  * Whether the contact pair is a mock, representing an unresolved

@@ -19,10 +19,6 @@ val SharedEvents.conversationsPageReappeared: EventStream<Unit>
 val SharedEvents.currentConversationMetadataChanged: EventStream<Unit>
     get() = event("currentConversationMetadataChanged")
 
-/** An event that signals the first message was sent in a new chat. */
-val SharedEvents.firstMessageSentInNewChat: EventStream<Unit>
-    get() = event("firstMessageSentInNewChat")
-
 /** An event that signals network activity occurred. */
 val SharedEvents.networkActivityOccurred: EventStream<Unit>
     get() = event("networkActivityOccurred")

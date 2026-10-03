@@ -59,8 +59,15 @@ object MessageDeliveryService {
     private val isExistingConversation: Boolean
         get() = conversation != null && conversation?.isMock != true
 
+    private val selectedContactPairUsers: List<User>
+        get() =
+            RecipientBarContactSelectionUIService
+                .selectedContactPairs
+                .value
+                .flatMap { contactPair -> contactPair.numberPairs.flatMap { it.users } }
+
     private val users: List<User>
-        get() = conversation?.users.orEmpty().distinctBy { it.id }
+        get() = (conversation?.users?.takeIf { it.isNotEmpty() } ?: selectedContactPairUsers).distinctBy { it.id }
 
     // MARK: - Methods
 
@@ -107,10 +114,7 @@ object MessageDeliveryService {
             MessageOutboxService.enqueue(entry)
         }
 
-        internalIsSendingMessage.value = true
-        withContext(Dispatchers.Main) {
-            DependencyValues.current.clientSession.deliveryProgressIndicator?.startAnimatingDeliveryProgress()
-        }
+        beginSend()
 
         try {
             val updated =
@@ -145,50 +149,59 @@ object MessageDeliveryService {
      * are resolved.
      */
     suspend fun sendMediaMessage(mediaFile: MediaFile) {
-        val conversation = ConversationSessionService.currentConversation ?: return
-        val currentUser = UserSessionService.currentUser ?: return
-        val users = conversation.users.orEmpty()
-        if (users.isEmpty()) return
+        val recipients = users
+        if (recipients.isEmpty()) return
 
         HapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
 
-        val stagedFileName =
-            mediaFile.localPathFile?.let { MessageOutboxService.storePayloadFile(from = it) } ?: return
-        val entry =
-            OutboxEntry(
-                id = "${OutboxEntry.ID_PREFIX}${UUID.randomUUID()}",
-                conversationIDKey = conversation.id.key,
-                fromAccountID = currentUser.id,
-                recipientUserIDs = users.map { it.id },
-                payload = OutboxEntry.Payload.Media(stagedFileName, mediaFile.fileExtension),
-                isPenPalsConversation = conversation.metadata.isPenPalsConversation,
-                createdDate = Date(),
-                attemptCount = 1,
-                lastAttemptDate = Date(),
-                reservedRemoteID = null,
-                state = OutboxEntry.State.SENDING,
-                transcription = null,
-            )
-        MessageOutboxService.enqueue(entry)
-        internalIsSendingMessage.value = true
-        withContext(Dispatchers.Main) {
-            DependencyValues.current.clientSession.deliveryProgressIndicator?.startAnimatingDeliveryProgress()
+        val currentConversation = conversation
+        val currentUser = UserSessionService.currentUser
+        var outboxEntryID: String? = null
+        if (isExistingConversation && currentConversation != null && currentUser != null) {
+            val stagedFileName =
+                mediaFile.localPathFile?.let { MessageOutboxService.storePayloadFile(from = it) } ?: return
+            val entry =
+                OutboxEntry(
+                    id = "${OutboxEntry.ID_PREFIX}${UUID.randomUUID()}",
+                    conversationIDKey = currentConversation.id.key,
+                    fromAccountID = currentUser.id,
+                    recipientUserIDs = recipients.map { it.id },
+                    payload = OutboxEntry.Payload.Media(stagedFileName, mediaFile.fileExtension),
+                    isPenPalsConversation = currentConversation.metadata.isPenPalsConversation,
+                    createdDate = Date(),
+                    attemptCount = 1,
+                    lastAttemptDate = Date(),
+                    reservedRemoteID = null,
+                    state = OutboxEntry.State.SENDING,
+                    transcription = null,
+                )
+            outboxEntryID = entry.id
+            MessageOutboxService.enqueue(entry)
         }
 
+        beginSend()
+
+        val targetConversation = currentConversation?.takeUnless { it.isMock }
+        val isPenPalsConversation = currentConversation?.metadata?.isPenPalsConversation ?: false
         try {
             val updated =
                 MessageSessionService.sendMediaMessage(
                     mediaFile = mediaFile,
-                    users = users,
-                    conversation = conversation,
-                    isPenPalsConversation = conversation.metadata.isPenPalsConversation,
+                    users = recipients,
+                    conversation = targetConversation,
+                    isPenPalsConversation = isPenPalsConversation,
                 )
-            MessageOutboxService.remove(entry.id)
-            ConversationSessionService.setCurrentConversation(updated)
+            outboxEntryID?.let { MessageOutboxService.remove(it) }
             AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.SEND_MEDIA_MESSAGE)
+            setCurrentConversationIfApplicable(updated)
         } catch (exception: Exception) {
-            MessageOutboxService.markFailed(entry.id)
-            Logger.log(exception)
+            val id = outboxEntryID
+            if (id != null) {
+                MessageOutboxService.markFailed(id)
+                Logger.log(exception)
+            } else {
+                throw exception
+            }
         } finally {
             cleanUpAfterSend()
         }
@@ -202,10 +215,21 @@ object MessageDeliveryService {
         ConversationSessionService.setCurrentConversation(conversation)
     }
 
+    private suspend fun beginSend() {
+        internalIsSendingMessage.value = true
+        withContext(Dispatchers.Main) {
+            DependencyValues.current.clientSession
+                .deliveryProgressIndicator
+                ?.startAnimatingDeliveryProgress()
+        }
+    }
+
     private suspend fun cleanUpAfterSend() {
         internalIsSendingMessage.value = false
         withContext(Dispatchers.Main) {
-            DependencyValues.current.clientSession.deliveryProgressIndicator?.stopAnimatingDeliveryProgress()
+            DependencyValues.current.clientSession
+                .deliveryProgressIndicator
+                ?.stopAnimatingDeliveryProgress()
         }
     }
 }
