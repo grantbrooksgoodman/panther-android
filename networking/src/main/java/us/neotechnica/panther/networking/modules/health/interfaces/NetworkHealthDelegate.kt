@@ -98,4 +98,11 @@ interface NetworkHealthDelegate {
 
     /** Stops monitoring and releases the underlying path monitor. */
     fun stopMonitoring()
+
+    /**
+     * A multi-line, human-readable summary of the current health
+     * estimate and its evidence, for the developer-mode inspection
+     * surface.
+     */
+    fun debugSummary(): String = ""
 }

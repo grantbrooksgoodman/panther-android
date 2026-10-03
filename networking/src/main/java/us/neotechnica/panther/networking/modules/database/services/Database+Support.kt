@@ -10,6 +10,8 @@ package us.neotechnica.panther.networking.modules.database.services
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.extensions.noValueExists
+import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import kotlin.coroutines.cancellation.CancellationException
@@ -82,7 +84,13 @@ internal suspend fun <T> guardedFirebaseOperation(
     } catch (cancellation: CancellationException) {
         throw cancellation
     } catch (throwable: Throwable) {
-        throw (throwable as? Exception) ?: Exception.from(throwable, ExceptionMetadata(sender))
+        val exception = (throwable as? Exception) ?: Exception.from(throwable, ExceptionMetadata(sender))
+        // iOS's HealthEvidence.classify treats a "no value exists" result as honest latency
+        // evidence – the server answered, there simply was no data – so record it before rethrowing.
+        if (exception.isEqual(to = AppException.noValueExists)) {
+            Networking.health.recordLatencySample((System.currentTimeMillis() - start) / MILLIS_PER_SECOND)
+        }
+        throw exception
     } finally {
         Networking.config.activityIndicatorDelegate.hide()
     }

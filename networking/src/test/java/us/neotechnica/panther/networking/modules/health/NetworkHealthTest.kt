@@ -15,6 +15,7 @@ import us.neotechnica.panther.networking.modules.health.models.EstimatorContext
 import us.neotechnica.panther.networking.modules.health.models.HealthEstimator
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealth
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealthConfiguration
+import us.neotechnica.panther.networking.modules.health.models.NetworkHealthEvent
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealthResolver
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealthTier
 import us.neotechnica.panther.networking.modules.health.models.PathState
@@ -79,6 +80,47 @@ class NetworkHealthTest {
                 EstimatorContext(configuration, isOnline = false, pathState = PathState()),
             )
         assertEquals(NetworkHealth.Measured(0.0, NetworkHealthTier.POOR), health)
+    }
+
+    @Test
+    fun constrainedPathPenalizesScore() {
+        val unconstrained = HealthEstimator().recordLatency(0.1, isCensored = false, context = onlineContext())
+        val constrained =
+            HealthEstimator().recordLatency(
+                0.1,
+                isCensored = false,
+                context = EstimatorContext(configuration, isOnline = true, pathState = PathState(isConstrained = true)),
+            )
+
+        assertTrue(unconstrained is NetworkHealth.Measured)
+        assertTrue(constrained is NetworkHealth.Measured)
+        assertTrue((constrained as NetworkHealth.Measured).score < (unconstrained as NetworkHealth.Measured).score)
+    }
+
+    @Test
+    fun connectionFlapsPenalizeScore() {
+        val estimator = HealthEstimator()
+        val before = estimator.recordLatency(0.1, isCensored = false, context = onlineContext())
+
+        var after = before
+        repeat(5) { after = estimator.record(NetworkHealthEvent.ConnectionFlap, onlineContext()) }
+
+        assertTrue(before is NetworkHealth.Measured)
+        assertTrue(after is NetworkHealth.Measured)
+        assertTrue((after as NetworkHealth.Measured).score < (before as NetworkHealth.Measured).score)
+    }
+
+    @Test
+    fun transferStallsPenalizeScore() {
+        val estimator = HealthEstimator()
+        val before = estimator.recordLatency(0.1, isCensored = false, context = onlineContext())
+
+        var after = before
+        repeat(3) { after = estimator.record(NetworkHealthEvent.TransferStall, onlineContext()) }
+
+        assertTrue(before is NetworkHealth.Measured)
+        assertTrue(after is NetworkHealth.Measured)
+        assertTrue((after as NetworkHealth.Measured).score < (before as NetworkHealth.Measured).score)
     }
 
     private fun onlineContext() = EstimatorContext(configuration, isOnline = true, pathState = PathState())

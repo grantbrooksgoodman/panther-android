@@ -21,6 +21,20 @@ internal data class EstimatorContext(
     val pathState: PathState,
 )
 
+/** A snapshot of the estimator's channel statistics for diagnostics. */
+internal data class EstimatorStatistics(
+    val failureFraction: Double,
+    val flapCount: Double,
+    val lastTransferBytesPerSecond: Double?,
+    val latencyConfidence: Double,
+    val latencyDispersion: Double,
+    val latencyMean: Double,
+    val stallCount: Int,
+    val throughputConfidence: Double,
+    val throughputDispersion: Double,
+    val throughputMean: Double,
+)
+
 /**
  * The framework's built-in network health estimator.
  *
@@ -50,6 +64,25 @@ internal class HealthEstimator {
 
     fun computeHealth(context: EstimatorContext): NetworkHealth =
         state.withValue { computeHealth(it.value, context) }
+
+    fun statistics(context: EstimatorContext): EstimatorStatistics {
+        val halfLife = context.configuration.halfLife
+        val now = System.currentTimeMillis()
+        val state = state.wrappedValue
+
+        return EstimatorStatistics(
+            failureFraction = state.failureChannel.mean,
+            flapCount = state.flapChannel.decayedWeight(now, halfLife),
+            lastTransferBytesPerSecond = state.lastTransferBytesPerSecond,
+            latencyConfidence = state.latencyChannel.decayedWeight(now, halfLife),
+            latencyDispersion = state.latencyChannel.standardDeviation / max(state.latencyChannel.mean, DISPERSION_EPSILON),
+            latencyMean = state.latencyChannel.mean,
+            stallCount = state.stallCount,
+            throughputConfidence = state.throughputChannel.decayedWeight(now, halfLife),
+            throughputDispersion = state.throughputChannel.standardDeviation,
+            throughputMean = state.throughputChannel.mean,
+        )
+    }
 
     fun record(
         event: NetworkHealthEvent,
@@ -287,6 +320,7 @@ internal class HealthEstimator {
     }
 
     private companion object {
+        private const val DISPERSION_EPSILON = 0.001
         private const val HALF = 0.5
         private const val MINIMUM_INTERVAL_SECONDS = 0.001
         private const val MINIMUM_LATENCY_SECONDS = 0.001

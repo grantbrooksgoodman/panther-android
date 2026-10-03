@@ -16,6 +16,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.health.models.TransferProgressProbe
 import us.neotechnica.panther.networking.modules.storage.interfaces.StorageDelegate
 import us.neotechnica.panther.networking.modules.storage.models.StorageMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -54,12 +55,21 @@ class Storage : StorageDelegate {
         path: String,
         toFile: File,
     ) {
-        val start = System.currentTimeMillis()
-        runGuarded {
-            toFile.parentFile?.mkdirs()
-            reference.child(environmentPath(path)).getFile(toFile).await()
+        val probe = TransferProgressProbe()
+        try {
+            runGuarded {
+                toFile.parentFile?.mkdirs()
+                reference
+                    .child(environmentPath(path))
+                    .getFile(toFile)
+                    .addOnProgressListener { probe.handleProgress(it.bytesTransferred) }
+                    .await()
+            }
+        } catch (exception: Exception) {
+            probe.invalidate()
+            throw exception
         }
-        recordThroughput(toFile.length().toInt(), start)
+        probe.finish(toFile.length().toInt())
     }
 
     override suspend fun uploadBytes(
@@ -67,17 +77,19 @@ class Storage : StorageDelegate {
         path: String,
         metadata: StorageMetadata?,
     ) {
-        val start = System.currentTimeMillis()
-        runGuarded {
-            val ref = reference.child(environmentPath(path))
-            val firebaseMetadata = metadata?.let(::firebaseMetadata)
-            if (firebaseMetadata != null) {
-                ref.putBytes(bytes, firebaseMetadata).await()
-            } else {
-                ref.putBytes(bytes).await()
+        val probe = TransferProgressProbe()
+        try {
+            runGuarded {
+                val ref = reference.child(environmentPath(path))
+                val firebaseMetadata = metadata?.let(::firebaseMetadata)
+                val task = if (firebaseMetadata != null) ref.putBytes(bytes, firebaseMetadata) else ref.putBytes(bytes)
+                task.addOnProgressListener { probe.handleProgress(it.bytesTransferred) }.await()
             }
+        } catch (exception: Exception) {
+            probe.invalidate()
+            throw exception
         }
-        recordThroughput(bytes.size, start)
+        probe.finish(bytes.size)
     }
 
     override suspend fun upload(
@@ -85,18 +97,20 @@ class Storage : StorageDelegate {
         path: String,
         metadata: StorageMetadata?,
     ) {
-        val start = System.currentTimeMillis()
-        runGuarded {
-            val ref = reference.child(environmentPath(path))
-            val uri = Uri.fromFile(file)
-            val firebaseMetadata = metadata?.let(::firebaseMetadata)
-            if (firebaseMetadata != null) {
-                ref.putFile(uri, firebaseMetadata).await()
-            } else {
-                ref.putFile(uri).await()
+        val probe = TransferProgressProbe()
+        try {
+            runGuarded {
+                val ref = reference.child(environmentPath(path))
+                val uri = Uri.fromFile(file)
+                val firebaseMetadata = metadata?.let(::firebaseMetadata)
+                val task = if (firebaseMetadata != null) ref.putFile(uri, firebaseMetadata) else ref.putFile(uri)
+                task.addOnProgressListener { probe.handleProgress(it.bytesTransferred) }.await()
             }
+        } catch (exception: Exception) {
+            probe.invalidate()
+            throw exception
         }
-        recordThroughput(file.length().toInt(), start)
+        probe.finish(file.length().toInt())
     }
 
     override suspend fun itemExists(path: String): Boolean =

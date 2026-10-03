@@ -7,9 +7,14 @@
 
 package us.neotechnica.panther.networking.modules.health.services
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import android.os.Build
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,7 +27,6 @@ import us.neotechnica.panther.networking.modules.health.models.EstimatorContext
 import us.neotechnica.panther.networking.modules.health.models.HealthEstimator
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealth
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealthEvent
-import us.neotechnica.panther.networking.modules.health.models.NetworkHealthProbeConfiguration
 import us.neotechnica.panther.networking.modules.health.models.NetworkInterfaceType
 import us.neotechnica.panther.networking.modules.health.models.PathState
 import us.neotechnica.panther.networking.modules.health.models.RadioTechnology
@@ -30,8 +34,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.shared.models.SharedState
-import java.net.HttpURLConnection
-import java.net.URL
+import kotlin.math.pow
 
 /**
  * The framework's built-in [NetworkHealthDelegate].
@@ -44,11 +47,19 @@ import java.net.URL
 internal object NetworkHealthService : NetworkHealthDelegate {
     // MARK: - Properties
 
+    private val connectionStabilityObserver = ConnectionStabilityObserver(isOnlineProvider = ::isOnline, onEvent = ::record)
     private val estimator = HealthEstimator()
+    private val hasStartedConnectionObserver = LockIsolated(false)
     private val isMonitoring = LockIsolated(false)
     private val pathState = LockIsolated(PathState())
     private val probeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val probeTimestamps = LockIsolated(listOf<Long>())
+    private val prober =
+        NetworkHealthProber(
+            isOnlineProvider = ::isOnline,
+            onEvent = ::record,
+            onLatencySample = { submitLatencySample(it, isCensored = false) },
+            pathStateProvider = { pathState.wrappedValue },
+        )
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val latestHealth = LockIsolated<NetworkHealth>(NetworkHealth.Unknown)
 
@@ -59,6 +70,18 @@ internal object NetworkHealthService : NetworkHealthDelegate {
                 networkCapabilities: NetworkCapabilities,
             ) {
                 handlePathUpdate(networkCapabilities)
+            }
+        }
+
+    // Data Saver changes do not fire the network callback, so a dedicated
+    // receiver refreshes the path's constrained flag when it toggles.
+    private val dataSaverReceiver =
+        object : BroadcastReceiver() {
+            override fun onReceive(
+                context: Context?,
+                intent: Intent?,
+            ) {
+                refreshPath()
             }
         }
 
@@ -100,7 +123,11 @@ internal object NetworkHealthService : NetworkHealthDelegate {
 
     override fun recordCensoredLatencySample(seconds: Double) = submitLatencySample(seconds, isCensored = true)
 
-    override fun recordLatencySample(seconds: Double) = submitLatencySample(seconds, isCensored = false)
+    override fun recordLatencySample(seconds: Double) {
+        // Evidence of realtime database use: attach the stability observer lazily on the first sample.
+        maybeStartConnectionObserver()
+        submitLatencySample(seconds, isCensored = false)
+    }
 
     override fun recordThroughputSample(
         bytes: Int,
@@ -113,6 +140,10 @@ internal object NetworkHealthService : NetworkHealthDelegate {
         if (isMonitoring.wrappedValue) return
         runCatching {
             connectivityManager.registerDefaultNetworkCallback(networkCallback)
+            Networking.requireContext().registerReceiver(
+                dataSaverReceiver,
+                IntentFilter(ConnectivityManager.ACTION_RESTRICT_BACKGROUND_CHANGED),
+            )
             isMonitoring.wrappedValue = true
         }
     }
@@ -120,35 +151,128 @@ internal object NetworkHealthService : NetworkHealthDelegate {
     override fun stopMonitoring() {
         if (!isMonitoring.wrappedValue) return
         runCatching { connectivityManager.unregisterNetworkCallback(networkCallback) }
+        runCatching { Networking.requireContext().unregisterReceiver(dataSaverReceiver) }
+        connectionStabilityObserver.stop()
+        hasStartedConnectionObserver.wrappedValue = false
         isMonitoring.wrappedValue = false
     }
 
-    // MARK: - Auxiliary
+    override fun debugSummary(): String {
+        val configuration = Networking.config.networkHealthConfiguration
+        val statistics = estimator.statistics(estimatorContext)
+        val currentHealth = health
 
-    private fun claimProbeSlot(configuration: NetworkHealthProbeConfiguration): Boolean =
-        probeTimestamps.withValue {
-            val now = System.currentTimeMillis()
-            val recent = it.value.filter { timestamp -> now - timestamp < ONE_HOUR_MILLIS }
-            it.value = recent
-
-            val lastProbe = recent.maxOrNull()
-            if (recent.size >= configuration.maximumProbesPerHour) return@withValue false
-            if (lastProbe != null &&
-                now - lastProbe < configuration.minimumIntervalSeconds * MILLIS_PER_SECOND
-            ) {
-                return@withValue false
+        val score = currentHealth.score
+        val tier = currentHealth.tier
+        val scoreDescription =
+            if (score != null && tier != null) {
+                "%.2f".format(score) + " (${tier.rawValue.replaceFirstChar { it.uppercase() }})"
+            } else {
+                "unknown"
             }
 
-            it.value = recent + now
-            true
+        val latencyDescription =
+            if (statistics.latencyConfidence > 0) {
+                "${formattedSeconds(statistics.latencyMean)} ±${(statistics.latencyDispersion * PERCENT).toInt()}%"
+            } else {
+                "none"
+            }
+
+        val throughputDescription =
+            if (statistics.throughputConfidence > 0) {
+                "${formattedBytesPerSecond(2.0.pow(statistics.throughputMean))} ±${"%.2f".format(statistics.throughputDispersion)}"
+            } else {
+                "none"
+            }
+
+        val confidenceDescription = "%.1f · %.1f".format(statistics.latencyConfidence, statistics.throughputConfidence)
+
+        val path = pathState.wrappedValue
+        val pathComponents = mutableListOf(interfaceDescription(path.interfaceType))
+        if (path.isConstrained) pathComponents.add("constrained")
+        if (path.isExpensive) pathComponents.add("expensive")
+        if (path.interfaceType == NetworkInterfaceType.CELLULAR) pathComponents.add(path.radioTechnology.name.lowercase())
+
+        val socketDescription =
+            if (hasStartedConnectionObserver.wrappedValue) {
+                val reconnectSuffix =
+                    connectionStabilityObserver.lastReconnectDuration?.let { " · reconnect ${"%.1f".format(it)}s" } ?: ""
+                connectionStabilityObserver.connectedStateDescription + reconnectSuffix
+            } else {
+                "unattached"
+            }
+
+        val probeDescription = if (configuration.probeConfiguration == null) "disabled" else prober.statsDescription
+        val transferDescription = statistics.lastTransferBytesPerSecond?.let { formattedBytesPerSecond(it) } ?: "none"
+
+        val failuresPercent = (statistics.failureFraction * PERCENT).toInt()
+        val flapCount = "%.1f".format(statistics.flapCount)
+        return listOf(
+            "Score: $scoreDescription",
+            "",
+            "Latency: $latencyDescription",
+            "Throughput: $throughputDescription",
+            "Confidence: $confidenceDescription",
+            "",
+            "Failures: $failuresPercent% · Flaps: $flapCount · Stalls: ${statistics.stallCount}",
+            "",
+            "Path: ${pathComponents.joinToString(" · ")}",
+            "Socket: $socketDescription",
+            "Transfer: $transferDescription",
+            "",
+            "Probing: $probeDescription",
+        ).joinToString("\n")
+    }
+
+    private fun formattedSeconds(seconds: Double): String =
+        if (seconds < 1) "${(seconds * MILLIS_PER_SECOND).toInt()} ms" else "%.2f s".format(seconds)
+
+    private fun formattedBytesPerSecond(bytesPerSecond: Double): String =
+        when {
+            bytesPerSecond >= BYTES_PER_MEGABYTE -> "%.1f MB/s".format(bytesPerSecond / BYTES_PER_MEGABYTE)
+            bytesPerSecond >= BYTES_PER_KILOBYTE -> "%.1f KB/s".format(bytesPerSecond / BYTES_PER_KILOBYTE)
+            else -> "%.0f B/s".format(bytesPerSecond)
         }
+
+    private fun interfaceDescription(type: NetworkInterfaceType?): String =
+        when (type) {
+            NetworkInterfaceType.WIFI -> "wifi"
+            NetworkInterfaceType.CELLULAR -> "cellular"
+            NetworkInterfaceType.WIRED_ETHERNET -> "wired"
+            NetworkInterfaceType.LOOPBACK -> "loopback"
+            NetworkInterfaceType.OTHER -> "other"
+            NetworkInterfaceType.UNKNOWN, null -> "unknown"
+        }
+
+    private fun maybeStartConnectionObserver() {
+        if (!Networking.config.networkHealthConfiguration.isConnectionStabilityMonitoringEnabled) return
+        val shouldStart =
+            hasStartedConnectionObserver.withValue {
+                if (it.value) {
+                    false
+                } else {
+                    it.value = true
+                    true
+                }
+            }
+        if (shouldStart) connectionStabilityObserver.start()
+    }
+
+    private fun refreshPath() {
+        runCatching {
+            val network = connectivityManager.activeNetwork ?: return
+            val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return
+            handlePathUpdate(capabilities)
+        }
+    }
+
+    // MARK: - Auxiliary
 
     private fun handlePathUpdate(capabilities: NetworkCapabilities) {
         val newState =
             PathState(
                 interfaceType = interfaceType(capabilities),
-                // Android exposes no per-path Low Data Mode analog.
-                isConstrained = false,
+                isConstrained = isConstrained(capabilities),
                 isExpensive = !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED),
                 radioTechnology = RadioTechnology.UNKNOWN,
             )
@@ -166,6 +290,24 @@ internal object NetworkHealthService : NetworkHealthDelegate {
         }
 
         maybeProbe(afterDelayMillis = PROBE_SETTLE_DELAY_MILLIS)
+    }
+
+    /**
+     * Whether the active path is bandwidth-constrained: Data Saver is
+     * restricting background data, or (on API 35+) the path reports
+     * itself bandwidth-constrained. Mirrors iOS's Low Data Mode.
+     */
+    private fun isConstrained(capabilities: NetworkCapabilities): Boolean {
+        val isDataSaverEnabled =
+            runCatching {
+                connectivityManager.restrictBackgroundStatus == ConnectivityManager.RESTRICT_BACKGROUND_STATUS_ENABLED
+            }.getOrDefault(false)
+
+        val isBandwidthConstrained =
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM &&
+                !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_BANDWIDTH_CONSTRAINED)
+
+        return isDataSaverEnabled || isBandwidthConstrained
     }
 
     private fun interfaceType(capabilities: NetworkCapabilities): NetworkInterfaceType =
@@ -189,42 +331,9 @@ internal object NetworkHealthService : NetworkHealthDelegate {
      * baseline.
      */
     private fun maybeProbe(afterDelayMillis: Long = 0L) {
-        val configuration = Networking.config.networkHealthConfiguration.probeConfiguration ?: return
         probeScope.launch {
             if (afterDelayMillis > 0L) delay(afterDelayMillis)
-            performProbe(configuration)
-        }
-    }
-
-    private fun performProbe(configuration: NetworkHealthProbeConfiguration) {
-        val path = pathState.wrappedValue
-        if ((path.isExpensive && !configuration.allowsExpensivePaths) ||
-            (path.isConstrained && !configuration.allowsConstrainedPaths)
-        ) {
-            return
-        }
-
-        if (!claimProbeSlot(configuration)) return
-
-        val timeoutMillis = (configuration.timeoutSeconds * MILLIS_PER_SECOND).toInt()
-        val start = System.currentTimeMillis()
-        val succeeded =
-            runCatching {
-                val connection = URL(configuration.url).openConnection() as HttpURLConnection
-                connection.requestMethod = configuration.httpMethod
-                connection.connectTimeout = timeoutMillis
-                connection.readTimeout = timeoutMillis
-                try {
-                    connection.responseCode
-                } finally {
-                    connection.disconnect()
-                }
-            }.isSuccess
-
-        if (succeeded) {
-            recordLatencySample((System.currentTimeMillis() - start) / MILLIS_PER_SECOND)
-        } else {
-            record(NetworkHealthEvent.ProbeFailure(timeoutSeconds = configuration.timeoutSeconds))
+            prober.maybeProbe()
         }
     }
 
@@ -256,7 +365,9 @@ internal object NetworkHealthService : NetworkHealthDelegate {
         scope.launch { publish(update()) }
     }
 
+    private const val BYTES_PER_KILOBYTE = 1024.0
+    private const val BYTES_PER_MEGABYTE = 1_048_576.0
     private const val MILLIS_PER_SECOND = 1000.0
-    private const val ONE_HOUR_MILLIS = 3_600_000L
+    private const val PERCENT = 100.0
     private const val PROBE_SETTLE_DELAY_MILLIS = 2000L
 }
