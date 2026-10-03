@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -33,6 +36,8 @@ import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewFlo
 import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageReducer
 import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageView
 import us.neotechnica.panther.navigation.ChatNavigatorState
+import us.neotechnica.panther.navigation.ChatRoute
+import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 
@@ -94,14 +99,20 @@ fun AddContactButton(
 }
 
 /**
- * Presents the contact selector over the chat info page while the chat
- * flow's sheet state selects it.
+ * Presents the contact selector as a bottom sheet over the chat info
+ * page while the chat flow's sheet state selects it.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatInfoContactSelectorHost() {
     val navigation = remember { DependencyValues.current.navigation }
     val navState by navigation.state.collectAsState()
     if (navState.chat.sheet == ChatNavigatorState.SheetPath.ContactSelector) {
-        ContactSelectorPageView(entryPoint = ContactSelectorPageReducer.EntryPoint.CHAT_INFO_PAGE_VIEW)
+        ModalBottomSheet(
+            onDismissRequest = { navigation.navigate(Route.Chat(ChatRoute.Sheet(null))) },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        ) {
+            ContactSelectorPageView(entryPoint = ContactSelectorPageReducer.EntryPoint.CHAT_INFO_PAGE_VIEW)
+        }
     }
 }

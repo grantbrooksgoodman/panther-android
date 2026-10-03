@@ -32,7 +32,7 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.modules.content.user.constants.UserContentContainerFloats
 import us.neotechnica.panther.modules.content.user.constants.UserContentContainerStrings
 import us.neotechnica.panther.modules.content.user.views.changelanguagepageview.ChangeLanguagePageView
-import us.neotechnica.panther.modules.content.user.views.invitelanguagepickerview.InviteLanguagePickerView
+import us.neotechnica.panther.modules.content.shared.components.invitelanguagepickerview.InviteLanguagePickerView
 import us.neotechnica.panther.modules.content.user.views.inviteqrcodepageview.InviteQRCodePageView
 import us.neotechnica.panther.modules.content.user.views.chatinfopageview.ChatInfoPageView
 import us.neotechnica.panther.modules.content.user.views.reactiondetailspageview.ReactionDetailsPageView

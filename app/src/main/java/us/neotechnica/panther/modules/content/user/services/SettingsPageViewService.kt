@@ -165,7 +165,13 @@ object SettingsPageViewService {
      */
     fun inviteFriendsButtonTapped() {
         scope.launch {
-            val shareToOtherAppAction = Action(SettingsStrings.SHARE_TO_ANOTHER_APP) { InviteService.presentInvitationPrompt() }
+            val shareToOtherAppAction =
+                Action(SettingsStrings.SHARE_TO_ANOTHER_APP) {
+                    scope.launch {
+                        runCatching { InviteService.presentInvitationPrompt() }
+                            .onFailure { Logger.log(it.toException(), with = AlertType.toast) }
+                    }
+                }
             val showQRCodeAction =
                 Action(SettingsStrings.SHOW_QR_CODE) {
                     DependencyValues.current.navigation.navigate(

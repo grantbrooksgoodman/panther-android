@@ -13,6 +13,7 @@ import us.neotechnica.panther.BuildConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.dependencies.alertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.HUDConfig
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
+import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheets
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.ApplicationStorageKey
 import us.neotechnica.panther.modules.common.extensions.isEmulator
@@ -126,9 +127,10 @@ object Application {
 
     /** Dismisses every presented sheet in the app. */
     fun dismissSheets() {
-        // Only the chat flow presents a sheet on Android; the other
-        // navigators have no sheet route to dismiss.
+        // The chat flow presents a sheet through its navigator; the root
+        // sheet is presented above the modal content.
         DependencyValues.current.navigation.navigate(Route.Chat(ChatRoute.Sheet(null)))
+        RootSheets.dismiss()
     }
 
     /**

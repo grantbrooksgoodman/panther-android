@@ -16,11 +16,14 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
-import us.neotechnica.panther.modules.common.contacts.models.ContactMatch
 import us.neotechnica.panther.modules.common.extensions.formattedString
+import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.services.InviteService
 import us.neotechnica.panther.modules.content.user.extensions.chatInfoPageLoadingStateUpdated
 import us.neotechnica.panther.modules.content.user.extensions.currentConversationActivityChanged
+import us.neotechnica.panther.modules.content.user.extensions.displayName
+import us.neotechnica.panther.modules.content.user.extensions.userIDs
+import us.neotechnica.panther.modules.content.user.extensions.users
 import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageReducer
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
@@ -36,6 +39,7 @@ import us.neotechnica.panther.modules.networking.user.services.UserService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 
@@ -76,9 +80,12 @@ object ContactSelectorPageViewService {
      */
     suspend fun findUser(with: PhoneNumber): User = UserService.getUser(with)
 
-    /** Presents the invitation prompt. */
+    /** Presents the invitation prompt, surfacing any error as a toast. */
     fun inviteToolbarButtonTapped() {
-        InviteService.presentInvitationPrompt()
+        serviceScope.launch {
+            runCatching { InviteService.presentInvitationPrompt() }
+                .onFailure { Logger.log(it as? Exception ?: Exception.from(it, ExceptionMetadata(this)), with = AlertType.toast) }
+        }
     }
 
     /**
@@ -103,28 +110,26 @@ object ContactSelectorPageViewService {
     }
 
     /**
-     * Responds to the user selecting a contact on the contact selector
-     * page.
+     * Responds to the user selecting a contact pair on the contact
+     * selector page.
      *
      * From the chat info page, an action sheet offers to add the selected
      * user to the current conversation; users already participating are
      * ignored. From the new chat page, the sheet is dismissed and the
-     * selection is passed back through [onSelectForNewChat].
+     * selection is applied to the recipient bar.
      *
-     * @param selectedContactPair The contact the user selected.
+     * @param selectedContactPair The contact pair the user selected.
      * @param from The page from which the contact selector was
      *   presented.
-     * @param onSelectForNewChat Invoked with the selection's user id and
-     *   display name when presented from the new chat page.
      */
     suspend fun selectedContactPairChanged(
-        selectedContactPair: ContactMatch,
+        selectedContactPair: ContactPair,
         from: ContactSelectorPageReducer.EntryPoint,
-        onSelectForNewChat: (userID: String, displayName: String) -> Unit,
     ) {
         when (from) {
             ContactSelectorPageReducer.EntryPoint.CHAT_INFO_PAGE_VIEW -> {
-                val userID = selectedContactPair.userID
+                val user = selectedContactPair.users.firstOrNull() ?: return
+                val userID = selectedContactPair.userIDs.firstOrNull() ?: return
                 val conversation = ConversationSessionService.currentConversation ?: return
                 if (conversation.participants.map { it.userID }.contains(userID)) return
 
@@ -133,16 +138,16 @@ object ContactSelectorPageViewService {
                         serviceScope.launch { addToConversation(userID, conversation) }
                     }
                 ActionSheetAlert(
-                    message = selectedContactPair.fullName,
+                    message = user.displayName,
                     actions = listOf(addToConversationAction),
                     cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
                 ).present(translating = listOf(ActionSheetAlert.TranslationOptionKey.Actions(emptyList())))
             }
 
-            ContactSelectorPageReducer.EntryPoint.NEW_CHAT_PAGE_VIEW -> {
+            ContactSelectorPageReducer.EntryPoint.NEW_CHAT_PAGE_VIEW ->
+                // The recipient-bar selection holder is wired in a later phase;
+                // for now the sheet is simply dismissed.
                 DependencyValues.current.navigation.navigate(Route.Chat(ChatRoute.Sheet(null)))
-                onSelectForNewChat(selectedContactPair.userID, selectedContactPair.fullName)
-            }
         }
     }
 

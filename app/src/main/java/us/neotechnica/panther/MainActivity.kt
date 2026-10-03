@@ -25,6 +25,7 @@ import us.neotechnica.panther.designsystem.modules.alertkit.views.AlertHost
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUDHost
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.BuildInfoOverlayView
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.OverlayHost
+import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheetHost
 import us.neotechnica.panther.designsystem.modules.foundation.toast.ToastHost
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.designsystem.modules.theming.views.PantherTheme
@@ -63,6 +64,7 @@ class MainActivity : ComponentActivity() {
                             .background(LocalPantherColors.current.background),
                 ) {
                     RootView()
+                    RootSheetHost()
                     AlertHost()
                     ToastHost()
                     OverlayHost()

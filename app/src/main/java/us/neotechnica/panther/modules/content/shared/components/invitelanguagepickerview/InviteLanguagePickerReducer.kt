@@ -6,18 +6,19 @@
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
-package us.neotechnica.panther.modules.content.user.views.invitelanguagepickerview
+package us.neotechnica.panther.modules.content.shared.components.invitelanguagepickerview
 
+import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheets
 import us.neotechnica.panther.modules.common.services.InviteService
+import us.neotechnica.panther.modules.localization.models.LocalizationSource
+import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentRoute
-import us.neotechnica.panther.navigation.navigation
-import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
@@ -43,6 +44,8 @@ class InviteLanguagePickerReducer : Reducer<InviteLanguagePickerReducer.State, I
     sealed interface Action {
         data object ViewAppeared : Action
 
+        data object ViewDisappeared : Action
+
         data object CancelHeaderItemTapped : Action
 
         data object DoneHeaderItemTapped : Action
@@ -59,7 +62,10 @@ class InviteLanguagePickerReducer : Reducer<InviteLanguagePickerReducer.State, I
     // MARK: - State
 
     data class State(
+        val cancelHeaderItemText: String = LocalizedStringKey.Cancel.localized(),
+        val doneHeaderItemText: String = LocalizedStringKey.Done.localized(LocalizationSource.SUBSYSTEM),
         val isDoneHeaderItemEnabled: Boolean = false,
+        val noResultsLabelText: String = LocalizedStringKey.NoResults.localized(),
         val searchQuery: String = "",
         val selectedLanguageCode: String = "",
     ) {
@@ -67,12 +73,19 @@ class InviteLanguagePickerReducer : Reducer<InviteLanguagePickerReducer.State, I
         val localizedLanguageNames: Map<String, String>
             get() = LocalizedStringResolver.languageDisplayNames()
 
+        /** The picker's navigation title. */
+        val navigationTitle: String
+            get() {
+                val title = LocalizedStringKey.SelectLanguage.localized(LocalizationSource.SUBSYSTEM)
+                return if (RuntimeStorage.languageCode == "en") title.replaceFirstChar { it.uppercase() } else title
+            }
+
         /** The languages whose display names match the search query, keyed by language code. */
         val queriedLanguageNames: Map<String, String>
-            get() =
-                localizedLanguageNames.filter {
-                    it.value.trim().lowercase().contains(searchQuery.trim().lowercase())
-                }
+            get() {
+                val query = searchQuery.trim().lowercase()
+                return localizedLanguageNames.filter { (_, name) -> name.trim().lowercase().contains(query) }
+            }
     }
 
     // MARK: - Reduce
@@ -85,15 +98,17 @@ class InviteLanguagePickerReducer : Reducer<InviteLanguagePickerReducer.State, I
             Action.ViewAppeared ->
                 ReduceResult(state.copy(isDoneHeaderItemEnabled = false, searchQuery = "", selectedLanguageCode = ""))
 
+            Action.ViewDisappeared -> ReduceResult(state)
+
             Action.CancelHeaderItemTapped -> {
-                DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
+                RootSheets.dismiss()
                 ReduceResult(state)
             }
 
             Action.DoneHeaderItemTapped -> {
                 if (state.isDoneHeaderItemEnabled) {
+                    RootSheets.dismiss()
                     val languageCode = state.selectedLanguageCode
-                    DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
                     Task.delayed(by = COMPOSE_INVITATION_DELAY_SECONDS.seconds) {
                         runCatching { InviteService.composeInvitation(languageCode) }
                             .onFailure { Logger.log(it.toException(), with = AlertType.toast) }

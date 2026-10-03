@@ -6,7 +6,7 @@
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
-package us.neotechnica.panther.modules.content.user.views.invitelanguagepickerview
+package us.neotechnica.panther.modules.content.shared.components.invitelanguagepickerview
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -29,40 +29,50 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.localization.models.LocalizationSource
+import us.neotechnica.panther.modules.content.shared.constants.InviteLanguagePickerViewFloats
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 
+// MARK: - Constants Accessors
+
+private typealias Floats = InviteLanguagePickerViewFloats
+
 /**
  * The invite language picker: a searchable language list for choosing
- * the language of an invitation message, mirroring the iOS
- * `InviteLanguagePickerView`.
+ * the language of an invitation message.
  *
  * @param modifier The modifier for this view.
  */
 @Composable
 fun InviteLanguagePickerView(modifier: Modifier = Modifier) {
     val viewModel = remember { ViewModel(InviteLanguagePickerReducer.State(), InviteLanguagePickerReducer()) }
-    DisposableEffect(Unit) { onDispose { viewModel.close() } }
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.send(InviteLanguagePickerReducer.Action.ViewDisappeared)
+            viewModel.close()
+        }
+    }
     LaunchedEffect(Unit) { viewModel.send(InviteLanguagePickerReducer.Action.ViewAppeared) }
 
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
 
-    val queried = if (state.queriedLanguageNames.isEmpty()) state.localizedLanguageNames else state.queriedLanguageNames
-    val languages = queried.entries.sortedBy { it.value }
+    val isNoResults = state.queriedLanguageNames.isEmpty() && state.searchQuery.isNotBlank()
+    val languages =
+        (if (state.queriedLanguageNames.isEmpty()) state.localizedLanguageNames else state.queriedLanguageNames)
+            .entries
+            .sortedBy { it.value }
 
     Box(modifier = modifier.fillMaxSize().background(colors.groupedContentBackground)) {
         Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
             Header(
-                isDoneEnabled = state.isDoneHeaderItemEnabled,
+                state = state,
                 onCancel = { viewModel.send(InviteLanguagePickerReducer.Action.CancelHeaderItemTapped) },
                 onDone = { viewModel.send(InviteLanguagePickerReducer.Action.DoneHeaderItemTapped) },
             )
@@ -72,16 +82,22 @@ fun InviteLanguagePickerView(modifier: Modifier = Modifier) {
                 onValueChange = { viewModel.send(InviteLanguagePickerReducer.Action.SearchQueryChanged(it)) },
                 singleLine = true,
                 placeholder = { Components.Text(LocalizedStringKey.Search.localized(), color = colors.subtitleText) },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = HORIZONTAL_PADDING.dp, vertical = ROW_VERTICAL_PADDING.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = Floats.horizontalPadding, vertical = Floats.rowVerticalPadding),
             )
 
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(languages, key = { it.key }) { entry ->
-                    LanguageRow(
-                        name = entry.value,
-                        isSelected = entry.key == state.selectedLanguageCode,
-                        onClick = { viewModel.send(InviteLanguagePickerReducer.Action.SelectedLanguageCodeChanged(entry.key)) },
-                    )
+            if (isNoResults) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Components.Text(state.noResultsLabelText, color = colors.subtitleText)
+                }
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(languages, key = { it.key }) { entry ->
+                        LanguageRow(
+                            name = entry.value,
+                            isSelected = entry.key == state.selectedLanguageCode,
+                            onClick = { viewModel.send(InviteLanguagePickerReducer.Action.SelectedLanguageCodeChanged(entry.key)) },
+                        )
+                    }
                 }
             }
         }
@@ -92,32 +108,32 @@ fun InviteLanguagePickerView(modifier: Modifier = Modifier) {
 
 @Composable
 private fun Header(
-    isDoneEnabled: Boolean,
+    state: InviteLanguagePickerReducer.State,
     onCancel: () -> Unit,
     onDone: () -> Unit,
 ) {
     val colors = LocalPantherColors.current
-    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = HORIZONTAL_PADDING.dp, vertical = ROW_VERTICAL_PADDING.dp)) {
+    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = Floats.horizontalPadding, vertical = Floats.rowVerticalPadding)) {
         CircleChipButton(
             systemName = "xmark",
-            contentDescription = LocalizedStringKey.Cancel.localized(),
+            contentDescription = state.cancelHeaderItemText,
             onClick = onCancel,
             modifier = Modifier.align(Alignment.CenterStart),
             tint = colors.titleText,
         )
         Components.Text(
-            LocalizedStringKey.SelectLanguage.localized(LocalizationSource.SUBSYSTEM),
+            state.navigationTitle,
             color = colors.titleText,
             font = Font.systemBold(FontScale.Large),
             modifier = Modifier.align(Alignment.Center),
         )
         CircleChipButton(
             systemName = "checkmark",
-            contentDescription = LocalizedStringKey.Done.localized(LocalizationSource.SUBSYSTEM),
+            contentDescription = state.doneHeaderItemText,
             onClick = onDone,
             modifier = Modifier.align(Alignment.CenterEnd),
-            tint = if (isDoneEnabled) colors.titleText else colors.subtitleText,
-            enabled = isDoneEnabled,
+            tint = if (state.isDoneHeaderItemEnabled) colors.titleText else colors.subtitleText,
+            enabled = state.isDoneHeaderItemEnabled,
         )
     }
 }
@@ -137,17 +153,11 @@ private fun LanguageRow(
             Modifier
                 .fillMaxWidth()
                 .clickable { onClick() }
-                .padding(horizontal = HORIZONTAL_PADDING.dp, vertical = ROW_VERTICAL_PADDING.dp),
+                .padding(horizontal = Floats.horizontalPadding, vertical = Floats.rowVerticalPadding),
     ) {
         Components.Text(name, color = colors.titleText, modifier = Modifier.weight(1f))
         if (isSelected) {
-            Components.Symbol("checkmark", color = colors.titleText, modifier = Modifier.size(CHECKMARK_SIZE.dp))
+            Components.Symbol("checkmark", color = colors.titleText, modifier = Modifier.size(Floats.checkmarkSize))
         }
     }
 }
-
-// MARK: - Constants
-
-private const val HORIZONTAL_PADDING = 16
-private const val ROW_VERTICAL_PADDING = 12
-private const val CHECKMARK_SIZE = 18

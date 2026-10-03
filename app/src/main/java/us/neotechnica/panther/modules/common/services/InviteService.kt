@@ -14,9 +14,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import us.neotechnica.panther.bundle.Application
+import us.neotechnica.panther.bundle.inviteLanguagePicker
+import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
+import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
+import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheet
+import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheets
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.services.AnalyticsService.AnalyticsEvent
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
@@ -26,19 +32,17 @@ import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.session.entity.extensions.conversations
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.networking.Networking
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentNavigatorState
-import us.neotechnica.panther.navigation.UserContentRoute
-import us.neotechnica.panther.navigation.navigation
-import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
+import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.TranslationInput
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Invites the user's contacts to the app.
@@ -108,22 +112,21 @@ object InviteService {
      * it.
      *
      * If the user declines translation, the invitation is composed
-     * targeting the system language. If the user accepts, the invite
-     * language picker is presented. Canceling the alert does nothing.
+     * targeting the system language. If the user accepts, all presented
+     * sheets are dismissed and the invite language picker is presented.
+     * Canceling the alert does nothing.
+     *
+     * @throws Exception if composing the invitation fails.
      */
-    fun presentInvitationPrompt() {
-        scope.launch {
-            val shouldPresentInviteLanguagePicker = presentTranslationAlert() ?: return@launch
+    suspend fun presentInvitationPrompt() {
+        val shouldPresentInviteLanguagePicker = presentTranslationAlert() ?: return
 
-            if (!shouldPresentInviteLanguagePicker) {
-                runCatching { composeInvitation(null) }.onFailure { Logger.log(it.toException(), with = AlertType.toast) }
-                return@launch
-            }
-
-            DependencyValues.current.navigation.navigate(
-                Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePath.InviteLanguagePicker)),
-            )
+        if (!shouldPresentInviteLanguagePicker) {
+            return composeInvitation(null)
         }
+
+        Application.dismissSheets()
+        Task.delayed(by = PRESENT_PICKER_DELAY_SECONDS.seconds) { RootSheets.present(RootSheet.inviteLanguagePicker) }
     }
 
     // MARK: - Suggest Invitation If Needed
@@ -170,19 +173,34 @@ object InviteService {
 
         AnalyticsService.logEvent(AnalyticsEvent.INVITE)
         if (languageCode == "en") {
-            return presentShareSheet(appShareLink, promptMessage)
+            return presentShareSheet(appShareLink, promptMessage.sanitized)
         }
 
+        HUD.showProgress(after = Duration.ZERO, isModal = true)
         val translation =
-            Networking.config.hostedTranslationDelegate.translate(
-                TranslationInput(promptMessage),
-                LanguagePair(from = "en", to = languageCode ?: RuntimeStorage.languageCode),
-            )
-        presentShareSheet(appShareLink, translation.output)
+            try {
+                Networking.config.hostedTranslationDelegate.translate(
+                    TranslationInput(promptMessage),
+                    LanguagePair(from = "en", to = languageCode ?: RuntimeStorage.languageCode),
+                )
+            } finally {
+                HUD.hide()
+            }
+        presentShareSheet(appShareLink, translation.output.sanitized)
     }
 
-    private suspend fun presentInvitationSuggestionPrompt() {
-        val inviteAction = Action("Send Invite", style = ActionStyle.PREFERRED) { presentInvitationPrompt() }
+    /**
+     * Presents an alert suggesting that the user invite their contacts
+     * to the app. If the user accepts, the invitation prompt is
+     * presented.
+     */
+    suspend fun presentInvitationSuggestionPrompt() {
+        val inviteAction =
+            Action("Send Invite", style = ActionStyle.PREFERRED) {
+                scope.launch {
+                    runCatching { presentInvitationPrompt() }.onFailure { Logger.log(it.toException(), with = AlertType.toast) }
+                }
+            }
         val message =
             "It doesn't appear that any of your contacts have an account on ⌘${Build.finalName}⌘ yet.\n\n" +
                 "Would you like to send them an invite to sign up?"
@@ -248,4 +266,5 @@ object InviteService {
     // MARK: - Companion
 
     private const val INVITE_FRIENDS = "Invite friends"
+    private const val PRESENT_PICKER_DELAY_SECONDS = 2
 }

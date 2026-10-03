@@ -9,17 +9,21 @@
 package us.neotechnica.panther.modules.content.user.views.contactselectorpageview
 
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
-import us.neotechnica.panther.modules.common.contacts.models.ContactMatch
 import us.neotechnica.panther.modules.common.contacts.services.ContactPairArchiveService
+import us.neotechnica.panther.modules.common.extensions.compiledNumberStrings
 import us.neotechnica.panther.modules.common.extensions.noUsersWithPhoneNumber
+import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.models.PhoneNumber
+import us.neotechnica.panther.modules.content.user.extensions.contactPair
 import us.neotechnica.panther.modules.content.user.extensions.displayName
+import us.neotechnica.panther.modules.content.user.extensions.queried
+import us.neotechnica.panther.modules.content.user.extensions.tableViewSectionTitle
+import us.neotechnica.panther.modules.content.user.extensions.users
+import us.neotechnica.panther.modules.content.user.extensions.withUser
 import us.neotechnica.panther.modules.content.user.services.ContactSelectorPageViewService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
-import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.translation.extensions.value
@@ -54,13 +58,8 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
  *   result; a failed lookup offers to send an invitation.
  * - Selecting a contact, cancelling, and inviting someone are performed
  *   through [ContactSelectorPageViewService].
- *
- * @param onSelectRecipient Invoked with a selection's user id and
- *   display name when presented from the new chat page.
  */
-class ContactSelectorPageReducer(
-    private val onSelectRecipient: (userID: String, displayName: String) -> Unit = { _, _ -> },
-) : Reducer<ContactSelectorPageReducer.State, ContactSelectorPageReducer.Action> {
+class ContactSelectorPageReducer : Reducer<ContactSelectorPageReducer.State, ContactSelectorPageReducer.Action> {
     // MARK: - Types
 
     /** The context the page was presented from. */
@@ -73,6 +72,8 @@ class ContactSelectorPageReducer(
 
     sealed interface Action {
         data object ViewAppeared : Action
+
+        data object ViewDisappeared : Action
 
         data object CancelToolbarButtonTapped : Action
 
@@ -101,7 +102,7 @@ class ContactSelectorPageReducer(
         ) : Action
 
         data class SelectedContactPairChanged(
-            val selectedContactPair: ContactMatch,
+            val selectedContactPair: ContactPair,
         ) : Action
     }
 
@@ -111,14 +112,14 @@ class ContactSelectorPageReducer(
         val entryPoint: EntryPoint,
         val inviteToolbarButtonText: String = LocalizedStringKey.Invite.localized(),
         val searchQuery: String = "",
-        val selectedContactPair: ContactMatch? = null,
+        val selectedContactPair: ContactPair? = null,
         val strings: List<TranslationOutputMap> = ContactSelectorPageViewStrings.defaultOutputMap,
         val viewState: ViewState = ViewState.Loading,
-        val foundContactPair: ContactMatch? = null,
+        val foundContactPair: ContactPair? = null,
     ) {
-        /** The user's known contacts. */
-        val contactPairs: List<ContactMatch>
-            get() = contactMatchesFromArchive()
+        /** The user's known contact pairs, from the contact pair archive. */
+        val contactPairs: List<ContactPair>
+            get() = ContactPairArchiveService.allValues()
 
         /** The page's navigation title. */
         val navigationTitle: String
@@ -138,8 +139,8 @@ class ContactSelectorPageReducer(
                 return LocalizedStringKey.NoResults.localized()
             }
 
-        /** The contacts matching the search query, or the single found user when a lookup succeeded. */
-        val queriedContactPairs: List<ContactMatch>
+        /** The contact pairs matching the search query, or the single found user when a lookup succeeded. */
+        val queriedContactPairs: List<ContactPair>
             get() = foundContactPair?.let { listOf(it) } ?: contactPairs.queried(searchQuery)
 
         /** The search bar's placeholder text. */
@@ -151,9 +152,9 @@ class ContactSelectorPageReducer(
                     LocalizedStringKey.Search.localized()
                 }
 
-        /** The queried contacts grouped into sections by their section title. */
-        val sections: Map<String, List<ContactMatch>>
-            get() = queriedContactPairs.groupBy { sectionTitle(it.fullName) }
+        /** The queried contact pairs grouped into sections by their section title. */
+        val sections: Map<String, List<ContactPair>>
+            get() = queriedContactPairs.groupBy { it.contact.tableViewSectionTitle }
 
         /** Whether the invite button is shown. */
         val shouldShowInviteButton: Boolean
@@ -162,7 +163,9 @@ class ContactSelectorPageReducer(
         val queryMatchesFoundContactPair: Boolean
             get() {
                 val found = foundContactPair ?: return false
-                return listOf(found.compiledNumberString.digits, found.nationalNumberString.digits).contains(searchQuery)
+                val phoneNumbers = found.users.map { it.phoneNumber }
+                val numberStrings = (phoneNumbers.compiledNumberStrings + phoneNumbers.map { it.nationalNumberString }).map { it.digits }
+                return numberStrings.contains(searchQuery)
             }
     }
 
@@ -179,6 +182,8 @@ class ContactSelectorPageReducer(
                 } else {
                     ReduceResult(state.copy(viewState = ViewState.Loading), resolveEffect())
                 }
+
+            Action.ViewDisappeared -> ReduceResult(state)
 
             Action.CancelToolbarButtonTapped -> {
                 ContactSelectorPageViewService.cancelToolbarButtonTapped(from = state.entryPoint)
@@ -234,11 +239,7 @@ class ContactSelectorPageReducer(
                 ReduceResult(
                     state.copy(selectedContactPair = selected),
                     Effect.fireAndForget {
-                        ContactSelectorPageViewService.selectedContactPairChanged(
-                            selected,
-                            from = entryPoint,
-                            onSelectForNewChat = onSelectRecipient,
-                        )
+                        ContactSelectorPageViewService.selectedContactPairChanged(selected, from = entryPoint)
                     },
                 )
             }
@@ -246,13 +247,7 @@ class ContactSelectorPageReducer(
 
     // MARK: - Auxiliary
 
-    private fun foundContactPair(user: User): ContactMatch =
-        ContactMatch(
-            userID = user.id,
-            fullName = user.displayName,
-            compiledNumberString = user.phoneNumber.compiledNumberString,
-            nationalNumberString = user.phoneNumber.nationalNumberString,
-        )
+    private fun foundContactPair(user: User): ContactPair = user.contactPair ?: ContactPair.withUser(user, name = user.displayName)
 
     private fun resolveEffect(): Effect<Action> =
         Effect.run { send ->
@@ -276,34 +271,4 @@ class ContactSelectorPageReducer(
         Effect.fireAndForget {
             ContactSelectorPageViewService.presentInvitationPrompt(phoneNumber)
         }
-}
-
-// MARK: - Contact Matching
-
-private fun contactMatchesFromArchive(): List<ContactMatch> =
-    ContactPairArchiveService
-        .allValues()
-        .flatMap { contactPair ->
-            contactPair.numberPairs.flatMap { numberPair ->
-                numberPair.userIDs.map { userID ->
-                    ContactMatch(
-                        userID = userID,
-                        fullName = SessionStore.users[userID]?.displayName ?: contactPair.contact.fullName,
-                        compiledNumberString = numberPair.phoneNumber.compiledNumberString,
-                        nationalNumberString = numberPair.phoneNumber.nationalNumberString,
-                    )
-                }
-            }
-        }.filter { it.userID != User.currentUserID }
-        .distinctBy { it.userID }
-
-private fun List<ContactMatch>.queried(searchQuery: String): List<ContactMatch> {
-    if (searchQuery.isBlank()) return this
-    val normalized = searchQuery.trim().lowercase()
-    return filter { it.fullName.lowercase().contains(normalized) || it.compiledNumberString.contains(searchQuery.digits) }
-}
-
-private fun sectionTitle(name: String): String {
-    val firstLetter = name.trim().firstOrNull { it.isLetter() } ?: return "#"
-    return firstLetter.uppercase()
 }

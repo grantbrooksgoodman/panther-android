@@ -16,12 +16,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
@@ -39,14 +41,17 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
  * @param onValueChange Invoked as the query changes.
  * @param modifier The modifier for this bar (for outer positioning).
  * @param containerColor The capsule's fill color.
+ * @param keyboardType The soft-keyboard type for the input field.
  */
 @Composable
+@Suppress("LongParameterList")
 fun SearchBar(
     value: String,
     placeholder: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     containerColor: Color = LocalPantherColors.current.groupedContentBackground,
+    keyboardType: KeyboardType = KeyboardType.Text,
 ) {
     val colors = LocalPantherColors.current
     Row(
@@ -77,6 +82,7 @@ fun SearchBar(
                 value = value,
                 onValueChange = onValueChange,
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
                 textStyle = Font.system.textStyle.copy(color = colors.titleText),
                 cursorBrush = SolidColor(colors.accent),
                 modifier = Modifier.fillMaxWidth(),

@@ -1,6 +1,6 @@
 //
 //  ContactSelectorPageView.kt
-//  Panther
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman on 23/08/2026.
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
@@ -38,17 +39,11 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.componentkit.models.TextFit
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.common.contacts.components.rememberContactCardPresenter
-import us.neotechnica.panther.modules.common.contacts.models.ContactMatch
-import us.neotechnica.panther.modules.common.models.PhoneNumber
-import us.neotechnica.panther.modules.content.user.components.ContactRow
+import us.neotechnica.panther.modules.common.models.ContactPair
+import us.neotechnica.panther.modules.content.user.components.ContactPairCellView
 import us.neotechnica.panther.modules.content.user.constants.ContactSelectorPageViewFloats
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
-import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
-import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 
 // MARK: - Constants Accessors
@@ -56,25 +51,22 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 private typealias Floats = ContactSelectorPageViewFloats
 
 /**
- * A contact picker: search the device's matched contacts, or enter a
+ * A contact picker: search the user's known contact pairs, or enter a
  * phone number to look up its registered user. Presented as a sheet
  * either from the chat info page – to add a participant – or from the
  * new chat page – to choose a recipient.
  *
  * @param entryPoint The context the page was presented from.
- * @param onSelectRecipient Invoked with a selection's user id and
- *   display name when presented from the new chat page.
  * @param modifier The modifier for this view.
  */
 @Composable
 fun ContactSelectorPageView(
     entryPoint: ContactSelectorPageReducer.EntryPoint,
-    onSelectRecipient: (userID: String, displayName: String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     val viewModel =
         remember(entryPoint) {
-            ViewModel(ContactSelectorPageReducer.State(entryPoint), ContactSelectorPageReducer(onSelectRecipient))
+            ViewModel(ContactSelectorPageReducer.State(entryPoint), ContactSelectorPageReducer())
         }
     DisposableEffect(viewModel) { onDispose { viewModel.close() } }
     LaunchedEffect(Unit) { viewModel.send(ContactSelectorPageReducer.Action.ViewAppeared) }
@@ -82,7 +74,6 @@ fun ContactSelectorPageView(
 
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
-    val presentContactCard = rememberContactCardPresenter()
 
     StatefulView(state = state.viewState, modifier = modifier.background(colors.groupedContentBackground)) {
         Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
@@ -100,6 +91,12 @@ fun ContactSelectorPageView(
                 onValueChange = { viewModel.send(ContactSelectorPageReducer.Action.SearchQueryChanged(it)) },
                 modifier = Modifier.padding(horizontal = Floats.searchHorizontalPadding, vertical = Floats.searchVerticalPadding),
                 containerColor = colors.background,
+                keyboardType =
+                    if (entryPoint == ContactSelectorPageReducer.EntryPoint.CHAT_INFO_PAGE_VIEW) {
+                        KeyboardType.Phone
+                    } else {
+                        KeyboardType.Text
+                    },
             )
 
             if (state.queriedContactPairs.isNotEmpty()) {
@@ -107,7 +104,6 @@ fun ContactSelectorPageView(
                     state = state,
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                     onSelect = { viewModel.send(ContactSelectorPageReducer.Action.SelectedContactPairChanged(it)) },
-                    onDetail = { presentContactCard(PhoneNumber(it.compiledNumberString), it.fullName) },
                 )
             } else {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -189,13 +185,12 @@ private fun Header(
 private fun ContactList(
     state: ContactSelectorPageReducer.State,
     modifier: Modifier,
-    onSelect: (ContactMatch) -> Unit,
-    onDetail: (ContactMatch) -> Unit,
+    onSelect: (ContactPair) -> Unit,
 ) {
     val colors = LocalPantherColors.current
     val sections = state.sections
     LazyColumn(modifier = modifier) {
-        sections.keys.sorted().forEach { letter ->
+        sections.keys.alphabeticallySorted().forEach { letter ->
             item(key = "section-$letter") {
                 Components.Text(
                     letter,
@@ -208,16 +203,8 @@ private fun ContactList(
                         ),
                 )
             }
-            items(sections[letter].orEmpty(), key = { it.userID }) { contact ->
-                val (enabled, annotation) = contactRowState(contact, state.selectedContactPair)
-                ContactRow(
-                    name = contact.fullName,
-                    initials = contact.initials,
-                    onClick = { onSelect(contact) },
-                    enabled = enabled,
-                    annotation = annotation,
-                    onDetail = { onDetail(contact) },
-                )
+            items(sections[letter].orEmpty(), key = { it.contact.id + it.compiledNumberStringsKey() }) { contactPair ->
+                ContactPairCellView(contactPair = contactPair, action = { onSelect(contactPair) })
                 HorizontalDivider(color = colors.groupedContentBackground)
             }
         }
@@ -247,19 +234,10 @@ private fun NoResultsView(
 
 // MARK: - Auxiliary
 
-private fun contactRowState(
-    contact: ContactMatch,
-    selected: ContactMatch?,
-): Pair<Boolean, String?> {
-    val isBlocked = UserSessionService.currentUser?.blockedUserIDs?.contains(contact.userID) == true
-    val isCurrentUser = contact.userID == User.currentUserID
-    val isSelected = contact.userID == selected?.userID
-    val isParticipant = ConversationSessionService.currentConversation?.participants?.any { it.userID == contact.userID } == true
-    val annotation =
-        when {
-            isBlocked -> "(${LocalizedStringKey.Blocked.localized()})"
-            isCurrentUser -> LocalizedStringKey.MyAccount.localized()
-            else -> null
-        }
-    return !(isBlocked || isCurrentUser || isSelected || isParticipant) to annotation
+/** Sorts section titles with alphabetically-prefixed titles first, then the rest. */
+private fun Set<String>.alphabeticallySorted(): List<String> {
+    val (alphabetical, other) = partition { it.firstOrNull()?.isLetter() == true }
+    return alphabetical.sorted() + other.sorted()
 }
+
+private fun ContactPair.compiledNumberStringsKey(): String = contact.phoneNumbers.joinToString(",") { it.compiledNumberString }

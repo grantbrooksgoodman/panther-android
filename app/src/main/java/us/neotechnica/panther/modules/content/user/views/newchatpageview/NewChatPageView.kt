@@ -30,7 +30,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -55,7 +58,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.components.Messa
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.content.user.components.ContactRow
+import us.neotechnica.panther.modules.content.user.components.ContactPairCellView
 import us.neotechnica.panther.modules.content.user.components.DeliveryProgressView
 import us.neotechnica.panther.modules.content.user.constants.NewChatPageViewFloats
 import us.neotechnica.panther.modules.content.user.constants.NewChatPageViewStrings
@@ -68,24 +71,28 @@ import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
+import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.services.InviteService
+import us.neotechnica.panther.modules.content.user.extensions.contactPair
+import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.content.user.extensions.hasContactsBesidesCurrentUser
 import us.neotechnica.panther.modules.content.user.extensions.syncIfNeeded
+import us.neotechnica.panther.modules.content.user.extensions.withUser
 import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageReducer
 import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageView
-import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.modules.content.user.views.newchatpageview.NewChatPageReducer.Action
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
+import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.navigation.ChatNavigatorState
 import us.neotechnica.panther.navigation.ChatRoute
+import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.modules.session.entity.extensions.messageOutboxDidChange
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
-import us.neotechnica.panther.modules.session.entity.services.MessageSessionService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
@@ -103,6 +110,7 @@ private typealias Strings = NewChatPageViewStrings
  *
  * @param modifier The modifier for this view.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewChatPageView(modifier: Modifier = Modifier) {
     val viewModel = remember { buildNewChatViewModel() }
@@ -150,12 +158,15 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
 
             LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 items(state.suggestions, key = { it.userID }) { contact ->
-                    ContactRow(
-                        name = contact.fullName,
-                        initials = contact.initials,
-                        onClick = { viewModel.send(Action.AddRecipient(contact.userID, contact.fullName)) },
-                    )
-                    HorizontalDivider(color = colors.groupedContentBackground)
+                    val user = SessionStore.users[contact.userID]
+                    val contactPair = user?.let { it.contactPair ?: ContactPair.withUser(it, name = it.displayName) }
+                    if (contactPair != null) {
+                        ContactPairCellView(
+                            contactPair = contactPair,
+                            action = { viewModel.send(Action.AddRecipient(contact.userID, contact.fullName)) },
+                        )
+                        HorizontalDivider(color = colors.groupedContentBackground)
+                    }
                 }
             }
 
@@ -171,10 +182,12 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
         }
 
         if (navState.chat.sheet == ChatNavigatorState.SheetPath.ContactSelector) {
-            ContactSelectorPageView(
-                entryPoint = ContactSelectorPageReducer.EntryPoint.NEW_CHAT_PAGE_VIEW,
-                onSelectRecipient = { userID, displayName -> viewModel.send(Action.AddRecipient(userID, displayName)) },
-            )
+            ModalBottomSheet(
+                onDismissRequest = { navigation.navigate(Route.Chat(ChatRoute.Sheet(null))) },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            ) {
+                ContactSelectorPageView(entryPoint = ContactSelectorPageReducer.EntryPoint.NEW_CHAT_PAGE_VIEW)
+            }
         }
     }
 }
@@ -217,7 +230,7 @@ private suspend fun selectContactButtonTapped(
     if (!ContactService.hasContactsBesidesCurrentUser) {
         runCatching { ContactService.syncIfNeeded() }
         if (!ContactService.hasContactsBesidesCurrentUser) {
-            InviteService.presentInvitationPrompt()
+            runCatching { InviteService.presentInvitationPrompt() }
             return
         }
     }
