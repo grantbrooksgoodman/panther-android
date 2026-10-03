@@ -9,9 +9,49 @@
 package us.neotechnica.panther.modules.content.user.extensions
 
 import us.neotechnica.panther.modules.common.models.ContactPair
+import us.neotechnica.panther.modules.content.user.models.QueriedContactPairCache
 import us.neotechnica.panther.modules.networking.user.models.User
 
 // MARK: - ContactPair
+
+/**
+ * Returns the contact pairs matching the given search term, excluding
+ * those already selected as recipients.
+ *
+ * Matches against each contact's name and phone numbers. Results are
+ * cached in memory per search term.
+ *
+ * @param searchTerm The term to filter the contact pairs by.
+ *
+ * @return The matching contact pairs, excluding any currently selected
+ *   as recipients.
+ */
+fun List<ContactPair>.queried(searchTerm: String): List<ContactPair> {
+    // Captures pure whitespace too, hence isEmpty and not isBlank.
+    if (searchTerm.isEmpty()) return this
+
+    QueriedContactPairCache.cachedValue(searchTerm)?.let { cached ->
+        return cached.filter { !it.isSelected }
+    }
+
+    val normalizedSearchTerm = searchTerm.trim().lowercase()
+    val queriedContactPairs =
+        filter { contactPair ->
+            val validTerms =
+                listOf(
+                    contactPair.contact.fullName,
+                    contactPair.contact.firstName,
+                    contactPair.contact.lastName,
+                ) + contactPair.compiledNumberStrings
+            validTerms.any { it.trim().lowercase().contains(normalizedSearchTerm) }
+        }
+
+    if (QueriedContactPairCache.canWriteToCache) {
+        QueriedContactPairCache.cache(searchTerm, queriedContactPairs)
+    }
+
+    return queriedContactPairs.filter { !it.isSelected }
+}
 
 /**
  * The contact pairs with duplicates removed by phone number, keeping the

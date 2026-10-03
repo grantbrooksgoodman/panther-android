@@ -20,6 +20,7 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.services.AnalyticsService.AnalyticsEvent
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
+import us.neotechnica.panther.modules.content.user.extensions.hasContactsBesidesCurrentUser
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.session.entity.extensions.conversations
@@ -142,7 +143,7 @@ object InviteService {
     suspend fun suggestInvitationIfNeeded(): Boolean {
         if (!canSuggestInvitation) return false
 
-        val didSync = runCatching { ContactService.sync() }.isSuccess
+        val didSync = runCatching { ContactService.syncContactPairArchive() }.isSuccess
         if (!didSync) return false
         if (hasContactsBesidesCurrentUser()) return false
 
@@ -240,10 +241,7 @@ object InviteService {
         runCatching { context.startActivity(chooser) }
     }
 
-    private fun hasContactsBesidesCurrentUser(): Boolean {
-        val currentUserID = UserSessionService.currentUser?.id
-        return ContactService.matches().any { it.userID != currentUserID }
-    }
+    private fun hasContactsBesidesCurrentUser(): Boolean = ContactService.hasContactsBesidesCurrentUser
 
     private fun Throwable.toException(): Exception = this as? Exception ?: Exception.from(this, ExceptionMetadata(this))
 

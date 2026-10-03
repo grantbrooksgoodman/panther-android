@@ -11,8 +11,6 @@ package us.neotechnica.panther.modules.content.user.services
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
-import us.neotechnica.panther.modules.content.user.extensions.blockUsers
-import us.neotechnica.panther.modules.content.user.extensions.reportUsers
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation

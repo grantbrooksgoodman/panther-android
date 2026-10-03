@@ -32,9 +32,6 @@ value class PersistentStorageKey(
         /** The key of the conversation open when the app was last backgrounded, restored after process death. */
         val openConversationIDKey = PersistentStorageKey("openConversationIDKey")
 
-        /** The persisted contact-match archive (JSON). */
-        val contactArchive = PersistentStorageKey("contactArchive")
-
         /** The persisted translation archive (JSON). */
         val translationArchive = PersistentStorageKey("translationArchive")
 

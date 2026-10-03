@@ -45,12 +45,12 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.contacts.components.rememberContactCardPresenter
-import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewConstants
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewFloats
+import us.neotechnica.panther.modules.content.user.extensions.contactPair
 import us.neotechnica.panther.modules.content.user.services.DeveloperModeListItem
 import us.neotechnica.panther.modules.content.user.services.SettingsPageViewService
 import us.neotechnica.panther.modules.localization.models.LocalizationSource
@@ -181,7 +181,7 @@ private fun ContactDetailCard(onTap: (PhoneNumber?, String?) -> Unit) {
     val colors = LocalPantherColors.current
     val currentUser = UserSessionService.currentUser
     val number = currentUser?.phoneNumber?.formattedString()
-    val contactName = currentUser?.id?.let { ContactService.match(it)?.fullName }
+    val contactName = currentUser?.contactPair?.contact?.fullName
     val title = contactName ?: number ?: LocalizedStringKey.You.localized()
     val subtitle = if (contactName != null) number else null
 

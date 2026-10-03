@@ -69,10 +69,10 @@ import kotlinx.coroutines.launch
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.services.InviteService
+import us.neotechnica.panther.modules.content.user.extensions.hasContactsBesidesCurrentUser
+import us.neotechnica.panther.modules.content.user.extensions.syncIfNeeded
 import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageReducer
 import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageView
-import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.modules.content.user.views.newchatpageview.NewChatPageReducer.Action
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
@@ -214,9 +214,9 @@ private suspend fun selectContactButtonTapped(
         return
     }
 
-    if (ContactService.matches().none { it.userID != User.currentUserID }) {
+    if (!ContactService.hasContactsBesidesCurrentUser) {
         runCatching { ContactService.syncIfNeeded() }
-        if (ContactService.matches().none { it.userID != User.currentUserID }) {
+        if (!ContactService.hasContactsBesidesCurrentUser) {
             InviteService.presentInvitationPrompt()
             return
         }

@@ -1,6 +1,6 @@
 //
 //  ContactService.kt
-//  Panther
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman on 20/08/2026.
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
@@ -14,36 +14,51 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.ContactsContract
 import androidx.core.content.ContextCompat
-import org.json.JSONArray
-import org.json.JSONObject
-import us.neotechnica.panther.modules.common.contacts.models.ContactMatch
+import us.neotechnica.panther.bundle.contactPairArchiveService
+import us.neotechnica.panther.modules.common.contacts.models.DeviceContact
+import us.neotechnica.panther.modules.common.extensions.ContactPairArchiveServiceStorageKey
+import us.neotechnica.panther.modules.common.extensions.emptyContactList
 import us.neotechnica.panther.modules.common.models.Contact
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.models.NumberPair
+import us.neotechnica.panther.modules.common.models.PhoneNumber
+import us.neotechnica.panther.modules.content.user.extensions.displayName
+import us.neotechnica.panther.modules.content.user.extensions.uniquedByPhoneNumber
+import us.neotechnica.panther.modules.content.user.extensions.userIDs
+import us.neotechnica.panther.modules.content.user.extensions.withUser
+import us.neotechnica.panther.modules.content.user.models.ConversationCellViewDataCache
+import us.neotechnica.panther.modules.content.user.models.QueriedContactPairCache
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.networking.user.services.UserService
-import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHashOf
+import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
+import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
+import us.neotechnica.panther.subsystem.modules.foundation.models.SingleSlotCoalescer
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
-import java.util.Date
 
 /**
- * Matches the device's contacts with registered users, persisting the
- * results so conversation titles and the contact selector can show names
- * instead of phone numbers.
+ * Matches the user's device contacts with registered users.
+ *
+ * Queries the device's address book for contacts whose phone numbers
+ * belong to registered users, maintains the contact pair archive with
+ * the results, and caches the fetched contacts in memory.
  */
 object ContactService {
     // MARK: - Properties
 
+    /** The service that persists and queries the contact pair archive. */
+    val contactPairArchive: ContactPairArchiveService
+        get() = ContactPairArchiveService
+
+    private val cachedDeviceContacts = LockIsolated<List<DeviceContact>?>(null)
+    private val coalescer = SingleSlotCoalescer<Unit>()
+
     @Volatile
     private var appContext: Context? = null
-
-    private val matchesRef = LockIsolated(emptyList<ContactMatch>())
-
-    @Volatile
-    private var didLoad = false
 
     // MARK: - Initialization
 
@@ -52,47 +67,45 @@ object ContactService {
         appContext = context.applicationContext
     }
 
-    // MARK: - Access
-
-    /** The matched contacts, loaded from the archive on first access. */
-    fun matches(): List<ContactMatch> {
-        loadIfNeeded()
-        return matchesRef.wrappedValue
-    }
-
-    /** Returns the contact matched to the given user, or `null`. */
-    fun match(userID: String): ContactMatch? = matches().firstOrNull { it.userID == userID }
-
-    /** The archive of contact pairs known to the app. */
-    val contactPairArchive: ContactPairArchiveService
-        get() = ContactPairArchiveService
-
-    /** Clears the matched-contact and contact-pair caches. */
-    fun clearCache() {
-        matchesRef.wrappedValue = emptyList()
-        persist(emptyList())
-        contactPairArchive.clearArchive()
-    }
+    // MARK: - Sync Contact Pair Archive
 
     /**
-     * Returns the display name of the contact whose national number hashes
-     * to [userNumberHash], or `null`. Resolves the sender of a push
-     * notification, standing in for the iOS notification extension's
-     * contact-archive lookup by `userNumberHash`.
+     * Rebuilds the contact pair archive by matching every registered
+     * user against the device's contacts.
+     *
+     * Fetches all registered users, queries the device's address book
+     * for contacts matching their phone numbers, and replaces the
+     * archive's contents with the results. Users without a matching
+     * device contact are persisted separately to the unknown contact
+     * pair archive. Related caches are cleared before the archive is
+     * repopulated. If no device contact matches any registered user,
+     * this method returns without modifying the archive.
+     *
+     * Concurrent calls coalesce onto a single in-flight sync.
+     *
+     * @throws Exception if contact permission has not been granted, or
+     *   if fetching users or contacts fails.
      */
-    fun nameForNumberHash(userNumberHash: String): String? =
-        matches()
-            .firstOrNull {
-                it.nationalNumberString.isNotBlank() &&
-                    encodedHashOf(listOf(it.nationalNumberString)) == userNumberHash
-            }?.fullName
+    suspend fun syncContactPairArchive() {
+        coalescer { syncContactPairArchiveInternal() }
+    }
+
+    // MARK: - Clear Cache
+
+    /** Removes every cached device contact. */
+    fun clearCache() {
+        cachedDeviceContacts.wrappedValue = null
+    }
+
+    // MARK: - Device Contact Lookup
 
     /**
-     * Returns the lookup URI of the device contact matching
-     * [compiledNumberString], suitable for a system contact-view intent,
-     * or `null` when no device contact matches (or contact permission is
-     * not granted). Standing in for the iOS `firstCNContact(for:)` lookup
-     * that resolves a `CNContact` for a phone number.
+     * Returns the lookup URI of the device contact matching the given
+     * compiled number string, suitable for a system contact-view
+     * intent, or `null` when no device contact matches or contact
+     * permission has not been granted.
+     *
+     * @param compiledNumberString The compiled number string to match.
      */
     fun deviceContactLookupUri(compiledNumberString: String): Uri? {
         val resolver = appContext?.contentResolver ?: return null
@@ -111,156 +124,93 @@ object ContactService {
         return null
     }
 
-    // MARK: - Sync
-
-    /**
-     * Rebuilds the contact archive when it is empty – or predates the
-     * national-number field a push notification's sender is resolved by –
-     * and contact permission is granted. Concurrent syncs are not
-     * coalesced; callers invoke this at boot.
-     */
-    suspend fun syncIfNeeded() {
-        loadIfNeeded()
-        val current = matchesRef.wrappedValue
-        if (current.isNotEmpty() && current.all { it.nationalNumberString.isNotBlank() }) return
-        if (!hasContactPermission()) return
-        sync()
-    }
-
-    /** Rebuilds the contact archive by matching device contacts to users. */
-    suspend fun sync() {
-        if (!hasContactPermission()) return
-
-        val users = runCatching { UserService.getAllUsers() }.getOrNull() ?: return
-        val deviceContacts = queryDeviceContacts()
-        if (deviceContacts.isEmpty()) return
-
-        val matches = mutableListOf<ContactMatch>()
-        val contactPairs = mutableListOf<ContactPair>()
-        for (user in users) {
-            val name = matchName(user, deviceContacts) ?: continue
-            matches.add(
-                ContactMatch(
-                    user.id,
-                    name,
-                    user.phoneNumber.compiledNumberString,
-                    user.phoneNumber.nationalNumberString,
-                ),
-            )
-            contactPairs.add(
-                ContactPair(
-                    contact =
-                        Contact(
-                            id = user.phoneNumber.compiledNumberString,
-                            firstName = name,
-                            lastName = "",
-                            phoneNumbers = listOf(user.phoneNumber),
-                            imageData = null,
-                        ),
-                    numberPairs =
-                        listOf(
-                            NumberPair(
-                                phoneNumber = user.phoneNumber,
-                                userIDs = listOf(user.id),
-                            ),
-                        ),
-                ),
-            )
-        }
-
-        matchesRef.wrappedValue = matches
-        persist(matches)
-        contactPairArchive.clearArchive()
-        contactPairArchive.addValues(contactPairs)
-        contactPairArchive.lastContactSyncDate = Date()
-        Logger.log("Updated contact archive (${matches.size} matches).")
-    }
-
-    // MARK: - Auxiliary
-
-    private fun matchName(
-        user: User,
-        deviceContacts: List<Pair<String, String>>,
-    ): String? {
-        val compiled = user.phoneNumber.compiledNumberString
-        val national = user.phoneNumber.nationalNumberString
-        return deviceContacts
-            .firstOrNull { (_, digits) ->
-                digits == compiled || digits == national || digits.endsWith(compiled) || digits.endsWith(national)
-            }?.first
-    }
-
-    private fun queryDeviceContacts(): List<Pair<String, String>> {
-        val resolver = appContext?.contentResolver ?: return emptyList()
-        val projection =
-            arrayOf(
-                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
-                ContactsContract.CommonDataKinds.Phone.NUMBER,
-            )
-
-        val results = mutableListOf<Pair<String, String>>()
-        resolver.query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, projection, null, null, null)?.use { cursor ->
-            val nameIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
-            val numberIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
-            if (nameIndex < 0 || numberIndex < 0) return emptyList()
-
-            while (cursor.moveToNext()) {
-                val name = cursor.getString(nameIndex) ?: continue
-                val digits = (cursor.getString(numberIndex) ?: "").filter { it.isDigit() }
-                if (digits.isNotEmpty()) results.add(name to digits)
-            }
-        }
-        return results
-    }
-
-    /** Whether the app currently holds read access to the device's contacts. */
+    /** A Boolean value that indicates whether read access to the device's contacts is held. */
     fun hasContactPermission(): Boolean {
         val context = appContext ?: return false
         return ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) ==
             PackageManager.PERMISSION_GRANTED
     }
 
-    private fun loadIfNeeded() {
-        if (didLoad) return
-        synchronized(this) {
-            if (didLoad) return
-            didLoad = true
-            val archive = Persistent.string(PersistentStorageKey.contactArchive) ?: return
-            matchesRef.wrappedValue = runCatching { decode(archive) }.getOrDefault(emptyList())
-        }
-    }
+    // MARK: - Auxiliary
 
-    private fun persist(matches: List<ContactMatch>) {
-        val array = JSONArray()
-        for (match in matches) {
-            array.put(
-                JSONObject()
-                    .put(KEY_USER_ID, match.userID)
-                    .put(KEY_FULL_NAME, match.fullName)
-                    .put(KEY_NUMBER, match.compiledNumberString)
-                    .put(KEY_NATIONAL_NUMBER, match.nationalNumberString),
+    private suspend fun syncContactPairArchiveInternal() {
+        try {
+            val users = UserService.getAllUsers()
+            val contactPairs = fetchContactPairs(users)
+
+            ConversationCellViewDataCache.clearCache()
+            QueriedContactPairCache.clearCache()
+
+            contactPairArchive.clearArchive()
+            contactPairArchive.addValues(contactPairs)
+
+            val contactPairUserIDs = contactPairs.userIDs
+            val unknownContactPairArchive =
+                users
+                    .filter { it.id !in contactPairUserIDs }
+                    .map { ContactPair.withUser(it, name = it.displayName) }
+            Persistent.setArchive(
+                PersistentStorageKey.contactPairArchiveService(ContactPairArchiveServiceStorageKey.UNKNOWN_CONTACT_PAIR_ARCHIVE),
+                unknownContactPairArchive.map { it.encoded },
             )
-        }
-        Persistent.setString(PersistentStorageKey.contactArchive, array.toString())
-    }
 
-    private fun decode(archive: String): List<ContactMatch> {
-        val array = JSONArray(archive)
-        return (0 until array.length()).map { index ->
-            val obj = array.getJSONObject(index)
-            ContactMatch(
-                obj.getString(KEY_USER_ID),
-                obj.getString(KEY_FULL_NAME),
-                obj.getString(KEY_NUMBER),
-                obj.optString(KEY_NATIONAL_NUMBER),
-            )
+            Logger.log("Successfully updated contact pair archive.", domain = LoggerDomain.contacts)
+        } catch (exception: Exception) {
+            if (exception.isEqual(to = AppException.emptyContactList)) return
+            throw exception
         }
     }
 
-    // MARK: - Companion
+    private fun fetchContactPairs(users: List<User>): List<ContactPair> {
+        val resolver = appContext?.contentResolver
+        if (!hasContactPermission() || resolver == null) {
+            throw Exception("Not authorized for contacts.", isReportable = false, metadata = ExceptionMetadata(this))
+        }
 
-    private const val KEY_USER_ID = "userID"
-    private const val KEY_FULL_NAME = "fullName"
-    private const val KEY_NUMBER = "number"
-    private const val KEY_NATIONAL_NUMBER = "nationalNumber"
+        val matchedDeviceContacts = mutableListOf<DeviceContact>()
+        val contactPairs =
+            DeviceContactReader.read(resolver).mapNotNull { deviceContact ->
+                val numberPairs =
+                    users
+                        .filter { deviceContact.matches(it.phoneNumber) }
+                        .map { NumberPair(phoneNumber = it.phoneNumber, userIDs = listOf(it.id)) }
+                        .distinct()
+                        .sortedBy { it.phoneNumber.callingCode }
+                if (numberPairs.isEmpty()) return@mapNotNull null
+
+                matchedDeviceContacts.add(deviceContact)
+                val (firstName, lastName) = ContactNameService.name(deviceContact)
+                ContactPair(
+                    contact =
+                        Contact(
+                            id = deviceContact.id,
+                            firstName = firstName,
+                            lastName = lastName,
+                            phoneNumbers = deviceContact.phoneNumbers,
+                            imageData = null,
+                        ),
+                    numberPairs = numberPairs,
+                )
+            }
+
+        cachedDeviceContacts.wrappedValue = ((cachedDeviceContacts.wrappedValue ?: emptyList()) + matchedDeviceContacts).distinct()
+
+        if (contactPairs.isEmpty()) {
+            throw Exception("Empty contact list.", isReportable = false, metadata = ExceptionMetadata(this))
+        }
+
+        return contactPairs.distinct().sortedBy { it.contact.firstName }.uniquedByPhoneNumber
+    }
+
+    private fun DeviceContact.matches(phoneNumber: PhoneNumber): Boolean {
+        val compiledNumberString = phoneNumber.compiledNumberString
+        val nationalNumberString = phoneNumber.nationalNumberString
+        return phoneNumbers.any { number ->
+            val numberCompiledNumberString = number.compiledNumberString
+            numberCompiledNumberString == compiledNumberString ||
+                (nationalNumberString.isNotEmpty() && number.nationalNumberString == nationalNumberString) ||
+                (compiledNumberString.isNotEmpty() && numberCompiledNumberString.endsWith(compiledNumberString)) ||
+                (nationalNumberString.isNotEmpty() && numberCompiledNumberString.endsWith(nationalNumberString))
+        }
+    }
 }

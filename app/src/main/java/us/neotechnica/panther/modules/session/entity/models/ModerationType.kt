@@ -6,7 +6,7 @@
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
-package us.neotechnica.panther.modules.content.user.models
+package us.neotechnica.panther.modules.session.entity.models
 
 /**
  * A kind of user moderation action.

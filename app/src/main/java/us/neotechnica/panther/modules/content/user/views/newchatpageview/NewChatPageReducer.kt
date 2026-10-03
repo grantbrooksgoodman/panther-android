@@ -9,19 +9,15 @@
 package us.neotechnica.panther.modules.content.user.views.newchatpageview
 
 import us.neotechnica.panther.modules.common.contacts.models.ContactMatch
-import us.neotechnica.panther.modules.common.contacts.services.ContactService
-import us.neotechnica.panther.modules.common.extensions.formattedString
-import us.neotechnica.panther.modules.common.services.PhoneNumberService
-import us.neotechnica.panther.modules.common.services.RegionDetailService
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentNavigatorState
-import us.neotechnica.panther.navigation.UserContentRoute
-import us.neotechnica.panther.navigation.navigation
-import us.neotechnica.panther.networking.modules.common.extensions.digits
-import us.neotechnica.panther.modules.common.services.AnalyticsService
+import us.neotechnica.panther.modules.common.contacts.services.ContactPairArchiveService
 import us.neotechnica.panther.modules.common.models.PhoneNumber
+import us.neotechnica.panther.modules.common.services.AnalyticsService
+import us.neotechnica.panther.modules.common.services.PhoneNumberService
+import us.neotechnica.panther.modules.content.user.extensions.displayName
+import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.networking.user.services.UserService
 import us.neotechnica.panther.modules.session.entity.extensions.conversations
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.modules.session.entity.extensions.empty
@@ -30,9 +26,13 @@ import us.neotechnica.panther.modules.session.entity.extensions.sortedByLatestMe
 import us.neotechnica.panther.modules.session.entity.extensions.users
 import us.neotechnica.panther.modules.session.entity.extensions.visibleForCurrentUser
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
-import us.neotechnica.panther.modules.networking.user.services.UserService
+import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.navigation.Route
+import us.neotechnica.panther.navigation.UserContentNavigatorState
+import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
@@ -157,7 +157,7 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
         when (action) {
             Action.ViewFirstAppeared -> {
                 AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.ACCESS_NEW_CHAT_PAGE)
-                ReduceResult(state.copy(contacts = ContactService.matches().filter { it.userID != User.currentUserID }))
+                ReduceResult(state.copy(contacts = contactMatchesFromArchive()))
             }
 
             Action.ViewDisappeared -> {
@@ -269,25 +269,33 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
 
     private fun findByPhoneEffect(query: String): Effect<Action> =
         Effect.run { send ->
-            val regionCode = RegionDetailService.deviceRegionCode
-            val phoneNumber =
-                PhoneNumber(
-                    callingCode = RegionDetailService.callingCode(regionCode) ?: PhoneNumberService.deviceCallingCode,
-                    nationalNumberString = query.digits,
-                    regionCode = regionCode,
-                    label = null,
-                    internalFormattedString = null,
-                )
+            val phoneNumber = PhoneNumber(query)
             try {
                 if (UserService.accountExists(phoneNumber)) {
                     val user = UserService.getUser(phoneNumber)
-                    val name = ContactService.match(user.id)?.fullName ?: user.phoneNumber.formattedString()
-                    send(Action.AddRecipient(user.id, name))
+                    send(Action.AddRecipient(user.id, user.displayName))
                 }
             } catch (exception: Exception) {
                 Logger.log(exception)
             }
         }
+
+    private fun contactMatchesFromArchive(): List<ContactMatch> =
+        ContactPairArchiveService
+            .allValues()
+            .flatMap { contactPair ->
+                contactPair.numberPairs.flatMap { numberPair ->
+                    numberPair.userIDs.map { userID ->
+                        ContactMatch(
+                            userID = userID,
+                            fullName = SessionStore.users[userID]?.displayName ?: contactPair.contact.fullName,
+                            compiledNumberString = numberPair.phoneNumber.compiledNumberString,
+                            nationalNumberString = numberPair.phoneNumber.nationalNumberString,
+                        )
+                    }
+                }
+            }.filter { it.userID != User.currentUserID }
+            .distinctBy { it.userID }
 
     private fun resolveConversationEffect(recipientUserIDs: List<String>): Effect<Action> =
         Effect.run {

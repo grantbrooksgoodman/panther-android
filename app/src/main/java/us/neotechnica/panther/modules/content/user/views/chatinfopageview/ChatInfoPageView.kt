@@ -59,8 +59,6 @@ import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.contacts.components.rememberContactCardPresenter
-import us.neotechnica.panther.modules.common.contacts.services.ContactService
-import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.content.user.components.AddContactButton
 import us.neotechnica.panther.modules.content.user.components.ChatInfoContactSelectorHost
@@ -71,6 +69,7 @@ import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewCon
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewFloats
 import us.neotechnica.panther.modules.content.user.extensions.chatInfoPageLoadingStateUpdated
 import us.neotechnica.panther.modules.content.user.extensions.currentConversationActivityChanged
+import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.content.user.models.MediaItemViewData
 import us.neotechnica.panther.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
@@ -582,12 +581,11 @@ private fun otherParticipants(conversation: Conversation): List<ParticipantRowDa
     conversation.participants
         .filter { it.userID != User.currentUserID }
         .map { participant ->
-            val match = ContactService.match(participant.userID)
             val user = conversation.users?.firstOrNull { it.id == participant.userID } ?: SessionStore.users[participant.userID]
             ParticipantRowData(
                 userID = participant.userID,
-                displayName = match?.fullName ?: user?.phoneNumber?.formattedString() ?: participant.userID,
-                initials = match?.initials.orEmpty(),
+                displayName = user?.displayName ?: participant.userID,
+                initials = user?.displayName?.contactInitials().orEmpty(),
                 languageCode = user?.languageCode,
                 regionCode = user?.phoneNumber?.regionCode,
                 phoneNumber = user?.phoneNumber,
@@ -600,9 +598,12 @@ private fun infoTitle(conversation: Conversation): String {
 
     val users = conversation.users.orEmpty()
     val first = users.firstOrNull() ?: return Strings.UNKNOWN
-    val base = ContactService.match(first.id)?.fullName ?: first.phoneNumber.formattedString()
+    val base = first.displayName
     return if (users.size > 1) "$base${Strings.TITLE_ADDITIONAL_SEPARATOR}${users.size - 1}" else base
 }
+
+/** The uppercased first letters of each word of the name. */
+private fun String.contactInitials(): String = split(" ").mapNotNull { it.firstOrNull()?.uppercase() }.joinToString("")
 
 /**
  * Sets up the camera and photo-library launchers and, on each new

@@ -10,6 +10,7 @@ package us.neotechnica.panther.modules.common.services
 
 import com.google.i18n.phonenumbers.PhoneNumberUtil
 import us.neotechnica.panther.networking.modules.common.extensions.digits
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHashOf
 
 /**
  * Answers questions about phone numbers – calling codes, valid
@@ -56,6 +57,32 @@ object PhoneNumberService {
                 PhoneNumberUtil.PhoneNumberType.MOBILE,
             ) ?: return US_EXAMPLE_NUMBER
         return phoneNumberUtil.format(example, PhoneNumberUtil.PhoneNumberFormat.NATIONAL)
+    }
+
+    /**
+     * Returns the encoded hashes under which the given number string
+     * may be stored.
+     *
+     * The result contains the hash of the full number, plus the hash
+     * of the number with each plausible calling code prefix removed.
+     */
+    fun possibleHashes(number: String): List<String> {
+        val hashes = mutableListOf(encodedHashOf(listOf(number)))
+        matchingCallingCodes(number)?.forEach { code ->
+            hashes.add(encodedHashOf(listOf(number.drop(code.length))))
+        }
+        return hashes
+    }
+
+    /**
+     * Returns the combined candidate hashes for the given number
+     * strings.
+     *
+     * Numbers for which no candidates could be derived are skipped.
+     */
+    fun possibleHashes(numbers: List<String>): List<String>? {
+        val hashes = numbers.flatMap { possibleHashes(it) }
+        return hashes.ifEmpty { null }
     }
 
     // MARK: - Auxiliary

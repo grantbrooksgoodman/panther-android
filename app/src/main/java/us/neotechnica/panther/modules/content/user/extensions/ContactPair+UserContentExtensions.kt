@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.extensions
 
+import us.neotechnica.panther.modules.common.extensions.compiledNumberStrings
 import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.models.Contact
 import us.neotechnica.panther.modules.common.models.ContactPair
@@ -21,7 +22,7 @@ import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 
 /** The compiled number strings of the contact's phone numbers. */
 val ContactPair.compiledNumberStrings: List<String>
-    get() = contact.phoneNumbers.map { it.compiledNumberString }
+    get() = contact.phoneNumbers.compiledNumberStrings
 
 /** Whether the contact pair contains a user the current user has blocked. */
 val ContactPair.containsBlockedUser: Boolean
@@ -33,6 +34,14 @@ val ContactPair.containsBlockedUser: Boolean
 /** Whether the contact pair contains only the current user. */
 val ContactPair.containsCurrentUser: Boolean
     get() = userIDs.all { it == User.currentUserID }
+
+/**
+ * A Boolean value that indicates whether the contact pair is currently
+ * selected as a recipient.
+ */
+val ContactPair.isSelected: Boolean
+    // Always false while no recipient selection is active.
+    get() = false
 
 /**
  * Whether the contact pair is a mock, representing an unresolved

@@ -10,18 +10,18 @@ package us.neotechnica.panther.modules.content.user.views.contactselectorpagevie
 
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.common.contacts.models.ContactMatch
-import us.neotechnica.panther.modules.common.contacts.services.ContactService
-import us.neotechnica.panther.modules.common.extensions.formattedString
+import us.neotechnica.panther.modules.common.contacts.services.ContactPairArchiveService
 import us.neotechnica.panther.modules.common.extensions.noUsersWithPhoneNumber
-import us.neotechnica.panther.modules.common.services.PhoneNumberService
-import us.neotechnica.panther.modules.common.services.RegionDetailService
+import us.neotechnica.panther.modules.common.models.PhoneNumber
+import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.content.user.services.ContactSelectorPageViewService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
+import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
+import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.digits
-import us.neotechnica.panther.modules.common.models.PhoneNumber
-import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.effect.Effect
@@ -118,7 +118,7 @@ class ContactSelectorPageReducer(
     ) {
         /** The user's known contacts. */
         val contactPairs: List<ContactMatch>
-            get() = ContactService.matches()
+            get() = contactMatchesFromArchive()
 
         /** The page's navigation title. */
         val navigationTitle: String
@@ -190,7 +190,7 @@ class ContactSelectorPageReducer(
                     state.queriedContactPairs.isEmpty() &&
                     state.searchQuery == state.searchQuery.digits
                 ) {
-                    ReduceResult(state, findUserEffect(phoneNumber(state.searchQuery.digits)))
+                    ReduceResult(state, findUserEffect(PhoneNumber(state.searchQuery.digits)))
                 } else {
                     ReduceResult(state)
                 }
@@ -208,7 +208,7 @@ class ContactSelectorPageReducer(
                     Logger.log(action.exception, with = AlertType.toast)
                     ReduceResult(state)
                 } else {
-                    ReduceResult(state, invitationPromptEffect(phoneNumber(state.searchQuery.digits)))
+                    ReduceResult(state, invitationPromptEffect(PhoneNumber(state.searchQuery.digits)))
                 }
 
             is Action.ResolveFailed -> {
@@ -247,24 +247,12 @@ class ContactSelectorPageReducer(
     // MARK: - Auxiliary
 
     private fun foundContactPair(user: User): ContactMatch =
-        ContactService.match(user.id)
-            ?: ContactMatch(
-                userID = user.id,
-                fullName = user.phoneNumber.formattedString(),
-                compiledNumberString = user.phoneNumber.compiledNumberString,
-                nationalNumberString = user.phoneNumber.nationalNumberString,
-            )
-
-    private fun phoneNumber(digits: String): PhoneNumber {
-        val regionCode = RegionDetailService.deviceRegionCode
-        return PhoneNumber(
-            callingCode = RegionDetailService.callingCode(regionCode) ?: PhoneNumberService.deviceCallingCode,
-            nationalNumberString = digits,
-            regionCode = regionCode,
-            label = null,
-            internalFormattedString = null,
+        ContactMatch(
+            userID = user.id,
+            fullName = user.displayName,
+            compiledNumberString = user.phoneNumber.compiledNumberString,
+            nationalNumberString = user.phoneNumber.nationalNumberString,
         )
-    }
 
     private fun resolveEffect(): Effect<Action> =
         Effect.run { send ->
@@ -291,6 +279,23 @@ class ContactSelectorPageReducer(
 }
 
 // MARK: - Contact Matching
+
+private fun contactMatchesFromArchive(): List<ContactMatch> =
+    ContactPairArchiveService
+        .allValues()
+        .flatMap { contactPair ->
+            contactPair.numberPairs.flatMap { numberPair ->
+                numberPair.userIDs.map { userID ->
+                    ContactMatch(
+                        userID = userID,
+                        fullName = SessionStore.users[userID]?.displayName ?: contactPair.contact.fullName,
+                        compiledNumberString = numberPair.phoneNumber.compiledNumberString,
+                        nationalNumberString = numberPair.phoneNumber.nationalNumberString,
+                    )
+                }
+            }
+        }.filter { it.userID != User.currentUserID }
+        .distinctBy { it.userID }
 
 private fun List<ContactMatch>.queried(searchQuery: String): List<ContactMatch> {
     if (searchQuery.isBlank()) return this

@@ -63,6 +63,47 @@ class ContactPairTest {
         assertEquals("AL", contact.initials)
     }
 
+    @Test
+    fun `contact pair with multiple numbers encodes and decodes to an equal value`() {
+        val homeNumber =
+            PhoneNumber(
+                callingCode = "1",
+                nationalNumberString = "5551234567",
+                regionCode = "US",
+                label = null,
+                internalFormattedString = null,
+            )
+        val mobileNumber =
+            PhoneNumber(
+                callingCode = "44",
+                nationalNumberString = "2079460958",
+                regionCode = "GB",
+                label = null,
+                internalFormattedString = null,
+            )
+        val contactPair =
+            ContactPair(
+                contact =
+                    Contact(
+                        id = "contact-grouped",
+                        firstName = "Jane",
+                        lastName = "Doe",
+                        phoneNumbers = listOf(homeNumber, mobileNumber),
+                        imageData = null,
+                    ),
+                numberPairs =
+                    listOf(
+                        NumberPair(phoneNumber = homeNumber, userIDs = listOf("user-1")),
+                        NumberPair(phoneNumber = mobileNumber, userIDs = listOf("user-2")),
+                    ),
+            )
+
+        val decoded = ContactPair.decode(contactPair.encoded)
+
+        assertEquals(contactPair, decoded)
+        assertEquals(2, decoded?.numberPairs?.size)
+    }
+
     // MARK: - Malformed Input
 
     @Test

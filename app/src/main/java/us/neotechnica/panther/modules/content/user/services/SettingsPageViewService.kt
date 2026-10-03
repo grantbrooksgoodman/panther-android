@@ -31,7 +31,6 @@ import us.neotechnica.panther.modules.common.services.MetadataService
 import us.neotechnica.panther.modules.common.services.NotificationService
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewConstants
 import us.neotechnica.panther.modules.content.user.extensions.removeCurrentPushToken
-import us.neotechnica.panther.modules.content.user.extensions.unblockUsers
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.session.entity.services.ModerationSessionService
@@ -43,6 +42,7 @@ import us.neotechnica.panther.navigation.UserContentNavigatorState
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
@@ -84,7 +84,7 @@ object SettingsPageViewService {
     /** Begins the unblock users flow, surfacing any error as a toast. */
     fun blockedUsersButtonTapped() {
         scope.launch {
-            runCatching { ModerationSessionService.unblockUsers() }.onFailure { Logger.log(it.toException()) }
+            runCatching { ModerationSessionService.unblockUsers() }.onFailure { Logger.log(it.toException(), with = AlertType.toast) }
         }
     }
 

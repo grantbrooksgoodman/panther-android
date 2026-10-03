@@ -13,9 +13,8 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAl
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAlert
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
-import us.neotechnica.panther.modules.common.contacts.services.ContactService
-import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewConstants
+import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.content.user.models.MediaItemViewData
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
@@ -344,10 +343,7 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         if (message.isFromCurrentUser) {
             return LocalizedStringKey.FromYou.localized().replaceFirstChar { it.lowercase() }
         }
-        val displayName =
-            ContactService.match(message.fromAccountID)?.fullName
-                ?: user?.phoneNumber?.formattedString()
-                ?: message.fromAccountID
+        val displayName = user?.displayName ?: message.fromAccountID
         return LocalizedStringKey.FromUser.localized().replace("⌘", displayName)
     }
 

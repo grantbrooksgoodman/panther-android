@@ -31,6 +31,7 @@ import us.neotechnica.panther.modules.common.services.AlertKitTranslationService
 import us.neotechnica.panther.modules.common.services.CommonServices
 import us.neotechnica.panther.modules.common.services.ErrorReportingService
 import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.modules.content.user.extensions.syncIfNeeded
 import us.neotechnica.panther.modules.content.user.extensions.updateDeviceIDIfNeeded
 import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey

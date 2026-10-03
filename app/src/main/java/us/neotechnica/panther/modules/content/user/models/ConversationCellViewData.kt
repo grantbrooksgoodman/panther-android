@@ -8,8 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.models
 
-import us.neotechnica.panther.modules.common.contacts.services.ContactService
-import us.neotechnica.panther.modules.common.extensions.formattedString
+import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
@@ -151,9 +150,7 @@ data class ConversationCellViewData(
 
             val users = conversation.users.orEmpty()
             val firstUser = users.firstOrNull() ?: return "Unknown"
-            val base =
-                ContactService.match(firstUser.id)?.fullName
-                    ?: firstUser.phoneNumber.formattedString()
+            val base = firstUser.displayName
             return if (users.size > 1) "$base + ${users.size - 1}" else base
         }
 

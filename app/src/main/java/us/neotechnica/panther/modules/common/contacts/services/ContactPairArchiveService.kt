@@ -8,11 +8,15 @@
 
 package us.neotechnica.panther.modules.common.contacts.services
 
+import org.json.JSONObject
 import us.neotechnica.panther.bundle.contactPairArchiveService
 import us.neotechnica.panther.bundle.updatedContactPairArchive
+import us.neotechnica.panther.modules.common.constants.NotificationExtensionConstants
 import us.neotechnica.panther.modules.common.extensions.ContactPairArchiveServiceStorageKey
+import us.neotechnica.panther.modules.common.extensions.compiledNumberStrings
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.models.PhoneNumber
+import us.neotechnica.panther.modules.common.services.PhoneNumberService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
@@ -51,7 +55,14 @@ object ContactPairArchiveService {
         set(newValue) {
             cachedArchive.wrappedValue = newValue
             persist(newValue)
+            persistValuesForNotificationExtension()
         }
+
+    // MARK: - Init
+
+    init {
+        persistValuesForNotificationExtension()
+    }
 
     // MARK: - Addition
 
@@ -135,6 +146,23 @@ object ContactPairArchiveService {
         Persistent.setArchive(
             key(ContactPairArchiveServiceStorageKey.CONTACT_PAIR_ARCHIVE),
             values.map { it.encoded },
+        )
+    }
+
+    private fun persistValuesForNotificationExtension() {
+        val json = JSONObject()
+        for (contactPair in archive) {
+            val phoneNumbers = contactPair.contact.phoneNumbers
+            val numberStrings = phoneNumbers.compiledNumberStrings.distinct()
+            val possibleHashes = PhoneNumberService.possibleHashes(numberStrings) ?: emptyList()
+            for (hash in possibleHashes) {
+                json.put(hash, contactPair.contact.fullName)
+            }
+        }
+
+        Persistent.setString(
+            PersistentStorageKey(NotificationExtensionConstants.CONTACT_NAME_MAP_KEY),
+            json.toString(),
         )
     }
 }

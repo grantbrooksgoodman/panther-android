@@ -245,7 +245,7 @@ class PermissionPageReducer : Reducer<PermissionPageReducer.State, PermissionPag
                 state.copy(isContactPermissionGranted = true),
                 Effect.fireAndForget {
                     try {
-                        ContactService.sync()
+                        ContactService.syncContactPairArchive()
                     } catch (exception: Exception) {
                         Logger.log(exception)
                     }

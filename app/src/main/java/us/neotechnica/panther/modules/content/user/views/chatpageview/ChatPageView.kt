@@ -62,9 +62,6 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.common.contacts.models.ContactMatch
-import us.neotechnica.panther.modules.common.contacts.services.ContactService
-import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.services.HapticsService
 import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.content.user.components.ChatMessageCell
@@ -74,6 +71,7 @@ import us.neotechnica.panther.modules.content.user.components.DeliveryProgressVi
 import us.neotechnica.panther.modules.content.user.components.MediaPreviewOverlay
 import us.neotechnica.panther.modules.content.user.components.rememberContentPickers
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
+import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.content.user.services.DeliveryProgressIndicatorService
 import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
@@ -85,7 +83,6 @@ import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.session.entity.extensions.isMediaMessage
 import us.neotechnica.panther.modules.session.entity.extensions.isOutboxMessage
@@ -448,7 +445,13 @@ private fun MessageList(
             val showSender = isGroup && !message.isFromCurrentUser && !message.isSystemMessage
             val firstOfRun = messages.getOrNull(index - 1)?.fromAccountID != message.fromAccountID
             val lastOfRun = messages.getOrNull(index + 1)?.fromAccountID != message.fromAccountID
-            val senderMatch = if (showSender) ContactService.match(message.fromAccountID) else null
+            val senderUser =
+                if (showSender) {
+                    users.firstOrNull { it.id == message.fromAccountID } ?: SessionStore.users[message.fromAccountID]
+                } else {
+                    null
+                }
+            val senderDisplayName = senderUser?.displayName
 
             ChatMessageCell(
                 row =
@@ -460,8 +463,8 @@ private fun MessageList(
                         isLastConfirmedOwnMessage = index == lastConfirmedOwnIndex,
                         isGroup = isGroup,
                         isFailed = isFailed,
-                        senderName = if (showSender && firstOfRun) senderName(message, senderMatch, users) else null,
-                        senderInitials = senderMatch?.initials ?: "",
+                        senderName = if (showSender && firstOfRun) (senderDisplayName ?: message.fromAccountID) else null,
+                        senderInitials = senderDisplayName?.contactInitials() ?: "",
                         showSenderAvatar = showSender && lastOfRun,
                         reactions = message.reactions.orEmpty(),
                         mediaFile = state.mediaByID[message.id],
@@ -495,15 +498,8 @@ private fun buildChatPageViewModel(): ViewModel<ChatPageReducer.State, ChatPageR
             ChatPageReducer.Action.MessageOutboxChanged(anyOutboxSending())
         }
 
-private fun senderName(
-    message: Message,
-    match: ContactMatch?,
-    users: List<User>,
-): String {
-    match?.let { return it.fullName }
-    val user = users.firstOrNull { it.id == message.fromAccountID } ?: SessionStore.users[message.fromAccountID]
-    return user?.phoneNumber?.formattedString() ?: message.fromAccountID
-}
+/** The uppercased first letters of each word of the name. */
+private fun String.contactInitials(): String = split(" ").mapNotNull { it.firstOrNull()?.uppercase() }.joinToString("")
 
 /**
  * Saves the given media file to the device, showing a success HUD on

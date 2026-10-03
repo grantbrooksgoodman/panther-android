@@ -21,6 +21,12 @@ package us.neotechnica.panther.modules.common.constants
  */
 object NotificationExtensionConstants {
     /**
+     * The key under which the number-hash to contact-name map is
+     * persisted.
+     */
+    const val CONTACT_NAME_MAP_KEY = "contactNameMap"
+
+    /**
      * The key under which the group conversation name map is
      * persisted.
      */

@@ -29,7 +29,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.MainActivity
 import us.neotechnica.panther.R
-import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.navigation.PendingChatNavigation
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.modules.networking.user.models.User
@@ -171,7 +170,7 @@ class PantherMessagingService : FirebaseMessagingService() {
     private fun enrichedTitle(message: RemoteMessage): String {
         val fallback = message.notification?.title ?: message.data[TITLE_KEY] ?: getString(R.string.app_name)
         val userNumberHash = message.data[USER_NUMBER_HASH_KEY] ?: return fallback
-        val fullName = ContactService.nameForNumberHash(userNumberHash) ?: return fallback
+        val fullName = contactNameForNumberHash(userNumberHash) ?: return fallback
 
         val reactionMessageID = message.data[REACTION_MESSAGE_ID_KEY]
         val reactionSuffix = message.data[REACTION_SUFFIX_KEY].orEmpty()
@@ -180,6 +179,15 @@ class PantherMessagingService : FirebaseMessagingService() {
         } else {
             fullName
         }
+    }
+
+    /**
+     * The contact name persisted for the given number hash, used to
+     * resolve a notification's sender before the session store loads.
+     */
+    private fun contactNameForNumberHash(userNumberHash: String): String? {
+        val nameMap = Persistent.string(PersistentStorageKey(NotificationExtensionConstants.CONTACT_NAME_MAP_KEY)) ?: return null
+        return runCatching { JSONObject(nameMap).optString(userNumberHash) }.getOrNull()?.takeUnless { it.isBlank() }
     }
 
     /**
