@@ -27,6 +27,7 @@ import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
@@ -41,15 +42,16 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
  * record. Individual failures are accumulated and a single compiled
  * exception is thrown at the end.
  *
- * **Note:** the two database integrity-repair passes iOS performs are
- * absent – `IntegrityService` is deferred to a separate plan (D-II-2).
- * The Android progress alert is indeterminate, so no completion
- * percentage is reported.
+ * A determinate progress bar tracks the per-conversation work. The two
+ * database integrity-repair passes iOS performs are out of scope for
+ * Android (D-III-10).
  */
 object AccountDeletionService {
     // MARK: - Properties
 
     private val database get() = Networking.config.databaseDelegate
+    private val completedUnits = LockIsolated(0.0)
+    private var progressAlert: ProgressAlert? = null
 
     // MARK: - Delete Account
 
@@ -67,12 +69,14 @@ object AccountDeletionService {
         UserSessionService.stopObservingCurrentUserChanges()
 
         val exceptions = mutableListOf<Exception>()
-        Overlay.show()
+        completedUnits.wrappedValue = 0.0
+        Overlay.show(alpha = OVERLAY_ALPHA, showsActivityIndicator = false)
         val progressAlert =
             ProgressAlert(
                 title = LocalizedStringKey.DeletingData.localized(),
                 message = LocalizedStringKey.PleaseWait.localized(),
             )
+        this.progressAlert = progressAlert
         progressAlert.present()
 
         try {
@@ -89,26 +93,33 @@ object AccountDeletionService {
             }
 
             val conversations = UserSessionService.currentUser?.conversations ?: emptyList()
+            val groupChats = conversations.filter { it.participants.size > GROUP_PARTICIPANT_THRESHOLD }
+            val oneToOneChats = conversations.filter { it.participants.size == ONE_TO_ONE_PARTICIPANT_COUNT }
+            val totalUnits = (groupChats.size + oneToOneChats.size).toDouble()
 
             // Remove from group chats, delete one-to-one chats, in parallel.
             coroutineScope {
-                conversations
-                    .map { conversation ->
+                val groupTasks =
+                    groupChats.map { conversation ->
                         async {
                             runCatchingException {
-                                if (conversation.participants.size > GROUP_PARTICIPANT_THRESHOLD) {
-                                    ActivitySessionService.removeFromConversation(
-                                        userID = currentUserID,
-                                        conversation = conversation,
-                                        removeFromUser = false,
-                                    )
-                                } else {
-                                    ConversationSessionService.deleteConversation(conversation, forced = true)
-                                }
+                                ActivitySessionService.removeFromConversation(
+                                    userID = currentUserID,
+                                    conversation = conversation,
+                                    removeFromUser = false,
+                                )
                             }
                         }
-                    }.awaitAll()
-                    .forEach { exception -> exception?.let(exceptions::add) }
+                    }
+                val oneToOneTasks =
+                    oneToOneChats.map { conversation ->
+                        async { runCatchingException { ConversationSessionService.deleteConversation(conversation, forced = true) } }
+                    }
+
+                (groupTasks + oneToOneTasks).forEach { task ->
+                    task.await()?.let(exceptions::add)
+                    incrementProgress(totalUnits)
+                }
             }
 
             // Zero-out conversation IDs after all conversation operations
@@ -118,15 +129,16 @@ object AccountDeletionService {
                 UserSessionService.currentUser?.update(UserUpdatableKey.CONVERSATION_IDS, to = emptyList<ConversationID>())
             }?.let(exceptions::add)
 
-            // iOS repairs database integrity here; deferred per D-II-2.
+            // iOS repairs database integrity here; the two repair passes are out of scope for
+            // Android per D-III-10.
 
+            progressAlert.updateProgress(1.0)
             Persistent.setString(PersistentStorageKey.currentUserID, null)
             runCatchingException {
                 database.setValue(value = null, key = "${NetworkPath.users.rawValue}/$currentUserID")
             }?.let(exceptions::add)
-
-            // iOS repairs database integrity again on errors; deferred per D-II-2.
         } finally {
+            this.progressAlert = null
             progressAlert.dismiss()
             Overlay.hide()
         }
@@ -158,5 +170,16 @@ object AccountDeletionService {
             exception
         }
 
+    private fun incrementProgress(total: Double) {
+        val percent =
+            completedUnits.withValue { reference ->
+                reference.value += 1
+                reference.value / maxOf(total, 1.0)
+            }
+        progressAlert?.updateProgress(percent)
+    }
+
     private const val GROUP_PARTICIPANT_THRESHOLD = 2
+    private const val ONE_TO_ONE_PARTICIPANT_COUNT = 2
+    private const val OVERLAY_ALPHA = 0.5f
 }

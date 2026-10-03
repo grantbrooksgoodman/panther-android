@@ -8,10 +8,6 @@
 
 package us.neotechnica.panther.modules.content.onboarding.views.permissionpageview
 
-import android.Manifest
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -56,15 +52,6 @@ fun PermissionPageView(modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
 
-    val contactLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            viewModel.send(PermissionPageReducer.Action.RequestContactPermissionReturned(granted))
-        }
-    val notificationLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            viewModel.send(PermissionPageReducer.Action.RequestNotificationPermissionReturned(granted))
-        }
-
     StatefulView(
         state = state.viewState,
         modifier = modifier,
@@ -87,19 +74,13 @@ fun PermissionPageView(modifier: Modifier = Modifier) {
                     StatusIndicatorButton(
                         label = state.strings.value(PermissionPageViewStrings.contactPermissionCapsuleButtonText),
                         isGranted = state.isContactPermissionGranted,
-                        onClick = { contactLauncher.launch(Manifest.permission.READ_CONTACTS) },
+                        onClick = { viewModel.send(PermissionPageReducer.Action.ContactPermissionCapsuleButtonTapped) },
                     )
 
                     StatusIndicatorButton(
                         label = state.strings.value(PermissionPageViewStrings.notificationPermissionCapsuleButtonText),
                         isGranted = state.isNotificationPermissionGranted,
-                        onClick = {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            } else {
-                                viewModel.send(PermissionPageReducer.Action.RequestNotificationPermissionReturned(true))
-                            }
-                        },
+                        onClick = { viewModel.send(PermissionPageReducer.Action.NotificationPermissionCapsuleButtonTapped) },
                     )
                 }
 

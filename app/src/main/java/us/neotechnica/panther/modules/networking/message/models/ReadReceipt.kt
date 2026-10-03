@@ -13,6 +13,7 @@ import us.neotechnica.panther.networking.modules.common.interfaces.Serializable
 import us.neotechnica.panther.networking.modules.common.interfaces.SerializableDecoder
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestampDateFormatter
+import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import java.util.Date
 
 /**
@@ -43,6 +44,8 @@ data class ReadReceipt(
         }
 
         override fun decode(data: String): ReadReceipt {
+            ReadReceiptCache.cachedValue(data)?.let { return it }
+
             val components = data.split(" | ")
             val readDate =
                 components.getOrNull(1)?.let {
@@ -53,10 +56,41 @@ data class ReadReceipt(
                 throw decodingFailure(this, data)
             }
 
-            return ReadReceipt(
-                userID = components[0],
-                readDate = readDate,
-            )
+            val readReceipt =
+                ReadReceipt(
+                    userID = components[0],
+                    readDate = readDate,
+                )
+            ReadReceiptCache.cache(data, readReceipt)
+            return readReceipt
         }
+    }
+}
+
+/**
+ * Manages the in-memory read-receipt cache, keyed by encoded string.
+ * Mirrors the iOS `ReadReceiptCache`.
+ */
+object ReadReceiptCache {
+    // MARK: - Properties
+
+    private val cachedReadReceiptsForEncodedStrings = LockIsolated<Map<String, ReadReceipt>?>(null)
+
+    // MARK: - Methods
+
+    /** Removes every cached read receipt. */
+    fun clearCache() {
+        cachedReadReceiptsForEncodedStrings.wrappedValue = null
+    }
+
+    internal fun cachedValue(data: String): ReadReceipt? = cachedReadReceiptsForEncodedStrings.wrappedValue?.get(data)
+
+    internal fun cache(
+        data: String,
+        readReceipt: ReadReceipt,
+    ) {
+        val cache = (cachedReadReceiptsForEncodedStrings.wrappedValue ?: emptyMap()).toMutableMap()
+        cache[data] = readReceipt
+        cachedReadReceiptsForEncodedStrings.wrappedValue = cache
     }
 }

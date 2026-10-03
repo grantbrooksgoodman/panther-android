@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
+import us.neotechnica.panther.designsystem.modules.alertkit.models.TextFieldAttributes
 
 /**
  * A description of the alert currently requested for presentation.
@@ -40,7 +42,7 @@ sealed interface PresentedAlert {
 
     /** An error alert with an optional send-report action. */
     data class ErrorContent(
-        val title: String,
+        val title: String?,
         val message: String,
         val dismissButtonTitle: String,
         val sendReportButtonTitle: String?,
@@ -52,11 +54,11 @@ sealed interface PresentedAlert {
     data class TextInput(
         val title: String?,
         val message: String,
-        val placeholder: String,
-        val initialText: String,
-        val isSecure: Boolean,
+        val attributes: TextFieldAttributes,
         val cancelButtonTitle: String,
+        val cancelButtonStyle: ActionStyle,
         val confirmButtonTitle: String,
+        val confirmButtonStyle: ActionStyle,
         val isConfirmEnabled: ((String) -> Boolean)?,
         val onResult: (String?) -> Unit,
     ) : PresentedAlert
@@ -75,11 +77,13 @@ sealed interface PresentedAlert {
         val onCancel: () -> Unit,
     ) : PresentedAlert
 
-    /** A non-dismissable progress indicator with an optional cancel action. */
+    /** A non-dismissable determinate progress bar with an optional cancel action. */
     data class Progress(
         val title: String?,
         val message: String,
         val cancelButtonTitle: String?,
+        val cancelButtonStyle: ActionStyle,
+        val progress: StateFlow<Double>,
         val onCancel: (() -> Unit)?,
     ) : PresentedAlert
 }

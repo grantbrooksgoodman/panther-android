@@ -18,9 +18,8 @@ import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.Dep
  * [DependencyValues.commonServices] rather than referencing the
  * service singletons directly.
  *
- * **Note:** the services cut from this port – audio, haptics,
- * permission, message-recipient-consent, data-usage, and PenPals –
- * are omitted.
+ * **Note:** the services cut from this port – audio,
+ * message-recipient-consent, data-usage, and PenPals – are omitted.
  */
 object CommonServices {
     /** The account deletion service. */
@@ -35,6 +34,9 @@ object CommonServices {
     /** The contact service. */
     val contact get() = ContactService
 
+    /** The haptic feedback service. */
+    val haptics get() = HapticsService
+
     /** The invite service. */
     val invite get() = InviteService
 
@@ -46,6 +48,9 @@ object CommonServices {
 
     /** The notification service. */
     val notification get() = NotificationService
+
+    /** The permission service. */
+    val permission get() = PermissionService
 
     /** The phone number service. */
     val phoneNumber get() = PhoneNumberService

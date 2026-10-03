@@ -25,6 +25,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import us.neotechnica.panther.modules.common.services.HapticsService
 import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.networking.message.models.AudioMessageReference
 import us.neotechnica.panther.modules.networking.message.models.Message
@@ -106,6 +107,8 @@ object AudioMessagePlaybackService {
 
         val audioFile = if (message.isFromCurrentUser) audioReference.original else audioReference.translated
         val file = audioFile.localPathFile ?: return
+
+        HapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
         play(message.id, file.absolutePath)
     }
 

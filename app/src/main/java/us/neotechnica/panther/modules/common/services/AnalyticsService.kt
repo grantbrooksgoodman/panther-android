@@ -14,11 +14,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import us.neotechnica.panther.navigation.descriptor
+import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkEnvironment
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
-import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
@@ -129,7 +133,16 @@ object AnalyticsService {
                 }
             }
 
-            Logger.log("Logging analytics event \"${event.eventName}\".", domain = LoggerDomain.analytics)
+            // iOS logs this under the `.analytics` domain; Android's `Logger.log(exception)` is
+            // domain-fixed to `.exception`, so the parameters are carried but the domain differs.
+            Logger.log(
+                Exception(
+                    "Logging analytics event \"${event.eventName}\".",
+                    isReportable = false,
+                    userInfo = parameters,
+                    metadata = ExceptionMetadata(this@AnalyticsService),
+                ),
+            )
 
             val bundle = Bundle()
             parameters.forEach { (key, value) -> bundle.putString(key, value) }
@@ -149,10 +162,14 @@ object AnalyticsService {
                 "device_model" to "${AndroidBuild.MODEL} (${AndroidBuild.DEVICE.lowercase()})",
                 "language_code" to RuntimeStorage.languageCode,
                 "os_version" to AndroidBuild.VERSION.RELEASE.lowercase(),
+                "project_id" to Build.projectID,
                 "timestamp" to SimpleDateFormat(TIMESTAMP_FORMAT, Locale.US).format(Date()),
             )
 
         User.currentUserID?.let { parameters["current_user_id"] = it }
+
+        val viewID = DependencyValues.current.navigation.state.value.descriptor
+        if (viewID != null) parameters["view_id"] = viewID
 
         return parameters
     }

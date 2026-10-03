@@ -1,8 +1,9 @@
 //
 //  TextInputAlert.kt
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 02/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.designsystem.modules.alertkit.models
@@ -24,7 +25,7 @@ import kotlin.coroutines.resume
  * ```kotlin
  * val name = TextInputAlert(
  *     message = "Enter a name for this conversation.",
- *     placeholder = "Name",
+ *     attributes = TextFieldAttributes(placeholderText = "Name"),
  * ).present()
  * ```
  *
@@ -34,22 +35,31 @@ import kotlin.coroutines.resume
 class TextInputAlert(
     private val title: String? = null,
     private val message: String,
-    private val placeholder: String = "",
-    private val initialText: String = "",
-    private val isSecure: Boolean = false,
-    private val cancelButtonTitle: String = "Cancel",
-    private val confirmButtonTitle: String = "Confirm",
+    private val attributes: TextFieldAttributes = TextFieldAttributes(),
+    private val cancelButtonTitle: String = DEFAULT_CANCEL_BUTTON_TITLE,
+    private val cancelButtonStyle: ActionStyle = ActionStyle.CANCEL,
+    private val confirmButtonTitle: String = DEFAULT_CONFIRM_BUTTON_TITLE,
+    private val confirmButtonStyle: ActionStyle = ActionStyle.PREFERRED,
     private val isConfirmEnabled: ((String) -> Boolean)? = null,
 ) {
     // MARK: - Types
 
     /** A value that identifies a translatable part of a [TextInputAlert]. */
     sealed interface TranslationOptionKey {
+        /** The cancel button's title. */
+        data object CancelButtonTitle : TranslationOptionKey
+
+        /** The confirm button's title. */
+        data object ConfirmButtonTitle : TranslationOptionKey
+
         /** The alert's message. */
         data object Message : TranslationOptionKey
 
         /** The text field's placeholder. */
         data object Placeholder : TranslationOptionKey
+
+        /** The text prepopulated in the field. */
+        data object SampleText : TranslationOptionKey
 
         /** The alert's title. */
         data object Title : TranslationOptionKey
@@ -73,11 +83,11 @@ class TextInputAlert(
                 PresentedAlert.TextInput(
                     title = title,
                     message = message,
-                    placeholder = placeholder,
-                    initialText = initialText,
-                    isSecure = isSecure,
+                    attributes = attributes,
                     cancelButtonTitle = cancelButtonTitle,
+                    cancelButtonStyle = cancelButtonStyle,
                     confirmButtonTitle = confirmButtonTitle,
+                    confirmButtonStyle = confirmButtonStyle,
                     isConfirmEnabled = isConfirmEnabled,
                 ) { result ->
                     AlertPresenter.dismiss()
@@ -91,8 +101,7 @@ class TextInputAlert(
     /**
      * Translates the alert's content according to [translating], then
      * presents it. Falls back to untranslated content if translation
-     * fails. The confirm and cancel button titles are expected to be
-     * pre-localized by the caller, mirroring iOS.
+     * fails.
      *
      * @param translating The parts of the alert to translate. The
      *   default includes all translatable content.
@@ -102,8 +111,11 @@ class TextInputAlert(
     suspend fun present(
         translating: List<TranslationOptionKey> =
             listOf(
+                TranslationOptionKey.CancelButtonTitle,
+                TranslationOptionKey.ConfirmButtonTitle,
                 TranslationOptionKey.Message,
                 TranslationOptionKey.Placeholder,
+                TranslationOptionKey.SampleText,
                 TranslationOptionKey.Title,
             ),
     ): String? =
@@ -121,14 +133,22 @@ class TextInputAlert(
         if (uniqueKeys.isEmpty()) return this
 
         val translations = AlertKitConfig.getTranslations(translationInputs(uniqueKeys))
+        var translatedAttributes = attributes
+        attributes.placeholderText?.let {
+            translatedAttributes = translatedAttributes.replacingPlaceholderText(translations.firstOutput(it))
+        }
+        attributes.sampleText?.let {
+            translatedAttributes = translatedAttributes.replacingSampleText(translations.firstOutput(it))
+        }
+
         return TextInputAlert(
             title = title?.let { translations.firstOutput(it) },
             message = translations.firstOutput(message),
-            placeholder = translations.firstOutput(placeholder),
-            initialText = initialText,
-            isSecure = isSecure,
-            cancelButtonTitle = cancelButtonTitle,
-            confirmButtonTitle = confirmButtonTitle,
+            attributes = translatedAttributes,
+            cancelButtonTitle = translations.firstOutput(cancelButtonTitle),
+            cancelButtonStyle = cancelButtonStyle,
+            confirmButtonTitle = translations.firstOutput(confirmButtonTitle),
+            confirmButtonStyle = confirmButtonStyle,
             isConfirmEnabled = isConfirmEnabled,
         )
     }
@@ -137,12 +157,26 @@ class TextInputAlert(
         val inputs = mutableListOf<TranslationInput>()
         for (key in keys) {
             when (key) {
+                TranslationOptionKey.CancelButtonTitle -> inputs.add(TranslationInput(cancelButtonTitle))
+                TranslationOptionKey.ConfirmButtonTitle -> inputs.add(TranslationInput(confirmButtonTitle))
                 TranslationOptionKey.Message -> inputs.add(TranslationInput(message))
-                TranslationOptionKey.Placeholder -> if (placeholder.isNotEmpty()) inputs.add(TranslationInput(placeholder))
+                TranslationOptionKey.Placeholder -> attributes.placeholderText?.let { inputs.add(TranslationInput(it)) }
+                TranslationOptionKey.SampleText -> attributes.sampleText?.let { inputs.add(TranslationInput(it)) }
                 TranslationOptionKey.Title -> title?.let { inputs.add(TranslationInput(it)) }
             }
         }
 
-        return inputs.distinctBy { it.value }
+        // nonDefaultUnique: translate each unique string once, leaving the
+        // default button titles to be localized from the string catalog.
+        return inputs
+            .distinctBy { it.value }
+            .filterNot { it.value == DEFAULT_CANCEL_BUTTON_TITLE || it.value == DEFAULT_CONFIRM_BUTTON_TITLE }
+    }
+
+    // MARK: - Companion
+
+    private companion object {
+        const val DEFAULT_CANCEL_BUTTON_TITLE = "Cancel"
+        const val DEFAULT_CONFIRM_BUTTON_TITLE = "Confirm"
     }
 }

@@ -260,7 +260,7 @@ private fun ChatInfoHeader(
     AvatarImageView(
         modifier = contactTapModifier.padding(top = Floats.avatarTopPadding).size(Floats.avatarSize),
         imageData = conversation?.metadata?.imageData,
-        fallbackSymbol = if (isGroup) "person.2" else "person",
+        fallbackSymbol = if (isGroup) "person.2" else "person.crop.circle.fill",
         glyphSize = Floats.avatarGlyphSize,
     )
 

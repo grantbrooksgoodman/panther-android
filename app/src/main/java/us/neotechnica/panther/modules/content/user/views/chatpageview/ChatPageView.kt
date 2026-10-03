@@ -65,6 +65,7 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.modules.common.contacts.models.ContactMatch
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.formattedString
+import us.neotechnica.panther.modules.common.services.HapticsService
 import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.content.user.components.ChatMessageCell
 import us.neotechnica.panther.modules.content.user.components.ChatMessageRowData
@@ -316,7 +317,7 @@ private fun ChatHeader(
             AvatarImageView(
                 modifier = Modifier.size(Floats.headerAvatarSize).zIndex(1f),
                 imageData = conversation?.metadata?.imageData,
-                fallbackSymbol = if (isGroup) "person.2" else "person",
+                fallbackSymbol = if (isGroup) "person.2" else "person.crop.circle.fill",
                 glyphSize = Floats.headerAvatarGlyphSize,
             )
             Row(
@@ -542,6 +543,7 @@ private suspend fun presentFailedMessageActionSheet(
 
 // Mirrors the iOS `MediaActionHandlerService.attachMediaButtonTapped` action sheet.
 private suspend fun presentAttachMediaSheet(pickers: ContentPickers) {
+    HapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
     ActionSheetAlert(
         title = "Attach media",
         actions =

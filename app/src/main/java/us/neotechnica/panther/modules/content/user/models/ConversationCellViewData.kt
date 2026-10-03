@@ -17,10 +17,12 @@ import us.neotechnica.panther.modules.networking.conversation.models.Conversatio
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
+import us.neotechnica.panther.modules.session.entity.extensions.isMock
 import us.neotechnica.panther.modules.session.entity.extensions.isReadByCurrentUser
 import us.neotechnica.panther.modules.session.entity.extensions.messages
 import us.neotechnica.panther.modules.session.entity.extensions.resolvedText
 import us.neotechnica.panther.modules.session.entity.extensions.users
+import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -61,6 +63,11 @@ data class ConversationCellViewData(
             languageCode: String,
             searchQuery: String = "",
         ): ConversationCellViewData {
+            val cacheQuery = searchQuery.ifBlank { CACHE_QUERY_EMPTY }
+            if (!conversation.isMock) {
+                ConversationCellViewDataCache.cachedValue(cacheQuery, conversation.id.key)?.let { return it }
+            }
+
             val title = title(conversation)
             val messages = conversation.messages.orEmpty().sortedBy { it.sentDate.time }
             val matchingMessage =
@@ -73,21 +80,25 @@ data class ConversationCellViewData(
             val hasName = title.any { it.isLetter() }
             val lastMessageFromOthers = messages.lastOrNull { !it.isFromCurrentUser }
 
-            return ConversationCellViewData(
-                title = title,
-                subtitle = subtitle(lastMessage, languageCode),
-                dateLabelText =
-                    lastMessage?.sentDate?.let { relativeDateString(it) }
-                        ?: relativeDateString(conversation.metadata.lastModifiedDate),
-                isShowingUnreadIndicator =
-                    lastMessageFromOthers != null && !lastMessageFromOthers.isReadByCurrentUser,
-                initials = if (hasName) initials(title) else "",
-                hasContactName = hasName,
-                isGroup = isGroup,
-                participantCount = users.size,
-                otherLanguageCode = if (!isGroup) users.firstOrNull()?.languageCode else null,
-                otherRegionCode = if (!isGroup) users.firstOrNull()?.phoneNumber?.regionCode else null,
-            )
+            val data =
+                ConversationCellViewData(
+                    title = title,
+                    subtitle = subtitle(lastMessage, languageCode),
+                    dateLabelText =
+                        lastMessage?.sentDate?.let { relativeDateString(it) }
+                            ?: relativeDateString(conversation.metadata.lastModifiedDate),
+                    isShowingUnreadIndicator =
+                        lastMessageFromOthers != null && !lastMessageFromOthers.isReadByCurrentUser,
+                    initials = if (hasName) initials(title) else "",
+                    hasContactName = hasName,
+                    isGroup = isGroup,
+                    participantCount = users.size,
+                    otherLanguageCode = if (!isGroup) users.firstOrNull()?.languageCode else null,
+                    otherRegionCode = if (!isGroup) users.firstOrNull()?.phoneNumber?.regionCode else null,
+                )
+
+            if (!conversation.isMock) ConversationCellViewDataCache.cache(cacheQuery, conversation.id.key, data)
+            return data
         }
 
         /**
@@ -133,7 +144,8 @@ data class ConversationCellViewData(
             } == true
         }
 
-        private fun title(conversation: Conversation): String {
+        /** The resolved title (`titleLabelText`) for the given conversation. */
+        internal fun title(conversation: Conversation): String {
             val metadataName = conversation.metadata.name
             if (!metadataName.isBangQualifiedEmpty && metadataName.isNotBlank()) return metadataName
 
@@ -203,7 +215,58 @@ data class ConversationCellViewData(
             return difference / MILLIS_PER_DAY
         }
 
+        private const val CACHE_QUERY_EMPTY = "!"
         private const val DAYS_IN_WEEK = 7
         private const val MILLIS_PER_DAY = 24L * 60 * 60 * 1000
+    }
+}
+
+/**
+ * Manages the in-memory conversation-cell view-data cache, keyed by
+ * search query and then conversation identifier. Mirrors the iOS
+ * `ConversationCellViewDataCache`. Data derived for a mock conversation
+ * is never cached.
+ */
+object ConversationCellViewDataCache {
+    // MARK: - Properties
+
+    private val cachedDataByConversationIDForSearchQueries =
+        LockIsolated<Map<String, Map<String, ConversationCellViewData>>?>(null)
+
+    // MARK: - Methods
+
+    /** Removes every cached conversation-cell view data. */
+    fun clearCache() {
+        cachedDataByConversationIDForSearchQueries.wrappedValue = null
+    }
+
+    /**
+     * Removes the cached view data for the given conversation
+     * identifiers across every search query.
+     *
+     * @param conversationIDKeys The identifiers of the conversations
+     *   whose cached view data to remove.
+     */
+    fun removeValues(conversationIDKeys: Set<String>) {
+        val cache = cachedDataByConversationIDForSearchQueries.wrappedValue ?: return
+        cachedDataByConversationIDForSearchQueries.wrappedValue =
+            cache.mapValues { (_, dataByID) -> dataByID.filterKeys { it !in conversationIDKeys } }
+    }
+
+    internal fun cachedValue(
+        searchQuery: String,
+        conversationIDKey: String,
+    ): ConversationCellViewData? = cachedDataByConversationIDForSearchQueries.wrappedValue?.get(searchQuery)?.get(conversationIDKey)
+
+    internal fun cache(
+        searchQuery: String,
+        conversationIDKey: String,
+        data: ConversationCellViewData,
+    ) {
+        val cache = (cachedDataByConversationIDForSearchQueries.wrappedValue ?: emptyMap()).toMutableMap()
+        val dataByID = (cache[searchQuery] ?: emptyMap()).toMutableMap()
+        dataByID[conversationIDKey] = data
+        cache[searchQuery] = dataByID
+        cachedDataByConversationIDForSearchQueries.wrappedValue = cache
     }
 }

@@ -131,7 +131,7 @@ class Alert(
                         if (key.actions.isEmpty()) {
                             actions
                         } else {
-                            actions.filter { action -> key.actions.any { it.title == action.title } }
+                            actions.filter { action -> key.actions.contains(action) }
                         }
                     inputs.addAll(targetActions.map { TranslationInput(it.title) })
                 }

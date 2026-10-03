@@ -8,13 +8,10 @@
 
 package us.neotechnica.panther.designsystem.modules.alertkit
 
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import us.neotechnica.panther.designsystem.modules.alertkit.interfaces.ReportDelegate
 import us.neotechnica.panther.designsystem.modules.alertkit.interfaces.TranslationDelegate
 import us.neotechnica.panther.designsystem.modules.alertkit.models.HUDConfig
-import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
+import us.neotechnica.panther.designsystem.modules.alertkit.models.TranslationTimeoutConfig
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
@@ -54,6 +51,19 @@ object AlertKitConfig {
         )
         private set
 
+    /**
+     * The configuration that controls translation timeout behavior.
+     *
+     * The default waits 10 seconds and falls back to the original
+     * untranslated strings on timeout.
+     */
+    var translationTimeoutConfig: TranslationTimeoutConfig =
+        TranslationTimeoutConfig(
+            duration = 10.seconds,
+            returnsInputsOnFailure = true,
+        )
+        private set
+
     // MARK: - Computed Properties
 
     /** The ISO 639-1 code of the source language for translations. */
@@ -73,6 +83,15 @@ object AlertKitConfig {
      */
     fun overrideTranslationHUDConfig(translationHUDConfig: HUDConfig) {
         this.translationHUDConfig = translationHUDConfig
+    }
+
+    /**
+     * Overrides the translation timeout configuration.
+     *
+     * @param translationTimeoutConfig The timeout configuration to use.
+     */
+    fun overrideTranslationTimeoutConfig(translationTimeoutConfig: TranslationTimeoutConfig) {
+        this.translationTimeoutConfig = translationTimeoutConfig
     }
 
     /**
@@ -100,6 +119,8 @@ object AlertKitConfig {
         return delegate.getTranslations(
             inputs = inputs,
             languagePair = LanguagePair(from = sourceLanguageCode, to = targetLanguageCode),
+            hudConfig = translationHUDConfig,
+            timeoutConfig = translationTimeoutConfig,
         )
     }
 
@@ -111,29 +132,10 @@ object AlertKitConfig {
     ): R {
         if (!shouldTranslate) return presentDirectly()
         return try {
-            presentTranslated(translateShowingHUD(translate))
+            presentTranslated(translate())
         } catch (exception: Exception) {
             Logger.log(exception)
             presentDirectly()
         }
     }
-
-    // MARK: - Auxiliary
-
-    private suspend fun <A> translateShowingHUD(translate: suspend () -> A): A =
-        coroutineScope {
-            val config = translationHUDConfig
-            val hudJob =
-                launch {
-                    delay(config.appearsAfter)
-                    HUD.showProgress(isModal = config.isModal)
-                }
-
-            try {
-                translate()
-            } finally {
-                hudJob.cancel()
-                HUD.hide()
-            }
-        }
 }

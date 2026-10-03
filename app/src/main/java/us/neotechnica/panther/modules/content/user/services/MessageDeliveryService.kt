@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import us.neotechnica.panther.modules.common.services.AnalyticsService
+import us.neotechnica.panther.modules.common.services.HapticsService
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.user.models.User
@@ -81,6 +82,8 @@ object MessageDeliveryService {
         val recipients = users
         if (recipients.isEmpty() || text.isBlank()) return
 
+        HapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
+
         val currentConversation = conversation
         val currentUser = UserSessionService.currentUser
         var outboxEntryID: String? = null
@@ -146,6 +149,8 @@ object MessageDeliveryService {
         val currentUser = UserSessionService.currentUser ?: return
         val users = conversation.users.orEmpty()
         if (users.isEmpty()) return
+
+        HapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
 
         val stagedFileName =
             mediaFile.localPathFile?.let { MessageOutboxService.storePayloadFile(from = it) } ?: return

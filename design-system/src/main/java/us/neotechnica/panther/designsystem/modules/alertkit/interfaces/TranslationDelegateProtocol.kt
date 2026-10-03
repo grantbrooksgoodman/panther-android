@@ -8,6 +8,8 @@
 
 package us.neotechnica.panther.designsystem.modules.alertkit.interfaces
 
+import us.neotechnica.panther.designsystem.modules.alertkit.models.HUDConfig
+import us.neotechnica.panther.designsystem.modules.alertkit.models.TranslationTimeoutConfig
 import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.Translation
 import us.neotechnica.panther.translator.models.TranslationInput
@@ -26,6 +28,10 @@ interface TranslationDelegate {
      *
      * @param inputs The translation inputs to translate.
      * @param languagePair The source and target languages.
+     * @param hudConfig The configuration for the translation HUD, or
+     *   `null` to suppress the HUD.
+     * @param timeoutConfig The configuration that controls timeout
+     *   behavior.
      *
      * @return The completed translations.
      *
@@ -34,5 +40,7 @@ interface TranslationDelegate {
     suspend fun getTranslations(
         inputs: List<TranslationInput>,
         languagePair: LanguagePair,
+        hudConfig: HUDConfig?,
+        timeoutConfig: TranslationTimeoutConfig,
     ): List<Translation>
 }

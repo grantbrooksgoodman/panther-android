@@ -1,8 +1,9 @@
 //
 //  ErrorAlert.kt
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 02/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.designsystem.modules.alertkit.models
@@ -13,33 +14,32 @@ import us.neotechnica.panther.designsystem.modules.alertkit.extensions.firstOutp
 import us.neotechnica.panther.designsystem.modules.alertkit.services.AlertPresenter
 import us.neotechnica.panther.designsystem.modules.alertkit.services.PresentedAlert
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.translator.models.TranslationInput
 import kotlin.coroutines.resume
 
 /**
  * An alert that reports an error to the user.
  *
- * The alert displays the exception's user-facing descriptor and a
- * dismiss button. When the exception is reportable, a send-report
- * button is shown as well.
+ * When the error is reportable, automatic error reporting is off, and
+ * a report delegate is registered, the alert shows a preferred
+ * "Send Error Report" button that files a report through the
+ * [ReportDelegate][us.neotechnica.panther.designsystem.modules.alertkit.interfaces.ReportDelegate]
+ * registered with `AlertKitConfig`, with the error description as the
+ * message. Otherwise, it shows the error description as the title and
+ * the error identifier in the message.
  *
  * ```kotlin
  * ErrorAlert(exception).present()
  * ```
- *
- * The send-report action invokes the provided callback, or files a
- * report through the [ReportDelegate][us.neotechnica.panther.designsystem.modules.alertkit.interfaces.ReportDelegate]
- * registered with `AlertKitConfig` when no callback is given.
  *
  * Pass translation keys to [present] to translate the alert's content
  * into the user's language before presentation.
  */
 class ErrorAlert(
     private val exception: Exception,
-    private val title: String = "Error",
     private val dismissButtonTitle: String = "Dismiss",
-    private val sendReportButtonTitle: String = "Send Error Report",
-    private val onSendReport: (() -> Unit)? = null,
+    private val sendErrorReportButtonTitle: String = "Send Error Report",
     private val errorDescription: String = exception.userFacingDescriptor,
 ) {
     // MARK: - Types
@@ -54,9 +54,6 @@ class ErrorAlert(
 
         /** The send error report button's title. */
         data object SendErrorReportButtonTitle : TranslationOptionKey
-
-        /** The alert's title. */
-        data object Title : TranslationOptionKey
     }
 
     // MARK: - Methods
@@ -66,21 +63,26 @@ class ErrorAlert(
      */
     suspend fun present(): Unit =
         suspendCancellableCoroutine { continuation ->
+            val showsReportAction =
+                exception.isReportable &&
+                    !Logger.reportsErrorsAutomatically &&
+                    AlertKitConfig.reportDelegate != null
+
             AlertPresenter.present(
                 PresentedAlert.ErrorContent(
-                    title = title,
-                    message = errorDescription,
+                    title = if (showsReportAction) null else errorDescription,
+                    message = if (showsReportAction) errorDescription else "\n${exception.id}",
                     dismissButtonTitle = dismissButtonTitle,
-                    sendReportButtonTitle = if (exception.isReportable) sendReportButtonTitle else null,
+                    sendReportButtonTitle = if (showsReportAction) sendErrorReportButtonTitle else null,
                     onDismiss = {
                         AlertPresenter.dismiss()
                         if (continuation.isActive) continuation.resume(Unit)
                     },
                     onSendReport =
-                        if (exception.isReportable) {
+                        if (showsReportAction) {
                             {
                                 AlertPresenter.dismiss()
-                                (onSendReport ?: { AlertKitConfig.reportDelegate?.fileReport(exception) }).invoke()
+                                AlertKitConfig.reportDelegate?.fileReport(exception)
                                 if (continuation.isActive) continuation.resume(Unit)
                             }
                         } else {
@@ -106,7 +108,6 @@ class ErrorAlert(
                 TranslationOptionKey.DismissButtonTitle,
                 TranslationOptionKey.ErrorDescription,
                 TranslationOptionKey.SendErrorReportButtonTitle,
-                TranslationOptionKey.Title,
             ),
     ): Unit =
         AlertKitConfig.presentWithTranslation(
@@ -125,10 +126,8 @@ class ErrorAlert(
         val translations = AlertKitConfig.getTranslations(translationInputs(uniqueKeys))
         return ErrorAlert(
             exception = exception,
-            title = translations.firstOutput(title),
             dismissButtonTitle = translations.firstOutput(dismissButtonTitle),
-            sendReportButtonTitle = translations.firstOutput(sendReportButtonTitle),
-            onSendReport = onSendReport,
+            sendErrorReportButtonTitle = translations.firstOutput(sendErrorReportButtonTitle),
             errorDescription = translations.firstOutput(errorDescription),
         )
     }
@@ -139,8 +138,7 @@ class ErrorAlert(
             when (key) {
                 TranslationOptionKey.DismissButtonTitle -> inputs.add(TranslationInput(dismissButtonTitle))
                 TranslationOptionKey.ErrorDescription -> inputs.add(TranslationInput(errorDescription))
-                TranslationOptionKey.SendErrorReportButtonTitle -> inputs.add(TranslationInput(sendReportButtonTitle))
-                TranslationOptionKey.Title -> inputs.add(TranslationInput(title))
+                TranslationOptionKey.SendErrorReportButtonTitle -> inputs.add(TranslationInput(sendErrorReportButtonTitle))
             }
         }
 

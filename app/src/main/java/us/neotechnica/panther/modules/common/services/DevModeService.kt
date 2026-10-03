@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.common.services
 
+import androidx.compose.ui.text.input.KeyboardType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -16,6 +17,7 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationAlert
+import us.neotechnica.panther.designsystem.modules.alertkit.models.TextFieldAttributes
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAlert
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
@@ -67,8 +69,12 @@ object DevModeService {
                 TextInputAlert(
                     title = "Enable Developer Mode",
                     message = "Enter the Developer Mode password to continue.",
-                    placeholder = "••••••",
-                    isSecure = true,
+                    attributes =
+                        TextFieldAttributes(
+                            isSecureTextEntry = true,
+                            keyboardType = KeyboardType.NumberPassword,
+                            placeholderText = "••••••",
+                        ),
                     confirmButtonTitle = "Done",
                 ).present(translating = emptyList())
 

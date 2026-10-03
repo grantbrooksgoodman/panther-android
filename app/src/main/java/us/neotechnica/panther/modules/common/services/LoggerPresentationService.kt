@@ -15,10 +15,14 @@ import kotlinx.coroutines.launch
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ErrorAlert
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
+import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.LoggerPresentationDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -62,19 +66,24 @@ object LoggerPresentationService : LoggerPresentationDelegate {
     ) {
         val exception = exception ?: return presentNormalAlert(null, text)
         scope.launch {
-            // iOS presents the error via `Logger` translating the dynamic description; the
-            // Android alert's dismiss/report titles default to raw English rather than being
-            // pre-localized, so translate those too.
-            ErrorAlert(exception, onSendReport = { ErrorReportingService.fileReport(exception) })
-                .present(
-                    translating =
-                        listOf(
-                            ErrorAlert.TranslationOptionKey.DismissButtonTitle,
-                            ErrorAlert.TranslationOptionKey.ErrorDescription,
-                            ErrorAlert.TranslationOptionKey.SendErrorReportButtonTitle,
-                            ErrorAlert.TranslationOptionKey.Title,
-                        ),
-                )
+            val mockGenericException = Exception(metadata = ExceptionMetadata(this@LoggerPresentationService))
+            val mockTimedOutException = Exception("The operation timed out.", metadata = ExceptionMetadata(this@LoggerPresentationService))
+
+            val hasUserFacingDescriptor = exception.descriptor != exception.userFacingDescriptor
+            val notGenericDescriptor = exception.userFacingDescriptor != mockGenericException.userFacingDescriptor
+            val notTimedOutDescriptor = exception.userFacingDescriptor != mockTimedOutException.userFacingDescriptor
+            val shouldTranslate = hasUserFacingDescriptor && notGenericDescriptor && notTimedOutDescriptor
+
+            val translationOptionKeys = mutableListOf<ErrorAlert.TranslationOptionKey>()
+            if (shouldTranslate) translationOptionKeys.add(ErrorAlert.TranslationOptionKey.ErrorDescription)
+            if (exception.isReportable && !Logger.reportsErrorsAutomatically) {
+                translationOptionKeys.add(ErrorAlert.TranslationOptionKey.SendErrorReportButtonTitle)
+            }
+
+            ErrorAlert(
+                exception = exception,
+                dismissButtonTitle = LocalizedStringKey.Dismiss.localized(),
+            ).present(translating = translationOptionKeys)
         }
     }
 

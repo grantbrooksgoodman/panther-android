@@ -8,22 +8,22 @@
 
 package us.neotechnica.panther.modules.content.user.services
 
+import us.neotechnica.panther.modules.common.services.NotificationService
 import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.session.entity.extensions.calculateBadgeNumber
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.session.entity.extensions.messages
 import us.neotechnica.panther.modules.session.entity.extensions.updateReadDate
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
+import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 
 /**
  * Manages read receipts.
  *
  * [ReadReceiptService] marks the displayed conversation's incoming
- * messages as read.
- *
- * **Note:** the iOS original also updates the application badge with the
- * resulting unread count via `NotificationService.setBadgeNumber`; that
- * lands with the Phase 5 notification service.
+ * messages as read, then updates the application badge with the
+ * resulting unread count.
  */
 object ReadReceiptService {
     /**
@@ -47,5 +47,8 @@ object ReadReceiptService {
         if (unreadMessages.isEmpty()) return
 
         conversation.updateReadDate(unreadMessages)
+
+        val currentUser = UserSessionService.currentUser ?: return
+        NotificationService.setBadgeNumber(currentUser.calculateBadgeNumber())
     }
 }

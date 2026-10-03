@@ -174,7 +174,7 @@ class ActionSheetAlert private constructor(
                         if (key.actions.isEmpty()) {
                             effectiveActions
                         } else {
-                            effectiveActions.filter { action -> key.actions.any { it.title == action.title } }
+                            effectiveActions.filter { action -> key.actions.contains(action) }
                         }
                     inputs.addAll(targetActions.map { TranslationInput(it.title) })
                 }

@@ -10,6 +10,8 @@ package us.neotechnica.panther.modules.content.onboarding.views.permissionpagevi
 
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
+import us.neotechnica.panther.modules.common.contacts.services.ContactService
+import us.neotechnica.panther.modules.common.services.PermissionService
 import us.neotechnica.panther.modules.content.onboarding.models.InstructionViewStrings
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
 import us.neotechnica.panther.navigation.OnboardingRoute
@@ -31,6 +33,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
 import us.neotechnica.panther.translator.models.TranslationInput
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * The reducer for the final onboarding permissions page.
@@ -39,9 +42,9 @@ import us.neotechnica.panther.translator.models.TranslationInput
  * optional), then finishes: agreeing to the conduct policy creates the
  * account and enters the app.
  *
- * **Note:** the runtime permission requests are launched from the view;
- * this reducer records their results. Contact-archive sync and
- * settings call-to-action prompts are deferred to a later phase.
+ * Tapping a permission capsule asks the reducer to request the
+ * permission through [PermissionService]; a denial presents a
+ * settings call-to-action, and granting contacts syncs the archive.
  */
 class PermissionPageReducer : Reducer<PermissionPageReducer.State, PermissionPageReducer.Action> {
     // MARK: - Action
@@ -51,14 +54,26 @@ class PermissionPageReducer : Reducer<PermissionPageReducer.State, PermissionPag
 
         data object BackButtonTapped : Action
 
+        data object ContactPermissionCapsuleButtonTapped : Action
+
+        data object NotificationPermissionCapsuleButtonTapped : Action
+
         data object FinishButtonTapped : Action
 
         data class RequestContactPermissionReturned(
-            val isGranted: Boolean,
+            val status: PermissionService.PermissionStatus,
+        ) : Action
+
+        data class RequestContactPermissionFailed(
+            val exception: Exception,
         ) : Action
 
         data class RequestNotificationPermissionReturned(
-            val isGranted: Boolean,
+            val status: PermissionService.PermissionStatus,
+        ) : Action
+
+        data class RequestNotificationPermissionFailed(
+            val exception: Exception,
         ) : Action
 
         data class EulaAlertDismissed(
@@ -105,11 +120,23 @@ class PermissionPageReducer : Reducer<PermissionPageReducer.State, PermissionPag
                 ReduceResult(state)
             }
 
-            is Action.RequestContactPermissionReturned ->
-                ReduceResult(state.withPermission(contactGranted = action.isGranted))
+            Action.ContactPermissionCapsuleButtonTapped -> contactPermissionCapsuleButtonTapped(state)
 
-            is Action.RequestNotificationPermissionReturned ->
-                ReduceResult(state.withPermission(notificationGranted = action.isGranted))
+            Action.NotificationPermissionCapsuleButtonTapped -> notificationPermissionCapsuleButtonTapped(state)
+
+            is Action.RequestContactPermissionReturned -> requestContactPermissionReturned(state, action.status)
+
+            is Action.RequestContactPermissionFailed -> {
+                Logger.log(action.exception, with = AlertType.toast)
+                ReduceResult(state.copy(isBackButtonEnabled = true, isFinishButtonEnabled = false))
+            }
+
+            is Action.RequestNotificationPermissionReturned -> requestNotificationPermissionReturned(state, action.status)
+
+            is Action.RequestNotificationPermissionFailed -> {
+                Logger.log(action.exception, with = AlertType.toast)
+                ReduceResult(state.copy(isBackButtonEnabled = true, isFinishButtonEnabled = false))
+            }
 
             Action.FinishButtonTapped -> {
                 Overlay.show()
@@ -169,20 +196,80 @@ class PermissionPageReducer : Reducer<PermissionPageReducer.State, PermissionPag
 
     // MARK: - Auxiliary
 
-    private fun State.withPermission(
-        contactGranted: Boolean? = isContactPermissionGranted,
-        notificationGranted: Boolean? = isNotificationPermissionGranted,
-    ): State {
-        val updated =
-            copy(
-                isContactPermissionGranted = contactGranted,
-                isNotificationPermissionGranted = notificationGranted,
-            )
-        return updated.copy(
-            isFinishButtonEnabled =
-                updated.isContactPermissionGranted != null && updated.isNotificationPermissionGranted != null,
+    private fun contactPermissionCapsuleButtonTapped(state: State): ReduceResult<State, Action> =
+        ReduceResult(
+            state.copy(isFinishButtonEnabled = state.isNotificationPermissionGranted != null),
+            Effect.run { send ->
+                try {
+                    send(
+                        Action.RequestContactPermissionReturned(
+                            PermissionService.requestPermission(PermissionService.PermissionType.CONTACTS),
+                        ),
+                    )
+                } catch (exception: Exception) {
+                    send(Action.RequestContactPermissionFailed(exception))
+                }
+            },
         )
-    }
+
+    private fun notificationPermissionCapsuleButtonTapped(state: State): ReduceResult<State, Action> =
+        ReduceResult(
+            state.copy(isFinishButtonEnabled = state.isContactPermissionGranted != null),
+            Effect.run { send ->
+                try {
+                    send(
+                        Action.RequestNotificationPermissionReturned(
+                            PermissionService.requestPermission(PermissionService.PermissionType.NOTIFICATIONS),
+                        ),
+                    )
+                } catch (exception: Exception) {
+                    send(Action.RequestNotificationPermissionFailed(exception))
+                }
+            },
+        )
+
+    private fun requestContactPermissionReturned(
+        state: State,
+        status: PermissionService.PermissionStatus,
+    ): ReduceResult<State, Action> =
+        if (status != PermissionService.PermissionStatus.GRANTED) {
+            ReduceResult(
+                state.copy(isContactPermissionGranted = false),
+                Effect.task(delay = CTA_PRESENTATION_DELAY_MS.milliseconds) {
+                    PermissionService.presentCTA(PermissionService.PermissionType.CONTACTS)
+                    null
+                },
+            )
+        } else {
+            ReduceResult(
+                state.copy(isContactPermissionGranted = true),
+                Effect.fireAndForget {
+                    try {
+                        ContactService.sync()
+                    } catch (exception: Exception) {
+                        Logger.log(exception)
+                    }
+                },
+            )
+        }
+
+    private fun requestNotificationPermissionReturned(
+        state: State,
+        status: PermissionService.PermissionStatus,
+    ): ReduceResult<State, Action> =
+        if (status != PermissionService.PermissionStatus.GRANTED) {
+            ReduceResult(
+                state.copy(isNotificationPermissionGranted = false),
+                Effect.task(delay = CTA_PRESENTATION_DELAY_MS.milliseconds) {
+                    PermissionService.presentCTA(PermissionService.PermissionType.NOTIFICATIONS)
+                    null
+                },
+            )
+        } else {
+            // iOS calls registerForRemoteNotifications() here; Android's FCM token is obtained
+            // automatically, so no explicit registration call is needed.
+            ReduceResult(state.copy(isNotificationPermissionGranted = true))
+        }
 
     private fun State.withResolvedInstruction(strings: List<TranslationOutputMap>): State =
         copy(
@@ -206,6 +293,12 @@ class PermissionPageReducer : Reducer<PermissionPageReducer.State, PermissionPag
                 send(Action.ResolveFailed(exception))
             }
         }
+
+    // MARK: - Companion
+
+    private companion object {
+        const val CTA_PRESENTATION_DELAY_MS = 500L
+    }
 }
 
 /** The translated label strings for the permissions page. */

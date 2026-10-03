@@ -19,6 +19,8 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CoroutineScope
@@ -34,8 +36,18 @@ import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
+import us.neotechnica.panther.modules.common.services.HapticsService
 import us.neotechnica.panther.modules.common.services.PushTokenService
+import us.neotechnica.panther.modules.session.entity.extensions.isVisibleForCurrentUser
+import us.neotechnica.panther.modules.session.entity.services.UserSessionService
+import us.neotechnica.panther.navigation.Route
+import us.neotechnica.panther.navigation.UserContentNavigatorState
+import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import kotlin.time.Duration.Companion.seconds
 import us.neotechnica.panther.modules.common.constants.NotificationExtensionConstants
 import org.json.JSONObject
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
@@ -68,6 +80,22 @@ class PantherMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         val conversationIDKey = message.data[PendingChatNavigation.CONVERSATION_ID_KEY_EXTRA] ?: return
 
+        scope.launch(Dispatchers.Main) {
+            val lifecycleState = ProcessLifecycleOwner.get().lifecycle.currentState
+            // In the foreground, respond in-app (toast + haptic) as iOS's
+            // `respondToInAppNotification` does, rather than posting a system notification.
+            if (lifecycleState.isAtLeast(Lifecycle.State.STARTED)) {
+                respondToInAppNotification(message, conversationIDKey)
+            } else {
+                showSystemNotification(message, conversationIDKey)
+            }
+        }
+    }
+
+    private fun showSystemNotification(
+        message: RemoteMessage,
+        conversationIDKey: String,
+    ) {
         // Suppress while the conversation is already on screen.
         if (ConversationSessionService.currentConversation?.id?.key == conversationIDKey) return
 
@@ -85,6 +113,53 @@ class PantherMessagingService : FirebaseMessagingService() {
                 ?: persistedConversationName(conversationIDKey)
 
         showNotification(this, conversationIDKey, title, body, subtitle)
+    }
+
+    /**
+     * Responds to a foreground message as iOS's `respondToInAppNotification`:
+     * verifies the message is for the current user and its conversation is
+     * visible, then either gives haptic feedback for a reaction to the
+     * on-screen conversation or shows a tap-to-navigate in-app toast.
+     */
+    private fun respondToInAppNotification(
+        message: RemoteMessage,
+        conversationIDKey: String,
+    ) {
+        val currentUser = UserSessionService.currentUser ?: return
+        val recipientUserID = message.data[RECIPIENT_USER_ID_KEY] ?: return
+        if (recipientUserID != currentUser.id) return
+
+        val conversation = SessionStore.getConversation(conversationIDKey) ?: return
+        if (!conversation.isVisibleForCurrentUser) return
+
+        val reactionMessageID = message.data[REACTION_MESSAGE_ID_KEY]
+        val isReaction = reactionMessageID != null && reactionMessageID != NO_REACTION && reactionMessageID.isNotBlank()
+
+        // Already viewing this conversation: a reaction gives haptic feedback; nothing otherwise.
+        if (ConversationSessionService.currentConversation?.id?.key == conversationIDKey) {
+            if (isReaction) HapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
+            return
+        }
+
+        val title = enrichedTitle(message)
+        val body = message.notification?.body ?: message.data[BODY_KEY].orEmpty()
+        val focusedMessageID = if (isReaction) reactionMessageID else null
+
+        Toast.show(
+            Toast(
+                Toast.Type.Capsule(),
+                title = title.ifBlank { null },
+                message = body,
+                perpetuation = Toast.Perpetuation.Ephemeral(IN_APP_TOAST_SECONDS.seconds),
+            ),
+            onTap = {
+                DependencyValues.current.navigation.navigate(
+                    Route.UserContent(
+                        UserContentRoute.Push(UserContentNavigatorState.SeguePath.Chat(conversationIDKey, focusedMessageID)),
+                    ),
+                )
+            },
+        )
     }
 
     /**
@@ -111,10 +186,10 @@ class PantherMessagingService : FirebaseMessagingService() {
      * The persisted group conversation name for cold-start subtitle
      * resolution, when the session store has not yet loaded.
      */
-    private fun persistedConversationName(conversationIDKey: String): String? =
-        Persistent.string(PersistentStorageKey(NotificationExtensionConstants.CONVERSATION_NAME_MAP_KEY))
-            ?.let { runCatching { JSONObject(it).optString(conversationIDKey) }.getOrNull() }
-            ?.takeUnless { it.isBlank() }
+    private fun persistedConversationName(conversationIDKey: String): String? {
+        val nameMap = Persistent.string(PersistentStorageKey(NotificationExtensionConstants.CONVERSATION_NAME_MAP_KEY)) ?: return null
+        return runCatching { JSONObject(nameMap).optString(conversationIDKey) }.getOrNull()?.takeUnless { it.isBlank() }
+    }
 
     // MARK: - Companion
 
@@ -193,6 +268,8 @@ class PantherMessagingService : FirebaseMessagingService() {
         private const val USER_NUMBER_HASH_KEY = "userNumberHash"
 
         /** The push payload's reaction-message-identifier field. */
+        private const val RECIPIENT_USER_ID_KEY = "recipientUserID"
+        private const val IN_APP_TOAST_SECONDS = 5L
         private const val REACTION_MESSAGE_ID_KEY = "reactionMessageID"
 
         /** The push payload's reaction-suffix field. */

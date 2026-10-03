@@ -39,6 +39,24 @@ class ExceptionMetadata(
     /** A description of the type that created the exception. */
     val sender: String
 
+    // MARK: - Computed Properties
+
+    /**
+     * A short, stable identifier derived from the source file name
+     * and line.
+     */
+    val id: String
+        get() {
+            var hexCharacters =
+                fileName
+                    .mapNotNull { character -> character.code.takeIf { it < ID_ASCII_LIMIT } }
+                    .map { "%02X".format(it) }
+            if (hexCharacters.size > ID_HEX_THRESHOLD) {
+                hexCharacters = hexCharacters.subList(0, ID_HEX_PREFIX_END) + hexCharacters.last()
+            }
+            return "${hexCharacters.joinToString("")}x$line".lowercase()
+        }
+
     // MARK: - Init
 
     init {
@@ -80,3 +98,7 @@ class ExceptionMetadata(
         return result
     }
 }
+
+private const val ID_ASCII_LIMIT = 128
+private const val ID_HEX_THRESHOLD = 3
+private const val ID_HEX_PREFIX_END = 4

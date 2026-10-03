@@ -12,7 +12,8 @@ import us.neotechnica.panther.translator.models.Translation
 
 /**
  * Returns the output of the first translation whose input matches
- * [inputString], or [inputString] itself when none matches.
+ * [inputString], or [inputString] itself when none matches, with
+ * AlertKit's emphasis sentinels removed.
  */
 internal fun List<Translation>.firstOutput(inputString: String): String =
-    firstOrNull { it.input.value == inputString }?.output ?: inputString
+    (firstOrNull { it.input.value == inputString }?.output ?: inputString).sanitized

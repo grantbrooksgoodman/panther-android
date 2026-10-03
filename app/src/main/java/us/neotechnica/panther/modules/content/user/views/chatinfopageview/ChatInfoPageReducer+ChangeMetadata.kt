@@ -11,6 +11,7 @@ package us.neotechnica.panther.modules.content.user.views.chatinfopageview
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action as AlertKitAction
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
+import us.neotechnica.panther.designsystem.modules.alertkit.models.TextFieldAttributes
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAlert
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
@@ -154,7 +155,11 @@ private suspend fun presentChangeNameAlert(
     val input =
         TextInputAlert(
             message = "Choose a new name for this conversation:",
-            initialText = currentName,
+            attributes =
+                TextFieldAttributes(
+                    clearButtonMode = TextFieldAttributes.ClearButtonMode.ALWAYS,
+                    sampleText = currentName,
+                ),
             cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
             confirmButtonTitle = LocalizedStringKey.Done.localized(),
             isConfirmEnabled = { it.none { character -> character in "⌘:" } },

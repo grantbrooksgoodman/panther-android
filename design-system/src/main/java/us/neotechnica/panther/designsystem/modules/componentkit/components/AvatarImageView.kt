@@ -48,7 +48,7 @@ fun AvatarImageView(
     modifier: Modifier = Modifier,
     imageData: ByteArray? = null,
     initials: String = "",
-    fallbackSymbol: String = "person",
+    fallbackSymbol: String = "person.crop.circle.fill",
     glyphSize: Dp = DEFAULT_GLYPH_SIZE,
     initialsFont: Font = Font.systemSemibold(),
 ) {

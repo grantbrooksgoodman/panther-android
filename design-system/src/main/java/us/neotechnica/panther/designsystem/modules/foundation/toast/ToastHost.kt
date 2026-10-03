@@ -54,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
 
@@ -167,14 +168,14 @@ private fun BannerToast(
                         Text(
                             color = colors.titleText,
                             fontWeight = FontWeight.SemiBold,
-                            text = title,
+                            text = title.sanitized,
                         )
                     }
 
                     Text(
                         color = colors.titleText.copy(alpha = MESSAGE_ALPHA),
                         fontWeight = if (toast.title == null) FontWeight.SemiBold else FontWeight.Normal,
-                        text = toast.message,
+                        text = toast.message.sanitized,
                     )
                 }
             }
@@ -236,7 +237,7 @@ private fun CapsuleToast(
             Text(
                 color = colors.titleText,
                 fontWeight = FontWeight.SemiBold,
-                text = toast.title ?: toast.message,
+                text = (toast.title ?: toast.message).sanitized,
                 textAlign = TextAlign.Center,
             )
         }

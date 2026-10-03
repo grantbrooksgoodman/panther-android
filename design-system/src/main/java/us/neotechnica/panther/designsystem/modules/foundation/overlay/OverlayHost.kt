@@ -33,20 +33,21 @@ fun OverlayHost() {
     val isVisible by Overlay.isVisible.collectAsState()
     if (!isVisible) return
 
+    val alpha by Overlay.alpha.collectAsState()
+    val showsActivityIndicator by Overlay.showsActivityIndicator.collectAsState()
+
     val interactionSource = remember { MutableInteractionSource() }
     Box(
         contentAlignment = Alignment.Center,
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = SCRIM_ALPHA))
+                .background(Color.Black.copy(alpha = alpha))
                 .clickable(
                     indication = null,
                     interactionSource = interactionSource,
                 ) {},
     ) {
-        CircularProgressIndicator(color = Color.White)
+        if (showsActivityIndicator) CircularProgressIndicator(color = Color.White)
     }
 }
-
-private const val SCRIM_ALPHA = 1f

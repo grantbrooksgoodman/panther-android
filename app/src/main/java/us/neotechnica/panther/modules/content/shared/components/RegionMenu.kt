@@ -23,6 +23,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +36,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.common.services.HapticsService
 import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.content.shared.constants.RegionMenuFloats
 import us.neotechnica.panther.modules.content.shared.constants.RegionMenuStrings
@@ -104,6 +106,8 @@ fun RegionMenu(
 private fun RegionList(onRegionCodeSelected: (String) -> Unit) {
     val colors = LocalPantherColors.current
     var searchQuery by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) { HapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM) }
 
     val regionCodes =
         remember(searchQuery) {

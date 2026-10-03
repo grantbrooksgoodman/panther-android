@@ -153,7 +153,7 @@ private fun Avatar(
             modifier = Modifier.fillMaxSize(),
             imageData = imageData,
             initials = if (!data.isGroup && data.hasContactName) data.initials else "",
-            fallbackSymbol = if (data.isGroup) "person.2" else "person",
+            fallbackSymbol = if (data.isGroup) "person.2" else "person.crop.circle.fill",
         )
 
         if (data.isGroup) {

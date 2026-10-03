@@ -1,8 +1,9 @@
 //
 //  AlertHost.kt
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 02/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.designsystem.modules.alertkit.views
@@ -12,11 +13,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -31,18 +38,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
+import us.neotechnica.panther.designsystem.modules.alertkit.models.TextFieldAttributes
 import us.neotechnica.panther.designsystem.modules.alertkit.services.AlertPresenter
 import us.neotechnica.panther.designsystem.modules.alertkit.services.PresentedAlert
 
@@ -88,8 +93,8 @@ private fun ActionSheetSheet(alert: PresentedAlert.ActionSheet) {
                     .padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            alert.title?.let { Text(emphasized(it), style = MaterialTheme.typography.titleMedium) }
-            alert.message?.let { Text(emphasized(it), style = MaterialTheme.typography.bodyMedium) }
+            alert.title?.let { Text(it.sanitized, style = MaterialTheme.typography.titleMedium) }
+            alert.message?.let { Text(it.sanitized, style = MaterialTheme.typography.bodyMedium) }
             alert.actions.forEachIndexed { index, action ->
                 SheetActionButton(
                     title = action.title,
@@ -102,7 +107,7 @@ private fun ActionSheetSheet(alert: PresentedAlert.ActionSheet) {
                 modifier = Modifier.fillMaxWidth(),
                 onClick = alert.onCancel,
             ) {
-                Text(alert.cancelButtonTitle)
+                Text(alert.cancelButtonTitle.sanitized)
             }
         }
     }
@@ -126,7 +131,7 @@ private fun SheetActionButton(
         modifier = Modifier.fillMaxWidth(),
         onClick = onClick,
     ) {
-        Text(emphasized(title))
+        Text(title.sanitized)
     }
 }
 
@@ -146,8 +151,8 @@ private fun StandardDialog(alert: PresentedAlert.Standard) {
         onDismissRequest = {
             alert.onSelect(if (cancelIndex >= 0) cancelIndex else alert.actions.lastIndex)
         },
-        text = alert.message?.let { { Text(emphasized(it)) } },
-        title = alert.title?.let { { Text(emphasized(it)) } },
+        text = alert.message?.let { { Text(it.sanitized) } },
+        title = alert.title?.let { { Text(it.sanitized) } },
     )
 }
 
@@ -159,8 +164,8 @@ private fun ConfirmationDialog(alert: PresentedAlert.Confirmation) {
         confirmButton = { ActionButton(alert.confirmAction) { alert.onResult(true) } },
         dismissButton = { ActionButton(alert.cancelAction) { alert.onResult(false) } },
         onDismissRequest = { alert.onResult(false) },
-        text = { Text(emphasized(alert.message)) },
-        title = alert.title?.let { { Text(emphasized(it)) } },
+        text = { Text(alert.message.sanitized) },
+        title = alert.title?.let { { Text(it.sanitized) } },
     )
 }
 
@@ -170,15 +175,22 @@ private fun ConfirmationDialog(alert: PresentedAlert.Confirmation) {
 private fun ErrorDialog(alert: PresentedAlert.ErrorContent) {
     AlertDialog(
         confirmButton = {
-            TextButton(onClick = alert.onDismiss) { Text(alert.dismissButtonTitle) }
+            val reportTitle = alert.sendReportButtonTitle
+            if (reportTitle != null) {
+                TextButton(onClick = { alert.onSendReport?.invoke() }) {
+                    Text(reportTitle.sanitized, fontWeight = FontWeight.Bold)
+                }
+            } else {
+                TextButton(onClick = alert.onDismiss) { Text(alert.dismissButtonTitle.sanitized) }
+            }
         },
         dismissButton =
-            alert.sendReportButtonTitle?.let { title ->
-                { TextButton(onClick = { alert.onSendReport?.invoke() }) { Text(title) } }
+            alert.sendReportButtonTitle?.let {
+                { TextButton(onClick = alert.onDismiss) { Text(alert.dismissButtonTitle.sanitized) } }
             },
         onDismissRequest = alert.onDismiss,
-        text = { Text(emphasized(alert.message)) },
-        title = { Text(emphasized(alert.title)) },
+        text = { Text(alert.message.sanitized) },
+        title = alert.title?.let { { Text(it.sanitized) } },
     )
 }
 
@@ -186,32 +198,56 @@ private fun ErrorDialog(alert: PresentedAlert.ErrorContent) {
 
 @Composable
 private fun TextInputDialog(alert: PresentedAlert.TextInput) {
-    var text by rememberSaveable(alert) { mutableStateOf(alert.initialText) }
+    val attributes = alert.attributes
+    var text by rememberSaveable(alert) { mutableStateOf(attributes.sampleText.orEmpty()) }
     AlertDialog(
         confirmButton = {
             TextButton(
                 enabled = alert.isConfirmEnabled?.invoke(text) ?: true,
                 onClick = { alert.onResult(text) },
-            ) { Text(alert.confirmButtonTitle) }
+            ) {
+                Text(
+                    alert.confirmButtonTitle.sanitized,
+                    fontWeight = if (alert.confirmButtonStyle.isPreferred) FontWeight.Bold else FontWeight.Normal,
+                )
+            }
         },
         dismissButton = {
-            TextButton(onClick = { alert.onResult(null) }) { Text(alert.cancelButtonTitle) }
+            TextButton(onClick = { alert.onResult(null) }) {
+                Text(
+                    alert.cancelButtonTitle.sanitized,
+                    fontWeight = if (alert.cancelButtonStyle.isPreferred) FontWeight.Bold else FontWeight.Normal,
+                )
+            }
         },
         onDismissRequest = { alert.onResult(null) },
         text = {
             Column {
-                Text(emphasized(alert.message))
+                Text(alert.message.sanitized)
                 OutlinedTextField(
+                    keyboardOptions =
+                        KeyboardOptions(
+                            capitalization = attributes.capitalizationType,
+                            autoCorrectEnabled = attributes.correctionType != TextFieldAttributes.CorrectionType.NO,
+                            keyboardType = attributes.keyboardType,
+                        ),
                     modifier =
                         Modifier
                             .fillMaxWidth()
                             .padding(top = 12.dp),
                     onValueChange = { text = it },
-                    placeholder = { Text(alert.placeholder) },
+                    placeholder = attributes.placeholderText?.let { { Text(it.sanitized) } },
                     singleLine = true,
+                    textStyle = LocalTextStyle.current.copy(textAlign = attributes.textAlignment),
+                    trailingIcon =
+                        if (attributes.clearButtonMode != TextFieldAttributes.ClearButtonMode.NEVER && text.isNotEmpty()) {
+                            { IconButton(onClick = { text = "" }) { Icon(Icons.Filled.Clear, contentDescription = null) } }
+                        } else {
+                            null
+                        },
                     value = text,
                     visualTransformation =
-                        if (alert.isSecure) {
+                        if (attributes.isSecureTextEntry) {
                             PasswordVisualTransformation()
                         } else {
                             VisualTransformation.None
@@ -219,7 +255,7 @@ private fun TextInputDialog(alert: PresentedAlert.TextInput) {
                 )
             }
         },
-        title = alert.title?.let { { Text(it) } },
+        title = alert.title?.let { { Text(it.sanitized) } },
     )
 }
 
@@ -239,16 +275,25 @@ private fun ProgressDialog(alert: PresentedAlert.Progress) {
             color = MaterialTheme.colorScheme.surface,
             shape = MaterialTheme.shapes.large,
         ) {
+            val progress by alert.progress.collectAsState()
             Column(
                 horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
                 modifier = Modifier.padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                alert.title?.let { Text(emphasized(it), style = MaterialTheme.typography.titleMedium) }
-                CircularProgressIndicator()
-                Text(emphasized(alert.message))
+                alert.title?.let { Text(it.sanitized, style = MaterialTheme.typography.titleMedium) }
+                LinearProgressIndicator(
+                    progress = { progress.toFloat() },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(alert.message.sanitized)
                 alert.cancelButtonTitle?.let { title ->
-                    TextButton(onClick = { alert.onCancel?.invoke() }) { Text(title) }
+                    TextButton(onClick = { alert.onCancel?.invoke() }) {
+                        Text(
+                            title.sanitized,
+                            fontWeight = if (alert.cancelButtonStyle.isPreferred) FontWeight.Bold else FontWeight.Normal,
+                        )
+                    }
                 }
             }
         }
@@ -273,34 +318,11 @@ private fun ActionButton(
         onClick = onClick,
     ) {
         Text(
-            emphasized(action.title),
+            action.title.sanitized,
             color = color,
             fontWeight = if (action.style.isPreferred) FontWeight.Bold else FontWeight.Normal,
         )
     }
 }
-
-// MARK: - Emphasis
-
-/**
- * Builds an annotated string with `⌘…⌘`-delimited spans rendered bold,
- * matching the AlertKit emphasis convention. The translation sentinels
- * are removed from the displayed text.
- */
-private fun emphasized(text: String): AnnotatedString =
-    buildAnnotatedString {
-        val cleaned = text.replace("⁂", "").replace("※", "")
-        var isBold = false
-        for (segment in cleaned.split("⌘")) {
-            if (segment.isNotEmpty()) {
-                if (isBold) {
-                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(segment) }
-                } else {
-                    append(segment)
-                }
-            }
-            isBold = !isBold
-        }
-    }
 
 private val ACTION_SHEET_DESTRUCTIVE_COLOR = Color(0xFFFF3B30)

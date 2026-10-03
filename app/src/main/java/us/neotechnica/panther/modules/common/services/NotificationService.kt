@@ -8,8 +8,12 @@
 package us.neotechnica.panther.modules.common.services
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
@@ -128,12 +132,10 @@ object NotificationService {
                 conversationIDKey = conversationIDKey,
             )
 
-        for (user in users) {
-            try {
-                notifyUser(user, request)
-            } catch (exception: Exception) {
-                Logger.log(exception)
-            }
+        // Notify every recipient concurrently, mirroring iOS; a recipient with no registered
+        // push tokens is skipped silently (see notifyUser), and any other failure propagates.
+        coroutineScope {
+            users.map { user -> async { notifyUser(user, request) } }.awaitAll()
         }
     }
 
@@ -205,8 +207,7 @@ object NotificationService {
                 }
         }
 
-    private fun senderTitle(currentUser: User): String =
-        "+${currentUser.phoneNumber.callingCode} ${currentUser.phoneNumber.nationalNumberString}".trim()
+    private fun senderTitle(currentUser: User): String = currentUser.phoneNumber.formattedString()
 
     /**
      * Delivers a single FCM v1 message. Returns whether the token was

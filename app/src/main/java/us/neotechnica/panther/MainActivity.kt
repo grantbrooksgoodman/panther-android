@@ -29,6 +29,7 @@ import us.neotechnica.panther.designsystem.modules.foundation.toast.ToastHost
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.designsystem.modules.theming.views.PantherTheme
 import us.neotechnica.panther.modules.common.services.AnalyticsService
+import us.neotechnica.panther.modules.content.shared.components.NetworkActivityIndicatorHost
 import us.neotechnica.panther.modules.content.shared.views.ForcedUpdateView
 import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
 import us.neotechnica.panther.modules.session.ClientSession
@@ -72,6 +73,13 @@ class MainActivity : ComponentActivity() {
                                 .zIndex(1f)
                                 .align(Alignment.BottomEnd)
                                 .padding(end = 20.dp, bottom = 32.dp),
+                    )
+                    NetworkActivityIndicatorHost(
+                        modifier =
+                            Modifier
+                                .zIndex(1f)
+                                .align(Alignment.TopEnd)
+                                .padding(end = 16.dp, top = 48.dp),
                     )
                     ForcedUpdateView()
                 }

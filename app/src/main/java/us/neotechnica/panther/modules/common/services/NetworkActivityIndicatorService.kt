@@ -32,6 +32,18 @@ object NetworkActivityIndicatorService : NetworkActivityIndicatorDelegate {
     val isActive: StateFlow<Boolean>
         get() = defaultNetworkActivityIndicatorDelegate.isActive
 
+    /** The ARGB background color reflecting the current network health tier. */
+    override val backgroundColor: Int?
+        get() = defaultNetworkActivityIndicatorDelegate.backgroundColor
+
+    /** The ARGB tint color of the progress indicator. */
+    override val progressViewTintColor: Int?
+        get() = defaultNetworkActivityIndicatorDelegate.progressViewTintColor
+
+    /** The action to perform when the indicator is tapped, or `null` for the default summary. */
+    override val tapAction: (() -> Unit)?
+        get() = defaultNetworkActivityIndicatorDelegate.tapAction
+
     // MARK: - NetworkActivityIndicatorDelegate Conformance
 
     /** Hides the network activity indicator. */

@@ -130,6 +130,13 @@ class Exception(
     // MARK: - Computed Properties
 
     /**
+     * A short, stable identifier combining the error [code] and the
+     * source-location identifier.
+     */
+    val id: String
+        get() = code + metadata.id
+
+    /**
      * The full chain of underlying exceptions, recursively
      * traversed.
      *

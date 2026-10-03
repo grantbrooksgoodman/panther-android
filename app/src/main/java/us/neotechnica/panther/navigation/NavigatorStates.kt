@@ -115,3 +115,29 @@ data class ChatNavigatorState(
         data object ContactSelector : SheetPath
     }
 }
+
+/**
+ * A descriptor for the frontmost navigation destination, mirroring the
+ * iOS `leafViewController.descriptor` (the destination type's simple
+ * name). Used as the `view_id` in analytics and error-report metadata.
+ *
+ * The frontmost sheet wins; otherwise the top of the active modal's
+ * stack, falling back to the modal itself.
+ */
+val RootNavigatorState.descriptor: String?
+    get() {
+        sheet?.let { return it.pathDescriptor }
+        chat.sheet?.let { return it.pathDescriptor }
+
+        val modalPath = modal ?: return null
+        val top =
+            when (modalPath) {
+                RootNavigatorState.ModalPath.Onboarding -> onboarding.stack.lastOrNull()
+                RootNavigatorState.ModalPath.UserContent -> chat.stack.lastOrNull() ?: userContent.stack.lastOrNull()
+                RootNavigatorState.ModalPath.Splash -> null
+            }
+        return (top ?: modalPath).pathDescriptor
+    }
+
+private val Paths.pathDescriptor: String
+    get() = this::class.simpleName ?: "Unknown"

@@ -8,6 +8,9 @@
 
 package us.neotechnica.panther.bundle
 
+import us.neotechnica.panther.modules.content.user.extensions.UserDisplayNameCache
+import us.neotechnica.panther.modules.content.user.models.ConversationCellViewDataCache
+import us.neotechnica.panther.modules.networking.message.models.ReadReceiptCache
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.CacheDomainListDelegate
@@ -25,8 +28,11 @@ object CacheDomainList : CacheDomainListDelegate {
     override val appCacheDomains: List<CacheDomain> =
         listOf(
             CacheDomain("conversationArchive") { SessionStore.clearConversationArchive() },
+            CacheDomain("conversationCellViewData") { ConversationCellViewDataCache.clearCache() },
             CacheDomain("messageArchive") { SessionStore.clearMessageArchive() },
+            CacheDomain("readReceipt") { ReadReceiptCache.clearCache() },
             CacheDomain("userArchive") { SessionStore.clearUserArchive() },
+            CacheDomain("userDisplayName") { UserDisplayNameCache.clearCache() },
             CacheDomain.Networking.database,
         )
 }

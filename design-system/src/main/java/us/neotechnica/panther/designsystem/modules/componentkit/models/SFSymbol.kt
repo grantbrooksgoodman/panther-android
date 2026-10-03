@@ -10,20 +10,22 @@ package us.neotechnica.panther.designsystem.modules.componentkit.models
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.Cached
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material.icons.filled.Flag
@@ -31,18 +33,22 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardCommandKey
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.PanTool
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
@@ -79,7 +85,7 @@ object SFSymbol {
             "xmark" to Icons.Filled.Close,
             "trash" to Icons.Filled.Delete,
             "trash.fill" to Icons.Filled.Delete,
-            "hand.raised.fill" to Icons.AutoMirrored.Filled.Logout,
+            "hand.raised.fill" to Icons.Filled.PanTool,
             "heart" to Icons.Filled.Favorite,
             "heart.fill" to Icons.Filled.Favorite,
             "ellipsis" to Icons.Filled.MoreHoriz,
@@ -120,9 +126,16 @@ object SFSymbol {
             "exclamationmark.bubble" to Icons.Filled.Feedback,
             "flag" to Icons.Filled.Flag,
             "flag.fill" to Icons.Filled.Flag,
-            "location.fill" to Icons.Filled.LocationOn,
+            "location.fill" to Icons.Filled.NearMe,
             "info" to Icons.Filled.Info,
-            "command" to Icons.Filled.Cached,
+            "info.circle" to Icons.Filled.Info,
+            "exclamationmark.circle" to Icons.Filled.Error,
+            "person.crop.circle.fill" to Icons.Filled.AccountCircle,
+            "square.text.square.fill" to Icons.Filled.TextFields,
+            "arrow.counterclockwise" to Icons.Filled.Replay,
+            "checkmark.circle.fill" to Icons.Filled.CheckCircle,
+            "xmark.circle.fill" to Icons.Filled.Cancel,
+            "command" to Icons.Filled.KeyboardCommandKey,
             "character.bubble" to Icons.AutoMirrored.Filled.Message,
             "character.bubble.fill" to Icons.AutoMirrored.Filled.Message,
             "text.bubble" to Icons.AutoMirrored.Filled.Message,

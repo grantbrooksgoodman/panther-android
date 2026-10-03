@@ -126,8 +126,13 @@ class DependencyValues internal constructor(
 private object ResolverCache {
     // MARK: - Properties
 
-    // A reentrant lock rather than LockIsolated: resolution may
-    // recursively resolve other dependencies on the same thread.
+    // The lock guards only the cache map; a key's resolve() runs outside
+    // it. Resolution can trigger lazy class initialization that re-enters
+    // the resolver on another thread, so holding the lock across resolve()
+    // risks a deadlock: that thread blocks acquiring this lock while this
+    // thread blocks on its class-init monitor. Keeping the critical section
+    // to the O(1) map access, and memoizing first-writer-wins, avoids it
+    // (resolution yields the same singleton, so a lost race is harmless).
     private val cache = mutableMapOf<DependencyKey<*>, Any?>()
     private val lock = ReentrantLock()
 
@@ -136,16 +141,24 @@ private object ResolverCache {
     fun <Value> value(
         key: DependencyKey<Value>,
         dependencies: DependencyValues,
-    ): Value =
+    ): Value {
         lock.withLock {
             if (cache.containsKey(key)) {
                 @Suppress("UNCHECKED_CAST")
                 return cache[key] as Value
             }
-
-            val value = key.resolve(dependencies)
-            cache[key] = value
-
-            value
         }
+
+        val value = key.resolve(dependencies)
+
+        return lock.withLock {
+            if (cache.containsKey(key)) {
+                @Suppress("UNCHECKED_CAST")
+                cache[key] as Value
+            } else {
+                cache[key] = value
+                value
+            }
+        }
+    }
 }

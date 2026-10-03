@@ -10,6 +10,8 @@ package us.neotechnica.panther.bundle
 
 import android.content.Context
 import us.neotechnica.panther.BuildConfig
+import us.neotechnica.panther.designsystem.modules.alertkit.dependencies.alertKitConfig
+import us.neotechnica.panther.designsystem.modules.alertkit.models.HUDConfig
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.ApplicationStorageKey
@@ -59,6 +61,7 @@ import us.neotechnica.panther.translator.Translator
 import java.util.Date
 import java.util.Properties
 import kotlin.system.exitProcess
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -234,6 +237,10 @@ object Application {
         AppSubsystem.delegates.registerPermanentPersistentStorageKeyDelegate(PermanentKeyDelegate)
         AppSubsystem.delegates.registerErrorReportDelegate(ErrorReportingService)
         LocalTranslationArchiverDelegate.registerWithDependencies()
+
+        DependencyValues.current.alertKitConfig.overrideTranslationHUDConfig(
+            HUDConfig(appearsAfter = 500.milliseconds, isModal = true),
+        )
     }
 
     private fun configureBuild(context: Context) {

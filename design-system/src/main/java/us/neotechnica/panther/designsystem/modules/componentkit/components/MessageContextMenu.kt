@@ -7,6 +7,7 @@
 
 package us.neotechnica.panther.designsystem.modules.componentkit.components
 
+import android.os.Build
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -40,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
@@ -116,14 +118,31 @@ fun ContextMenuHost(
 ) {
     val controller = remember { ContextMenuController() }
     controller.canBegin = canBegin
+    val progress = remember { Animatable(0f) }
+
+    LaunchedEffect(controller.active) {
+        if (controller.active == null) {
+            progress.snapTo(0f)
+        } else {
+            progress.snapTo(0f)
+            progress.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
+            )
+        }
+    }
 
     Box(modifier.fillMaxSize()) {
-        CompositionLocalProvider(LocalContextMenuController provides controller) {
-            content()
+        // Modifier.blur is a no-op below API 31, so the pre-31 path relies on
+        // the dimmed scrim instead of a blur.
+        Box(Modifier.blur(BLUR_RADIUS * progress.value)) {
+            CompositionLocalProvider(LocalContextMenuController provides controller) {
+                content()
+            }
         }
 
         controller.active?.let { active ->
-            ContextMenuOverlay(active = active, onDismiss = controller::dismiss)
+            ContextMenuOverlay(active = active, progress = progress.value, onDismiss = controller::dismiss)
         }
     }
 }
@@ -232,26 +251,25 @@ fun MessageContextMenu(
 @Composable
 private fun ContextMenuOverlay(
     active: ActiveContextMenu,
+    progress: Float,
     onDismiss: () -> Unit,
 ) {
     val density = LocalDensity.current
-    val progress = remember { Animatable(0f) }
     var reactionRowWidthPx by remember { mutableIntStateOf(0) }
     var reactionRowHeightPx by remember { mutableIntStateOf(0) }
     var menuHeightPx by remember { mutableIntStateOf(0) }
-    LaunchedEffect(active) {
-        progress.snapTo(0f)
-        progress.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMediumLow))
-    }
 
     val bounds = active.anchorBounds
     val originX = if (active.alignment == ContextMenuAlignment.LEADING) 0f else 1f
     val hasReactions = active.reactionChoices.isNotEmpty()
     val hasActions = active.actions.isNotEmpty()
 
+    // A blur separates the content on API 31+, so a lighter tint suffices;
+    // pre-31 keeps the full scrim.
+    val scrimAlpha = contextMenuScrimAlpha()
     BoxWithConstraints(
         Modifier
-            .background(Color.Black.copy(alpha = SCRIM_ALPHA * progress.value))
+            .background(Color.Black.copy(alpha = scrimAlpha * progress))
             .fillMaxSize()
             .pointerInput(Unit) { detectTapGestures { onDismiss() } },
     ) {
@@ -291,8 +309,8 @@ private fun ContextMenuOverlay(
                         val y = bounds.top - reactionRowHeightPx - reactionGapPx + shiftPx
                         IntOffset(x.roundToInt().coerceAtLeast(0), y.roundToInt().coerceAtLeast(0))
                     }.graphicsLayer {
-                        alpha = progress.value
-                        val scale = MENU_MIN_SCALE + (1f - MENU_MIN_SCALE) * progress.value
+                        alpha = progress
+                        val scale = MENU_MIN_SCALE + (1f - MENU_MIN_SCALE) * progress
                         scaleX = scale
                         scaleY = scale
                         transformOrigin = TransformOrigin(originX, 1f)
@@ -310,7 +328,7 @@ private fun ContextMenuOverlay(
             Modifier
                 .offset { IntOffset(bounds.left.roundToInt(), (bounds.top + shiftPx).roundToInt()) }
                 .graphicsLayer {
-                    val scale = 1f + active.liftScale * progress.value
+                    val scale = 1f + active.liftScale * progress
                     scaleX = scale
                     scaleY = scale
                     transformOrigin = TransformOrigin(originX, 0f)
@@ -333,8 +351,8 @@ private fun ContextMenuOverlay(
                         val y = bubbleBottomPx + gapPx + shiftPx
                         IntOffset(x.roundToInt().coerceAtLeast(0), y.roundToInt())
                     }.graphicsLayer {
-                        alpha = progress.value
-                        val scale = MENU_MIN_SCALE + (1f - MENU_MIN_SCALE) * progress.value
+                        alpha = progress
+                        val scale = MENU_MIN_SCALE + (1f - MENU_MIN_SCALE) * progress
                         scaleX = scale
                         scaleY = scale
                         transformOrigin = TransformOrigin(originX, 0f)
@@ -360,7 +378,7 @@ private fun ContextMenuCard(
         Modifier
             .width(MENU_WIDTH)
             .clip(RoundedCornerShape(MENU_CORNER_RADIUS))
-            .background(colors.reactionButtonBackground),
+            .background(Color.White.copy(alpha = MENU_BACKGROUND_ALPHA)),
     ) {
         actions.forEachIndexed { index, action ->
             val contentColor = if (action.isDestructive) DESTRUCTIVE_COLOR else colors.titleText
@@ -393,6 +411,10 @@ private fun ContextMenuCard(
     }
 }
 
+// A blur separates the content on API 31+, so a lighter tint suffices;
+// pre-31 keeps the full scrim.
+private fun contextMenuScrimAlpha(): Float = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) LIGHT_SCRIM_ALPHA else SCRIM_ALPHA
+
 private val MENU_WIDTH = 250.dp
 private val MENU_GAP = 8.dp
 private val EDGE_MARGIN = 12.dp
@@ -402,10 +424,13 @@ private val MENU_ROW_START_PADDING = 16.dp
 private val MENU_ICON_SIZE = 22.dp
 private val MENU_DIVIDER_THICKNESS = 0.6.dp
 private const val SCRIM_ALPHA = 0.45f
-private const val LIFT_SCALE_BONUS = 0.06f
+private const val LIGHT_SCRIM_ALPHA = 0.2f
+private const val LIFT_SCALE_BONUS = 0.08f
 private const val MENU_MIN_SCALE = 0.85f
+private const val MENU_BACKGROUND_ALPHA = 0.5f
 private val DESTRUCTIVE_COLOR = Color(0xFFFF3B30)
 private val REACTION_ROW_GAP = 8.dp
+private val BLUR_RADIUS = 20.dp
 
 private fun androidx.compose.ui.unit.IntSize.toSize() =
     androidx.compose.ui.geometry

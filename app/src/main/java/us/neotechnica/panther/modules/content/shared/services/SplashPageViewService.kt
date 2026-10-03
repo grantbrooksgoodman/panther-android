@@ -20,7 +20,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
-import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
+import us.neotechnica.panther.designsystem.modules.alertkit.dependencies.alertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ErrorAlert
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.isEmulator
@@ -51,6 +51,7 @@ import us.neotechnica.panther.networking.modules.common.extensions.noValueExists
 import us.neotechnica.panther.networking.modules.health.extensions.networkHealth
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealthTier
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -223,8 +224,8 @@ object SplashPageViewService {
 
         /* AlertKit Delegate Setup */
 
-        AlertKitConfig.registerReportDelegate(ErrorReportingService)
-        AlertKitConfig.registerTranslationDelegate(AlertKitTranslationService)
+        DependencyValues.current.alertKitConfig.registerReportDelegate(ErrorReportingService)
+        DependencyValues.current.alertKitConfig.registerTranslationDelegate(AlertKitTranslationService)
 
         /* Breadcrumbs Capture Setup: absent – BreadcrumbsCaptureService is deferred. */
 
@@ -356,10 +357,7 @@ object SplashPageViewService {
         val shouldTranslate = hasUserFacingDescriptor && notGenericDescriptor && notTimedOutDescriptor
 
         val translationOptionKeys = mutableListOf<ErrorAlert.TranslationOptionKey>()
-        if (shouldTranslate) {
-            translationOptionKeys.add(ErrorAlert.TranslationOptionKey.ErrorDescription)
-            translationOptionKeys.add(ErrorAlert.TranslationOptionKey.Title)
-        }
+        if (shouldTranslate) translationOptionKeys.add(ErrorAlert.TranslationOptionKey.ErrorDescription)
         if (exception.isReportable) translationOptionKeys.add(ErrorAlert.TranslationOptionKey.SendErrorReportButtonTitle)
 
         ErrorAlert(
