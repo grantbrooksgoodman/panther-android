@@ -18,6 +18,10 @@ object VerifyNumberPageViewFloats {
     val continueButtonVerticalPadding: Dp = 5.dp
     val innerVStackBottomPadding: Dp = 50.dp
     val instructionLabelVerticalPadding: Dp = 5.dp
+    val phoneNumberTextFieldTrailingPadding: Dp = 20.dp
+    val phoneNumberTextFieldVerticalPadding: Dp = 2.dp
+    val regionMenuLeadingPadding: Dp = 20.dp
+    val regionMenuTrailingPadding: Dp = 5.dp
 
     const val BACK_BUTTON_LABEL_FONT_SIZE = 15f
 }

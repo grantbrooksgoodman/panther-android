@@ -9,7 +9,7 @@
 package us.neotechnica.panther.modules.content.onboarding.views.selectlanguagepageview
 
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
-import us.neotechnica.panther.modules.content.onboarding.models.InstructionViewStrings
+import us.neotechnica.panther.modules.content.onboarding.components.InstructionViewStrings
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
 import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
 import us.neotechnica.panther.navigation.OnboardingNavigatorState
@@ -18,9 +18,6 @@ import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.translation.extensions.value
-import us.neotechnica.panther.networking.modules.translation.interfaces.TranslatedLabelStrings
-import us.neotechnica.panther.networking.modules.translation.models.TranslatedLabelStringCollection
-import us.neotechnica.panther.networking.modules.translation.models.TranslationInputMap
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
@@ -29,7 +26,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
-import us.neotechnica.panther.translator.models.TranslationInput
 import java.util.Locale
 
 /**
@@ -165,31 +161,4 @@ class SelectLanguagePageReducer : Reducer<SelectLanguagePageReducer.State, Selec
     private fun navigate(route: OnboardingRoute) {
         DependencyValues.current.navigation.navigate(Route.Onboarding(route))
     }
-}
-
-/** The translated label strings for the language-selection page. */
-object SelectLanguagePageViewStrings : TranslatedLabelStrings {
-    val backButtonText = TranslatedLabelStringCollection("selectLanguagePageView.backButtonText")
-    val continueButtonText = TranslatedLabelStringCollection("selectLanguagePageView.continueButtonText")
-    val instructionLabelText = TranslatedLabelStringCollection("selectLanguagePageView.instructionLabelText")
-    val instructionViewSubtitleLabelText =
-        TranslatedLabelStringCollection("selectLanguagePageView.instructionViewSubtitleLabelText")
-    val instructionViewTitleLabelText =
-        TranslatedLabelStringCollection("selectLanguagePageView.instructionViewTitleLabelText")
-
-    override val keyPairs: List<TranslationInputMap> =
-        listOf(
-            TranslationInputMap(backButtonText, TranslationInput("Back", alternate = "Go back")),
-            TranslationInputMap(continueButtonText, TranslationInput("Continue")),
-            TranslationInputMap(instructionLabelText, TranslationInput("I speak:")),
-            TranslationInputMap(
-                instructionViewSubtitleLabelText,
-                TranslationInput(
-                    "To begin, select your native language.\n\nThis will be the language you send and " +
-                        "receive messages in, as well as that of system dialogues. Your selection can be " +
-                        "changed later in Settings.",
-                ),
-            ),
-            TranslationInputMap(instructionViewTitleLabelText, TranslationInput("Select Native Language")),
-        )
 }

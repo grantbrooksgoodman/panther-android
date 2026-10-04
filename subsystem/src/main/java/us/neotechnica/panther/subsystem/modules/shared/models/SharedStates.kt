@@ -88,3 +88,14 @@ class SharedStates internal constructor() {
             }
         }
 }
+
+/**
+ * A Boolean value that indicates whether a forced update is
+ * required.
+ *
+ * Set live when the hosted metadata reports a required update;
+ * observed at the root so the blocking forced-update modal appears
+ * the moment it becomes `true`.
+ */
+val SharedStates.isForcedUpdateRequired: StateStream<Boolean>
+    get() = state("isForcedUpdateRequired") { false }

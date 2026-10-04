@@ -33,7 +33,11 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.modules.content.onboarding.components.InstructionView
 import us.neotechnica.panther.modules.content.onboarding.components.WheelPicker
 import us.neotechnica.panther.modules.content.user.constants.ChangeLanguagePageViewFloats
+import us.neotechnica.panther.navigation.Route
+import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.modules.translation.extensions.value
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 
 // MARK: - Constants Accessors
@@ -49,7 +53,12 @@ private typealias Floats = ChangeLanguagePageViewFloats
 @Composable
 fun ChangeLanguagePageView(modifier: Modifier = Modifier) {
     val viewModel = remember { ViewModel(ChangeLanguagePageReducer.State(), ChangeLanguagePageReducer()) }
-    DisposableEffect(Unit) { onDispose { viewModel.close() } }
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.send(ChangeLanguagePageReducer.Action.ViewDisappeared)
+            viewModel.close()
+        }
+    }
     LaunchedEffect(Unit) { viewModel.send(ChangeLanguagePageReducer.Action.ViewAppeared) }
 
     val state by viewModel.state.collectAsState()
@@ -63,7 +72,7 @@ fun ChangeLanguagePageView(modifier: Modifier = Modifier) {
         Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
             Header(
                 title = state.strings.value(ChangeLanguagePageViewStrings.navigationTitle),
-                onBack = { viewModel.send(ChangeLanguagePageReducer.Action.BackTapped) },
+                onBack = { DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop)) },
             )
 
             InstructionView(state.instructionViewStrings)

@@ -1,6 +1,6 @@
 //
-//  UnderlinedTextField.kt
-//  Panther
+//  GenericTextField.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman on 23/08/2026.
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
@@ -25,11 +25,11 @@ import androidx.compose.ui.text.style.TextAlign
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.content.shared.constants.UnderlinedTextFieldFloats
+import us.neotechnica.panther.modules.content.shared.constants.GenericTextFieldFloats
 
 /**
  * A single-line, center-aligned text field with a gray placeholder and
- * an underline divider, mirroring the iOS `GenericTextField`.
+ * an underline divider.
  *
  * @param value The current text.
  * @param placeholder The gray placeholder shown while empty.
@@ -41,7 +41,7 @@ import us.neotechnica.panther.modules.content.shared.constants.UnderlinedTextFie
  */
 @Composable
 @Suppress("LongParameterList")
-fun UnderlinedTextField(
+fun GenericTextField(
     value: String,
     placeholder: String,
     onValueChange: (String) -> Unit,
@@ -53,7 +53,7 @@ fun UnderlinedTextField(
     Column(modifier = modifier) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.fillMaxWidth().heightIn(min = UnderlinedTextFieldFloats.fieldMinHeight),
+            modifier = Modifier.fillMaxWidth().heightIn(min = GenericTextFieldFloats.fieldMinHeight),
         ) {
             if (value.isEmpty()) {
                 Components.Text(
@@ -74,6 +74,6 @@ fun UnderlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
-        HorizontalDivider(color = colors.subtitleText.copy(alpha = UnderlinedTextFieldFloats.DIVIDER_ALPHA))
+        HorizontalDivider(color = colors.subtitleText.copy(alpha = GenericTextFieldFloats.DIVIDER_ALPHA))
     }
 }

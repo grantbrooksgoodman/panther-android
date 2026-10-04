@@ -19,7 +19,6 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.modules.common.extensions.MetadataServiceStorageKey
-import us.neotechnica.panther.modules.common.extensions.isForcedUpdateRequired
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.networking.Networking
@@ -30,6 +29,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.shared.models.SharedState
+import us.neotechnica.panther.subsystem.modules.shared.models.isForcedUpdateRequired
 import us.neotechnica.panther.translator.Translator
 import java.util.Calendar
 import java.util.Date

@@ -14,7 +14,7 @@ import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.filteringSystemMessages
 import us.neotechnica.panther.modules.session.entity.extensions.isEmpty
 import us.neotechnica.panther.modules.session.entity.extensions.isMock
-import us.neotechnica.panther.modules.session.entity.extensions.sessionStoreDidChange
+import us.neotechnica.panther.bundle.sessionStoreDidChange
 import us.neotechnica.panther.modules.session.state.constants.SessionStoreFloats
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
 import us.neotechnica.panther.networking.modules.common.extensions.SessionStoreStorageKey

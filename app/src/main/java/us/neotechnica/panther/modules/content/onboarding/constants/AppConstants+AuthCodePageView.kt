@@ -1,6 +1,6 @@
 //
 //  AppConstants+AuthCodePageView.kt
-//  Panther
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman on 23/08/2026.
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
@@ -27,6 +27,6 @@ object AuthCodePageViewFloats {
 
 // MARK: - String
 
-object AuthCodePageViewStrings {
+object AuthCodePageViewConstants {
     const val TEXT_FIELD_PLACEHOLDER = "000000"
 }

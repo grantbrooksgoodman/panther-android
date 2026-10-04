@@ -12,7 +12,7 @@ import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.services.PermissionService
-import us.neotechnica.panther.modules.content.onboarding.models.InstructionViewStrings
+import us.neotechnica.panther.modules.content.onboarding.components.InstructionViewStrings
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
 import us.neotechnica.panther.navigation.OnboardingRoute
 import us.neotechnica.panther.navigation.RootNavigatorState
@@ -21,9 +21,6 @@ import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.translation.extensions.value
-import us.neotechnica.panther.networking.modules.translation.interfaces.TranslatedLabelStrings
-import us.neotechnica.panther.networking.modules.translation.models.TranslatedLabelStringCollection
-import us.neotechnica.panther.networking.modules.translation.models.TranslationInputMap
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
@@ -32,7 +29,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
-import us.neotechnica.panther.translator.models.TranslationInput
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -299,40 +295,4 @@ class PermissionPageReducer : Reducer<PermissionPageReducer.State, PermissionPag
     private companion object {
         const val CTA_PRESENTATION_DELAY_MS = 500L
     }
-}
-
-/** The translated label strings for the permissions page. */
-object PermissionPageViewStrings : TranslatedLabelStrings {
-    val backButtonText = TranslatedLabelStringCollection("permissionPageView.backButtonText")
-    val finishButtonText = TranslatedLabelStringCollection("permissionPageView.finishButtonText")
-    val contactPermissionCapsuleButtonText =
-        TranslatedLabelStringCollection("permissionPageView.contactPermissionCapsuleButtonText")
-    val notificationPermissionCapsuleButtonText =
-        TranslatedLabelStringCollection("permissionPageView.notificationPermissionCapsuleButtonText")
-    val instructionViewSubtitleLabelText =
-        TranslatedLabelStringCollection("permissionPageView.instructionViewSubtitleLabelText")
-    val instructionViewTitleLabelText =
-        TranslatedLabelStringCollection("permissionPageView.instructionViewTitleLabelText")
-
-    override val keyPairs: List<TranslationInputMap> =
-        listOf(
-            TranslationInputMap(backButtonText, TranslationInput("Back", alternate = "Go back")),
-            TranslationInputMap(finishButtonText, TranslationInput("Finish")),
-            TranslationInputMap(
-                contactPermissionCapsuleButtonText,
-                TranslationInput("Tap to allow contact access"),
-            ),
-            TranslationInputMap(
-                notificationPermissionCapsuleButtonText,
-                TranslationInput("Tap to allow notifications"),
-            ),
-            TranslationInputMap(
-                instructionViewSubtitleLabelText,
-                TranslationInput(
-                    "Finally, grant Hello the necessary permissions to work with your device.\n\n" +
-                        "These options can be changed later in Settings.",
-                ),
-            ),
-            TranslationInputMap(instructionViewTitleLabelText, TranslationInput("Grant Permissions")),
-        )
 }

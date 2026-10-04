@@ -30,6 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.zIndex
+import us.neotechnica.panther.bundle.sessionStoreDidChange
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
 import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
@@ -38,7 +39,6 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.modules.content.user.constants.ChatPageHeaderViewFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatPageHeaderViewStrings
 import us.neotechnica.panther.modules.content.user.extensions.chatPageHeaderLabelText
-import us.neotechnica.panther.modules.session.entity.extensions.sessionStoreDidChange
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents

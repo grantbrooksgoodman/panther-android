@@ -11,6 +11,7 @@ package us.neotechnica.panther.modules.content.onboarding.views.signinpageview
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,9 +35,10 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.content.onboarding.components.PhoneNumberEntry
 import us.neotechnica.panther.modules.content.onboarding.constants.SignInPageViewFloats
-import us.neotechnica.panther.modules.content.shared.components.UnderlinedTextField
+import us.neotechnica.panther.modules.content.shared.components.GenericTextField
+import us.neotechnica.panther.modules.content.shared.components.PhoneNumberTextField
+import us.neotechnica.panther.modules.content.shared.components.regionmenu.RegionMenu
 import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
@@ -44,7 +46,7 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 // MARK: - Constants Accessors
 
 private typealias Floats = SignInPageViewFloats
-private typealias Strings = us.neotechnica.panther.modules.content.onboarding.constants.SignInPageViewStrings
+private typealias Strings = us.neotechnica.panther.modules.content.onboarding.constants.SignInPageViewConstants
 
 /**
  * The sign-in page, entering an existing account's phone number and
@@ -95,15 +97,34 @@ fun SignInPageView(modifier: Modifier = Modifier) {
 
             when (state.configuration) {
                 SignInPageReducer.Configuration.PHONE_NUMBER ->
-                    PhoneNumberEntry(
-                        selectedRegionCode = state.selectedRegionCode,
-                        phoneNumber = state.phoneNumberString.digits,
-                        onRegionCodeSelected = { viewModel.send(SignInPageReducer.Action.SelectedRegionCodeChanged(it)) },
-                        onPhoneNumberChange = { viewModel.send(SignInPageReducer.Action.PhoneNumberStringChanged(it)) },
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        RegionMenu(
+                            selectedRegionCode = state.selectedRegionCode,
+                            onRegionCodeSelected = { viewModel.send(SignInPageReducer.Action.SelectedRegionCodeChanged(it)) },
+                            modifier =
+                                Modifier.padding(
+                                    start = Floats.regionMenuLeadingPadding,
+                                    end = Floats.regionMenuTrailingPadding,
+                                ),
+                        )
+
+                        PhoneNumberTextField(
+                            value = state.phoneNumberString.digits,
+                            onValueChange = { viewModel.send(SignInPageReducer.Action.PhoneNumberStringChanged(it)) },
+                            regionCode = state.selectedRegionCode,
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .padding(
+                                        end = Floats.phoneNumberTextFieldTrailingPadding,
+                                        top = Floats.phoneNumberTextFieldVerticalPadding,
+                                        bottom = Floats.phoneNumberTextFieldVerticalPadding,
+                                    ),
+                        )
+                    }
 
                 SignInPageReducer.Configuration.VERIFICATION_CODE ->
-                    UnderlinedTextField(
+                    GenericTextField(
                         value = state.verificationCode,
                         placeholder = Strings.TEXT_FIELD_PLACEHOLDER,
                         onValueChange = { viewModel.send(SignInPageReducer.Action.VerificationCodeChanged(it)) },

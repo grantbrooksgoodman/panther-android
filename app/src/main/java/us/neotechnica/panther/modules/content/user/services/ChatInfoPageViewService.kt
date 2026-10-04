@@ -13,14 +13,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.Application
+import us.neotechnica.panther.bundle.chatInfoPageLoadingStateUpdated
+import us.neotechnica.panther.bundle.currentConversationActivityChanged
 import us.neotechnica.panther.bundle.currentConversationMetadataChanged
 import us.neotechnica.panther.bundle.shouldNotifyOfConversationAvailability
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationAlert
 import us.neotechnica.panther.modules.common.models.ContactPair
-import us.neotechnica.panther.modules.content.user.extensions.chatInfoPageLoadingStateUpdated
 import us.neotechnica.panther.modules.content.user.extensions.contactPair
-import us.neotechnica.panther.modules.content.user.extensions.currentConversationActivityChanged
 import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.content.user.extensions.withUser
 import us.neotechnica.panther.modules.content.user.models.ChatParticipant
@@ -29,7 +29,6 @@ import us.neotechnica.panther.modules.networking.conversation.models.ActivityAct
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationMetadata
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.modules.session.entity.extensions.users
 import us.neotechnica.panther.modules.session.entity.services.ActivitySessionService
@@ -38,6 +37,7 @@ import us.neotechnica.panther.navigation.ChatRoute
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception

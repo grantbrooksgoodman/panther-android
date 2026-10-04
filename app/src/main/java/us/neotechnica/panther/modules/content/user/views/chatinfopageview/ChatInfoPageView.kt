@@ -50,6 +50,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.launch
+import us.neotechnica.panther.bundle.chatInfoPageLoadingStateUpdated
+import us.neotechnica.panther.bundle.currentConversationActivityChanged
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
 import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
@@ -60,6 +62,7 @@ import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.contacts.components.rememberContactCardPresenter
 import us.neotechnica.panther.modules.common.extensions.formattedString
+import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.content.user.components.AddContactButton
 import us.neotechnica.panther.modules.content.user.components.ChatInfoContactSelectorHost
 import us.neotechnica.panther.modules.content.user.components.ChatParticipantView
@@ -68,18 +71,15 @@ import us.neotechnica.panther.modules.content.user.components.MediaPreviewOverla
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewConstants
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewFloats
-import us.neotechnica.panther.modules.content.user.extensions.chatInfoPageLoadingStateUpdated
-import us.neotechnica.panther.modules.content.user.extensions.currentConversationActivityChanged
 import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.content.user.models.ChatParticipant
 import us.neotechnica.panther.modules.content.user.models.MediaItemViewData
+import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
+import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
-import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
-import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues

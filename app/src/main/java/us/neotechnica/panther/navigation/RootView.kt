@@ -21,7 +21,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import us.neotechnica.panther.modules.content.onboarding.views.OnboardingContainer
+import us.neotechnica.panther.modules.content.onboarding.views.OnboardingContainerView
 import us.neotechnica.panther.modules.content.shared.views.splashpageview.SplashPageReducer
 import us.neotechnica.panther.modules.content.shared.views.splashpageview.SplashPageView
 import us.neotechnica.panther.modules.content.user.views.UserContentContainer
@@ -52,7 +52,7 @@ fun RootView(modifier: Modifier = Modifier) {
         },
     ) { modal ->
         when (modal) {
-            RootNavigatorState.ModalPath.Onboarding -> OnboardingContainer(Modifier.fillMaxSize().systemBarsPadding())
+            RootNavigatorState.ModalPath.Onboarding -> OnboardingContainerView(Modifier.fillMaxSize().systemBarsPadding())
             RootNavigatorState.ModalPath.Splash ->
                 SplashPageView(
                     viewModel = remember { ViewModel(SplashPageReducer.State(), SplashPageReducer()) },

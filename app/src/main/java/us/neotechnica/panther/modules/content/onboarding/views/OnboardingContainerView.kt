@@ -1,6 +1,6 @@
 //
-//  OnboardingContainer.kt
-//  Panther
+//  OnboardingContainerView.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman on 19/08/2026.
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
@@ -54,7 +54,7 @@ private typealias Strings = OnboardingContainerStrings
  * @param modifier The modifier for this container.
  */
 @Composable
-fun OnboardingContainer(modifier: Modifier = Modifier) {
+fun OnboardingContainerView(modifier: Modifier = Modifier) {
     val navigation = remember { DependencyValues.current.navigation }
     val state by navigation.state.collectAsState()
     val topPath = state.onboarding.stack.lastOrNull()

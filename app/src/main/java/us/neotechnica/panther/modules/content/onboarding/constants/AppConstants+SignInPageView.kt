@@ -1,6 +1,6 @@
 //
 //  AppConstants+SignInPageView.kt
-//  Panther
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman on 23/08/2026.
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
@@ -21,6 +21,10 @@ object SignInPageViewFloats {
     val imageFrameWidth: Dp = 150.dp
     val instructionLabelHorizontalPadding: Dp = 30.dp
     val instructionLabelVerticalPadding: Dp = 5.dp
+    val phoneNumberTextFieldTrailingPadding: Dp = 20.dp
+    val phoneNumberTextFieldVerticalPadding: Dp = 2.dp
+    val regionMenuLeadingPadding: Dp = 20.dp
+    val regionMenuTrailingPadding: Dp = 5.dp
     val textFieldHorizontalPadding: Dp = 20.dp
     val textFieldVerticalPadding: Dp = 2.dp
 
@@ -29,6 +33,6 @@ object SignInPageViewFloats {
 
 // MARK: - String
 
-object SignInPageViewStrings {
+object SignInPageViewConstants {
     const val TEXT_FIELD_PLACEHOLDER = "000000"
 }

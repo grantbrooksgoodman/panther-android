@@ -9,6 +9,7 @@
 package us.neotechnica.panther.modules.content.onboarding.views.verifynumberpageview
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,8 +28,9 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.onboarding.components.InstructionView
-import us.neotechnica.panther.modules.content.onboarding.components.PhoneNumberEntry
 import us.neotechnica.panther.modules.content.onboarding.constants.VerifyNumberPageViewFloats
+import us.neotechnica.panther.modules.content.shared.components.PhoneNumberTextField
+import us.neotechnica.panther.modules.content.shared.components.regionmenu.RegionMenu
 import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
@@ -72,12 +74,31 @@ fun VerifyNumberPageView(modifier: Modifier = Modifier) {
                     modifier = Modifier.padding(vertical = Floats.instructionLabelVerticalPadding),
                 )
 
-                PhoneNumberEntry(
-                    selectedRegionCode = state.selectedRegionCode,
-                    phoneNumber = state.phoneNumberString.digits,
-                    onRegionCodeSelected = { viewModel.send(VerifyNumberPageReducer.Action.SelectedRegionCodeChanged(it)) },
-                    onPhoneNumberChange = { viewModel.send(VerifyNumberPageReducer.Action.PhoneNumberStringChanged(it)) },
-                )
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    RegionMenu(
+                        selectedRegionCode = state.selectedRegionCode,
+                        onRegionCodeSelected = { viewModel.send(VerifyNumberPageReducer.Action.SelectedRegionCodeChanged(it)) },
+                        modifier =
+                            Modifier.padding(
+                                start = Floats.regionMenuLeadingPadding,
+                                end = Floats.regionMenuTrailingPadding,
+                            ),
+                    )
+
+                    PhoneNumberTextField(
+                        value = state.phoneNumberString.digits,
+                        onValueChange = { viewModel.send(VerifyNumberPageReducer.Action.PhoneNumberStringChanged(it)) },
+                        regionCode = state.selectedRegionCode,
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .padding(
+                                    end = Floats.phoneNumberTextFieldTrailingPadding,
+                                    top = Floats.phoneNumberTextFieldVerticalPadding,
+                                    bottom = Floats.phoneNumberTextFieldVerticalPadding,
+                                ),
+                    )
+                }
 
                 Components.CapsuleButton(
                     text = state.strings.value(VerifyNumberPageViewStrings.continueButtonText),

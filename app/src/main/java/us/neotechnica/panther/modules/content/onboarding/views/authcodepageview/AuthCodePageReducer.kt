@@ -10,7 +10,7 @@ package us.neotechnica.panther.modules.content.onboarding.views.authcodepageview
 
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
-import us.neotechnica.panther.modules.content.onboarding.models.InstructionViewStrings
+import us.neotechnica.panther.modules.content.onboarding.components.InstructionViewStrings
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
 import us.neotechnica.panther.navigation.OnboardingNavigatorState
 import us.neotechnica.panther.navigation.OnboardingRoute
@@ -19,9 +19,6 @@ import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.auth.extensions.notReportableForAuthCodes
 import us.neotechnica.panther.networking.modules.translation.extensions.value
-import us.neotechnica.panther.networking.modules.translation.interfaces.TranslatedLabelStrings
-import us.neotechnica.panther.networking.modules.translation.models.TranslatedLabelStringCollection
-import us.neotechnica.panther.networking.modules.translation.models.TranslationInputMap
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
@@ -30,7 +27,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
-import us.neotechnica.panther.translator.models.TranslationInput
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -201,29 +197,4 @@ class AuthCodePageReducer : Reducer<AuthCodePageReducer.State, AuthCodePageReduc
         const val CONTINUE_DELAY_MILLIS = 100L
         const val VERIFICATION_CODE_LENGTH = 6
     }
-}
-
-/** The translated label strings for the verification-code page. */
-object AuthCodePageViewStrings : TranslatedLabelStrings {
-    val backButtonText = TranslatedLabelStringCollection("authCodePageView.backButtonText")
-    val continueButtonText = TranslatedLabelStringCollection("authCodePageView.continueButtonText")
-    val instructionLabelText = TranslatedLabelStringCollection("authCodePageView.instructionLabelText")
-    val instructionViewSubtitleLabelText =
-        TranslatedLabelStringCollection("authCodePageView.instructionViewSubtitleLabelText")
-    val instructionViewTitleLabelText =
-        TranslatedLabelStringCollection("authCodePageView.instructionViewTitleLabelText")
-
-    override val keyPairs: List<TranslationInputMap> =
-        listOf(
-            TranslationInputMap(backButtonText, TranslationInput("Back", alternate = "Go back")),
-            TranslationInputMap(continueButtonText, TranslationInput("Continue")),
-            TranslationInputMap(instructionLabelText, TranslationInput("Enter the code sent to your device:")),
-            TranslationInputMap(
-                instructionViewSubtitleLabelText,
-                TranslationInput(
-                    "A verification code was sent to your device. It may take a minute or so to arrive.",
-                ),
-            ),
-            TranslationInputMap(instructionViewTitleLabelText, TranslationInput("Enter Verification Code")),
-        )
 }

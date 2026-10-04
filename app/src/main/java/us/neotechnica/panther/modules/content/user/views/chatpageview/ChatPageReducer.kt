@@ -9,35 +9,23 @@
 package us.neotechnica.panther.modules.content.user.views.chatpageview
 
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
+import us.neotechnica.panther.modules.common.services.AnalyticsService
+import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.content.user.extensions.chatPageHeaderLabelText
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.content.user.services.AudioMessagePlaybackService
 import us.neotechnica.panther.modules.content.user.services.ContextMenuActionHandlerService
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentNavigatorState
-import us.neotechnica.panther.navigation.UserContentRoute
-import us.neotechnica.panther.navigation.navigation
-import us.neotechnica.panther.modules.common.services.AnalyticsService
-import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.message.models.AudioMessageReference
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.extensions.cachedMediaFile
-import us.neotechnica.panther.modules.session.entity.extensions.cachedTranslation
-import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
-import us.neotechnica.panther.modules.session.entity.extensions.isAudioMessage
-import us.neotechnica.panther.modules.session.entity.extensions.isMediaMessage
-import us.neotechnica.panther.modules.session.entity.extensions.resolvedAudioReference
-import us.neotechnica.panther.modules.session.entity.extensions.resolvedMediaFile
-import us.neotechnica.panther.modules.session.entity.extensions.resolvedTranslation
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
-import us.neotechnica.panther.modules.content.user.services.ReadReceiptService
-import us.neotechnica.panther.modules.session.entity.services.ReactionSessionService
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
 import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.navigation.Route
+import us.neotechnica.panther.navigation.UserContentNavigatorState
+import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
@@ -294,7 +282,9 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
      * was pushed over it, as opposed to the conversation being left.
      */
     private fun isCoveredBySubPage(conversationIDKey: String): Boolean {
-        val topPath = DependencyValues.current.navigation.state.value.userContent.stack.lastOrNull()
+        val topPath =
+            DependencyValues.current.navigation.state.value.userContent.stack
+                .lastOrNull()
         return when (topPath) {
             is UserContentNavigatorState.SeguePath.ChatInfo -> topPath.conversationIDKey == conversationIDKey
             else -> false
@@ -321,24 +311,6 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             resolveEffect(messages, state.languageCode, translations, media, state.audioByID),
         )
     }
-
-    private fun reactEffect(
-        message: Message,
-        style: Reaction.Style,
-    ): Effect<Action> =
-        Effect.run {
-            val currentUserID = User.currentUserID ?: return@run
-            try {
-                ReactionSessionService.react(Reaction(style, currentUserID), message)
-            } catch (exception: Exception) {
-                Logger.log(exception, with = AlertType.toast)
-            }
-        }
-
-    private fun sendMediaEffect(mediaFile: MediaFile): Effect<Action> =
-        Effect.run {
-            MessageDeliveryService.sendMediaMessage(mediaFile)
-        }
 
     private fun speakEffect(
         state: State,
@@ -395,19 +367,4 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             if (resolvedAudio.isNotEmpty()) send(Action.AudioResolved(resolvedAudio))
             markCurrentConversationAsRead()
         }
-
-    private fun sendEffect(text: String): Effect<Action> =
-        Effect.run {
-            MessageDeliveryService.sendTextMessage(text)
-        }
-
-    private fun markReadEffect(): Effect<Action> = Effect.run { markCurrentConversationAsRead() }
-
-    private suspend fun markCurrentConversationAsRead() {
-        try {
-            ReadReceiptService.updateReadDateForUnreadMessages()
-        } catch (exception: Exception) {
-            Logger.log(exception)
-        }
-    }
 }

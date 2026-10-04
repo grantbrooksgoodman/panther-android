@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.isNewChatPageDoneToolbarButtonEnabled
+import us.neotechnica.panther.bundle.messageOutboxDidChange
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.MessageInputBar
@@ -51,10 +52,10 @@ import us.neotechnica.panther.modules.common.services.InviteService
 import us.neotechnica.panther.modules.content.user.components.ContactPairCellView
 import us.neotechnica.panther.modules.content.user.components.ContentPickers
 import us.neotechnica.panther.modules.content.user.components.DeliveryProgressView
-import us.neotechnica.panther.modules.content.user.components.anyOutboxSending
-import us.neotechnica.panther.modules.content.user.components.rememberRegisteredDeliveryProgressIndicatorService
 import us.neotechnica.panther.modules.content.user.components.RecipientBar
+import us.neotechnica.panther.modules.content.user.components.anyOutboxSending
 import us.neotechnica.panther.modules.content.user.components.rememberContentPickers
+import us.neotechnica.panther.modules.content.user.components.rememberRegisteredDeliveryProgressIndicatorService
 import us.neotechnica.panther.modules.content.user.constants.NewChatPageViewFloats
 import us.neotechnica.panther.modules.content.user.extensions.hasContactsBesidesCurrentUser
 import us.neotechnica.panther.modules.content.user.extensions.syncIfNeeded
@@ -65,7 +66,6 @@ import us.neotechnica.panther.modules.content.user.views.contactselectorpageview
 import us.neotechnica.panther.modules.content.user.views.newchatpageview.NewChatPageReducer.Action
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
-import us.neotechnica.panther.modules.session.entity.extensions.messageOutboxDidChange
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.navigation.ChatNavigatorState
 import us.neotechnica.panther.navigation.ChatRoute

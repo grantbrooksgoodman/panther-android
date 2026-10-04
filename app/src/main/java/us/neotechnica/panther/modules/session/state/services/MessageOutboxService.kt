@@ -7,7 +7,7 @@
 
 package us.neotechnica.panther.modules.session.state.services
 
-import us.neotechnica.panther.modules.session.entity.extensions.messageOutboxDidChange
+import us.neotechnica.panther.bundle.messageOutboxDidChange
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated

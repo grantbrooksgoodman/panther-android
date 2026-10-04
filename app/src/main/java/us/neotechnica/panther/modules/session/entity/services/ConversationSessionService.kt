@@ -28,10 +28,10 @@ import us.neotechnica.panther.modules.session.entity.extensions.asDisplayMessage
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.modules.session.entity.extensions.filteringSystemMessages
 import us.neotechnica.panther.modules.session.entity.extensions.hydrated
-import us.neotechnica.panther.modules.session.entity.extensions.messageOutboxDidChange
+import us.neotechnica.panther.bundle.messageOutboxDidChange
 import us.neotechnica.panther.modules.session.entity.extensions.messages
 import us.neotechnica.panther.modules.session.entity.extensions.offsetFromCurrentUserAdditionDate
-import us.neotechnica.panther.modules.session.entity.extensions.sessionStoreDidChange
+import us.neotechnica.panther.bundle.sessionStoreDidChange
 import us.neotechnica.panther.modules.session.entity.extensions.sortedByAscendingSentDate
 import us.neotechnica.panther.modules.session.entity.extensions.uniquedByID
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange

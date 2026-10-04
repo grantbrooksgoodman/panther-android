@@ -11,10 +11,12 @@ package us.neotechnica.panther.modules.content.onboarding.views.verifynumberpage
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.common.extensions.partiallyFormatted
+import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.common.services.PhoneNumberService
 import us.neotechnica.panther.modules.common.services.RegionDetailService
-import us.neotechnica.panther.modules.content.onboarding.models.InstructionViewStrings
+import us.neotechnica.panther.modules.content.onboarding.components.InstructionViewStrings
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
+import us.neotechnica.panther.modules.networking.user.services.UserService
 import us.neotechnica.panther.navigation.OnboardingNavigatorState
 import us.neotechnica.panther.navigation.OnboardingRoute
 import us.neotechnica.panther.navigation.Route
@@ -22,13 +24,8 @@ import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.auth.extensions.notReportableForAuthCodes
 import us.neotechnica.panther.networking.modules.common.extensions.digits
-import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.networking.modules.translation.extensions.value
-import us.neotechnica.panther.networking.modules.translation.interfaces.TranslatedLabelStrings
-import us.neotechnica.panther.networking.modules.translation.models.TranslatedLabelStringCollection
-import us.neotechnica.panther.networking.modules.translation.models.TranslationInputMap
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
-import us.neotechnica.panther.modules.networking.user.services.UserService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
@@ -39,7 +36,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStora
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
 import us.neotechnica.panther.translator.Translator
-import us.neotechnica.panther.translator.models.TranslationInput
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -292,30 +288,4 @@ class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNum
 
         const val CONTINUE_DELAY_MILLIS = 100L
     }
-}
-
-/** The translated label strings for the phone-number entry page. */
-object VerifyNumberPageViewStrings : TranslatedLabelStrings {
-    val backButtonText = TranslatedLabelStringCollection("verifyNumberPageView.backButtonText")
-    val continueButtonText = TranslatedLabelStringCollection("verifyNumberPageView.continueButtonText")
-    val instructionLabelText = TranslatedLabelStringCollection("verifyNumberPageView.instructionLabelText")
-    val instructionViewTitleLabelText =
-        TranslatedLabelStringCollection("verifyNumberPageView.instructionViewTitleLabelText")
-    val instructionViewSubtitleLabelText =
-        TranslatedLabelStringCollection("verifyNumberPageView.instructionViewSubtitleLabelText")
-
-    override val keyPairs: List<TranslationInputMap> =
-        listOf(
-            TranslationInputMap(backButtonText, TranslationInput("Back", alternate = "Go back")),
-            TranslationInputMap(continueButtonText, TranslationInput("Continue")),
-            TranslationInputMap(instructionLabelText, TranslationInput("Enter your phone number below:")),
-            TranslationInputMap(instructionViewTitleLabelText, TranslationInput("Enter Phone Number")),
-            TranslationInputMap(
-                instructionViewSubtitleLabelText,
-                TranslationInput(
-                    "Next, enter your phone number.\n\nA verification code will be sent to your number. " +
-                        "Standard messaging rates apply.",
-                ),
-            ),
-        )
 }

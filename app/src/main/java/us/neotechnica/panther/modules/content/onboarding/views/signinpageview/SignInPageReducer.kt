@@ -11,9 +11,13 @@ package us.neotechnica.panther.modules.content.onboarding.views.signinpageview
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.common.extensions.partiallyFormatted
+import us.neotechnica.panther.modules.common.models.PhoneNumber
+import us.neotechnica.panther.modules.common.services.AnalyticsService
+import us.neotechnica.panther.modules.common.services.AnalyticsService.AnalyticsEvent
 import us.neotechnica.panther.modules.common.services.PhoneNumberService
 import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
+import us.neotechnica.panther.modules.networking.user.services.UserService
 import us.neotechnica.panther.navigation.OnboardingNavigatorState
 import us.neotechnica.panther.navigation.OnboardingRoute
 import us.neotechnica.panther.navigation.RootNavigatorState
@@ -23,15 +27,8 @@ import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.auth.extensions.notReportableForAuthCodes
 import us.neotechnica.panther.networking.modules.common.extensions.digits
-import us.neotechnica.panther.modules.common.services.AnalyticsService
-import us.neotechnica.panther.modules.common.services.AnalyticsService.AnalyticsEvent
-import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.networking.modules.translation.extensions.value
-import us.neotechnica.panther.networking.modules.translation.interfaces.TranslatedLabelStrings
-import us.neotechnica.panther.networking.modules.translation.models.TranslatedLabelStringCollection
-import us.neotechnica.panther.networking.modules.translation.models.TranslationInputMap
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
-import us.neotechnica.panther.modules.networking.user.services.UserService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.effect.cancel
@@ -48,7 +45,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStora
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
 import us.neotechnica.panther.translator.Translator
-import us.neotechnica.panther.translator.models.TranslationInput
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -453,28 +449,4 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
         const val DEVELOPER_NATIONAL_NUMBER = "5558885555"
         const val DEVELOPER_CODE = "000000"
     }
-}
-
-/** The translated label strings for the sign-in page. */
-object SignInPageViewStrings : TranslatedLabelStrings {
-    val backButtonText = TranslatedLabelStringCollection("signInPageView.backButtonText")
-    val phoneNumberContinueButtonText = TranslatedLabelStringCollection("signInPageView.phoneNumberContinueButtonText")
-    val verificationCodeContinueButtonText =
-        TranslatedLabelStringCollection("signInPageView.verificationCodeContinueButtonText")
-    val phoneNumberInstructionLabelText =
-        TranslatedLabelStringCollection("signInPageView.phoneNumberInstructionLabelText")
-    val verificationCodeInstructionLabelText =
-        TranslatedLabelStringCollection("signInPageView.verificationCodeInstructionLabelText")
-
-    override val keyPairs: List<TranslationInputMap> =
-        listOf(
-            TranslationInputMap(backButtonText, TranslationInput("Back", alternate = "Go back")),
-            TranslationInputMap(phoneNumberContinueButtonText, TranslationInput("Continue")),
-            TranslationInputMap(verificationCodeContinueButtonText, TranslationInput("Finish")),
-            TranslationInputMap(phoneNumberInstructionLabelText, TranslationInput("Enter your phone number below:")),
-            TranslationInputMap(
-                verificationCodeInstructionLabelText,
-                TranslationInput("Enter the code sent to your device:"),
-            ),
-        )
 }

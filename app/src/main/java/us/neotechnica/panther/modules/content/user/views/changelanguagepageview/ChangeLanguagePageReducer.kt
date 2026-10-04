@@ -1,6 +1,6 @@
 //
 //  ChangeLanguagePageReducer.kt
-//  Panther
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman on 22/09/2026.
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
@@ -8,14 +8,13 @@
 
 package us.neotechnica.panther.modules.content.user.views.changelanguagepageview
 
+import us.neotechnica.panther.bundle.traitCollectionChanged
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
-import us.neotechnica.panther.modules.content.onboarding.models.InstructionViewStrings
-import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentRoute
-import us.neotechnica.panther.navigation.navigation
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.modules.content.onboarding.components.InstructionViewStrings
 import us.neotechnica.panther.modules.content.user.services.ChangeLanguagePageViewService
+import us.neotechnica.panther.modules.content.user.services.SettingsPageViewService
+import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
+import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
@@ -25,6 +24,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
+import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 
 /**
  * The reducer that drives the change-language page.
@@ -37,13 +37,12 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
  *
  * - On appearance, the page builds its language list from the localized
  *   language-name dictionary, selecting the app's current language by
- *   default, and resolves its translated display strings, remaining in the
- *   loading state until resolution completes. If resolution fails, the page
- *   falls back to its default strings and loads anyway.
- * - The confirm button is enabled only while the selected language differs
- *   from the current language.
- * - Tapping confirm asks the user to confirm, then applies the selected
- *   language and returns to Settings.
+ *   default, and resolves its translated display strings, remaining in
+ *   the loading state until resolution completes. If resolution fails,
+ *   the page falls back to its default strings and loads anyway.
+ * - The confirm button is enabled only while the selected language
+ *   differs from the current language.
+ * - Tapping confirm applies the selected language.
  */
 class ChangeLanguagePageReducer : Reducer<ChangeLanguagePageReducer.State, ChangeLanguagePageReducer.Action> {
     // MARK: - Action
@@ -51,7 +50,7 @@ class ChangeLanguagePageReducer : Reducer<ChangeLanguagePageReducer.State, Chang
     sealed interface Action {
         data object ViewAppeared : Action
 
-        data object BackTapped : Action
+        data object ViewDisappeared : Action
 
         data object ConfirmButtonTapped : Action
 
@@ -96,6 +95,7 @@ class ChangeLanguagePageReducer : Reducer<ChangeLanguagePageReducer.State, Chang
     ): ReduceResult<State, Action> =
         when (action) {
             Action.ViewAppeared -> {
+                SettingsPageViewService.isMainPagePresented = false
                 val displayNames = LocalizedStringResolver.languageDisplayNames()
                 val languages = displayNames.values.sorted()
                 val selected = displayNames[RuntimeStorage.languageCode] ?: languages.firstOrNull() ?: ""
@@ -110,8 +110,10 @@ class ChangeLanguagePageReducer : Reducer<ChangeLanguagePageReducer.State, Chang
                 )
             }
 
-            Action.BackTapped -> {
-                DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
+            Action.ViewDisappeared -> {
+                SettingsPageViewService.isMainPagePresented = true
+                val sharedEvents = DependencyValues.current.sharedEvents
+                sharedEvents.traitCollectionChanged.send(Unit)
                 ReduceResult(state)
             }
 
@@ -158,5 +160,4 @@ class ChangeLanguagePageReducer : Reducer<ChangeLanguagePageReducer.State, Chang
                 send(Action.ResolveFailed(exception))
             }
         }
-
 }

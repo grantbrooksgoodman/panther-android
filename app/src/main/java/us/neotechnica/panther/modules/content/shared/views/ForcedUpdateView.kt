@@ -30,9 +30,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.common.extensions.isForcedUpdateRequired
 import us.neotechnica.panther.modules.common.services.UpdateService
 import us.neotechnica.panther.subsystem.modules.shared.models.SharedState
+import us.neotechnica.panther.subsystem.modules.shared.models.isForcedUpdateRequired
 
 /**
  * Renders the blocking forced-update modal when a forced update is

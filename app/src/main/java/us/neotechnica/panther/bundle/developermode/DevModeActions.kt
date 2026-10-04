@@ -21,7 +21,6 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.TextFieldAttr
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAlert
 import us.neotechnica.panther.designsystem.modules.developermode.interfaces.DevModeAppActionDelegate
 import us.neotechnica.panther.designsystem.modules.developermode.models.DevModeAction
-import us.neotechnica.panther.modules.common.extensions.isForcedUpdateRequired
 import us.neotechnica.panther.modules.session.entity.extensions.UserSessionServiceStorageKey
 import us.neotechnica.panther.navigation.RootNavigatorState
 import us.neotechnica.panther.navigation.RootRoute
@@ -31,6 +30,7 @@ import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.Dep
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.shared.models.SharedState
+import us.neotechnica.panther.subsystem.modules.shared.models.isForcedUpdateRequired
 
 /**
  * The delegate that supplies app-specific actions to the Developer Mode

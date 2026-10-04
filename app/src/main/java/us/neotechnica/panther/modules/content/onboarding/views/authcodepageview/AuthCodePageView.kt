@@ -29,14 +29,14 @@ import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.onboarding.components.InstructionView
 import us.neotechnica.panther.modules.content.onboarding.constants.AuthCodePageViewFloats
-import us.neotechnica.panther.modules.content.shared.components.UnderlinedTextField
+import us.neotechnica.panther.modules.content.shared.components.GenericTextField
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 
 // MARK: - Constants Accessors
 
 private typealias Floats = AuthCodePageViewFloats
-private typealias Strings = us.neotechnica.panther.modules.content.onboarding.constants.AuthCodePageViewStrings
+private typealias Strings = us.neotechnica.panther.modules.content.onboarding.constants.AuthCodePageViewConstants
 
 /**
  * The onboarding page for entering the verification code during
@@ -74,7 +74,7 @@ fun AuthCodePageView(modifier: Modifier = Modifier) {
                     modifier = Modifier.padding(vertical = Floats.instructionLabelVerticalPadding),
                 )
 
-                UnderlinedTextField(
+                GenericTextField(
                     value = state.verificationCode,
                     placeholder = Strings.TEXT_FIELD_PLACEHOLDER,
                     onValueChange = { viewModel.send(AuthCodePageReducer.Action.VerificationCodeChanged(it)) },

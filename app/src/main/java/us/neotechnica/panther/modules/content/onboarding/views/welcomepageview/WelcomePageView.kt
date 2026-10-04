@@ -9,6 +9,8 @@
 package us.neotechnica.panther.modules.content.onboarding.views.welcomepageview
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -81,10 +83,15 @@ fun WelcomePageView(modifier: Modifier = Modifier) {
                 color = colors.titleText,
                 font = Font.systemBold(FontScale.Large),
                 modifier =
-                    Modifier.padding(
-                        horizontal = Floats.instructionLabelHorizontalPadding,
-                        vertical = Floats.instructionLabelVerticalPadding,
-                    ),
+                    Modifier
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) { viewModel.send(WelcomePageReducer.Action.WelcomeLabelTapped) }
+                        .padding(
+                            horizontal = Floats.instructionLabelHorizontalPadding,
+                            vertical = Floats.instructionLabelVerticalPadding,
+                        ),
             )
 
             Components.CapsuleButton(

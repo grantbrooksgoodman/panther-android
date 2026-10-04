@@ -1,6 +1,6 @@
 //
-//  PhoneNumberVisualTransformation.kt
-//  Panther
+//  PhoneNumberTextField.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman on 23/08/2026.
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
@@ -8,11 +8,49 @@
 
 package us.neotechnica.panther.modules.content.shared.components
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import com.google.i18n.phonenumbers.PhoneNumberUtil
+import us.neotechnica.panther.modules.common.services.PhoneNumberService
+import us.neotechnica.panther.networking.modules.common.extensions.digits
+
+/**
+ * A text field that formats an entered phone number as the user types.
+ *
+ * Use [PhoneNumberTextField] to accept phone number input for a specific
+ * region. The field displays an example number for [regionCode] as its
+ * placeholder and reformats the entered digits into a partially
+ * formatted national number whenever the text or region changes. The
+ * underlying edit buffer stays plain digits; [onValueChange] reports
+ * those digits.
+ *
+ * @param value The entered national number, as raw digits.
+ * @param onValueChange Called with the edited number's raw digits.
+ * @param regionCode The region whose formatting and placeholder to use.
+ * @param modifier The modifier for this field.
+ */
+@Composable
+fun PhoneNumberTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    regionCode: String,
+    modifier: Modifier = Modifier,
+) {
+    GenericTextField(
+        value = value,
+        placeholder = PhoneNumberService.exampleNationalNumberString(regionCode),
+        onValueChange = { onValueChange(it.digits) },
+        keyboardType = KeyboardType.Phone,
+        visualTransformation = remember(regionCode) { PhoneNumberVisualTransformation(regionCode) },
+        modifier = modifier,
+    )
+}
 
 /**
  * A [VisualTransformation] that displays a raw-digit phone number

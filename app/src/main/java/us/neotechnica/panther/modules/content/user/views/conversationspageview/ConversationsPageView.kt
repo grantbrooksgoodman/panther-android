@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import us.neotechnica.panther.bundle.conversationsPageReappeared
 import us.neotechnica.panther.bundle.conversationsSearchQuery
 import us.neotechnica.panther.bundle.reloadingConversationIDKeys
+import us.neotechnica.panther.bundle.sessionStoreDidChange
 import us.neotechnica.panther.bundle.traitCollectionChanged
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
@@ -58,7 +59,6 @@ import us.neotechnica.panther.modules.content.user.constants.ConversationCellVie
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewStrings
 import us.neotechnica.panther.modules.content.user.constants.ConversationsPageViewFloats
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.session.entity.extensions.sessionStoreDidChange
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
