@@ -7,6 +7,7 @@
 
 package us.neotechnica.panther.modules.networking.conversation.models
 
+import androidx.compose.ui.graphics.Color
 import us.neotechnica.panther.networking.modules.common.extensions.decodingFailure
 import us.neotechnica.panther.networking.modules.common.interfaces.Serializable
 import us.neotechnica.panther.networking.modules.common.interfaces.SerializableDecoder
@@ -65,6 +66,18 @@ data class Reaction(
                     LAUGH -> 3
                     EMPHASIS -> 4
                     QUESTION -> 5
+                }
+
+        /** The background color of the style's square icon. */
+        val squareIconBackgroundColor: Color
+            get() =
+                when (this) {
+                    DISLIKE -> Color(0xFFFF5252)
+                    EMPHASIS -> Color(0xFF0FB9B1)
+                    LAUGH -> Color(0xFFC56CF0)
+                    LIKE -> Color(0xFF27AE60)
+                    LOVE -> Color(0xFF30AAF2)
+                    QUESTION -> Color(0xFFFFB142)
                 }
 
         companion object {

@@ -1,6 +1,6 @@
 //
 //  ChatInfoPageView.kt
-//  Panther
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman on 20/08/2026.
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
@@ -59,9 +59,10 @@ import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.contacts.components.rememberContactCardPresenter
-import us.neotechnica.panther.modules.common.services.RegionDetailService
+import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.content.user.components.AddContactButton
 import us.neotechnica.panther.modules.content.user.components.ChatInfoContactSelectorHost
+import us.neotechnica.panther.modules.content.user.components.ChatParticipantView
 import us.neotechnica.panther.modules.content.user.components.MediaItemView
 import us.neotechnica.panther.modules.content.user.components.MediaPreviewOverlay
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewColors
@@ -70,22 +71,15 @@ import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewFlo
 import us.neotechnica.panther.modules.content.user.extensions.chatInfoPageLoadingStateUpdated
 import us.neotechnica.panther.modules.content.user.extensions.currentConversationActivityChanged
 import us.neotechnica.panther.modules.content.user.extensions.displayName
+import us.neotechnica.panther.modules.content.user.models.ChatParticipant
 import us.neotechnica.panther.modules.content.user.models.MediaItemViewData
 import us.neotechnica.panther.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
-import us.neotechnica.panther.navigation.ChatRoute
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.navigation
-import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
-import us.neotechnica.panther.modules.session.entity.extensions.users
 import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
-import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
@@ -104,9 +98,12 @@ private typealias Colors = ChatInfoPageViewColors
 private typealias Strings = ChatInfoPageViewConstants
 
 /**
- * A conversation's info page: a large avatar, the conversation
- * title, and — for groups — a rename action, an expandable
- * participants card with an add-contact row, and a leave action.
+ * A conversation's info page.
+ *
+ * For a group: a large avatar, the conversation title, a rename
+ * action, an expandable participants card whose rows swipe to remove
+ * and tap to open a contact card, and a leave action. For a
+ * one-to-one conversation: the other participant's contact card.
  *
  * @param conversationIDKey The identifier key of the conversation.
  * @param modifier The modifier for this view.
@@ -116,11 +113,10 @@ fun ChatInfoPageView(
     conversationIDKey: String,
     modifier: Modifier = Modifier,
 ) {
-    val navigation = remember { DependencyValues.current.navigation }
     val viewModel = remember { buildChatInfoViewModel() }
     DisposableEffect(Unit) {
         onDispose {
-            navigation.navigate(Route.Chat(ChatRoute.Sheet(null)))
+            viewModel.send(ChatInfoPageReducer.Action.ViewDisappeared)
             viewModel.close()
         }
     }
@@ -132,9 +128,9 @@ fun ChatInfoPageView(
     val colors = LocalPantherColors.current
     val conversation = state.conversation
     var previewIndex by remember { mutableStateOf<Int?>(null) }
-    val showMediaSegment = state.mediaItems.isNotEmpty() && state.selectedSegment == 1
+    val showMediaSegment = state.mediaItems.isNotEmpty() && state.segmentedControlSelectionIndex == 1
     val presentContactCard = rememberContactCardPresenter()
-    val singleContact = conversation?.takeUnless { state.isGroup }?.let { otherParticipants(it).firstOrNull() }
+    val singleParticipant = conversation?.takeUnless { state.isGroup }?.let { state.chatParticipants.firstOrNull() }
 
     GroupPhotoCaptureEffect(state.photoCaptureRequest, viewModel)
 
@@ -150,60 +146,27 @@ fun ChatInfoPageView(
             ) {
                 ChatInfoHeader(
                     conversation = conversation,
+                    title = state.chatTitleLabelText,
                     isGroup = state.isGroup,
-                    onDone = { viewModel.send(ChatInfoPageReducer.Action.BackTapped) },
-                    onContactTap = singleContact?.let { { presentContactCard(it.phoneNumber, it.displayName) } },
+                    onDone = { viewModel.send(ChatInfoPageReducer.Action.DoneHeaderItemTapped) },
+                    onContactTap =
+                        singleParticipant?.firstUser?.let { user ->
+                            { presentContactCard(user.phoneNumber, user.displayName) }
+                        },
                 )
 
                 if (state.isGroup && conversation != null) {
-                    Components.CapsuleButton(
-                        state.strings.value(ChatInfoPageViewStrings.changeMetadataButtonText),
-                        onClick = { viewModel.send(ChatInfoPageReducer.Action.ChangeMetadataTapped) },
-                        primary = true,
-                        modifier =
-                            Modifier
-                                .padding(top = Floats.changeNameTopPadding)
-                                .padding(bottom = Floats.changeNameBottomPadding),
+                    GroupContent(
+                        state = state,
+                        viewModel = viewModel,
+                        showMediaSegment = showMediaSegment,
+                        presentContactCard = presentContactCard,
+                        onPreviewIndexChange = { previewIndex = it },
                     )
-                }
-
-                if (state.mediaItems.isNotEmpty()) {
-                    SegmentedControl(
-                        titles =
-                            listOf(
-                                state.strings.value(ChatInfoPageViewStrings.segmentedControlParticipantsOptionText),
-                                state.strings.value(ChatInfoPageViewStrings.segmentedControlMediaOptionText),
-                            ),
-                        selectedIndex = state.selectedSegment,
-                        onSelect = { viewModel.send(ChatInfoPageReducer.Action.SegmentChanged(it)) },
-                    )
-                }
-
-                if (showMediaSegment) {
-                    MediaList(items = state.mediaItems, onTap = { previewIndex = it })
-                } else if (state.isGroup && conversation != null) {
-                    ParticipantsCard(
-                        participants = otherParticipants(conversation),
-                        isExpanded = state.isExpanded,
-                        strings = state.strings,
-                        showAddContact = state.visibleParticipantsIncrement == 1,
-                        isAddContactEnabled = state.isAddContactButtonEnabled,
-                        onToggle = { viewModel.send(ChatInfoPageReducer.Action.ToggleExpanded) },
-                        onAddContact = { viewModel.send(ChatInfoPageReducer.Action.AddContactButtonTapped) },
-                        onParticipantTap = { viewModel.send(ChatInfoPageReducer.Action.ParticipantTapped(it.userID)) },
-                    )
-
-                    LeaveRow(
-                        enabled = otherParticipants(conversation).size > 2,
-                        text = state.strings.value(ChatInfoPageViewStrings.leaveConversation),
-                        onClick = { viewModel.send(ChatInfoPageReducer.Action.LeaveTapped) },
-                    )
-                } else if (conversation != null) {
-                    OneToOneActionsCard(
-                        onBlock = { viewModel.send(ChatInfoPageReducer.Action.BlockTapped) },
-                        onReport = { viewModel.send(ChatInfoPageReducer.Action.ReportTapped) },
-                        onDelete = { viewModel.send(ChatInfoPageReducer.Action.DeleteTapped) },
-                    )
+                } else if (singleParticipant != null) {
+                    SingleContactCard(singleParticipant) {
+                        singleParticipant.firstUser?.let { presentContactCard(it.phoneNumber, it.displayName) }
+                    }
                 }
 
                 Spacer(modifier = Modifier.padding(bottom = Floats.bottomSpacerPadding))
@@ -222,11 +185,73 @@ fun ChatInfoPageView(
     }
 }
 
+// MARK: - Group Content
+
+@Composable
+@Suppress("LongParameterList")
+private fun GroupContent(
+    state: ChatInfoPageReducer.State,
+    viewModel: ViewModel<ChatInfoPageReducer.State, ChatInfoPageReducer.Action>,
+    showMediaSegment: Boolean,
+    presentContactCard: (PhoneNumber?, String?) -> Unit,
+    onPreviewIndexChange: (Int?) -> Unit,
+) {
+    Components.CapsuleButton(
+        state.strings.value(ChatInfoPageViewStrings.changeMetadataButtonText),
+        onClick = { viewModel.send(ChatInfoPageReducer.Action.ChangeMetadataButtonTapped) },
+        primary = true,
+        isEnabled = state.isChangeMetadataButtonEnabled,
+        modifier =
+            Modifier
+                .padding(top = Floats.changeNameTopPadding)
+                .padding(bottom = Floats.changeNameBottomPadding),
+    )
+
+    if (state.mediaItems.isNotEmpty()) {
+        SegmentedControl(
+            titles =
+                listOf(
+                    state.strings.value(ChatInfoPageViewStrings.segmentedControlParticipantsOptionText),
+                    state.strings.value(ChatInfoPageViewStrings.segmentedControlMediaOptionText),
+                ),
+            selectedIndex = state.segmentedControlSelectionIndex,
+            onSelect = { viewModel.send(ChatInfoPageReducer.Action.SegmentedControlSelectionIndexChanged(it)) },
+        )
+    }
+
+    if (showMediaSegment) {
+        MediaList(items = state.mediaItems, onTap = { onPreviewIndexChange(it) })
+    } else {
+        ParticipantsCard(
+            participants = state.visibleParticipants,
+            allParticipants = state.chatParticipants,
+            isExpanded = state.visibleParticipants.isNotEmpty(),
+            strings = state.strings,
+            showAddContact = state.visibleParticipantsIncrement == 1,
+            isAddContactEnabled = state.isAddContactButtonEnabled,
+            showsRemoveUserSwipeAction = state.showsRemoveUserSwipeAction,
+            onToggle = { viewModel.send(ChatInfoPageReducer.Action.ChatInfoCellTapped) },
+            onAddContact = { viewModel.send(ChatInfoPageReducer.Action.AddContactButtonTapped) },
+            onParticipantTap = { participant -> presentContactCard(participant.firstUser?.phoneNumber, participant.displayName) },
+            onUserInfoBadgeTapped = { viewModel.send(ChatInfoPageReducer.Action.UserInfoBadgeTapped(it.firstUser)) },
+            onRemove = { viewModel.send(ChatInfoPageReducer.Action.RemoveUserButtonTapped(it)) },
+        )
+    }
+
+    // The leave row shows under both segments.
+    LeaveRow(
+        enabled = state.isLeaveConversationButtonEnabled,
+        text = state.strings.value(ChatInfoPageViewStrings.leaveConversation),
+        onClick = { viewModel.send(ChatInfoPageReducer.Action.LeaveConversationButtonTapped) },
+    )
+}
+
 // MARK: - Header
 
 @Composable
 private fun ChatInfoHeader(
     conversation: Conversation?,
+    title: String,
     isGroup: Boolean,
     onDone: () -> Unit,
     onContactTap: (() -> Unit)?,
@@ -252,8 +277,6 @@ private fun ChatInfoHeader(
         )
     }
 
-    // In a one-to-one conversation the avatar and name present the other
-    // participant's contact card (the iOS `singleCNContactContainer`).
     val contactTapModifier = if (onContactTap != null) Modifier.clickable(onClick = onContactTap) else Modifier
 
     AvatarImageView(
@@ -264,7 +287,7 @@ private fun ChatInfoHeader(
     )
 
     Components.Text(
-        conversation?.let { infoTitle(it) }.orEmpty(),
+        title,
         color = colors.titleText,
         font = Font.systemBold(FontScale.Large),
         textAlign = TextAlign.Center,
@@ -275,6 +298,31 @@ private fun ChatInfoHeader(
                 end = Floats.titleHorizontalPadding,
             ),
     )
+}
+
+// MARK: - Single Contact Card
+
+@Composable
+private fun SingleContactCard(
+    participant: ChatParticipant,
+    onTap: () -> Unit,
+) {
+    val colors = LocalPantherColors.current
+    val number = participant.firstUser?.phoneNumber?.formattedString() ?: return
+    InfoCard {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onTap)
+                    .padding(horizontal = Floats.cardHorizontalPadding, vertical = Floats.rowVerticalPadding),
+        ) {
+            Components.Text(number, color = colors.titleText, font = Font.systemSemibold())
+            Spacer(modifier = Modifier.weight(1f))
+            Components.Symbol("chevron.right", color = colors.subtitleText, modifier = Modifier.size(Floats.chevronGlyphSize))
+        }
+    }
 }
 
 // MARK: - Segmented Control
@@ -341,27 +389,37 @@ private fun MediaList(
 @Composable
 @Suppress("LongParameterList")
 private fun ParticipantsCard(
-    participants: List<ParticipantRowData>,
+    participants: List<ChatParticipant>,
+    allParticipants: List<ChatParticipant>,
     isExpanded: Boolean,
     strings: List<TranslationOutputMap>,
     showAddContact: Boolean,
     isAddContactEnabled: Boolean,
+    showsRemoveUserSwipeAction: Boolean,
     onToggle: () -> Unit,
     onAddContact: () -> Unit,
-    onParticipantTap: (ParticipantRowData) -> Unit,
+    onParticipantTap: (ChatParticipant) -> Unit,
+    onUserInfoBadgeTapped: (ChatParticipant) -> Unit,
+    onRemove: (ChatParticipant) -> Unit,
 ) {
     InfoCard {
         ParticipantsHeaderRow(
-            count = participants.size,
+            count = allParticipants.size,
             peopleText = strings.value(ChatInfoPageViewStrings.participantCountLabelText),
-            subtitle = participants.joinToString(Strings.PARTICIPANTS_SEPARATOR) { it.displayName },
+            subtitle = allParticipants.joinToString(Strings.PARTICIPANTS_SEPARATOR) { it.displayName },
             isExpanded = isExpanded,
             onToggle = onToggle,
         )
         if (isExpanded) {
             participants.forEach { participant ->
                 CardDivider()
-                ParticipantRow(participant, onTap = { onParticipantTap(participant) })
+                ChatParticipantView(
+                    participant = participant,
+                    showsRemoveUserSwipeAction = showsRemoveUserSwipeAction,
+                    onTap = { onParticipantTap(participant) },
+                    onUserInfoBadgeTapped = { onUserInfoBadgeTapped(participant) },
+                    onRemove = { onRemove(participant) },
+                )
             }
             if (showAddContact) {
                 CardDivider()
@@ -421,61 +479,6 @@ private fun ParticipantsHeaderRow(
     }
 }
 
-@Composable
-private fun ParticipantRow(
-    participant: ParticipantRowData,
-    onTap: () -> Unit,
-) {
-    val colors = LocalPantherColors.current
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onTap)
-                .padding(horizontal = Floats.cardHorizontalPadding, vertical = Floats.rowVerticalPadding),
-    ) {
-        AvatarImageView(
-            modifier = Modifier.size(Floats.rowAvatarSize),
-            initials = participant.initials,
-            glyphSize = Floats.rowAvatarGlyphSize,
-            initialsFont = Font.systemSemibold(FontScale.Small),
-        )
-        Components.Text(
-            participant.displayName,
-            color = colors.titleText,
-            font = Font.systemSemibold(),
-            modifier = Modifier.padding(start = Floats.rowTextStartPadding),
-        )
-        participant.languageCode?.let { LanguageBadge(it, participant.regionCode) }
-        Spacer(modifier = Modifier.weight(1f))
-        Components.Symbol("chevron.right", color = colors.subtitleText, modifier = Modifier.size(Floats.chevronGlyphSize))
-    }
-}
-
-@Composable
-private fun LanguageBadge(
-    languageCode: String,
-    regionCode: String?,
-) {
-    val colors = LocalPantherColors.current
-    val flag = regionCode?.let { RegionDetailService.emojiFlag(it) }.orEmpty()
-    val label = languageCode.uppercase() + if (flag.isNotEmpty()) " $flag" else ""
-    Box(
-        modifier =
-            Modifier
-                .padding(start = Floats.languageBadgeStartPadding)
-                .clip(RoundedCornerShape(Floats.languageBadgeCornerRadius))
-                .background(colors.groupedContentBackground)
-                .padding(
-                    horizontal = Floats.languageBadgeHorizontalPadding,
-                    vertical = Floats.languageBadgeVerticalPadding,
-                ),
-    ) {
-        Components.Text(label, color = colors.subtitleText, font = Font.systemMedium(FontScale.Small))
-    }
-}
-
 // MARK: - Actions
 
 @Composable
@@ -500,33 +503,6 @@ private fun LeaveRow(
             text,
             color = if (enabled) Colors.destructive else colors.subtitleText,
         )
-    }
-}
-
-@Composable
-private fun OneToOneActionsCard(
-    onBlock: () -> Unit,
-    onReport: () -> Unit,
-    onDelete: () -> Unit,
-) {
-    InfoCard {
-        ActionCardRow(Strings.BLOCK, onBlock)
-        CardDivider()
-        ActionCardRow(Strings.REPORT, onReport)
-        CardDivider()
-        ActionCardRow(Strings.DELETE_CONVERSATION, onDelete)
-    }
-}
-
-@Composable
-private fun ActionCardRow(
-    title: String,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(Floats.cardPadding),
-    ) {
-        Components.Text(title, color = Colors.destructive)
     }
 }
 
@@ -563,52 +539,15 @@ private fun buildChatInfoViewModel(): ViewModel<ChatInfoPageReducer.State, ChatI
         .observing(DependencyValues.current.sharedEvents.chatInfoPageLoadingStateUpdated.events) {
             ChatInfoPageReducer.Action.LoadingStateUpdated
         }.observing(DependencyValues.current.sharedEvents.currentConversationActivityChanged.events) {
-            ChatInfoPageReducer.Action.Reload
+            ChatInfoPageReducer.Action.CurrentConversationMetadataChanged
         }.observing(MessageDeliveryService.isSendingMessage) {
             ChatInfoPageReducer.Action.IsSendingMessageChanged(it)
         }
 
-private data class ParticipantRowData(
-    val userID: String,
-    val displayName: String,
-    val initials: String,
-    val languageCode: String?,
-    val regionCode: String?,
-    val phoneNumber: PhoneNumber?,
-)
-
-private fun otherParticipants(conversation: Conversation): List<ParticipantRowData> =
-    conversation.participants
-        .filter { it.userID != User.currentUserID }
-        .map { participant ->
-            val user = conversation.users?.firstOrNull { it.id == participant.userID } ?: SessionStore.users[participant.userID]
-            ParticipantRowData(
-                userID = participant.userID,
-                displayName = user?.displayName ?: participant.userID,
-                initials = user?.displayName?.contactInitials().orEmpty(),
-                languageCode = user?.languageCode,
-                regionCode = user?.phoneNumber?.regionCode,
-                phoneNumber = user?.phoneNumber,
-            )
-        }
-
-private fun infoTitle(conversation: Conversation): String {
-    val name = conversation.metadata.name
-    if (!name.isBangQualifiedEmpty && name.isNotBlank()) return name
-
-    val users = conversation.users.orEmpty()
-    val first = users.firstOrNull() ?: return Strings.UNKNOWN
-    val base = first.displayName
-    return if (users.size > 1) "$base${Strings.TITLE_ADDITIONAL_SEPARATOR}${users.size - 1}" else base
-}
-
-/** The uppercased first letters of each word of the name. */
-private fun String.contactInitials(): String = split(" ").mapNotNull { it.firstOrNull()?.uppercase() }.joinToString("")
-
 /**
  * Sets up the camera and photo-library launchers and, on each new
- * capture request, launches the chosen source, delivering the compressed
- * image data on selection.
+ * capture request, launches the chosen source, delivering the
+ * compressed image data on selection.
  */
 @Composable
 private fun GroupPhotoCaptureEffect(
@@ -620,18 +559,25 @@ private fun GroupPhotoCaptureEffect(
     val onImageData: (ByteArray) -> Unit = { viewModel.send(ChatInfoPageReducer.Action.SelectedImageChanged(it)) }
     val galleryLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-            uri ?: return@rememberLauncherForActivityResult
+            if (uri == null) {
+                viewModel.send(ChatInfoPageReducer.Action.PhotoPickerDismissed(null))
+                return@rememberLauncherForActivityResult
+            }
             scope.launch { compressAndDeliverGroupPhoto(uri, onImageData) }
         }
     var cameraUri by remember { mutableStateOf<Uri?>(null) }
     val cameraLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
             val uri = cameraUri
-            if (success && uri != null) scope.launch { compressAndDeliverGroupPhoto(uri, onImageData) }
+            if (success && uri != null) {
+                scope.launch { compressAndDeliverGroupPhoto(uri, onImageData) }
+            } else {
+                viewModel.send(ChatInfoPageReducer.Action.CameraPickerDismissed(null))
+            }
         }
     LaunchedEffect(request) {
         val source = request ?: return@LaunchedEffect
-        viewModel.send(ChatInfoPageReducer.Action.PhotoCaptureHandled)
+        viewModel.send(ChatInfoPageReducer.Action.PhotoCaptureHandled(source))
         when (source) {
             ChatInfoPageReducer.PhotoCaptureSource.CAMERA -> {
                 val uri = groupPhotoCaptureUri(context)
@@ -666,4 +612,3 @@ private fun groupPhotoCaptureUri(context: Context): Uri {
 private const val GROUP_PHOTO_COMPRESSION_SIZE_KB = 100
 private const val GROUP_PHOTO_DIRECTORY = "media"
 private const val GROUP_PHOTO_CAPTURE_NAME = "group-photo-capture.jpg"
-

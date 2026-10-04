@@ -86,8 +86,6 @@ import androidx.compose.material3.Text as Material3Text
  * @param onFailedIndicatorTapped Presents the retry/delete action sheet
  *   for the given failed outbox message ID.
  * @param onSaveMedia Saves the given media file to the device.
- * @param isHighlighted Whether the row is highlighted – for example,
- *   after being navigated to from search.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -100,7 +98,6 @@ fun ChatMessageCell(
     onSpeak: (String, String) -> Unit,
     onFailedIndicatorTapped: (String) -> Unit,
     onSaveMedia: (MediaFile) -> Unit,
-    isHighlighted: Boolean = false,
 ) {
     val colors = LocalPantherColors.current
     val message = row.message
@@ -109,7 +106,6 @@ fun ChatMessageCell(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(if (isHighlighted) colors.accent.copy(alpha = HIGHLIGHT_BACKGROUND_ALPHA) else Color.Transparent)
                 .padding(
                     horizontal = ChatMessageCellFloats.rowHorizontalPadding,
                     vertical = ChatMessageCellFloats.rowVerticalPadding,
@@ -208,6 +204,7 @@ private fun MessageContent(
                 alignment = alignment,
                 reactionChoices = reactionChoices,
                 alignsMenuCardToLeadingEdge = true,
+                menuKey = message.id,
                 onTap = { onTapMedia(message.id) },
                 header = { SenderNameLabel(row) },
             ) {
@@ -224,6 +221,7 @@ private fun MessageContent(
                 alignment = alignment,
                 reactionChoices = reactionChoices,
                 alignsMenuCardToLeadingEdge = true,
+                menuKey = message.id,
                 header = { SenderNameLabel(row) },
             ) {
                 if (row.isDisplayingAudioTranscription) {
@@ -253,6 +251,7 @@ private fun MessageContent(
                 alignment = alignment,
                 reactionChoices = reactionChoices,
                 alignsMenuCardToLeadingEdge = true,
+                menuKey = message.id,
                 header = { SenderNameLabel(row) },
             ) {
                 MessageBubble(
@@ -797,4 +796,3 @@ private fun isSameDay(
 private fun sanitized(value: String): String = value.replace("⁂", "").replace("⌘", "").replace("※", "")
 
 private const val SAVE_ACTION_IMAGE_SYSTEM_NAME = "square.and.arrow.down"
-private const val HIGHLIGHT_BACKGROUND_ALPHA = 0.12f

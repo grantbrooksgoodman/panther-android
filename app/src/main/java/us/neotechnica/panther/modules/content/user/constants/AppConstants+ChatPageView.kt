@@ -16,17 +16,6 @@ import androidx.compose.ui.unit.dp
 object ChatPageViewFloats {
     val failedOutboxIndicatorButtonSize: Dp = 22.dp
     val failedOutboxIndicatorButtonSpacing: Dp = 6.dp
-    val headerAvatarGlyphSize: Dp = 22.dp
-    val headerAvatarPillOverlap: Dp = 3.dp
-    val headerAvatarSize: Dp = 44.dp
-    val headerHorizontalPadding: Dp = 12.dp
-    val headerVerticalPadding: Dp = 8.dp
-    val pillChevronSize: Dp = 14.dp
-    val pillChevronStartPadding: Dp = 2.dp
-    val pillCornerRadius: Dp = 16.dp
-    val pillEndPadding: Dp = 8.dp
-    val pillStartPadding: Dp = 12.dp
-    val pillVerticalPadding: Dp = 4.dp
 }
 
 // MARK: - String

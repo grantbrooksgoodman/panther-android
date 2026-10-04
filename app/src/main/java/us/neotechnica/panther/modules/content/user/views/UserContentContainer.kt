@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -33,9 +34,7 @@ import us.neotechnica.panther.modules.content.user.constants.UserContentContaine
 import us.neotechnica.panther.modules.content.user.constants.UserContentContainerStrings
 import us.neotechnica.panther.modules.content.user.views.changelanguagepageview.ChangeLanguagePageView
 import us.neotechnica.panther.modules.content.shared.components.invitelanguagepickerview.InviteLanguagePickerView
-import us.neotechnica.panther.modules.content.user.views.inviteqrcodepageview.InviteQRCodePageView
 import us.neotechnica.panther.modules.content.user.views.chatinfopageview.ChatInfoPageView
-import us.neotechnica.panther.modules.content.user.views.reactiondetailspageview.ReactionDetailsPageView
 import us.neotechnica.panther.modules.content.user.views.chatpageview.ChatPageView
 import us.neotechnica.panther.modules.content.user.views.conversationspageview.ConversationsPageReducer
 import us.neotechnica.panther.modules.content.user.views.conversationspageview.ConversationsPageView
@@ -84,6 +83,19 @@ fun UserContentContainer(modifier: Modifier = Modifier) {
     DisposableEffect(Unit) {
         conversationsViewModel.send(ConversationsPageReducer.Action.ViewFirstAppeared)
         onDispose { conversationsViewModel.close() }
+    }
+
+    // The conversations list is always composed; map its coverage by a pushed
+    // page to the iOS appear/disappear lifecycle so returning to the root
+    // refreshes it.
+    LaunchedEffect(topPath == null) {
+        conversationsViewModel.send(
+            if (topPath == null) {
+                ConversationsPageReducer.Action.ViewAppeared
+            } else {
+                ConversationsPageReducer.Action.ViewDisappeared
+            },
+        )
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -153,9 +165,6 @@ fun UserContentContainer(modifier: Modifier = Modifier) {
                         is UserContentNavigatorState.SeguePath.ChatInfo ->
                             ChatInfoPageView(path.conversationIDKey, Modifier.fillMaxSize())
 
-                        is UserContentNavigatorState.SeguePath.ReactionDetails ->
-                            ReactionDetailsPageView(path.messageID, Modifier.fillMaxSize())
-
                         // Drawn edge-to-edge so its grouped background bleeds past the system bars,
                         // matching iOS; the page insets its own content.
                         UserContentNavigatorState.SeguePath.NewChat ->
@@ -170,11 +179,6 @@ fun UserContentContainer(modifier: Modifier = Modifier) {
                         // matching iOS; the page insets its own content.
                         UserContentNavigatorState.SeguePath.ChangeLanguage ->
                             ChangeLanguagePageView(Modifier.fillMaxSize())
-
-                        // Drawn edge-to-edge so its grouped background bleeds past the system bars,
-                        // matching iOS; the page insets its own content.
-                        UserContentNavigatorState.SeguePath.InviteQRCode ->
-                            InviteQRCodePageView(Modifier.fillMaxSize())
 
                         // Drawn edge-to-edge so its grouped background bleeds past the system bars,
                         // matching iOS; the page insets its own content.

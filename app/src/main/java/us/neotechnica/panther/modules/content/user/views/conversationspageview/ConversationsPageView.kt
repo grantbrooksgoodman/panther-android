@@ -1,6 +1,6 @@
 //
 //  ConversationsPageView.kt
-//  Panther
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman on 20/08/2026.
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
@@ -37,6 +37,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import us.neotechnica.panther.bundle.conversationsPageReappeared
+import us.neotechnica.panther.bundle.conversationsSearchQuery
+import us.neotechnica.panther.bundle.reloadingConversationIDKeys
+import us.neotechnica.panther.bundle.traitCollectionChanged
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
 import us.neotechnica.panther.designsystem.modules.componentkit.components.ContextMenuHost
@@ -53,18 +57,13 @@ import us.neotechnica.panther.modules.content.user.components.conversationcellvi
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewFloats
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewStrings
 import us.neotechnica.panther.modules.content.user.constants.ConversationsPageViewFloats
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentNavigatorState
-import us.neotechnica.panther.navigation.UserContentRoute
-import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.session.entity.extensions.sessionStoreDidChange
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
-import us.neotechnica.panther.subsystem.modules.foundation.services.Build
-import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
+import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedStates
 
 // MARK: - Constants Accessors
 
@@ -76,6 +75,8 @@ private typealias Floats = ConversationsPageViewFloats
  * pull-to-refresh. Long-pressing a row lifts it and shows a menu to
  * delete the conversation or block or report its participants.
  *
+ * @param viewModel The conversations page view model.
+ * @param listState The list's scroll state.
  * @param modifier The modifier for this view.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -87,8 +88,6 @@ fun ConversationsPageView(
 ) {
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
-    val languageCode = RuntimeStorage.languageCode
-    val navigation = remember { DependencyValues.current.navigation }
 
     ContextMenuHost(modifier = modifier) {
         StatefulView(state = state.viewState) {
@@ -96,21 +95,14 @@ fun ConversationsPageView(
             // the system bars; the list content insets itself below them here.
             Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
                 Header(
-                    onSettings = {
-                        navigation.navigate(
-                            Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePath.Settings)),
-                        )
-                    },
-                    onNewChat = {
-                        navigation.navigate(
-                            Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePath.NewChat)),
-                        )
-                    },
+                    showExtraButtons = state.shouldShowExtraToolbarButtons,
+                    onSettings = { viewModel.send(ConversationsPageReducer.Action.SettingsToolbarButtonTapped) },
+                    onNewChat = { viewModel.send(ConversationsPageReducer.Action.ComposeToolbarButtonTapped) },
                     onDeleteConversations = { viewModel.send(ConversationsPageReducer.Action.DeleteConversationsToolbarButtonTapped) },
                 )
 
                 Components.Text(
-                    state.strings.value(ConversationsPageViewStrings.navigationBarTitle),
+                    state.strings.value(ConversationsPageViewStrings.navigationTitle),
                     color = colors.titleText,
                     font = Font.systemBold(FontScale.Large),
                     modifier = Modifier.padding(horizontal = Floats.titleHorizontalPadding, vertical = Floats.titleVerticalPadding),
@@ -119,7 +111,10 @@ fun ConversationsPageView(
                 SearchBar(
                     value = state.searchQuery,
                     placeholder = state.strings.value(ConversationsPageViewStrings.searchBarPlaceholder),
-                    onValueChange = { viewModel.send(ConversationsPageReducer.Action.SearchQueryChanged(it)) },
+                    onValueChange = {
+                        viewModel.send(ConversationsPageReducer.Action.SearchQueryChanged(it))
+                        viewModel.send(ConversationsPageReducer.Action.IsSearchingChanged(it.isNotBlank()))
+                    },
                     modifier = Modifier.padding(horizontal = Floats.searchHorizontalPadding),
                 )
 
@@ -174,7 +169,7 @@ fun ConversationsPageView(
                                 )
                             }
                             items(conversations, key = { it.id.key }) { conversation ->
-                                ConversationCellMenu(conversation, languageCode, state.changeToken, state.searchQuery)
+                                ConversationCellMenu(conversation, state.searchQuery)
                                 HorizontalDivider(
                                     color = colors.groupedContentBackground,
                                     modifier = Modifier.padding(start = ConversationCellViewFloats.textInset),
@@ -196,14 +191,16 @@ fun ConversationsPageView(
 }
 
 /**
- * Builds the conversations page view-model, wired to session-store
- * changes. Hoisted to [UserContentContainer] so it – and the list's
- * scroll position – survive pushing to a chat and back.
+ * Builds the conversations page view-model, wired to session-store and
+ * trait-collection changes. Hoisted to `UserContentContainer` so it –
+ * and the list's scroll position – survive pushing to a chat and back.
  */
 internal fun buildConversationsPageViewModel(): ViewModel<ConversationsPageReducer.State, ConversationsPageReducer.Action> =
     ViewModel(ConversationsPageReducer.State(), ConversationsPageReducer())
         .observing(DependencyValues.current.sharedEvents.sessionStoreDidChange.events) {
             ConversationsPageReducer.Action.SessionStoreDidChange
+        }.observing(DependencyValues.current.sharedEvents.traitCollectionChanged.events) {
+            ConversationsPageReducer.Action.TraitCollectionChanged
         }
 
 // MARK: - Conversation Cell Menu
@@ -211,15 +208,26 @@ internal fun buildConversationsPageViewModel(): ViewModel<ConversationsPageReduc
 @Composable
 private fun ConversationCellMenu(
     conversation: Conversation,
-    languageCode: String,
-    changeToken: Any,
-    searchQuery: String,
+    initialSearchQuery: String,
 ) {
     val viewModel =
         remember(conversation.id.key) {
-            ViewModel(ConversationCellReducer.State(conversation.id.key), ConversationCellReducer())
+            ViewModel(
+                ConversationCellReducer.State(conversationIDKey = conversation.id.key, searchQuery = initialSearchQuery),
+                ConversationCellReducer(),
+            ).observing(DependencyValues.current.sharedStates.conversationsSearchQuery.changes) {
+                ConversationCellReducer.Action.SearchQueryChanged(it)
+            }.observing(DependencyValues.current.sharedStates.reloadingConversationIDKeys.changes) {
+                ConversationCellReducer.Action.ReloadingConversationsChanged(it)
+            }.observing(DependencyValues.current.sharedEvents.sessionStoreDidChange.events) {
+                ConversationCellReducer.Action.SessionStoreDidChange(it)
+            }.observing(DependencyValues.current.sharedEvents.conversationsPageReappeared.events) {
+                ConversationCellReducer.Action.ReloadData
+            }
         }
     DisposableEffect(viewModel) { onDispose { viewModel.close() } }
+    LaunchedEffect(viewModel) { viewModel.send(ConversationCellReducer.Action.ViewAppeared) }
+
     val cellState by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
 
@@ -247,13 +255,11 @@ private fun ConversationCellMenu(
         alignment = ContextMenuAlignment.LEADING,
         reactionChoices = emptyList(),
         liftScale = 0f,
-        onTap = { viewModel.send(ConversationCellReducer.Action.CellTapped(searchQuery)) },
+        onTap = { viewModel.send(ConversationCellReducer.Action.CellTapped) },
     ) {
         ConversationCellView(
-            conversation = conversation,
-            languageCode = languageCode,
-            changeToken = changeToken,
-            searchQuery = searchQuery,
+            state = cellState,
+            onUserInfoBadgeTapped = { viewModel.send(ConversationCellReducer.Action.UserInfoBadgeTapped) },
         )
     }
 }
@@ -262,6 +268,7 @@ private fun ConversationCellMenu(
 
 @Composable
 private fun Header(
+    showExtraButtons: Boolean,
     onSettings: () -> Unit,
     onNewChat: () -> Unit,
     onDeleteConversations: () -> Unit,
@@ -278,7 +285,7 @@ private fun Header(
                 ),
     ) {
         CircleChipButton(systemName = "gearshape", contentDescription = "Settings", onClick = onSettings)
-        if (Build.isDeveloperModeEnabled) {
+        if (showExtraButtons) {
             CircleChipButton(
                 systemName = "trash",
                 contentDescription = "Delete conversations",

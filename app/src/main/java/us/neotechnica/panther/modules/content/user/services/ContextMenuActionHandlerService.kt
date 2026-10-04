@@ -14,14 +14,12 @@ import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.content.user.components.ChatMessageRowData
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
+import us.neotechnica.panther.bundle.reactionDetailsPageView
+import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheet
+import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheets
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.session.entity.extensions.reactions
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentNavigatorState
-import us.neotechnica.panther.navigation.UserContentRoute
-import us.neotechnica.panther.navigation.navigation
-import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
@@ -30,18 +28,23 @@ import us.neotechnica.panther.translator.models.Translation
 import us.neotechnica.panther.translator.services.LanguageRecognitionService
 
 /**
- * Builds context menu actions and handles their side effects.
+ * Builds context menu actions and handles their side effects, and
+ * tracks the message currently being spoken aloud.
  *
- * **Note:** this port handles the report-mistranslation and speak
- * actions; the remaining actions (copy, view alternate) are built inline
- * by `ChatMessageCell` for now.
- *
- * The iOS original gates report-mistranslation behind retry-translation,
- * offering it only once every translation platform has been tried. This
- * port omits retry-translation, so it surfaces the action for any
- * eligible translated message and files the report directly.
+ * Report-mistranslation is offered for any eligible translated
+ * message that has not already been reported during the current
+ * app session, and files the report directly.
  */
 object ContextMenuActionHandlerService {
+    // MARK: - Properties
+
+    /**
+     * The message currently being spoken aloud, or `null` if no
+     * message is being spoken.
+     */
+    var speakingMessage: Message? = null
+        private set
+
     // MARK: - Report Mistranslation
 
     /**
@@ -105,11 +108,7 @@ object ContextMenuActionHandlerService {
             title = LocalizedStringKey.ReactionDetails.localized(),
             systemImageName = REACTION_DETAILS_ACTION_IMAGE_SYSTEM_NAME,
         ) {
-            DependencyValues.current.navigation.navigate(
-                Route.UserContent(
-                    UserContentRoute.Push(UserContentNavigatorState.SeguePath.ReactionDetails(message.id)),
-                ),
-            )
+            RootSheets.present(RootSheet.reactionDetailsPageView(message.id))
         }
     }
 
@@ -124,8 +123,7 @@ object ContextMenuActionHandlerService {
      * user's side, a received message the other side. When the displayed
      * text does not confidently match the chosen language but confidently
      * matches the other, and the translation's input equals its output,
-     * the other language is used instead – mirroring the iOS
-     * `handleSpeakAction` language-recognition override.
+     * the other language is used instead.
      *
      * @param message The message being spoken.
      * @param translation The message's resolved translation, or `null`.
@@ -162,7 +160,15 @@ object ContextMenuActionHandlerService {
                     .firstOrNull { it != utteranceLanguageCode } ?: utteranceLanguageCode
         }
 
+        speakingMessage = message
         TextToSpeechService.speak(displayText, utteranceLanguageCode, message.id)
+    }
+
+    // MARK: - Reset Speaking Message
+
+    /** Clears the message tracked as currently being spoken aloud. */
+    fun resetSpeakingMessage() {
+        speakingMessage = null
     }
 
     // MARK: - Auxiliary

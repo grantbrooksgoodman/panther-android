@@ -217,7 +217,9 @@ object ModerationSessionService {
 
         val path = listOf(NetworkPath.users.rawValue, currentUserID, BLOCKED_USER_IDS_KEY).joinToString("/")
         val rawValue: Map<String, Any?> = database.getValues(path, cacheStrategy = CacheStrategy.ADAPTIVE)
-        return UserService.getUsers(rawValue.keys.toList())
+        val blockedUserIDs = rawValue.keys.filter { !it.isBangQualifiedEmpty }
+        if (blockedUserIDs.isEmpty()) return emptyList()
+        return UserService.getUsers(blockedUserIDs)
     }
 
     private suspend fun performModeration(

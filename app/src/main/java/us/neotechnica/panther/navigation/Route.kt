@@ -83,6 +83,11 @@ sealed interface SettingsRoute {
         val path: SettingsNavigatorState.SeguePath,
     ) : SettingsRoute
 
+    /** Presents the given sheet over the settings flow, or dismisses it when `null`. */
+    data class Sheet(
+        val path: SettingsNavigatorState.SheetPath?,
+    ) : SettingsRoute
+
     data class Stack(
         val paths: List<SettingsNavigatorState.SeguePath>,
     ) : SettingsRoute

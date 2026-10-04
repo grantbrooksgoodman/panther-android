@@ -15,6 +15,7 @@ import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifi
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
 import us.neotechnica.panther.modules.networking.message.models.Message
+import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.session.entity.extensions.isMock
 import us.neotechnica.panther.modules.session.entity.extensions.isReadByCurrentUser
@@ -47,8 +48,25 @@ data class ConversationCellViewData(
     val participantCount: Int,
     val otherLanguageCode: String?,
     val otherRegionCode: String?,
+    val otherUser: User?,
 ) {
     companion object {
+        /** An empty placeholder used before a cell's data resolves. */
+        val empty =
+            ConversationCellViewData(
+                title = "",
+                subtitle = "",
+                dateLabelText = "",
+                isShowingUnreadIndicator = false,
+                initials = "",
+                hasContactName = false,
+                isGroup = false,
+                participantCount = 0,
+                otherLanguageCode = null,
+                otherRegionCode = null,
+                otherUser = null,
+            )
+
         /**
          * Builds the cell data for [conversation], resolving text into
          * [languageCode].
@@ -61,9 +79,10 @@ data class ConversationCellViewData(
             conversation: Conversation,
             languageCode: String,
             searchQuery: String = "",
+            useCachedValue: Boolean = true,
         ): ConversationCellViewData {
             val cacheQuery = searchQuery.ifBlank { CACHE_QUERY_EMPTY }
-            if (!conversation.isMock) {
+            if (useCachedValue && !conversation.isMock) {
                 ConversationCellViewDataCache.cachedValue(cacheQuery, conversation.id.key)?.let { return it }
             }
 
@@ -94,6 +113,7 @@ data class ConversationCellViewData(
                     participantCount = users.size,
                     otherLanguageCode = if (!isGroup) users.firstOrNull()?.languageCode else null,
                     otherRegionCode = if (!isGroup) users.firstOrNull()?.phoneNumber?.regionCode else null,
+                    otherUser = if (!isGroup) users.firstOrNull() else null,
                 )
 
             if (!conversation.isMock) ConversationCellViewDataCache.cache(cacheQuery, conversation.id.key, data)

@@ -73,12 +73,7 @@ object ChatInfoPageViewColors {
 // iOS); these format, separator, and Android-specific labels live here.
 object ChatInfoPageViewConstants {
     const val ADD_CONTACT_BUTTON_IMAGE_SYSTEM_NAME = "plus"
-    const val BLOCK = "Block"
-    const val DELETE_CONVERSATION = "Delete this Conversation"
     const val FILE_TYPE_SEPARATOR = " • "
     const val PARTICIPANTS_SEPARATOR = ", "
-    const val REPORT = "Report"
     const val TIMESTAMP_FORMAT = "MMM d, yyyy"
-    const val TITLE_ADDITIONAL_SEPARATOR = " + "
-    const val UNKNOWN = "Unknown"
 }

@@ -1,6 +1,6 @@
 //
 //  SettingsPageView.kt
-//  Panther
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman on 20/08/2026.
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
@@ -10,6 +10,7 @@ package us.neotechnica.panther.modules.content.user.views.settingspageview
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,7 +22,9 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -31,12 +34,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
+import us.neotechnica.panther.bundle.traitCollectionChanged
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
 import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
@@ -47,46 +47,57 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.modules.common.contacts.components.rememberContactCardPresenter
 import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.models.PhoneNumber
-import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewColors
-import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewConstants
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewFloats
-import us.neotechnica.panther.modules.content.user.extensions.contactPair
 import us.neotechnica.panther.modules.content.user.services.DeveloperModeListItem
-import us.neotechnica.panther.modules.content.user.services.SettingsPageViewService
-import us.neotechnica.panther.modules.localization.models.LocalizationSource
+import us.neotechnica.panther.modules.content.user.views.inviteqrcodepageview.InviteQRCodePageView
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
+import us.neotechnica.panther.navigation.Navigation
+import us.neotechnica.panther.navigation.Route
+import us.neotechnica.panther.navigation.SettingsNavigatorState
+import us.neotechnica.panther.navigation.SettingsRoute
+import us.neotechnica.panther.navigation.UserContentNavigatorState
+import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.modules.translation.extensions.value
-import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
-import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
-import us.neotechnica.panther.subsystem.modules.foundation.services.Build
-import us.neotechnica.panther.subsystem.modules.foundation.services.BuildInfoOverlay
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
+import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 
 // MARK: - Constants Accessors
 
 private typealias Floats = SettingsPageViewFloats
-private typealias Colors = SettingsPageViewColors
-private typealias Strings = SettingsPageViewConstants
 
 /**
  * The settings page: the current user's contact header followed by
- * grouped action cards, mirroring the iOS `SettingsPageView`.
+ * grouped action cards and the cycling build-info button.
  *
  * @param modifier The modifier for this view.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsPageView(modifier: Modifier = Modifier) {
-    val viewModel = remember { ViewModel(SettingsPageReducer.State(), SettingsPageReducer()) }
-    DisposableEffect(Unit) { onDispose { viewModel.close() } }
+    val viewModel =
+        remember {
+            ViewModel(SettingsPageReducer.State(), SettingsPageReducer())
+                .observing(DependencyValues.current.sharedEvents.traitCollectionChanged.events) {
+                    SettingsPageReducer.Action.TraitCollectionChanged
+                }
+        }
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.send(SettingsPageReducer.Action.ViewDisappeared)
+            viewModel.close()
+        }
+    }
     LaunchedEffect(Unit) { viewModel.send(SettingsPageReducer.Action.ViewAppeared) }
 
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
+    val navigation = remember { DependencyValues.current.navigation }
+    val navState by navigation.state.collectAsState()
     val presentContactCard = rememberContactCardPresenter()
-    val haptics = LocalHapticFeedback.current
-    val clipboard = LocalClipboardManager.current
 
     Box(modifier = modifier.fillMaxSize().background(colors.groupedContentBackground)) {
         StatefulView(state = state.viewState) {
@@ -97,50 +108,32 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
                         .systemBarsPadding()
                         .verticalScroll(rememberScrollState()),
             ) {
-                Header(onDone = { viewModel.send(SettingsPageReducer.Action.DoneToolbarButtonTapped) })
+                Header(
+                    title = state.navigationTitle,
+                    doneText = state.doneToolbarButtonText,
+                    onDone = { viewModel.send(SettingsPageReducer.Action.DoneToolbarButtonTapped) },
+                )
 
-                ContactDetailCard(onTap = presentContactCard)
+                ContactDetailCard(state = state, onTap = presentContactCard)
 
-                SettingsActionCards(strings = state.strings, send = viewModel::send)
+                SettingsActionCards(state = state, send = viewModel::send, navigation = navigation)
 
-                DeveloperModeCards()
+                DeveloperModeCards(items = state.developerModeListItems)
 
-                // Prerelease-only affordance to restore the build-info overlay after it has been
-                // long-press–dismissed (mirrors iOS Developer Mode).
-                if (Build.isConfigured && Build.milestone != Milestone.GENERAL_RELEASE) {
-                    val isOverlayHidden by BuildInfoOverlay.isHidden.collectAsState()
-                    SettingsCard {
-                        SettingsIconRow(
-                            symbol = "gearshape.fill",
-                            iconColor = Colors.iconGray,
-                            title =
-                                if (isOverlayHidden) {
-                                    Strings.SHOW_BUILD_INFO_OVERLAY
-                                } else {
-                                    Strings.HIDE_BUILD_INFO_OVERLAY
-                                },
-                            onClick = { if (isOverlayHidden) BuildInfoOverlay.show() else BuildInfoOverlay.hide() },
-                        )
-                    }
-                }
+                BuildInfoButton(
+                    labelText = state.buildInfoButtonStrings.labelText,
+                    onTap = { viewModel.send(SettingsPageReducer.Action.BuildInfoButtonTapped) },
+                    onLongPress = { viewModel.send(SettingsPageReducer.Action.LongPressGestureRecognized) },
+                )
+            }
+        }
 
-                if (Build.isConfigured) {
-                    // The build-info row copies its text on tap, with haptics, mirroring iOS.
-                    val buildInfo = versionString()
-                    Components.Text(
-                        buildInfo,
-                        color = colors.subtitleText,
-                        font = Font.system(FontScale.Small),
-                        textAlign = TextAlign.Center,
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    clipboard.setText(AnnotatedString(buildInfo))
-                                }.padding(top = Floats.versionTopPadding, bottom = Floats.versionBottomPadding),
-                    )
-                }
+        if (navState.settings.sheet == SettingsNavigatorState.SheetPath.InviteQRCode) {
+            ModalBottomSheet(
+                onDismissRequest = { navigation.navigate(Route.Settings(SettingsRoute.Sheet(null))) },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            ) {
+                InviteQRCodePageView()
             }
         }
     }
@@ -149,7 +142,11 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
 // MARK: - Header
 
 @Composable
-private fun Header(onDone: () -> Unit) {
+private fun Header(
+    title: String,
+    doneText: String,
+    onDone: () -> Unit,
+) {
     val colors = LocalPantherColors.current
     Box(
         modifier =
@@ -158,14 +155,14 @@ private fun Header(onDone: () -> Unit) {
                 .padding(horizontal = Floats.headerHorizontalPadding, vertical = Floats.headerVerticalPadding),
     ) {
         Components.Text(
-            LocalizedStringKey.Settings.localized(LocalizationSource.SUBSYSTEM).dropLast(1),
+            title,
             color = colors.titleText,
             font = Font.systemBold(FontScale.Large),
             modifier = Modifier.align(Alignment.Center),
         )
         CircleChipButton(
             systemName = "checkmark",
-            contentDescription = LocalizedStringKey.Done.localized(LocalizationSource.SUBSYSTEM),
+            contentDescription = doneText,
             onClick = onDone,
             modifier = Modifier.align(Alignment.CenterEnd),
             tint = colors.titleText,
@@ -177,13 +174,15 @@ private fun Header(onDone: () -> Unit) {
 // MARK: - Contact Detail
 
 @Composable
-private fun ContactDetailCard(onTap: (PhoneNumber?, String?) -> Unit) {
+private fun ContactDetailCard(
+    state: SettingsPageReducer.State,
+    onTap: (PhoneNumber?, String?) -> Unit,
+) {
     val colors = LocalPantherColors.current
-    val currentUser = UserSessionService.currentUser
-    val number = currentUser?.phoneNumber?.formattedString()
-    val contactName = currentUser?.contactPair?.contact?.fullName
-    val title = contactName ?: number ?: LocalizedStringKey.You.localized()
-    val subtitle = if (contactName != null) number else null
+    val phoneNumber = UserSessionService.currentUser?.phoneNumber
+    val contactName = state.contactPair?.contact?.fullName
+    val title = state.contactDetailViewTitleLabelText.ifEmpty { phoneNumber?.formattedString() ?: LocalizedStringKey.You.localized() }
+    val subtitle = state.contactDetailViewSubtitleLabelText?.takeIf { it.isNotEmpty() }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -193,7 +192,7 @@ private fun ContactDetailCard(onTap: (PhoneNumber?, String?) -> Unit) {
                 .padding(horizontal = Floats.cardHorizontalMargin, vertical = Floats.cardVerticalMargin)
                 .clip(RoundedCornerShape(Floats.contactCornerRadius))
                 .background(colors.groupedRowBackground)
-                .clickable { onTap(currentUser?.phoneNumber, contactName) }
+                .clickable { onTap(phoneNumber, contactName) }
                 .padding(Floats.cardPadding),
     ) {
         AvatarImageView(modifier = Modifier.size(Floats.avatarSize), glyphSize = Floats.avatarGlyphSize)
@@ -217,43 +216,52 @@ private fun ContactDetailCard(onTap: (PhoneNumber?, String?) -> Unit) {
 
 @Composable
 private fun SettingsActionCards(
-    strings: List<TranslationOutputMap>,
+    state: SettingsPageReducer.State,
     send: (SettingsPageReducer.Action) -> Unit,
+    navigation: Navigation,
 ) {
     SettingsCard {
-        SettingsIconRow("location.fill", Colors.iconBlue, strings.value(SettingsPageViewStrings.inviteFriends)) {
-            SettingsPageViewService.inviteFriendsButtonTapped()
+        InviteFriendsListItem(state.strings.value(SettingsPageViewStrings.inviteFriendsButtonText)) {
+            send(SettingsPageReducer.Action.InviteFriendsButtonTapped)
         }
         SettingsRowDivider()
-        SettingsIconRow("star.fill", Colors.iconYellow, strings.value(SettingsPageViewStrings.leaveReview)) {
-            SettingsPageViewService.leaveReviewButtonTapped()
+        LeaveReviewListItem(state.strings.value(SettingsPageViewStrings.leaveReviewButtonText)) {
+            send(SettingsPageReducer.Action.LeaveReviewButtonTapped)
         }
         SettingsRowDivider()
-        SettingsIconRow("globe", Colors.iconPink, strings.value(SettingsPageViewStrings.changeLanguage), showsDisclosure = true) {
-            send(SettingsPageReducer.Action.ChangeLanguageTapped)
+        ChangeLanguageListItem(state.strings.value(SettingsPageViewStrings.changeLanguage)) {
+            navigation.navigate(
+                Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePath.ChangeLanguage)),
+            )
         }
     }
 
+    val sendFeedbackTitle =
+        LocalizedStringKey.SendFeedback
+            .localized()
+            .lowercase()
+            .replaceFirstChar { it.uppercase() }
+
     SettingsCard {
-        SettingsIconRow("info", Colors.iconIndigo, LocalizedStringKey.SendFeedback.localized()) {
-            SettingsPageViewService.sendFeedbackButtonTapped()
+        SendFeedbackListItem(sendFeedbackTitle) {
+            send(SettingsPageReducer.Action.SendFeedbackButtonTapped)
         }
         SettingsRowDivider()
-        SettingsIconRow("command", Colors.iconMint, strings.value(SettingsPageViewStrings.clearCaches)) {
+        ClearCachesListItem(state.strings.value(SettingsPageViewStrings.clearCachesButtonText)) {
             send(SettingsPageReducer.Action.ClearCachesButtonTapped)
         }
     }
 
     SettingsCard {
-        SettingsIconRow("flag.fill", Colors.iconGray, strings.value(SettingsPageViewStrings.blockedUsers)) {
+        BlockedUsersListItem(state.blockedUsersButtonText, state.isBlockedUsersButtonEnabled) {
             send(SettingsPageReducer.Action.BlockedUsersButtonTapped)
         }
         SettingsRowDivider()
-        SettingsIconRow("trash.fill", Colors.iconOrange, strings.value(SettingsPageViewStrings.deleteAccount)) {
+        DeleteAccountListItem(state.strings.value(SettingsPageViewStrings.deleteAccountButtonText)) {
             send(SettingsPageReducer.Action.DeleteAccountButtonTapped)
         }
         SettingsRowDivider()
-        SettingsIconRow("hand.raised.fill", Colors.iconRed, strings.value(SettingsPageViewStrings.signOut)) {
+        SignOutListItem(state.strings.value(SettingsPageViewStrings.signOutButtonText)) {
             send(SettingsPageReducer.Action.SignOutButtonTapped)
         }
     }
@@ -262,16 +270,37 @@ private fun SettingsActionCards(
 // MARK: - Developer Mode
 
 @Composable
-private fun DeveloperModeCards() {
-    val items: List<DeveloperModeListItem> = SettingsPageViewService.developerModeListItems() ?: return
-    if (items.isEmpty()) return
-
+private fun DeveloperModeCards(items: List<DeveloperModeListItem>?) {
+    if (items.isNullOrEmpty()) return
     SettingsCard {
         items.forEachIndexed { index, item ->
             if (index > 0) SettingsRowDivider()
-            SettingsIconRow(item.systemName, Colors.iconGray, item.title, onClick = item.action)
+            SettingsListRow(configuration = item.configuration, title = item.title, onClick = item.action)
         }
     }
+}
+
+// MARK: - Build Info Button
+
+@Composable
+private fun BuildInfoButton(
+    labelText: String,
+    onTap: () -> Unit,
+    onLongPress: () -> Unit,
+) {
+    val colors = LocalPantherColors.current
+    Components.Text(
+        labelText,
+        color = colors.subtitleText,
+        font = Font.system(FontScale.Small),
+        textAlign = TextAlign.Center,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = { onTap() }, onLongPress = { onLongPress() })
+                }.padding(top = Floats.versionTopPadding, bottom = Floats.versionBottomPadding),
+    )
 }
 
 // MARK: - Cards
@@ -290,60 +319,3 @@ private fun SettingsCard(content: @Composable () -> Unit) {
         content()
     }
 }
-
-@Composable
-private fun SettingsIconRow(
-    symbol: String,
-    iconColor: Color,
-    title: String,
-    showsDisclosure: Boolean = false,
-    onClick: () -> Unit,
-) {
-    val colors = LocalPantherColors.current
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable { onClick() }
-                .padding(horizontal = Floats.cardPadding, vertical = Floats.iconRowVerticalPadding),
-    ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier =
-                Modifier
-                    .size(Floats.iconSize)
-                    .clip(RoundedCornerShape(Floats.iconCornerRadius))
-                    .background(iconColor),
-        ) {
-            Components.Symbol(symbol, color = Color.White, modifier = Modifier.size(Floats.iconGlyphSize))
-        }
-        Components.Text(
-            title,
-            color = colors.titleText,
-            modifier = Modifier.weight(1f).padding(start = Floats.iconTitleStartPadding),
-        )
-        if (showsDisclosure) {
-            Components.Symbol(
-                "chevron.right",
-                color = colors.subtitleText,
-                modifier = Modifier.size(Floats.disclosureChevronSize),
-            )
-        }
-    }
-}
-
-@Composable
-private fun SettingsRowDivider() {
-    val colors = LocalPantherColors.current
-    HorizontalDivider(
-        color = colors.groupedContentBackground,
-        modifier = Modifier.padding(start = Floats.cardPadding + Floats.iconSize + Floats.iconTitleStartPadding),
-    )
-}
-
-// MARK: - Auxiliary
-
-private fun versionString(): String =
-    "${LocalizedStringKey.Version.localized()} ${Build.bundleVersion} " +
-        "(${Build.buildNumber}${Build.milestone.shortString}/${Build.bundleRevision.lowercase()})"

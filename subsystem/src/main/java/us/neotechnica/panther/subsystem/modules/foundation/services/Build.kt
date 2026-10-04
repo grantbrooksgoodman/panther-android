@@ -181,20 +181,13 @@ object Build {
 
     private fun bundleRevision(revisionBuildNumber: Int): String {
         val alphabet = ('A'..'Z').toList()
-        val revisionMilestone = revisionBuildNumber / REVISION_MILESTONE_DIVISOR
-        if (revisionMilestone < alphabet.size) {
-            return alphabet[revisionMilestone].toString()
-        }
-
-        var remainder = revisionMilestone
-        val letters = StringBuilder("Z")
-        while (remainder >= alphabet.size) {
-            remainder -= alphabet.size
-            letters.append(if (remainder < alphabet.size) alphabet[remainder] else 'Z')
-        }
-
-        val zCount = letters.count { it == 'Z' }
-        return if (zCount > MAX_TRAILING_Z) "Z$zCount${letters.filter { it != 'Z' }}" else letters.toString()
+        var remainder = revisionBuildNumber / REVISION_MILESTONE_DIVISOR
+        val revisionLetters = StringBuilder()
+        do {
+            revisionLetters.insert(0, alphabet[remainder % alphabet.size])
+            remainder = remainder / alphabet.size - 1
+        } while (remainder >= 0)
+        return revisionLetters.toString()
     }
 
     private fun deriveExpirationOverrideCode(): String {
@@ -276,7 +269,6 @@ object Build {
     // MARK: - Companion
 
     private const val REVISION_MILESTONE_DIVISOR = 150
-    private const val MAX_TRAILING_Z = 3
     private const val THREE_LETTER_ID_LENGTH = 3
     private const val PROJECT_ID_LENGTH = 8
     private const val PROJECT_ID_DEFAULT_LETTER_POSITION = 13

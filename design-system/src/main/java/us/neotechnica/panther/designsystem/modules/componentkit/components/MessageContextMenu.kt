@@ -31,12 +31,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -87,8 +89,35 @@ class ContextMenuController internal constructor() {
 
     internal var canBegin: Boolean = true
 
+    private val registry = mutableMapOf<String, () -> ActiveContextMenu?>()
+
     internal fun present(item: ActiveContextMenu) {
         active = item
+    }
+
+    /**
+     * Presents the menu registered under the given key, if one is
+     * registered and can currently be built.
+     *
+     * @param key The key of the menu to present.
+     *
+     * @return `true` if a menu was presented; otherwise, `false`.
+     */
+    fun present(key: String): Boolean {
+        val item = registry[key]?.invoke() ?: return false
+        active = item
+        return true
+    }
+
+    internal fun register(
+        key: String,
+        factory: () -> ActiveContextMenu?,
+    ) {
+        registry[key] = factory
+    }
+
+    internal fun unregister(key: String) {
+        registry.remove(key)
     }
 
     /** Dismisses the presented context menu, if any. */
@@ -183,6 +212,7 @@ fun MessageContextMenu(
     liftedBackground: Color? = null,
     menuLeadingOffset: Dp = 0.dp,
     alignsMenuCardToLeadingEdge: Boolean = false,
+    menuKey: String? = null,
     onTap: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     header: (@Composable () -> Unit)? = null,
@@ -191,6 +221,35 @@ fun MessageContextMenu(
     val controller = LocalContextMenuController.current
     val haptics = LocalHapticFeedback.current
     var anchorBounds by remember { mutableStateOf(Rect.Zero) }
+
+    // Register this menu under its key so it can be opened
+    // programmatically (such as focusing a message from search).
+    if (menuKey != null && controller != null) {
+        val currentActions by rememberUpdatedState(actions)
+        val currentReactionChoices by rememberUpdatedState(reactionChoices)
+        val currentContent by rememberUpdatedState(content)
+        DisposableEffect(menuKey, controller) {
+            controller.register(menuKey) {
+                val hasMenu = currentActions.isNotEmpty() || currentReactionChoices.isNotEmpty()
+                if (!hasMenu || anchorBounds == Rect.Zero) {
+                    null
+                } else {
+                    ActiveContextMenu(
+                        anchorBounds,
+                        alignment,
+                        currentActions,
+                        currentReactionChoices,
+                        liftScale,
+                        liftedBackground,
+                        menuLeadingOffset,
+                        alignsMenuCardToLeadingEdge,
+                        currentContent,
+                    )
+                }
+            }
+            onDispose { controller.unregister(menuKey) }
+        }
+    }
 
     // Hide the origin bubble while it is the lifted one, so only the
     // overlay's copy is visible (no double image).

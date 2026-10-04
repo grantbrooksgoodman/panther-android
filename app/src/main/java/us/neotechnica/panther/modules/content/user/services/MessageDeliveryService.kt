@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.services.HapticsService
+import us.neotechnica.panther.modules.content.user.models.ContextMenuInteraction
+import us.neotechnica.panther.modules.content.user.models.MessageDeliveryServiceEffectID
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.user.models.User
@@ -21,6 +23,8 @@ import us.neotechnica.panther.modules.session.entity.extensions.isMock
 import us.neotechnica.panther.modules.session.entity.extensions.users
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import java.util.Date
 import java.util.UUID
@@ -45,6 +49,11 @@ object MessageDeliveryService {
 
     private val internalIsSendingMessage = MutableStateFlow(false)
 
+    private val uponIsSendingMessageChangedToFalse =
+        LockIsolated(mapOf<MessageDeliveryServiceEffectID, () -> Unit>())
+    private val uponIsSendingMessageChangedToTrue =
+        LockIsolated(mapOf<MessageDeliveryServiceEffectID, () -> Unit>())
+
     // MARK: - Computed Properties
 
     /**
@@ -68,6 +77,30 @@ object MessageDeliveryService {
 
     private val users: List<User>
         get() = (conversation?.users?.takeIf { it.isNotEmpty() } ?: selectedContactPairUsers).distinctBy { it.id }
+
+    // MARK: - Add Effect
+
+    /**
+     * Registers an effect to run once, the next time
+     * [isSendingMessage] is set to the given value.
+     *
+     * The effect is cleared after it runs. Registering a new
+     * effect with the same identifier and target value replaces
+     * the existing one.
+     *
+     * @param state The value of [isSendingMessage] that triggers
+     *   the effect.
+     * @param id The identifier under which to register the effect.
+     * @param effect The effect to run.
+     */
+    fun addEffectUponIsSendingMessage(
+        state: Boolean,
+        id: MessageDeliveryServiceEffectID,
+        effect: () -> Unit,
+    ) {
+        val registry = if (state) uponIsSendingMessageChangedToTrue else uponIsSendingMessageChangedToFalse
+        registry.withValue { it.value = it.value + (id to effect) }
+    }
 
     // MARK: - Methods
 
@@ -216,7 +249,7 @@ object MessageDeliveryService {
     }
 
     private suspend fun beginSend() {
-        internalIsSendingMessage.value = true
+        setIsSendingMessage(true)
         withContext(Dispatchers.Main) {
             DependencyValues.current.clientSession
                 .deliveryProgressIndicator
@@ -225,11 +258,56 @@ object MessageDeliveryService {
     }
 
     private suspend fun cleanUpAfterSend() {
-        internalIsSendingMessage.value = false
+        setIsSendingMessage(false)
         withContext(Dispatchers.Main) {
             DependencyValues.current.clientSession
                 .deliveryProgressIndicator
                 ?.stopAnimatingDeliveryProgress()
         }
     }
+
+    private suspend fun setIsSendingMessage(isSendingMessage: Boolean) {
+        internalIsSendingMessage.value = isSendingMessage
+        didSetIsSendingMessage(isSendingMessage)
+    }
+
+    private suspend fun didSetIsSendingMessage(isSendingMessage: Boolean) =
+        withContext(Dispatchers.Main) {
+            if (isSendingMessage) {
+                ContextMenuInteraction.setCanBegin(false)
+                val effects = drainEffects(uponIsSendingMessageChangedToTrue)
+                if (effects.isEmpty()) return@withContext
+                Logger.log(
+                    Exception(
+                        "Running effects for change of \"isSendingMessage\" to TRUE. " +
+                            "[EnqueuedEffectIDs: ${effects.keys.map { it.rawValue }}]",
+                        isReportable = false,
+                        metadata = ExceptionMetadata(this@MessageDeliveryService),
+                    ),
+                )
+                effects.values.forEach { it() }
+            } else {
+                ContextMenuInteraction.setCanBegin(true)
+                val effects = drainEffects(uponIsSendingMessageChangedToFalse)
+                if (effects.isEmpty()) return@withContext
+                Logger.log(
+                    Exception(
+                        "Running effects for change of \"isSendingMessage\" to FALSE. " +
+                            "[EnqueuedEffectIDs: ${effects.keys.map { it.rawValue }}]",
+                        isReportable = false,
+                        metadata = ExceptionMetadata(this@MessageDeliveryService),
+                    ),
+                )
+                effects.values.forEach { it() }
+            }
+        }
+
+    private fun drainEffects(
+        effects: LockIsolated<Map<MessageDeliveryServiceEffectID, () -> Unit>>,
+    ): Map<MessageDeliveryServiceEffectID, () -> Unit> =
+        effects.withValue { ref ->
+            val drained = ref.value
+            if (drained.isNotEmpty()) ref.value = emptyMap()
+            drained
+        }
 }

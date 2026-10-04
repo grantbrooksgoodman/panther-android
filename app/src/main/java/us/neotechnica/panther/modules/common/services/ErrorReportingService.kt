@@ -32,6 +32,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHas
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
+import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
 import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
@@ -66,6 +67,9 @@ object ErrorReportingService : ReportDelegate, ErrorReportDelegate {
     val reportedErrorCodes: List<String>
         get() = _reportedErrorCodes.wrappedValue
 
+    private val bundleVersionString: String
+        get() = "${if (Build.milestone == Milestone.GENERAL_RELEASE) Build.finalName else Build.codeName} (${Build.bundleVersion})"
+
     // MARK: - ReportDelegate Conformance
 
     /**
@@ -75,6 +79,33 @@ object ErrorReportingService : ReportDelegate, ErrorReportDelegate {
      */
     override fun fileReport(exception: Exception) {
         fileReport(exception, showsToastOnSuccess = true)
+    }
+
+    /**
+     * Composes and presents a bug report.
+     *
+     * The message prompts the user to describe the issue and the steps
+     * to reproduce it.
+     */
+    override fun reportBug() {
+        composeMessage(
+            subject = "$bundleVersionString Bug Report",
+            body = "In the appropriate section, please describe the error encountered and the steps to reproduce it.",
+            prompt = "Description/Steps to Reproduce",
+        )
+    }
+
+    /**
+     * Composes and presents a general feedback message.
+     *
+     * The message invites the user to share general feedback.
+     */
+    override fun sendFeedback() {
+        composeMessage(
+            subject = "$bundleVersionString Feedback Report",
+            body = "Any general feedback is appreciated in the appropriate section.",
+            prompt = "General Feedback",
+        )
     }
 
     // MARK: - File Report
@@ -136,6 +167,33 @@ object ErrorReportingService : ReportDelegate, ErrorReportDelegate {
     }
 
     // MARK: - Auxiliary
+
+    private fun composeMessage(
+        subject: String,
+        body: String,
+        prompt: String,
+    ) {
+        val activity = Translator.config.currentActivityProvider?.invoke() ?: return
+        val bodyText =
+            buildString {
+                append(body)
+                append("\n\n")
+                append("$prompt:")
+                append("\n\n")
+                append("---\n")
+                append("Device: ${AndroidBuild.MANUFACTURER} ${AndroidBuild.MODEL} (API ${AndroidBuild.VERSION.SDK_INT})")
+            }
+
+        val mailIntent =
+            Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:")).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                putExtra(Intent.EXTRA_EMAIL, arrayOf(REPORT_RECIPIENT))
+                putExtra(Intent.EXTRA_SUBJECT, subject)
+                putExtra(Intent.EXTRA_TEXT, bodyText)
+            }
+
+        runCatching { activity.startActivity(mailIntent) }
+    }
 
     private suspend fun upload(
         recordBytes: ByteArray,
@@ -240,6 +298,7 @@ object ErrorReportingService : ReportDelegate, ErrorReportDelegate {
 private const val ERROR_CODE_LENGTH = 4
 private const val FILE_DATE_FORMAT = "yyMMdd"
 private const val HOSTED_OVERRIDE_ERROR_CODE_KEY = "HostedOverrideErrorCode"
+private const val REPORT_RECIPIENT = "me@grantbrooks.io"
 private const val SHORT_DATE_HASH_LENGTH = 5
 private const val SHORTHAND_WORD_LIMIT = 3
 private const val SUCCESS_TOAST_SECONDS = 3L

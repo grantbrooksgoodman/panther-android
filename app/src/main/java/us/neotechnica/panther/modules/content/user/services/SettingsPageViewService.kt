@@ -8,37 +8,57 @@
 
 package us.neotechnica.panther.modules.content.user.services
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.DpSize
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.Application
 import us.neotechnica.panther.bundle.Application.ResetCompletionProcedure
+import us.neotechnica.panther.bundle.application
+import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationAlert
+import us.neotechnica.panther.designsystem.modules.alertkit.models.TextFieldAttributes
+import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAlert
+import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
+import us.neotechnica.panther.modules.common.extensions.ApplicationStorageKey
+import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.services.AccountDeletionService
 import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.services.AnalyticsService.AnalyticsEvent
 import us.neotechnica.panther.modules.common.services.DevModeService
+import us.neotechnica.panther.modules.common.services.HapticsService
 import us.neotechnica.panther.modules.common.services.InviteService
 import us.neotechnica.panther.modules.common.services.MetadataService
 import us.neotechnica.panther.modules.common.services.NotificationService
+import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewConstants
+import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewFloats
+import us.neotechnica.panther.modules.content.user.constants.SquareIconViewFloats
+import us.neotechnica.panther.modules.content.user.extensions.contactPair
 import us.neotechnica.panther.modules.content.user.extensions.removeCurrentPushToken
+import us.neotechnica.panther.modules.content.user.models.SquareIconViewConfiguration
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
+import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
 import us.neotechnica.panther.modules.session.entity.services.ModerationSessionService
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.navigation.RootNavigatorState
 import us.neotechnica.panther.navigation.RootRoute
 import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentNavigatorState
+import us.neotechnica.panther.navigation.SettingsNavigatorState
+import us.neotechnica.panther.navigation.SettingsRoute
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
@@ -46,31 +66,45 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
+import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
+import us.neotechnica.panther.subsystem.modules.foundation.models.StoredItemKey
+import us.neotechnica.panther.subsystem.modules.foundation.models.overriddenLanguageCode
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
+import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import kotlin.time.Duration.Companion.milliseconds
 
 // MARK: - Constants Accessors
 
+private typealias SettingsColors = SettingsPageViewColors
+private typealias SettingsFloats = SettingsPageViewFloats
 private typealias SettingsStrings = SettingsPageViewConstants
+
+// The counterpart service carries `// swiftlint:disable file_length type_body_length`.
 
 /**
  * The service that handles the settings page's user interactions.
  *
  * Use [SettingsPageViewService] to respond to the settings page's
- * controls – account actions and support options – most of which
- * confirm through alerts before taking effect.
+ * controls – feature switches, account actions, and support options –
+ * most of which confirm through alerts before taking effect.
  *
  * [initialize] must be called once with the application context before
  * the intent-launching handlers.
  */
+@Suppress("LargeClass")
 object SettingsPageViewService {
     // MARK: - Properties
+
+    /** A Boolean value that indicates whether the main settings page is presented. */
+    var isMainPagePresented = true
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private var appContext: Context? = null
+    private var cachedCNContactForCurrentUser: ContactPair? = null
 
     // MARK: - Init
 
@@ -141,7 +175,7 @@ object SettingsPageViewService {
 
             val confirmed =
                 ConfirmationAlert(
-                    title = SettingsStrings.DELETE_ACCOUNT_ACTION,
+                    title = SettingsStrings.DELETE_ACCOUNT,
                     message = message,
                     cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
                     confirmButtonStyle = ActionStyle.DESTRUCTIVE_PREFERRED,
@@ -175,7 +209,7 @@ object SettingsPageViewService {
             val showQRCodeAction =
                 Action(SettingsStrings.SHOW_QR_CODE) {
                     DependencyValues.current.navigation.navigate(
-                        Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePath.InviteQRCode)),
+                        Route.Settings(SettingsRoute.Sheet(SettingsNavigatorState.SheetPath.InviteQRCode)),
                     )
                 }
 
@@ -205,17 +239,80 @@ object SettingsPageViewService {
     }
 
     /**
+     * Toggles prerelease mode after verification.
+     *
+     * On general-release builds, entering the correct passphrase
+     * switches the build milestone to beta; on prerelease builds,
+     * confirmation clears the override. Either change exits the app,
+     * which must restart for the change to take effect.
+     */
+    fun promptToEnterPrereleaseMode() {
+        scope.launch {
+            val buildMilestoneKey = PersistentStorageKey.application(ApplicationStorageKey.BUILD_MILESTONE_STRING)
+            if (Build.milestone != Milestone.GENERAL_RELEASE) {
+                val confirmed =
+                    ConfirmationAlert(
+                        title = ENTER_PRERELEASE_MODE_EXIT_TITLE,
+                        message = "Are you sure you'd like to exit Prerelease Mode? An app restart is required for this to take effect.",
+                        confirmButtonTitle = "Apply & Exit",
+                        confirmButtonStyle = ActionStyle.DESTRUCTIVE_PREFERRED,
+                    ).present(translating = emptyList())
+
+                if (!confirmed) return@launch
+                Persistent.setString(buildMilestoneKey, null)
+                Application.beginGracefulExit()
+                return@launch
+            }
+
+            val input =
+                TextInputAlert(
+                    title = ENTER_PRERELEASE_MODE_TITLE,
+                    message = "Enter the correct passphrase to continue.",
+                    attributes =
+                        TextFieldAttributes(
+                            isSecureTextEntry = true,
+                            keyboardType = KeyboardType.NumberPassword,
+                            placeholderText = "••••••",
+                        ),
+                    confirmButtonTitle = LocalizedStringKey.Done.localized(),
+                ).present(translating = emptyList())
+
+            if (input == null) return@launch
+            if (input != Build.expirationOverrideCode.reversed()) {
+                Alert(
+                    title = ENTER_PRERELEASE_MODE_TITLE,
+                    message = "The passphrase entered was incorrect. Please try again.",
+                    actions =
+                        listOf(
+                            Action("Try Again", style = ActionStyle.PREFERRED) { promptToEnterPrereleaseMode() },
+                            Action(LocalizedStringKey.Cancel.localized(), style = ActionStyle.CANCEL) {},
+                        ),
+                ).present(translating = emptyList())
+                return@launch
+            }
+
+            Persistent.setString(buildMilestoneKey, Milestone.BETA.rawValue)
+            val exitAction =
+                Action(SettingsStrings.EXIT, style = ActionStyle.DESTRUCTIVE_PREFERRED) { Application.beginGracefulExit() }
+            Alert(
+                message = "Successfully entered Prerelease Mode. You must now restart the app.",
+                actions = listOf(exitAction),
+            ).present(translating = emptyList())
+        }
+    }
+
+    /**
      * Presents an action sheet for filing a report, offering to send
      * feedback or report a bug.
      */
     fun sendFeedbackButtonTapped() {
         scope.launch {
-            val reportBugAction = Action(SettingsStrings.REPORT_BUG) { launchMailReport(SettingsStrings.BUG_REPORT_SUBJECT) }
+            val reportBugAction = Action(SettingsStrings.REPORT_BUG) { AlertKitConfig.reportDelegate?.reportBug() }
             ActionSheetAlert(
                 title = SettingsStrings.FILE_A_REPORT,
                 actions =
                     listOf(
-                        Action(LocalizedStringKey.SendFeedback.localized()) { launchMailReport(SettingsStrings.FEEDBACK_SUBJECT) },
+                        Action(LocalizedStringKey.SendFeedback.localized()) { AlertKitConfig.reportDelegate?.sendFeedback() },
                         reportBugAction,
                     ),
                 cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
@@ -227,6 +324,19 @@ object SettingsPageViewService {
                     ),
             )
         }
+    }
+
+    /**
+     * Copies the given string to the clipboard, playing heavy haptic
+     * feedback.
+     *
+     * @param string The string to copy.
+     */
+    fun setClipboardWithHapticFeedback(string: String) {
+        val context = appContext ?: return
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        clipboard?.setPrimaryClip(ClipData.newPlainText(CLIPBOARD_LABEL, string))
+        HapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.HEAVY)
     }
 
     /**
@@ -255,7 +365,9 @@ object SettingsPageViewService {
     /**
      * Returns the developer mode list rows for the settings page.
      *
-     * The rows offer toggling developer mode.
+     * The rows offer toggling developer mode and, in developer mode –
+     * for users whose language is not English – overriding the app's
+     * language code to English.
      *
      * @return The list row configurations; otherwise, `null` on
      *   general-release builds.
@@ -264,30 +376,118 @@ object SettingsPageViewService {
         if (Build.milestone == Milestone.GENERAL_RELEASE) return null
 
         val items = mutableListOf<DeveloperModeListItem>()
-        // The override-language-code row is deferred; it depends on an
-        // AlertKit target-language override that Android does not expose.
+        val currentUser = UserSessionService.currentUser
+        if (Build.isDeveloperModeEnabled && currentUser != null && currentUser.languageCode != "en") {
+            val languageName =
+                LocalizedStringResolver.languageDisplayNames()[currentUser.languageCode] ?: currentUser.languageCode.uppercase()
+            val restoreLanguageCodeString = "${SettingsStrings.RESTORE_LANGUAGE_CODE_BUTTON_TEXT_PREFIX} $languageName"
+            val overrideOrRestore =
+                if (RuntimeStorage.retrieve(StoredItemKey.overriddenLanguageCode) == null) {
+                    SettingsStrings.OVERRIDE_LANGUAGE_CODE_BUTTON_TEXT
+                } else {
+                    restoreLanguageCodeString
+                }
+
+            items.add(
+                DeveloperModeListItem(
+                    title = overrideOrRestore,
+                    configuration =
+                        squareIconConfiguration(
+                            SettingsColors.overrideLanguageCodeButtonImageBackground,
+                            SettingsStrings.OVERRIDE_LANGUAGE_CODE_BUTTON_IMAGE_SYSTEM_NAME,
+                        ),
+                    action = ::overrideLanguageCodeButtonTapped,
+                ),
+            )
+        }
+
         if (!Build.isDeveloperModeEnabled) {
             items.add(
                 DeveloperModeListItem(
                     title = SettingsStrings.TOGGLE_DEVELOPER_MODE,
-                    systemName = "command",
-                ) { DevModeService.promptToToggle() },
+                    configuration =
+                        squareIconConfiguration(
+                            SettingsColors.toggleDeveloperModeButtonImageBackground,
+                            SettingsStrings.TOGGLE_DEVELOPER_MODE_BUTTON_IMAGE_SYSTEM_NAME,
+                            SettingsFloats.TOGGLE_DEVELOPER_MODE_BUTTON_OVERLAY_FRAME_PERCENT_OF_TOTAL_SIZE,
+                        ),
+                    action = { DevModeService.promptToToggle() },
+                ),
             )
         }
 
         return items
     }
 
+    // MARK: - Fetch CNContact for Current User
+
+    /**
+     * Returns the device contact matching the current user's phone
+     * number.
+     *
+     * Results are cached in memory.
+     *
+     * @return The matching device contact.
+     *
+     * @throws Exception if the current user has not been set, or if no
+     *   matching contact can be resolved.
+     */
+    fun fetchCNContactForCurrentUser(): ContactPair {
+        cachedCNContactForCurrentUser?.let { return it }
+
+        val currentUser =
+            UserSessionService.currentUser
+                ?: throw Exception("Current user has not been set.", metadata = ExceptionMetadata(this))
+        val contactPair =
+            currentUser.contactPair
+                ?: throw Exception("No matching contact could be resolved.", metadata = ExceptionMetadata(this))
+
+        cachedCNContactForCurrentUser = contactPair
+        return contactPair
+    }
+
     // MARK: - Clear Cache
 
     /** Removes the cached device contact for the current user. */
     fun clearCache() {
-        // Android resolves the current user's device contact in the
-        // settings view through the contact service, which owns its own
-        // cache; this service holds no device-contact cache to clear.
+        cachedCNContactForCurrentUser = null
     }
 
     // MARK: - Auxiliary
+
+    private fun overrideLanguageCodeButtonTapped() {
+        if (RuntimeStorage.retrieve(StoredItemKey.overriddenLanguageCode) != null) {
+            val currentUser = UserSessionService.currentUser ?: return
+            val languageName =
+                LocalizedStringResolver.languageDisplayNames()[currentUser.languageCode] ?: currentUser.languageCode.uppercase()
+
+            AlertKitConfig.overrideTargetLanguageCode(currentUser.languageCode)
+            RuntimeStorage.remove(StoredItemKey.overriddenLanguageCode)
+            HUD.showSuccess(text = "Set to $languageName")
+            Application.dismissSheets()
+            return
+        }
+
+        AlertKitConfig.overrideTargetLanguageCode("en")
+        RuntimeStorage.store("en", StoredItemKey.overriddenLanguageCode)
+        HUD.showSuccess(text = "Set to English")
+        Application.dismissSheets()
+    }
+
+    private fun squareIconConfiguration(
+        backgroundColor: Color,
+        systemName: String,
+        framePercentOfTotalSize: Float = SquareIconViewFloats.OVERLAY_FRAME_HEIGHT_MULTIPLIER,
+    ): SquareIconViewConfiguration =
+        SquareIconViewConfiguration(
+            size = DpSize(SettingsFloats.iconSize, SettingsFloats.iconSize),
+            backgroundColor = backgroundColor,
+            overlay =
+                SquareIconViewConfiguration.OverlayConfiguration.Symbol(
+                    name = systemName,
+                    framePercentOfTotalSize = framePercentOfTotalSize,
+                ),
+        )
 
     private suspend fun clearCaches() {
         UserSessionService.stopObservingCurrentUserChanges()
@@ -315,7 +515,7 @@ object SettingsPageViewService {
 
     private suspend fun presentDeleteAccountActionSheet() {
         val deleteAccountAction =
-            Action(SettingsStrings.DELETE_ACCOUNT_ACTION, style = ActionStyle.DESTRUCTIVE_PREFERRED) {
+            Action(SettingsStrings.DELETE_ACCOUNT, style = ActionStyle.DESTRUCTIVE_PREFERRED) {
                 scope.launch {
                     runCatching { AccountDeletionService.deleteAccount() }.onFailure { Logger.log(it.toException()) }
                     val exitAction = Action(SettingsStrings.EXIT, style = ActionStyle.DESTRUCTIVE_PREFERRED) { clearCachesAndExit() }
@@ -380,20 +580,6 @@ object SettingsPageViewService {
         navigation.navigate(Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.Onboarding)))
     }
 
-    private fun launchMailReport(subject: String) {
-        val context = appContext ?: return
-        val diagnostics =
-            "\n\n---\nDevice: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL} " +
-                "(API ${android.os.Build.VERSION.SDK_INT})"
-        val mailIntent =
-            Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:")).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                putExtra(Intent.EXTRA_SUBJECT, subject)
-                putExtra(Intent.EXTRA_TEXT, diagnostics)
-            }
-        runCatching { context.startActivity(mailIntent) }
-    }
-
     private fun openURL(url: String) {
         val context = appContext ?: return
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
@@ -404,6 +590,9 @@ object SettingsPageViewService {
 
     // MARK: - Companion
 
+    private const val CLIPBOARD_LABEL = "Build Info"
+    private const val ENTER_PRERELEASE_MODE_EXIT_TITLE = "Exit Prerelease Mode"
+    private const val ENTER_PRERELEASE_MODE_TITLE = "Enter Prerelease Mode"
     private const val SIGN_OUT_NAVIGATION_DELAY = 500
 }
 
@@ -412,6 +601,6 @@ object SettingsPageViewService {
 /** A developer mode row shown on the settings page. */
 data class DeveloperModeListItem(
     val title: String,
-    val systemName: String,
+    val configuration: SquareIconViewConfiguration,
     val action: () -> Unit,
 )

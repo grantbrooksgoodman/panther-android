@@ -64,17 +64,42 @@ object AlertKitConfig {
         )
         private set
 
+    // MARK: - Properties
+
+    private var sourceLanguageCodeOverride: String? = null
+    private var targetLanguageCodeOverride: String? = null
+
     // MARK: - Computed Properties
 
     /** The ISO 639-1 code of the source language for translations. */
     val sourceLanguageCode: String
-        get() = "en"
+        get() = sourceLanguageCodeOverride ?: "en"
 
     /** The ISO 639-1 code of the target language for translations. */
     val targetLanguageCode: String
-        get() = RuntimeStorage.languageCode
+        get() = targetLanguageCodeOverride ?: RuntimeStorage.languageCode
 
     // MARK: - Methods
+
+    /**
+     * Overrides the source language code used for translations.
+     *
+     * @param sourceLanguageCode The ISO 639-1 language code to use as
+     *   the source language.
+     */
+    fun overrideSourceLanguageCode(sourceLanguageCode: String) {
+        sourceLanguageCodeOverride = sourceLanguageCode
+    }
+
+    /**
+     * Overrides the target language code used for translations.
+     *
+     * @param targetLanguageCode The ISO 639-1 language code to use as
+     *   the target language.
+     */
+    fun overrideTargetLanguageCode(targetLanguageCode: String) {
+        targetLanguageCodeOverride = targetLanguageCode
+    }
 
     /**
      * Overrides the translation HUD configuration.

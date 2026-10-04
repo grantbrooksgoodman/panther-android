@@ -9,6 +9,8 @@ package us.neotechnica.panther.subsystem.modules.foundation.services
 
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.StoredItemKey
+import us.neotechnica.panther.subsystem.modules.foundation.models.languageCode
+import us.neotechnica.panther.subsystem.modules.foundation.models.overriddenLanguageCode
 import java.util.Locale
 
 /**
@@ -39,22 +41,25 @@ object RuntimeStorage {
     // MARK: - Properties
 
     private val storedItems = LockIsolated(mapOf<String, Any>())
-    private val currentLanguageCode = LockIsolated(Locale.getDefault().language)
 
     // MARK: - Computed Properties
 
     /**
      * The ISO 639-1 code of the app's active language.
      *
-     * Defaults to the device language; later phases set it from the
-     * user's stored preference. This is the target of
+     * Returns the overridden language code if one has been stored, the
+     * explicitly stored language code if available, or the device
+     * language as a fallback. This is the target of
      * [LanguagePair.system][us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage]
      * for display-string translation.
      */
     var languageCode: String
-        get() = currentLanguageCode.wrappedValue
+        get() =
+            (retrieve(StoredItemKey.overriddenLanguageCode) as? String)
+                ?: (retrieve(StoredItemKey.languageCode) as? String)
+                ?: Locale.getDefault().language
         set(value) {
-            currentLanguageCode.wrappedValue = value
+            store(value, StoredItemKey.languageCode)
         }
 
     // MARK: - Methods

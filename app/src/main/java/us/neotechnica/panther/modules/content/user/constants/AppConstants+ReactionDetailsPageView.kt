@@ -20,6 +20,7 @@ object ReactionDetailsPageViewFloats {
     val listCornerRadius: Dp = 12.dp
     val listHorizontalPadding: Dp = 16.dp
     val rowHorizontalPadding: Dp = 16.dp
+    val rowIconSize: Dp = 40.dp
     val rowIconSpacing: Dp = 12.dp
     val rowVerticalPadding: Dp = 12.dp
     val titleBottomPadding: Dp = 12.dp

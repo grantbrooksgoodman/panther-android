@@ -8,25 +8,18 @@
 
 package us.neotechnica.panther.modules.content.user.views.chatpageview
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -41,10 +34,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.zIndex
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -52,16 +41,11 @@ import kotlinx.coroutines.withContext
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
-import us.neotechnica.panther.designsystem.modules.componentkit.Components
-import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
-import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
 import us.neotechnica.panther.designsystem.modules.componentkit.components.ContextMenuHost
 import us.neotechnica.panther.designsystem.modules.componentkit.components.LocalContextMenuController
 import us.neotechnica.panther.designsystem.modules.componentkit.components.MessageInputBar
-import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
-import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.services.HapticsService
 import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.content.user.components.ChatMessageCell
@@ -69,17 +53,19 @@ import us.neotechnica.panther.modules.content.user.components.ChatMessageRowData
 import us.neotechnica.panther.modules.content.user.components.ContentPickers
 import us.neotechnica.panther.modules.content.user.components.DeliveryProgressView
 import us.neotechnica.panther.modules.content.user.components.MediaPreviewOverlay
+import us.neotechnica.panther.modules.content.user.components.anyOutboxSending
+import us.neotechnica.panther.modules.content.user.components.chatpageheaderview.ChatPageHeaderView
 import us.neotechnica.panther.modules.content.user.components.rememberContentPickers
-import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
+import us.neotechnica.panther.modules.content.user.components.rememberRegisteredDeliveryProgressIndicatorService
 import us.neotechnica.panther.modules.content.user.extensions.displayName
+import us.neotechnica.panther.modules.content.user.models.ContextMenuInteraction
+import us.neotechnica.panther.modules.content.user.services.ChatPageStateService
+import us.neotechnica.panther.modules.content.user.services.ContextMenuActionHandlerService
 import us.neotechnica.panther.modules.content.user.services.DeliveryProgressIndicatorService
 import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
+import us.neotechnica.panther.modules.content.user.services.SearchInteractionService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentNavigatorState
-import us.neotechnica.panther.navigation.UserContentRoute
-import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
@@ -96,7 +82,6 @@ import us.neotechnica.panther.modules.session.entity.services.ConversationSessio
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
 import us.neotechnica.panther.modules.session.state.services.retry
-import us.neotechnica.panther.modules.session.entity.services.MessageSessionService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
@@ -104,11 +89,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
-import us.neotechnica.panther.modules.session.clientSession
-
-// MARK: - Constants Accessors
-
-private typealias Floats = ChatPageViewFloats
 
 // The maximum number of frames to keep re-pinning the newest message while
 // its content settles into place, guarding against an unbounded loop.
@@ -135,7 +115,9 @@ fun ChatPageView(
     val viewModel = remember { buildChatPageViewModel() }
 
     DisposableEffect(Unit) {
+        ChatPageStateService.setIsPresented(true)
         onDispose {
+            ChatPageStateService.setIsPresented(false)
             viewModel.send(ChatPageReducer.Action.ViewDisappeared)
             viewModel.close()
         }
@@ -172,13 +154,13 @@ fun ChatPageView(
         Box(modifier = Modifier.fillMaxSize()) {
             ContextMenuHost(
                 modifier = Modifier.fillMaxSize(),
-                canBegin = !state.isSendingMessage,
+                canBegin = ContextMenuInteraction.canBegin,
             ) {
                 SpeechSynthesizerDidFinishOrCancel()
+                FocusedMessageInteractionEffect(focusedMessageID = state.focusedMessageID)
 
                 Column(modifier = Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
                     ChatHeaderWithDeliveryProgress(
-                        title = state.title,
                         conversationIDKey = state.conversationIDKey,
                         service = deliveryProgressIndicatorService,
                     )
@@ -228,14 +210,13 @@ fun ChatPageView(
 }
 
 @Composable
-private fun rememberRegisteredDeliveryProgressIndicatorService(): DeliveryProgressIndicatorService {
-    val scope = rememberCoroutineScope()
-    val service = remember { DeliveryProgressIndicatorService(scope) }
-    DisposableEffect(service) {
-        DependencyValues.current.clientSession.registerDeliveryProgressIndicator(service)
-        onDispose { service.teardown() }
+private fun FocusedMessageInteractionEffect(focusedMessageID: String?) {
+    val controller = LocalContextMenuController.current
+    LaunchedEffect(controller, focusedMessageID) {
+        if (controller == null || focusedMessageID == null) return@LaunchedEffect
+        SearchInteractionService(focusedMessageID) { controller.present(it) }
+            .triggerFocusedMessageCellInteractionIfNeeded()
     }
-    return service
 }
 
 @Composable
@@ -244,7 +225,10 @@ private fun SpeechSynthesizerDidFinishOrCancel() {
     LaunchedEffect(controller) {
         var wasSpeaking = false
         snapshotFlow { TextToSpeechService.isSpeaking }.collect { isSpeaking ->
-            if (wasSpeaking && !isSpeaking) controller?.dismiss()
+            if (wasSpeaking && !isSpeaking) {
+                controller?.dismiss()
+                ContextMenuActionHandlerService.resetSpeakingMessage()
+            }
             wasSpeaking = isSpeaking
         }
     }
@@ -252,93 +236,16 @@ private fun SpeechSynthesizerDidFinishOrCancel() {
 
 @Composable
 private fun ChatHeaderWithDeliveryProgress(
-    title: String,
     conversationIDKey: String,
     service: DeliveryProgressIndicatorService,
 ) {
     Box {
-        ChatHeader(
-            title = title,
-            onBack = {
-                DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
-            },
-            onInfo = {
-                DependencyValues.current.navigation.navigate(
-                    Route.UserContent(
-                        UserContentRoute.Push(
-                            UserContentNavigatorState.SeguePath.ChatInfo(conversationIDKey),
-                        ),
-                    ),
-                )
-            },
-        )
+        ChatPageHeaderView(conversationIDKey = conversationIDKey)
         DeliveryProgressView(
             progress = service.progress,
             alpha = service.alpha,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
-    }
-}
-
-@Composable
-private fun ChatHeader(
-    title: String,
-    onBack: () -> Unit,
-    onInfo: () -> Unit,
-) {
-    val colors = LocalPantherColors.current
-    Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Floats.headerHorizontalPadding, vertical = Floats.headerVerticalPadding),
-    ) {
-        CircleChipButton(
-            systemName = "chevron.left",
-            contentDescription = "Back",
-            onClick = onBack,
-            modifier = Modifier.align(Alignment.CenterStart),
-            tint = colors.titleText,
-        )
-
-        val conversation = ConversationSessionService.currentConversation
-        val isGroup = (conversation?.participants?.size ?: 2) > 2
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier =
-                Modifier
-                    .align(Alignment.Center)
-                    .clickable(onClick = onInfo)
-                    .semantics { contentDescription = "Conversation info" },
-        ) {
-            AvatarImageView(
-                modifier = Modifier.size(Floats.headerAvatarSize).zIndex(1f),
-                imageData = conversation?.metadata?.imageData,
-                fallbackSymbol = if (isGroup) "person.2" else "person.crop.circle.fill",
-                glyphSize = Floats.headerAvatarGlyphSize,
-            )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier =
-                    Modifier
-                        .offset(y = -Floats.headerAvatarPillOverlap)
-                        .clip(RoundedCornerShape(Floats.pillCornerRadius))
-                        .background(colors.groupedContentBackground)
-                        .padding(
-                            start = Floats.pillStartPadding,
-                            end = Floats.pillEndPadding,
-                            top = Floats.pillVerticalPadding,
-                            bottom = Floats.pillVerticalPadding,
-                        ),
-            ) {
-                Components.Text(title.ifBlank { " " }, color = colors.titleText, font = Font.systemSemibold())
-                Components.Symbol(
-                    "chevron.right",
-                    color = colors.subtitleText,
-                    modifier = Modifier.size(Floats.pillChevronSize).padding(start = Floats.pillChevronStartPadding),
-                )
-            }
-        }
     }
 }
 
@@ -478,13 +385,10 @@ private fun MessageList(
                 onSpeak = onSpeak,
                 onFailedIndicatorTapped = onFailedIndicatorTapped,
                 onSaveMedia = onSaveMedia,
-                isHighlighted = message.id == state.highlightedMessageID,
             )
         }
     }
 }
-
-private fun anyOutboxSending(): Boolean = MessageOutboxService.allEntries.any { it.state == OutboxEntry.State.SENDING }
 
 private fun buildChatPageViewModel(): ViewModel<ChatPageReducer.State, ChatPageReducer.Action> =
     ViewModel(ChatPageReducer.State(), ChatPageReducer())

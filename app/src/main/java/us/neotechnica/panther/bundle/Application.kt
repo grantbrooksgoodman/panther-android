@@ -40,6 +40,7 @@ import us.neotechnica.panther.navigation.ChatRoute
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.RootNavigatorState
 import us.neotechnica.panther.navigation.RootRoute
+import us.neotechnica.panther.navigation.SettingsRoute
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
@@ -90,6 +91,16 @@ object Application {
 
     // MARK: - Properties
 
+    /**
+     * A Boolean value that indicates whether the app is operating
+     * in staging mode.
+     */
+    val isInStagingMode: Boolean
+        get() =
+            Persistent.booleanOrNull(
+                PersistentStorageKey.application(ApplicationStorageKey.IS_IN_STAGING_MODE),
+            ) ?: false
+
     /** The moment the current launch began loading. */
     var loadStartDate: Date = Date()
 
@@ -127,9 +138,11 @@ object Application {
 
     /** Dismisses every presented sheet in the app. */
     fun dismissSheets() {
-        // The chat flow presents a sheet through its navigator; the root
-        // sheet is presented above the modal content.
-        DependencyValues.current.navigation.navigate(Route.Chat(ChatRoute.Sheet(null)))
+        // The chat and settings flows present sheets through their
+        // navigators; the root sheet is presented above the modal content.
+        val navigation = DependencyValues.current.navigation
+        navigation.navigate(Route.Chat(ChatRoute.Sheet(null)))
+        navigation.navigate(Route.Settings(SettingsRoute.Sheet(null)))
         RootSheets.dismiss()
     }
 

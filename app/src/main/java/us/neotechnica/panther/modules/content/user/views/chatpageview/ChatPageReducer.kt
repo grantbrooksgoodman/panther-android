@@ -11,12 +11,14 @@ package us.neotechnica.panther.modules.content.user.views.chatpageview
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.content.user.extensions.chatPageHeaderLabelText
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
+import us.neotechnica.panther.modules.content.user.services.AudioMessagePlaybackService
 import us.neotechnica.panther.modules.content.user.services.ContextMenuActionHandlerService
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentNavigatorState
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.modules.common.services.AnalyticsService
+import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.message.models.AudioMessageReference
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
@@ -44,7 +46,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
-import kotlinx.coroutines.delay
 import us.neotechnica.panther.translator.models.Translation
 import java.util.UUID
 
@@ -64,8 +65,6 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             val conversationIDKey: String,
             val focusedMessageID: String? = null,
         ) : Action
-
-        data object FocusHighlightExpired : Action
 
         data class MessagesUpdated(
             val messages: List<Message>,
@@ -153,7 +152,6 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         val languageCode: String = "en",
         val title: String = "",
         val focusedMessageID: String? = null,
-        val highlightedMessageID: String? = null,
         val changeToken: UUID = UUID.randomUUID(),
         val viewState: ViewState = ViewState.Loading,
     )
@@ -173,14 +171,10 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
                         conversationIDKey = action.conversationIDKey,
                         languageCode = RuntimeStorage.languageCode,
                         focusedMessageID = action.focusedMessageID,
-                        highlightedMessageID = action.focusedMessageID,
                     ),
                     startEffect(action.conversationIDKey, action.focusedMessageID),
                 )
             }
-
-            Action.FocusHighlightExpired ->
-                ReduceResult(state.copy(highlightedMessageID = null))
 
             is Action.MessagesUpdated ->
                 handleMessagesUpdated(state, action.messages)
@@ -283,6 +277,9 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
                 // chat info's own actions, such as adding a participant, that read the
                 // current conversation.
                 if (!isCoveredBySubPage(state.conversationIDKey)) {
+                    TextToSpeechService.stop()
+                    AudioMessagePlaybackService.stopPlayback()
+                    ContextMenuActionHandlerService.resetSpeakingMessage()
                     ConversationSessionService.setCurrentConversation(null)
                 }
                 ReduceResult(state)
@@ -300,7 +297,6 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         val topPath = DependencyValues.current.navigation.state.value.userContent.stack.lastOrNull()
         return when (topPath) {
             is UserContentNavigatorState.SeguePath.ChatInfo -> topPath.conversationIDKey == conversationIDKey
-            is UserContentNavigatorState.SeguePath.ReactionDetails -> true
             else -> false
         }
     }
@@ -380,11 +376,6 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
                 send(Action.TitleResolved(title))
             }
             markCurrentConversationAsRead()
-
-            if (focusedMessageID != null) {
-                delay(FOCUS_HIGHLIGHT_DURATION_MILLISECONDS)
-                send(Action.FocusHighlightExpired)
-            }
         }
 
     @Suppress("LongParameterList")
@@ -420,7 +411,3 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         }
     }
 }
-
-// The duration for which a message navigated to from search stays
-// highlighted before the emphasis fades.
-private const val FOCUS_HIGHLIGHT_DURATION_MILLISECONDS = 2500L

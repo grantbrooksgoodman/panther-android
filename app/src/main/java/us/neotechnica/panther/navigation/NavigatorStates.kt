@@ -73,18 +73,11 @@ data class UserContentNavigatorState(
             val conversationIDKey: String,
         ) : SeguePath
 
-        /** The reaction-details page for the message with the given ID. */
-        data class ReactionDetails(
-            val messageID: String,
-        ) : SeguePath
-
         data object NewChat : SeguePath
 
         data object Settings : SeguePath
 
         data object ChangeLanguage : SeguePath
-
-        data object InviteQRCode : SeguePath
 
         data object InviteLanguagePicker : SeguePath
     }
@@ -92,12 +85,15 @@ data class UserContentNavigatorState(
 
 /** The settings flow's navigation state. */
 data class SettingsNavigatorState(
+    val sheet: SheetPath? = null,
     val stack: List<SeguePath> = emptyList(),
 ) {
-    sealed interface SeguePath : Paths {
-        data object BlockedUsers : SeguePath
+    sealed interface SeguePath : Paths
 
-        data object ChangeLanguage : SeguePath
+    /** The sheet destinations presented over the settings flow. */
+    sealed interface SheetPath : Paths {
+        /** The invite QR code sheet. */
+        data object InviteQRCode : SheetPath
     }
 }
 
@@ -128,6 +124,7 @@ val RootNavigatorState.descriptor: String?
     get() {
         sheet?.let { return it.pathDescriptor }
         chat.sheet?.let { return it.pathDescriptor }
+        settings.sheet?.let { return it.pathDescriptor }
 
         val modalPath = modal ?: return null
         val top =

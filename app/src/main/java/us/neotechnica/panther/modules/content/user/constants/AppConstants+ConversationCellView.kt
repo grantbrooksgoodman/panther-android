@@ -47,5 +47,7 @@ object ConversationCellViewColors {
 object ConversationCellViewStrings {
     const val BLOCK_USERS_BUTTON_IMAGE_SYSTEM_NAME = "flag"
     const val DELETE_CONVERSATION_BUTTON_IMAGE_SYSTEM_NAME = "trash"
+    const val REDACTED_DATE_LABEL_TEXT = "0/00/00"
+    const val REDACTED_SUBTITLE_LABEL_TEXT = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
     const val REPORT_USERS_BUTTON_IMAGE_SYSTEM_NAME = "exclamationmark.bubble"
 }

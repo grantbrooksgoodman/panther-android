@@ -26,4 +26,19 @@ interface ReportDelegate {
      * @param exception The exception to report.
      */
     fun fileReport(exception: Exception)
+
+    /**
+     * Composes and presents a bug report.
+     *
+     * The message prompts the user to describe the issue and the steps
+     * to reproduce it.
+     */
+    fun reportBug()
+
+    /**
+     * Composes and presents a general feedback message.
+     *
+     * The message invites the user to share general feedback.
+     */
+    fun sendFeedback()
 }

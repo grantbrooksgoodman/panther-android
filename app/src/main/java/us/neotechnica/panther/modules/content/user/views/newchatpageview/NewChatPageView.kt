@@ -51,12 +51,13 @@ import us.neotechnica.panther.modules.common.services.InviteService
 import us.neotechnica.panther.modules.content.user.components.ContactPairCellView
 import us.neotechnica.panther.modules.content.user.components.ContentPickers
 import us.neotechnica.panther.modules.content.user.components.DeliveryProgressView
+import us.neotechnica.panther.modules.content.user.components.anyOutboxSending
+import us.neotechnica.panther.modules.content.user.components.rememberRegisteredDeliveryProgressIndicatorService
 import us.neotechnica.panther.modules.content.user.components.RecipientBar
 import us.neotechnica.panther.modules.content.user.components.rememberContentPickers
 import us.neotechnica.panther.modules.content.user.constants.NewChatPageViewFloats
 import us.neotechnica.panther.modules.content.user.extensions.hasContactsBesidesCurrentUser
 import us.neotechnica.panther.modules.content.user.extensions.syncIfNeeded
-import us.neotechnica.panther.modules.content.user.services.DeliveryProgressIndicatorService
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.content.user.services.RecipientBarContactSelectionUIService
 import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageReducer
@@ -64,11 +65,8 @@ import us.neotechnica.panther.modules.content.user.views.contactselectorpageview
 import us.neotechnica.panther.modules.content.user.views.newchatpageview.NewChatPageReducer.Action
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
-import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.extensions.messageOutboxDidChange
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.modules.session.state.models.OutboxEntry
-import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
 import us.neotechnica.panther.navigation.ChatNavigatorState
 import us.neotechnica.panther.navigation.ChatRoute
 import us.neotechnica.panther.navigation.Navigation
@@ -195,17 +193,6 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
     }
 }
 
-@Composable
-private fun rememberRegisteredDeliveryProgressIndicatorService(): DeliveryProgressIndicatorService {
-    val scope = rememberCoroutineScope()
-    val service = remember { DeliveryProgressIndicatorService(scope) }
-    DisposableEffect(service) {
-        DependencyValues.current.clientSession.registerDeliveryProgressIndicator(service)
-        onDispose { service.teardown() }
-    }
-    return service
-}
-
 private fun buildNewChatViewModel(): ViewModel<NewChatPageReducer.State, NewChatPageReducer.Action> =
     ViewModel(NewChatPageReducer.State(), NewChatPageReducer())
         .observing(MessageDeliveryService.isSendingMessage) {
@@ -219,8 +206,6 @@ private fun buildNewChatViewModel(): ViewModel<NewChatPageReducer.State, NewChat
         }.observing(DependencyValues.current.sharedStates.isNewChatPageDoneToolbarButtonEnabled.changes) {
             Action.IsDoneToolbarButtonEnabledChanged(it)
         }
-
-private fun anyOutboxSending(): Boolean = MessageOutboxService.allEntries.any { it.state == OutboxEntry.State.SENDING }
 
 /**
  * Opens the contact selector, mirroring the iOS `selectContactButtonTapped`:

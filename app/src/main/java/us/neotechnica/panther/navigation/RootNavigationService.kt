@@ -75,6 +75,7 @@ private object SettingsNavigator {
         when (route) {
             SettingsRoute.Pop -> state.copy(stack = state.stack.dropLast(1))
             is SettingsRoute.Push -> state.copy(stack = state.stack + route.path)
+            is SettingsRoute.Sheet -> state.copy(sheet = route.path)
             is SettingsRoute.Stack -> state.copy(stack = route.paths)
         }
 }

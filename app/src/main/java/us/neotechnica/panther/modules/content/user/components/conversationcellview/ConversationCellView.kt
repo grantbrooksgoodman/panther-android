@@ -1,6 +1,6 @@
 //
 //  ConversationCellView.kt
-//  Panther
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman on 20/08/2026.
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
@@ -21,12 +21,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
@@ -34,44 +32,35 @@ import us.neotechnica.panther.designsystem.modules.componentkit.components.Avata
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.common.services.RegionDetailService
+import us.neotechnica.panther.modules.content.user.components.UserInfoBadgeView
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewColors
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewFloats
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
-import us.neotechnica.panther.modules.networking.conversation.models.Conversation
+import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import androidx.compose.material3.Text as Material3Text
 
 /**
  * A single conversation row: an unread dot, avatar, title with an
- * optional language chip, message preview, and timestamp.
+ * optional user-info badge, message preview, and timestamp.
  *
- * The cell data is resolved asynchronously (message previews may resolve
- * translations), keyed on the conversation and [changeToken] so the row
- * refreshes when the store updates.
+ * The content renders from the reducer's resolved cell view data and
+ * redacts its preview and timestamp while the data has not resolved
+ * or the conversation reloads.
  *
- * @param conversation The conversation to render.
- * @param languageCode The language to resolve previews into.
- * @param changeToken A token that changes when the store updates.
+ * @param state The conversation cell's state.
+ * @param onUserInfoBadgeTapped The action performed when the user
+ *   taps the user-info badge.
  * @param modifier The modifier for this cell.
  */
 @Composable
 fun ConversationCellView(
-    conversation: Conversation,
-    languageCode: String,
-    changeToken: Any,
-    searchQuery: String = "",
+    state: ConversationCellReducer.State,
+    onUserInfoBadgeTapped: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalPantherColors.current
-    val cellData by produceState<ConversationCellViewData?>(
-        initialValue = null,
-        conversation,
-        changeToken,
-        searchQuery,
-    ) {
-        value = ConversationCellViewData.build(conversation, languageCode, searchQuery)
-    }
-    val data = cellData ?: return
+    val data = state.cellViewData
+    val contentAlpha = if (state.isShowingRedactedContent) REDACTED_CONTENT_ALPHA else 1f
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -97,7 +86,7 @@ fun ConversationCellView(
             }
         }
 
-        Avatar(data, conversation.metadata.imageData)
+        Avatar(data, state.conversation.metadata.imageData)
 
         Spacer(modifier = Modifier.width(ConversationCellViewFloats.titleAvatarSpacing))
 
@@ -115,10 +104,22 @@ fun ConversationCellView(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                     )
-                    data.otherLanguageCode?.let { LanguageChip(it, data.otherRegionCode) }
+                    data.otherUser?.let { user ->
+                        Box(modifier = Modifier.padding(start = ConversationCellViewFloats.languageChipStartPadding)) {
+                            UserInfoBadgeView(
+                                user = user,
+                                action = if (Build.isDeveloperModeEnabled) onUserInfoBadgeTapped else null,
+                            )
+                        }
+                    }
                 }
                 Spacer(modifier = Modifier.width(ConversationCellViewFloats.dateSpacerWidth))
-                Components.Text(data.dateLabelText, color = colors.subtitleText, font = Font.system(FontScale.Small))
+                Components.Text(
+                    state.dateLabelText,
+                    color = colors.subtitleText,
+                    font = Font.system(FontScale.Small),
+                    modifier = Modifier.alpha(contentAlpha),
+                )
                 Components.Symbol(
                     "chevron.right",
                     color = colors.subtitleText,
@@ -129,11 +130,12 @@ fun ConversationCellView(
                 )
             }
             Material3Text(
-                data.subtitle.ifBlank { " " },
+                state.subtitleLabelText.ifBlank { " " },
                 color = colors.subtitleText,
                 style = Font.system(FontScale.Small).textStyle,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.alpha(contentAlpha),
             )
         }
     }
@@ -177,48 +179,4 @@ private fun Avatar(
     }
 }
 
-@Composable
-private fun LanguageChip(
-    languageCode: String,
-    regionCode: String?,
-) {
-    val colors = LocalPantherColors.current
-    // Prefer the flag of the user's phone-number region (e.g. +1 → 🇺🇸), falling back to the
-    // language code's flag, mirroring the iOS `UserInfoBadgeView`.
-    val flag = regionCode?.let { RegionDetailService.emojiFlag(it) }?.ifBlank { null } ?: flagFor(languageCode)
-    val label = languageCode.uppercase() + if (flag != null) " $flag" else ""
-    Box(
-        modifier =
-            Modifier
-                .padding(start = ConversationCellViewFloats.languageChipStartPadding)
-                .clip(RoundedCornerShape(ConversationCellViewFloats.languageChipCornerRadius))
-                .background(colors.groupedContentBackground)
-                .padding(
-                    horizontal = ConversationCellViewFloats.languageChipHorizontalPadding,
-                    vertical = ConversationCellViewFloats.languageChipVerticalPadding,
-                ),
-    ) {
-        Components.Text(label, color = colors.subtitleText, font = Font.systemMedium(FontScale.Small))
-    }
-}
-
-private fun flagFor(languageCode: String): String? =
-    when (languageCode.lowercase()) {
-        "en" -> "🇺🇸"
-        "es" -> "🇪🇸"
-        "de" -> "🇩🇪"
-        "fr" -> "🇫🇷"
-        "it" -> "🇮🇹"
-        "pt" -> "🇵🇹"
-        "ru" -> "🇷🇺"
-        "uk" -> "🇺🇦"
-        "zh" -> "🇨🇳"
-        "ja" -> "🇯🇵"
-        "ko" -> "🇰🇷"
-        "nl" -> "🇳🇱"
-        "pl" -> "🇵🇱"
-        "tr" -> "🇹🇷"
-        "ar" -> "🇸🇦"
-        "hi" -> "🇮🇳"
-        else -> null
-    }
+private const val REDACTED_CONTENT_ALPHA = 0.5f

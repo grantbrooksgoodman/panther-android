@@ -1,6 +1,6 @@
 //
 //  ReactionDetailsPageView.kt
-//  Panther
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman on 30/03/2025.
 //  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -28,13 +29,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.DpSize
+import us.neotechnica.panther.bundle.currentConversationMetadataChanged
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.content.user.components.SquareIconView
 import us.neotechnica.panther.modules.content.user.constants.ReactionDetailsPageViewFloats
 import us.neotechnica.panther.modules.content.user.extensions.displayName
+import us.neotechnica.panther.modules.content.user.models.SquareIconViewConfiguration
 import us.neotechnica.panther.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
@@ -47,10 +52,8 @@ import us.neotechnica.panther.modules.session.entity.services.ConversationSessio
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
-import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
-import us.neotechnica.panther.modules.session.entity.extensions.sessionStoreDidChange
 
 // MARK: - Constants Accessors
 
@@ -60,7 +63,8 @@ private typealias Floats = ReactionDetailsPageViewFloats
  * The reaction details page.
  *
  * Lists the reactions on a message, grouped by reaction, showing the
- * names of the participants who reacted with each.
+ * names of the participants who reacted with each, each row led by a
+ * square icon of the reaction.
  *
  * @param messageID The identifier of the message whose reactions are
  *   shown.
@@ -74,15 +78,21 @@ fun ReactionDetailsPageView(
     val viewModel =
         remember(messageID) {
             ViewModel(ReactionDetailsPageReducer.State(messageID), ReactionDetailsPageReducer())
-                .observing(DependencyValues.current.sharedEvents.sessionStoreDidChange.events) {
-                    ReactionDetailsPageReducer.Action.StoreChanged
+                .observing(DependencyValues.current.sharedEvents.currentConversationMetadataChanged.events) {
+                    ReactionDetailsPageReducer.Action.UpdateViewID
                 }
         }
-    DisposableEffect(Unit) { onDispose { viewModel.close() } }
+    LaunchedEffect(Unit) { viewModel.send(ReactionDetailsPageReducer.Action.ViewAppeared) }
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.send(ReactionDetailsPageReducer.Action.ViewDisappeared)
+            viewModel.close()
+        }
+    }
 
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
-    val groups = remember(state.messageID, state.changeToken) { reactionGroups(state.messageID) }
+    val groups = remember(state.messageID, state.viewID) { reactionGroups(state.messageID) }
 
     Box(modifier = modifier.fillMaxSize().background(colors.groupedContentBackground)) {
         Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
@@ -102,7 +112,7 @@ fun ReactionDetailsPageView(
             }
 
             Components.Text(
-                navigationTitle(),
+                state.navigationTitle,
                 color = colors.titleText,
                 font = Font.systemBold(FontScale.Large),
                 textAlign = TextAlign.Center,
@@ -135,10 +145,17 @@ private fun ReactionGroupList(groups: List<ReactionGroup>) {
                         .fillMaxWidth()
                         .padding(horizontal = Floats.rowHorizontalPadding, vertical = Floats.rowVerticalPadding),
             ) {
-                Components.Text(
-                    group.style.emojiValue,
-                    color = colors.titleText,
-                    font = Font.system(FontScale.Custom(Floats.ICON_FONT_SIZE)),
+                SquareIconView(
+                    configuration =
+                        SquareIconViewConfiguration(
+                            size = DpSize(Floats.rowIconSize, Floats.rowIconSize),
+                            backgroundColor = group.style.squareIconBackgroundColor,
+                            overlay =
+                                SquareIconViewConfiguration.OverlayConfiguration.Text(
+                                    group.style.emojiValue,
+                                    font = Font.system(FontScale.Custom(Floats.ICON_FONT_SIZE)),
+                                ),
+                        ),
                     modifier = Modifier.padding(end = Floats.rowIconSpacing),
                 )
                 Components.Text(group.names, color = colors.titleText)
@@ -176,19 +193,10 @@ private fun reactionGroups(messageID: String): List<ReactionGroup> {
                     .sortedBy { it.lowercase() }
                     .joinToString("\n")
             if (names.isEmpty()) null else ReactionGroup(style, names)
-        }
-        .sortedBy { it.style.orderValue }
+        }.sortedBy { it.style.orderValue }
 }
 
 private fun reactionDisplayName(
     user: User,
     currentUserID: String,
 ): String = if (user.id == currentUserID) LocalizedStringKey.You.localized() else user.displayName
-
-private fun navigationTitle(): String {
-    val base = LocalizedStringKey.ReactionDetails.localized().replace("…", "")
-    if (RuntimeStorage.languageCode != "en") return base
-    return base.split(" ").joinToString(" ") { word ->
-        word.replaceFirstChar { it.uppercaseChar() }
-    }
-}
