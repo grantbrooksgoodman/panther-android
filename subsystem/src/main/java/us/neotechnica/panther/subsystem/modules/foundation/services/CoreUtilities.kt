@@ -31,6 +31,17 @@ object CoreUtilities {
     }
 
     /**
+     * Erases every file in the app's documents directory.
+     *
+     * If the file store has not been initialized, this method has no
+     * effect.
+     */
+    fun eraseDocumentsDirectory() {
+        val directory = FileStore.documentsDirectory ?: return
+        directory.listFiles()?.forEach { it.deleteRecursively() }
+    }
+
+    /**
      * Restores the active language code to the device's system
      * language.
      */

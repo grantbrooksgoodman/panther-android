@@ -10,8 +10,11 @@ package us.neotechnica.panther.bundle
 
 import android.content.Context
 import us.neotechnica.panther.BuildConfig
+import us.neotechnica.panther.bundle.developermode.AppDevModeActions
+import us.neotechnica.panther.bundle.developermode.NetworkingOptions
 import us.neotechnica.panther.designsystem.modules.alertkit.dependencies.alertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.HUDConfig
+import us.neotechnica.panther.designsystem.modules.developermode.services.DevModeService
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheets
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
@@ -251,6 +254,8 @@ object Application {
         AppSubsystem.delegates.registerLoggerDomainSubscriptionDelegate(LoggerDomainSubscription)
         AppSubsystem.delegates.registerPermanentPersistentStorageKeyDelegate(PermanentKeyDelegate)
         AppSubsystem.delegates.registerErrorReportDelegate(ErrorReportingService)
+        DevModeService.registerAppActionDelegate(AppDevModeActions)
+        DevModeService.registerAdditionalSubsystemActions(listOf(NetworkingOptions.networkingOptionsAction))
         LocalTranslationArchiverDelegate.registerWithDependencies()
 
         DependencyValues.current.alertKitConfig.overrideTranslationHUDConfig(

@@ -21,7 +21,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import us.neotechnica.panther.bundle.developermode.ShakeDetector
 import us.neotechnica.panther.designsystem.modules.alertkit.views.AlertHost
+import us.neotechnica.panther.designsystem.modules.developermode.services.DevModeService
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUDHost
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.BuildInfoOverlayView
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.OverlayHost
@@ -37,6 +39,7 @@ import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.navigation.PendingChatNavigation
 import us.neotechnica.panther.navigation.RootView
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
+import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 
 class MainActivity : ComponentActivity() {
@@ -84,6 +87,7 @@ class MainActivity : ComponentActivity() {
                                 .padding(end = 16.dp, top = 48.dp),
                     )
                     ForcedUpdateView()
+                    ShakeDetector { if (Build.isDeveloperModeEnabled) DevModeService.presentActionSheet() }
                 }
             }
         }

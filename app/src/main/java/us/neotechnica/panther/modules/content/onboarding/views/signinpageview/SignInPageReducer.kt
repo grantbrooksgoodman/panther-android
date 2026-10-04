@@ -8,7 +8,6 @@
 
 package us.neotechnica.panther.modules.content.onboarding.views.signinpageview
 
-import us.neotechnica.panther.BuildConfig
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.common.extensions.partiallyFormatted
@@ -42,6 +41,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
+import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
@@ -382,7 +382,7 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
 
     // MARK: - Auxiliary
 
-    private val isDeveloperModeEnabled: Boolean get() = BuildConfig.DEBUG
+    private val isDeveloperModeEnabled: Boolean get() = Build.isDeveloperModeEnabled
 
     private fun verifyPhoneNumberEffect(phoneNumber: PhoneNumber): Effect<Action> =
         Effect.run { send ->

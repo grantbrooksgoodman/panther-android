@@ -12,6 +12,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -35,6 +36,7 @@ import kotlinx.coroutines.delay
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
+import us.neotechnica.panther.designsystem.modules.developermode.services.DevModeService
 import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.BuildInfoOverlay
@@ -132,6 +134,16 @@ private fun BuildInfoDetailsDialog(onDismiss: () -> Unit) {
                         Material3Text(label, style = Font.systemBold(FontScale.Small).textStyle)
                         Material3Text(value, style = Font.system(FontScale.Small).textStyle)
                     }
+                }
+
+                TextButton(
+                    contentPadding = PaddingValues(0.dp),
+                    onClick = {
+                        DevModeService.promptToToggle()
+                        onDismiss()
+                    },
+                ) {
+                    Material3Text("${if (Build.isDeveloperModeEnabled) "Disable" else "Enable"} Developer Mode")
                 }
             }
         },

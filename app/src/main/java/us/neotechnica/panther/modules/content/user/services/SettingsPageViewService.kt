@@ -31,13 +31,13 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationAlert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextFieldAttributes
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAlert
+import us.neotechnica.panther.designsystem.modules.developermode.services.DevModeService
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.modules.common.extensions.ApplicationStorageKey
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.services.AccountDeletionService
 import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.services.AnalyticsService.AnalyticsEvent
-import us.neotechnica.panther.modules.common.services.DevModeService
 import us.neotechnica.panther.modules.common.services.HapticsService
 import us.neotechnica.panther.modules.common.services.InviteService
 import us.neotechnica.panther.modules.common.services.MetadataService

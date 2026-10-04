@@ -144,10 +144,10 @@ object ContactSelectorPageViewService {
                 ).present(translating = listOf(ActionSheetAlert.TranslationOptionKey.Actions(emptyList())))
             }
 
-            ContactSelectorPageReducer.EntryPoint.NEW_CHAT_PAGE_VIEW ->
-                // The recipient-bar selection holder is wired in a later phase;
-                // for now the sheet is simply dismissed.
+            ContactSelectorPageReducer.EntryPoint.NEW_CHAT_PAGE_VIEW -> {
+                RecipientBarContactSelectionUIService.selectContactPair(selectedContactPair)
                 DependencyValues.current.navigation.navigate(Route.Chat(ChatRoute.Sheet(null)))
+            }
         }
     }
 

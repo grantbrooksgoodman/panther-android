@@ -14,11 +14,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.Application
 import us.neotechnica.panther.bundle.currentConversationMetadataChanged
+import us.neotechnica.panther.bundle.developermode.DangerZone
 import us.neotechnica.panther.bundle.reloadingConversationIDKeys
 import us.neotechnica.panther.bundle.traitCollectionChanged
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationAlert
-import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.modules.common.services.InviteService
 import us.neotechnica.panther.modules.common.services.PushTokenService
 import us.neotechnica.panther.modules.common.services.ReviewService
@@ -141,7 +139,7 @@ object ConversationsPageViewService {
                         UserSessionService.DataType.MESSAGES,
                     ),
                 )
-                deleteCurrentUserConversations()
+                DangerZone.deleteConversationsAction.perform()
             } catch (exception: Exception) {
                 Logger.log(exception, with = AlertType.toast)
             }
@@ -247,34 +245,8 @@ object ConversationsPageViewService {
         }
     }
 
-    private suspend fun deleteCurrentUserConversations() {
-        val didConfirm =
-            ConfirmationAlert(
-                title = DELETE_CONVERSATIONS_ALERT_TITLE,
-                message = DELETE_CONVERSATIONS_ALERT_MESSAGE,
-                confirmButtonStyle = ActionStyle.DESTRUCTIVE_PREFERRED,
-            ).present(translating = emptyList())
-        if (!didConfirm) return
-
-        val conversations = UserSessionService.currentUser?.conversations ?: return
-        for (conversation in conversations) {
-            ConversationSessionService.deleteConversation(conversation, forced = true)
-        }
-
-        HUD.showSuccess()
-        Task.delayed(by = 1.seconds) {
-            Application.reset(
-                preserveCurrentUserID = true,
-                onCompletion = Application.ResetCompletionProcedure.NAVIGATE_TO_SPLASH,
-            )
-        }
-    }
-
     // MARK: - Companion
 
-    private const val DELETE_CONVERSATIONS_ALERT_TITLE = "Delete Current User Conversations"
-    private const val DELETE_CONVERSATIONS_ALERT_MESSAGE =
-        "This will delete all conversations for the current user.\n\nThis operation cannot be undone."
     private const val FULL_RELOAD_FRACTION_DENOMINATOR = 3
     private const val FULL_RELOAD_SHUFFLE_THRESHOLD = 5
     private const val MILLIS_PER_SECOND = 1000L
