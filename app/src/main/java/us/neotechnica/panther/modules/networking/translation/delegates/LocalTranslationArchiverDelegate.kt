@@ -1,5 +1,6 @@
 //
 //  LocalTranslationArchiverDelegate.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -22,7 +23,7 @@ import kotlin.concurrent.withLock
 /**
  * The persistent translation archive.
  *
- * Mirrors the iOS `LocalTranslationArchiverDelegate`: lookups and
+ * Lookups and
  * mutations operate on an in-memory archive and its index, while disk
  * writes are serialized onto a background thread off the calling path.
  * The archive is decoded from disk at most once per launch and persisted

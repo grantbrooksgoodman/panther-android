@@ -1,9 +1,9 @@
 //
 //  PantherMessagingService.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 20/08/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.notifications.services
@@ -81,8 +81,8 @@ class PantherMessagingService : FirebaseMessagingService() {
 
         scope.launch(Dispatchers.Main) {
             val lifecycleState = ProcessLifecycleOwner.get().lifecycle.currentState
-            // In the foreground, respond in-app (toast + haptic) as iOS's
-            // `respondToInAppNotification` does, rather than posting a system notification.
+            // In the foreground, respond in-app (toast + haptic) rather than
+            // posting a system notification.
             if (lifecycleState.isAtLeast(Lifecycle.State.STARTED)) {
                 respondToInAppNotification(message, conversationIDKey)
             } else {
@@ -101,7 +101,7 @@ class PantherMessagingService : FirebaseMessagingService() {
         val body = message.notification?.body ?: message.data[BODY_KEY].orEmpty()
 
         // Enrich the title with the sender's contact name, and a group conversation's name as
-        // the subtitle, mirroring the iOS notification extension.
+        // the subtitle.
         val title = enrichedTitle(message)
         val subtitle =
             SessionStore
@@ -115,7 +115,7 @@ class PantherMessagingService : FirebaseMessagingService() {
     }
 
     /**
-     * Responds to a foreground message as iOS's `respondToInAppNotification`:
+     * Responds to a foreground message:
      * verifies the message is for the current user and its conversation is
      * visible, then either gives haptic feedback for a reaction to the
      * on-screen conversation or shows a tap-to-navigate in-app toast.
@@ -254,7 +254,7 @@ class PantherMessagingService : FirebaseMessagingService() {
                     .setContentText(body)
                     .setAutoCancel(true)
                     .setContentIntent(pendingIntent)
-                    // Group per conversation, matching the iOS per-thread grouping.
+                    // Group per conversation.
                     .setGroup(conversationIDKey)
                     .setPriority(NotificationCompat.PRIORITY_HIGH)
             if (subtitle != null) builder.setSubText(subtitle)

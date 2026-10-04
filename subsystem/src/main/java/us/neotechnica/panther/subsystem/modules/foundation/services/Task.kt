@@ -1,5 +1,6 @@
 //
 //  Task.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -18,7 +19,7 @@ import java.util.UUID
 import kotlin.time.Duration
 
 /**
- * Schedules deferred and debounced asynchronous work.
+ * Schedules delayed and debounced asynchronous work.
  *
  * Use [Task] to run an operation after a delay, or to debounce a
  * burst of calls so that only the most recently scheduled

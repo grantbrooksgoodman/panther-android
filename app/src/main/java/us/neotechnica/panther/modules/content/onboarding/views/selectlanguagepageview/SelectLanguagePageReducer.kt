@@ -1,9 +1,9 @@
 //
 //  SelectLanguagePageReducer.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 19/08/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.onboarding.views.selectlanguagepageview
@@ -86,9 +86,8 @@ class SelectLanguagePageReducer : Reducer<SelectLanguagePageReducer.State, Selec
             Action.ViewAppeared -> {
                 // The selector always displays in the device language, never the language the user
                 // tentatively picked, so returning to it after Continue does not translate it into
-                // that selection. iOS keeps this page's original resolution because it never
-                // rebuilds the view; on Android the page is recreated on pop, so we reset the active
-                // language here instead. The wheel still reflects the prior selection.
+                // that selection. Because the page is recreated on pop, the active
+                // language is reset here instead. The wheel still reflects the prior selection.
                 RuntimeStorage.languageCode = Locale.getDefault().language
                 val displayNames = LocalizedStringResolver.languageDisplayNames()
                 val languages = displayNames.values.sorted()

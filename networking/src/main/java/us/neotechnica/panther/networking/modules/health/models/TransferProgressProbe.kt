@@ -1,5 +1,6 @@
 //
 //  TransferProgressProbe.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -19,8 +20,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 
 /**
  * A per-transfer health probe that converts storage transfer progress
- * into mid-flight throughput samples and stall evidence, mirroring the
- * iOS `TransferProgressProbe`.
+ * into mid-flight throughput samples and stall evidence.
  *
  * Feed each progress snapshot to [handleProgress]; whenever the
  * accumulated segment reaches `minimumThroughputSampleBytes`, the probe

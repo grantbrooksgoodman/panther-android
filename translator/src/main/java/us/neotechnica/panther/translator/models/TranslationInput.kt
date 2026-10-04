@@ -1,5 +1,6 @@
 //
 //  TranslationInput.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -41,9 +42,8 @@ data class TranslationInput(
      * A copy whose detected links and phone numbers are wrapped in
      * the processing delimiter, so translation preserves them.
      *
-     * **Note:** the iOS original also detects postal addresses via
-     * `NSDataDetector`; Android has no equivalent detector, so
-     * addresses are not tokenized here.
+     * **Note:** postal addresses are not tokenized here, as no
+     * address detector is available.
      */
     val withTokenizedDetectorAttributes: TranslationInput
         get() {

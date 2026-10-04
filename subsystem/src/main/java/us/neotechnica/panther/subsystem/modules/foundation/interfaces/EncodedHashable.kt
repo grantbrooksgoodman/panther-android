@@ -1,5 +1,6 @@
 //
 //  EncodedHashable.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -40,9 +41,9 @@ import java.security.MessageDigest
  * **Note:** Because the hash is derived from the content of
  * [hashFactors], two instances with the same factors always
  * produce the same [encodedHash], regardless of type. The
- * computation matches the iOS `EncodedHashable` byte for byte;
+ * computation is stable across runs;
  * the golden fixtures in
- * `src/test/resources/parity/encoded_hash_vectors.json` pin
+ * `encoded_hash_vectors.json` pin
  * this behavior.
  */
 interface EncodedHashable {

@@ -1,9 +1,9 @@
 //
 //  ChangeLanguagePageView.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 22/09/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.views.changelanguagepageview
@@ -46,7 +46,7 @@ private typealias Floats = ChangeLanguagePageViewFloats
 
 /**
  * The page for changing the language the app translates content into,
- * pushed from Settings and mirroring the iOS `ChangeLanguagePageView`.
+ * pushed from Settings.
  *
  * @param modifier The modifier for this view.
  */

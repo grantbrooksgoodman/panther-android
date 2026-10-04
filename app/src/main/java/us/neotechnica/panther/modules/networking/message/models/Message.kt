@@ -1,5 +1,6 @@
 //
 //  Message.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -21,12 +22,9 @@ import java.util.Date
 /**
  * A message within a conversation.
  *
- * **Note:** This Phase 2 port decodes the message's wire fields
- * directly. Translation resolution and audio/media content
- * download – performed during decode on iOS – are deferred to the
- * translation (Phase 4) and chat (Phase 7) phases; decoded
- * messages carry their [translationReferences] as raw hosting
- * keys.
+ * **Note:** This decodes the message's wire fields directly; decoded
+ * messages carry their [translationReferences] as raw hosting keys.
+ * Translation resolution and audio/media download happen later.
  */
 data class Message(
     /** The message's identifier. */

@@ -1,9 +1,9 @@
 //
 //  RegionDetailService.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 19/08/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.common.services
@@ -12,11 +12,9 @@ import java.util.Locale
 
 /**
  * Resolves region metadata – calling codes, localized names, and
- * emoji flags – from [CommonPropertyLists], ported from the iOS
- * `RegionDetailService`.
+ * emoji flags – from [CommonPropertyLists].
  *
- * **Note:** the iOS service renders flag images; this Android port
- * uses emoji flags derived from the region code.
+ * **Note:** flags are rendered as emoji derived from the region code.
  */
 object RegionDetailService {
     // MARK: - Computed Properties

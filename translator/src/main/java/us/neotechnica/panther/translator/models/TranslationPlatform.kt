@@ -1,5 +1,6 @@
 //
 //  TranslationPlatform.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -245,7 +246,7 @@ enum class TranslationPlatform {
                 "zh" to "chi",
             )
 
-        // Mirrors iOS `addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)`:
+        // Percent-encode for a URL query:
         // URLEncoder is form-encoding (space → "+"), so restore the URL-query
         // conventions the translation hosts expect.
         private fun urlQueryEncoded(text: String): String =

@@ -1,9 +1,9 @@
 //
 //  ContextMenuActionHandlerService.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 01/09/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.services
@@ -51,7 +51,7 @@ object ContextMenuActionHandlerService {
      * Returns the report-mistranslation action for [row], or `null` when
      * the message has no reportable translation currently on display.
      *
-     * Mirrors iOS's retry-translation eligibility: the translation must be
+     * Retry-translation eligibility requires that the translation be
      * non-idempotent, its output must differ from its input, either side
      * must contain letters, it must carry a hosting key, the message must
      * currently display its translation, and it must not already have been

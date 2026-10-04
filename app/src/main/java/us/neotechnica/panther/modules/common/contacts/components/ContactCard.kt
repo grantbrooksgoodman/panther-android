@@ -1,9 +1,9 @@
 //
 //  ContactCard.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 20/09/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.common.contacts.components
@@ -38,8 +38,7 @@ import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 
 /**
- * A contact identified for display, standing in for the iOS
- * `CNContactContainer`.
+ * A contact identified for display.
  *
  * @property displayName The contact's name, or `null` when only a number
  *   is known.
@@ -62,14 +61,12 @@ data class ContactCardInfo(
 }
 
 /**
- * Returns a presenter that shows a contact card, standing in for the iOS
- * `CNContactView`.
+ * Returns a presenter that shows a contact card.
  *
  * When the number matches a saved device contact, the presenter opens the
- * system contact detail through a `ContactsContract` view intent (the
- * iOS `CNContactViewController(for:)`); otherwise it presents an in-app
- * detail sheet offering to add the number to contacts (the iOS
- * `CNContactViewController(forUnknownContact:)`).
+ * system contact detail through a `ContactsContract` view intent;
+ * otherwise it presents an in-app detail sheet offering to add the
+ * number to contacts.
  *
  * Call the returned function with a phone number and an optional display
  * name to present the card.

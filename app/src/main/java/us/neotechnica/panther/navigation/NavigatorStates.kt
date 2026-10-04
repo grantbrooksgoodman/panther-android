@@ -1,9 +1,9 @@
 //
 //  NavigatorStates.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 19/08/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.navigation
@@ -113,9 +113,8 @@ data class ChatNavigatorState(
 }
 
 /**
- * A descriptor for the frontmost navigation destination, mirroring the
- * iOS `leafViewController.descriptor` (the destination type's simple
- * name). Used as the `view_id` in analytics and error-report metadata.
+ * A descriptor for the frontmost navigation destination (the
+ * destination type's simple name). Used as the `view_id` in analytics and error-report metadata.
  *
  * The frontmost sheet wins; otherwise the top of the active modal's
  * stack, falling back to the modal itself.

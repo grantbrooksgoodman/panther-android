@@ -1,9 +1,9 @@
 //
 //  AppConstants+MediaActionHandler.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 01/09/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.constants
@@ -16,8 +16,8 @@ object MediaActionHandlerFloats {
     const val THUMBNAIL_IMAGE_SCALE = 2
     const val THUMBNAIL_FRAME_TIME_MICROSECONDS = 1_000_000L
 
-    // Maps the iOS `AVAssetExportPresetMediumQuality` transcode target: the
-    // video height is scaled to 480 px (H.264 video, AAC audio), preserving
+    // A medium-quality transcode target: the video height is scaled to
+    // 480 px (H.264 video, AAC audio), preserving
     // the aspect ratio, with the encoder's default medium bitrate.
     const val VIDEO_TARGET_HEIGHT = 480
 }

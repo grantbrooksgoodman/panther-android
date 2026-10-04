@@ -1,5 +1,6 @@
 //
 //  Components.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -214,7 +215,7 @@ object Components {
     // MARK: - Symbol
 
     /**
-     * Displays a symbol image, standing in for an SF Symbol.
+     * Displays a symbol image for an SF Symbol name.
      *
      * @param systemName The SF Symbol name. Unmapped names render a
      *   warning symbol.

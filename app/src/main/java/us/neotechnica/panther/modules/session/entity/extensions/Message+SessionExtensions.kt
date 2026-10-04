@@ -1,5 +1,6 @@
 //
 //  Message+SessionExtensions.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -128,8 +129,7 @@ val Message.otherParticipantReadReceipt: ReadReceipt?
 /**
  * The reactions applied to this message, or `null` when none.
  *
- * Resolved from the current conversation's reaction metadata, mirroring
- * the iOS `Message.reactions`.
+ * Resolved from the current conversation's reaction metadata.
  */
 val Message.reactions: List<Reaction>?
     get() =

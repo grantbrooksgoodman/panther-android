@@ -1,9 +1,9 @@
 //
 //  StatusIndicatorButton.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 19/08/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.onboarding.components
@@ -32,7 +32,7 @@ import us.neotechnica.panther.modules.content.onboarding.constants.StatusIndicat
 
 /**
  * A capsule button that requests a permission and reflects its
- * granted/denied status, ported from the iOS `StatusIndicatorButton`.
+ * granted/denied status.
  *
  * While undetermined ([isGranted] `null`) the button is a blue,
  * tappable capsule with a white label and an orange "?" status circle.

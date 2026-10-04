@@ -2,8 +2,8 @@
 //  Contact.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman on 26/09/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.common.models
@@ -19,10 +19,8 @@ import java.util.Base64
  * [Contact] captures the subset of a system contact the app uses –
  * identifier, name, and phone numbers.
  *
- * **Note:** the iOS original also carries thumbnail image data and a
- * decoded image; Android reads names and numbers only, so [imageData]
- * is present for structural parity but is not populated by the contacts
- * reader (see [[parity-ii-plan]]).
+ * **Note:** the contacts reader reads names and numbers only, so
+ * [imageData] is present but is not populated.
  */
 class Contact(
     val id: String,

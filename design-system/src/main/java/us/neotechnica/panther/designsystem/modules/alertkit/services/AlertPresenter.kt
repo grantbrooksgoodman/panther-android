@@ -1,5 +1,6 @@
 //
 //  AlertPresenter.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -65,8 +66,8 @@ sealed interface PresentedAlert {
 
     /**
      * A bottom action sheet offering a list of actions and a cancel
-     * button, standing in for the iOS `AKActionSheet`. A binary
-     * confirm/cancel sheet is the single-action case.
+     * button. A binary confirm/cancel sheet is the single-action
+     * case.
      */
     data class ActionSheet(
         val title: String?,

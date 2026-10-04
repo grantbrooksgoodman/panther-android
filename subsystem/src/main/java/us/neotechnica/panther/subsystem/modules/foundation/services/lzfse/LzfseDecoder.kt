@@ -2,8 +2,8 @@
 //  LzfseDecoder.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman on 30/09/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 //  Ported from Apple's BSD-licensed LZFSE reference implementation
 //  (`lzfse_decode_base.c`, `lzvn_decode_base.c`). See `Lzfse.kt` for the

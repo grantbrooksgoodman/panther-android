@@ -1,5 +1,6 @@
 //
 //  NetworkHealthService.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -295,7 +296,7 @@ internal object NetworkHealthService : NetworkHealthDelegate {
     /**
      * Whether the active path is bandwidth-constrained: Data Saver is
      * restricting background data, or (on API 35+) the path reports
-     * itself bandwidth-constrained. Mirrors iOS's Low Data Mode.
+     * itself bandwidth-constrained.
      */
     private fun isConstrained(capabilities: NetworkCapabilities): Boolean {
         val isDataSaverEnabled =

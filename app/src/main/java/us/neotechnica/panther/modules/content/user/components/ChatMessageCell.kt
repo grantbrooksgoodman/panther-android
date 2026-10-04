@@ -1,9 +1,9 @@
 //
 //  ChatMessageCell.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 20/08/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.components
@@ -242,7 +242,7 @@ private fun MessageContent(
  * The label below a message bubble: its reaction chips (one per style,
  * with a count and the current user's own reaction highlighted) and, for
  * the last confirmed own message in a one-to-one chat, its delivery
- * status. Aligns to the message's side, matching iOS's cell bottom label.
+ * status. Aligns to the message's side.
  */
 @Composable
 private fun BottomLabel(

@@ -1,5 +1,6 @@
 //
 //  Exception+AuthExtensions.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -14,8 +15,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
  * The user-info key under which an authentication exception carries
  * its underlying Firebase error code.
  *
- * The key matches the one the iOS Firebase SDK populates, so
- * error-code checks read identically across platforms.
+ * The key matches the one the Firebase SDK populates, so error-code
+ * checks are stable.
  */
 const val FIREBASE_AUTH_ERROR_CODE_KEY = "FIRAuthErrorUserInfoNameKey"
 

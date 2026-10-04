@@ -1,5 +1,6 @@
 //
 //  TranslationReferenceParityTest.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -25,8 +26,7 @@ import us.neotechnica.panther.translator.models.TranslationInput
 
 /**
  * Verifies the hosted translation archive wire format byte-for-byte
- * against the golden vectors generated from the iOS sources, so a
- * translation Android writes is readable by iOS and vice versa.
+ * against the golden wire-format vectors.
  *
  * The idempotent vectors are skipped: their reference key is a
  * `android.util.Base64` encoding that is unavailable to JVM unit tests.

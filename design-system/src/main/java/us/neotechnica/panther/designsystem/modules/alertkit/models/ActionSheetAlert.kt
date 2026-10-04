@@ -1,5 +1,6 @@
 //
 //  ActionSheetAlert.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -17,7 +18,7 @@ import us.neotechnica.panther.translator.models.TranslationInput
 import kotlin.coroutines.resume
 
 /**
- * A bottom action sheet, standing in for the iOS `AKActionSheet`.
+ * A bottom action sheet.
  *
  * The sheet has two forms:
  *

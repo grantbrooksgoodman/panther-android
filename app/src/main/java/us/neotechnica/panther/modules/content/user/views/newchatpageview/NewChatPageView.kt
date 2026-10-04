@@ -2,8 +2,8 @@
 //  NewChatPageView.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman on 20/08/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.views.newchatpageview
@@ -208,7 +208,7 @@ private fun buildNewChatViewModel(): ViewModel<NewChatPageReducer.State, NewChat
         }
 
 /**
- * Opens the contact selector, mirroring the iOS `selectContactButtonTapped`:
+ * Opens the contact selector:
  * a call-to-action when contacts access is denied, a contact-pair sync and
  * an invitation prompt when the address book is empty, and otherwise the
  * selector.
@@ -263,7 +263,7 @@ private suspend fun presentContactsPermissionCTA(context: Context) {
     }
 }
 
-// Mirrors the iOS `MediaActionHandlerService.attachMediaButtonTapped` action sheet.
+// The attach-media action sheet.
 private suspend fun presentAttachMediaSheet(pickers: ContentPickers) {
     ActionSheetAlert(
         title = "Attach media",

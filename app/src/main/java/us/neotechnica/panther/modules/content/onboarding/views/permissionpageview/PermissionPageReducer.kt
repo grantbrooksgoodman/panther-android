@@ -1,9 +1,9 @@
 //
 //  PermissionPageReducer.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 19/08/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.onboarding.views.permissionpageview
@@ -262,8 +262,8 @@ class PermissionPageReducer : Reducer<PermissionPageReducer.State, PermissionPag
                 },
             )
         } else {
-            // iOS calls registerForRemoteNotifications() here; Android's FCM token is obtained
-            // automatically, so no explicit registration call is needed.
+            // The FCM token is obtained automatically, so no explicit
+            // registration call is needed.
             ReduceResult(state.copy(isNotificationPermissionGranted = true))
         }
 

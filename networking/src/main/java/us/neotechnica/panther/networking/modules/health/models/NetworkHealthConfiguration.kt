@@ -1,5 +1,6 @@
 //
 //  NetworkHealthConfiguration.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -18,7 +19,7 @@ package us.neotechnica.panther.networking.modules.health.models
  * through
  * [Networking.Config.setNetworkHealthConfiguration][us.neotechnica.panther.networking.Networking.Config.setNetworkHealthConfiguration].
  */
-@Suppress("LongParameterList") // Mirrors the iOS NetworkHealthConfiguration memberwise initializer.
+@Suppress("LongParameterList") // All fields are supplied at the one memberwise call site.
 data class NetworkHealthConfiguration(
     /**
      * The health score below which [CacheStrategy.ADAPTIVE]
@@ -169,7 +170,7 @@ data class NetworkHealthConfiguration(
     // MARK: - Constants
 
     companion object {
-        /** The default configuration, matching the iOS defaults. */
+        /** The default configuration. */
         val default =
             NetworkHealthConfiguration(
                 adaptiveScoreThreshold = 0.3,

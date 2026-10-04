@@ -1,5 +1,6 @@
 //
 //  AuthDelegate.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -76,9 +77,8 @@ interface AuthDelegate {
      * Sends a verification code to the specified phone number via
      * SMS and returns the verification ID.
      *
-     * **Note:** Unlike the iOS interface, Android phone
-     * verification requires an [Activity] to host the Play
-     * Integrity or reCAPTCHA verification flow.
+     * **Note:** Phone verification requires an [Activity] to host
+     * the Play Integrity or reCAPTCHA verification flow.
      *
      * @param activity The activity hosting the verification flow.
      * @param internationalNumber The phone number to verify, in

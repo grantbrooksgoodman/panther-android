@@ -1,5 +1,6 @@
 //
 //  AnalyticsService.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -133,8 +134,8 @@ object AnalyticsService {
                 }
             }
 
-            // iOS logs this under the `.analytics` domain; Android's `Logger.log(exception)` is
-            // domain-fixed to `.exception`, so the parameters are carried but the domain differs.
+            // `Logger.log(exception)` is domain-fixed to `.exception`, so the
+            // parameters are carried but the analytics domain is not set.
             Logger.log(
                 Exception(
                     "Logging analytics event \"${event.eventName}\".",

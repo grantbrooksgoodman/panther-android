@@ -1,5 +1,6 @@
 //
 //  TranslationReference.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -13,10 +14,8 @@ package us.neotechnica.panther.modules.networking.message.models
  * A reference serializes as its [hostingKey], the composite
  * archive key `"<languagePair> | <referenceKey>"`.
  *
- * **Note:** This Phase 2 port carries the raw hosting key so
- * messages round-trip on the wire without the full translation
- * stack. The translation module (Phase 4) will expand this type
- * with the parsed language pair and reference kind.
+ * **Note:** This carries the raw hosting key so messages round-trip
+ * on the wire without the full translation stack.
  */
 @JvmInline
 value class TranslationReference(

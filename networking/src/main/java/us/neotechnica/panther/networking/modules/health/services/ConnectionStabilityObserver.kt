@@ -1,5 +1,6 @@
 //
 //  ConnectionStabilityObserver.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -25,8 +26,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 
 /**
  * A passive observer of the Firebase realtime client's own connection
- * state, reported at the special `.info/connected` location, mirroring
- * the iOS `ConnectionStabilityObserver`.
+ * state, reported at the special `.info/connected` location.
  *
  * Unexpected socket drops in the foreground (flaps) are reported as
  * [NetworkHealthEvent.ConnectionFlap]; reconnections as

@@ -1,5 +1,6 @@
 //
 //  MediaFile.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -52,7 +53,7 @@ data class MediaFile(
     /**
      * The file extension's raw value and a hash of the file's content,
      * sorted alphabetically. When the content cannot be read, the content
-     * hash is omitted. Matches the iOS `MediaFile.hashFactors`.
+     * hash is omitted.
      */
     override val hashFactors: List<String>
         get() {
@@ -63,9 +64,9 @@ data class MediaFile(
 
     // MARK: - Auxiliary
 
-    // A streamed SHA-256 hex digest of the file's bytes — byte-identical to
-    // the iOS `Data.hash`, but streamed rather than loading the whole file
-    // into memory so large videos do not risk an OOM.
+    // A streamed SHA-256 hex digest of the file's bytes, streamed rather
+    // than loading the whole file into memory so large videos do not
+    // risk an OOM.
     private fun contentHash(): String? {
         val file = localPathFile?.takeIf { it.exists() } ?: return null
         return runCatching {

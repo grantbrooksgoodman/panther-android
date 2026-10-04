@@ -1,5 +1,6 @@
 //
 //  LanguageRecognitionService.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -19,14 +20,10 @@ import kotlin.coroutines.resumeWithException
 /**
  * Estimates how confidently a string belongs to a given language.
  *
- * The iOS original combines Apple's `NLLanguageRecognizer` (two 0.4
- * legs: the dominant language and the top hypothesis) with a
- * `UITextChecker` spell heuristic (a 0.2 leg). Android has no headless
- * spell checker, so this port derives the two identification legs from
- * ML Kit's language identifier and lets the spell leg pass through as a
- * constant 0.2. The result is that a string both ML legs agree on
- * scores 1.0 – matching iOS's all-three-legs outcome, which is what the
- * `> 0.8` "already in the target language" short-circuit checks for.
+ * Combines two identification legs (0.4 each) from ML Kit's language
+ * identifier with a constant 0.2 spell leg, so a string both legs
+ * agree on scores 1.0, which is what the `> 0.8` "already in the
+ * target language" short-circuit checks for.
  */
 class LanguageRecognitionService private constructor() {
     // MARK: - Properties

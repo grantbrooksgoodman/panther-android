@@ -1,5 +1,6 @@
 //
 //  AudioMessageService.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -18,8 +19,8 @@ import us.neotechnica.panther.translator.models.Translation
 /**
  * The service that downloads audio message content for playback.
  *
- * **Note:** the iOS original also uploads and deletes audio components;
- * audio message *sending* is cut, so this port provides retrieval only.
+ * **Note:** audio message *sending* is cut, so this provides
+ * retrieval only.
  */
 object AudioMessageService {
     // MARK: - Get Audio Component

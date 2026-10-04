@@ -1,5 +1,6 @@
 //
 //  ConversationService.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -30,8 +31,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetad
 
 /**
  * Reads [Conversation] records from the database, upserting each into
- * the [SessionStore]. Ported from the iOS `ConversationService` read
- * path.
+ * the [SessionStore].
  */
 object ConversationService {
     // MARK: - Properties
@@ -103,7 +103,7 @@ object ConversationService {
     /** Returns the conversations with the given keys, upserting them into the store. */
     suspend fun getConversations(idKeys: List<String>): List<Conversation> =
         coroutineScope {
-            // Fail the batch if any conversation cannot be fetched, matching iOS.
+            // Fail the batch if any conversation cannot be fetched.
             idKeys.map { idKey -> async { getConversation(idKey) } }.awaitAll()
         }
 

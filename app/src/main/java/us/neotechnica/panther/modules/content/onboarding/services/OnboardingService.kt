@@ -1,9 +1,9 @@
 //
 //  OnboardingService.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 19/08/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.onboarding.services
@@ -23,7 +23,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 
 /**
  * Carries state through the onboarding flow and finalizes account
- * creation, ported from the iOS `OnboardingService`.
+ * creation.
  *
  * A singleton, so every onboarding page reads and writes the same
  * values. Sign-up pages record their results as the user progresses;
@@ -31,8 +31,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
  * present. [flushValues] resets recorded values when the flow
  * restarts.
  *
- * **Note:** push-token registration is deferred to a later phase, so
- * created users carry no push tokens yet.
+ * **Note:** push-token registration is not yet wired, so created
+ * users carry no push tokens yet.
  */
 object OnboardingService {
     // MARK: - Properties
@@ -140,8 +140,8 @@ object OnboardingService {
 
     /** Asks the user to agree to the conduct policy; returns `true` if declined. */
     suspend fun presentEulaAlert(): Boolean =
-        // iOS presents this with a bare `.present()`, which translates everything;
-        // the Android no-arg `present()` translates nothing, so opt in explicitly.
+        // The no-arg `present()` translates nothing, so opt in explicitly
+        // to translate every string.
         !ActionSheetAlert(
             message =
                 "I agree to help maintain a community of respect towards others " +

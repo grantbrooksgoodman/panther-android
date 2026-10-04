@@ -1,5 +1,6 @@
 //
 //  PermissionService.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -34,11 +35,10 @@ import kotlin.coroutines.resume
 import android.os.Build as SystemBuild
 
 /**
- * Checks, requests, and prompts for system permissions, standing in for
- * the iOS `PermissionService`.
+ * Checks, requests, and prompts for system permissions.
  *
- * iOS also covers the recording and transcription permissions; those
- * are cut on Android until audio messages arrive, so only contacts and
+ * The recording and transcription permissions are cut until audio
+ * messages arrive, so only contacts and
  * notifications are modeled.
  */
 object PermissionService {

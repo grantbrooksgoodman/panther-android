@@ -1,5 +1,6 @@
 //
 //  Overlay.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -12,8 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * A global, dimming activity overlay, standing in for the iOS
- * `CoreKit.UI.addOverlay`/`removeOverlay`.
+ * A global, dimming activity overlay.
  *
  * Toggle it from anywhere; the
  * [OverlayHost][us.neotechnica.panther.designsystem.modules.foundation.overlay.OverlayHost]
@@ -41,7 +41,7 @@ object Overlay {
     // MARK: - Methods
 
     /**
-     * Shows the overlay, mirroring the iOS `CoreKit.UI.addOverlay`.
+     * Shows the overlay.
      *
      * @param alpha The opacity of the dimming scrim.
      * @param showsActivityIndicator Whether to show the spinner (pass

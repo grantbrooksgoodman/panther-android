@@ -2,8 +2,8 @@
 //  LzfseTest.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman on 30/09/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.subsystem.modules.foundation.services.lzfse
@@ -13,7 +13,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
-/** Verifies the LZFSE codec ported in Parity II Phase 9.6. */
+/** Verifies the LZFSE codec. */
 class LzfseTest {
     @Test
     fun `round-trips empty input`() {

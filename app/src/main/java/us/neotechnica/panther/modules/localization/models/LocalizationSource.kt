@@ -1,9 +1,9 @@
 //
 //  LocalizationSource.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 19/08/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.localization.models
@@ -12,8 +12,7 @@ package us.neotechnica.panther.modules.localization.models
  * The table a localized string is resolved from.
  *
  * Each source maps to a bundled JSON asset of the form
- * `{ key: { languageCode: value } }`, generated from the iOS
- * `LocalizedStrings.plist` files.
+ * `{ key: { languageCode: value } }`, generated from the source localization tables.
  */
 enum class LocalizationSource(
     val assetName: String,

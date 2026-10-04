@@ -1,5 +1,6 @@
 //
 //  Message+RemotelyUpdatable.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -61,7 +62,7 @@ suspend fun Message.update(
 // MARK: - Did Write
 
 /** Applies a completed single-field remote update, upserting the updated message into the session store. */
-@Suppress("UnusedParameter") // `key` matches the iOS `didWrite(_:forKey:)` signature shared across updatable types.
+@Suppress("UnusedParameter") // `key` matches the shared updatable-type write signature.
 fun Message.didWrite(
     updated: Message,
     key: MessageUpdatableKey,

@@ -1,5 +1,6 @@
 //
 //  MediaMessageService.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -35,8 +36,7 @@ import java.io.File
  * upload and decompressed on download, while the local file stays
  * uncompressed. [Lzfse] emits uncompressed LZFSE blocks on encode (valid
  * and Apple-decodable, without a compression ratio) and decodes every
- * block type – uncompressed, LZVN, and FSE-compressed (v2) – so a
- * document compressed by iOS opens on Android and vice versa.
+ * block type – uncompressed, LZVN, and FSE-compressed (v2).
  */
 object MediaMessageService {
     // MARK: - Get Media Component
@@ -130,8 +130,8 @@ object MediaMessageService {
                 exceptions.add(exception)
             }
 
-            // Best-effort; the thumbnail may be absent. The path mirrors
-            // iOS, which appends the suffix to the extension-qualified path.
+            // Best-effort; the thumbnail may be absent. The suffix is
+            // appended to the extension-qualified path.
             runCatching { storage.delete("${NetworkPath.media.rawValue}/$mediaFilePath${MediaFile.THUMBNAIL_IMAGE_NAME_SUFFIX}") }
         } catch (exception: Exception) {
             exceptions.add(exception)

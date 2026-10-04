@@ -1,5 +1,6 @@
 //
 //  ConversationSyncService.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -47,7 +48,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
  * activities, participants, metadata, and reactions – and commits the
  * reconciled conversation to the session store.
  */
-// Mirrors iOS `ConversationSyncService`, which carries `swiftlint:disable type_body_length`.
+// This service exceeds the type-body-length limit.
 @Suppress("LargeClass")
 class ConversationSyncService {
     // MARK: - Properties
@@ -279,7 +280,7 @@ class ConversationSyncService {
         return data.conversation
     }
 
-    // Mirrors the iOS private `_synchronizeConversation`; the leading underscore is preserved for parity.
+    // The leading underscore marks this as an internal synchronization helper.
     @Suppress("FunctionNaming")
     private suspend fun _synchronizeConversation(
         conversation: Conversation,

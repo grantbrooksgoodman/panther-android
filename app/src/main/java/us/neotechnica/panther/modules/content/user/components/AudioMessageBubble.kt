@@ -1,9 +1,9 @@
 //
 //  AudioMessageBubble.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 03/09/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.components
@@ -36,7 +36,7 @@ import java.util.Locale
 
 /**
  * An audio message bubble: a play/pause button, a playback-progress bar,
- * and a duration label, mirroring the iOS `AudioMessageCell`.
+ * and a duration label.
  *
  * The label shows the total duration when idle and the elapsed time while
  * playing. Playback itself (driving [isPlaying] and [progress]) is managed

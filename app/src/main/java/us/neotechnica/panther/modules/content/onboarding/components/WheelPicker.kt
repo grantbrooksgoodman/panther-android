@@ -1,9 +1,9 @@
 //
 //  WheelPicker.kt
-//  Panther
+//  Panther Android
 //3/08/2026.
 ////  Copyright © 2013-2026 NEOTechnica
-//  Created by Grant Brooks Goodman on 2 Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
 //
 
 package us.neotechnica.panther.modules.content.onboarding.components
@@ -43,8 +43,8 @@ import us.neotechnica.panther.modules.content.onboarding.constants.WheelPickerFl
 import kotlin.math.abs
 
 /**
- * A scrolling wheel (spinner) picker, mirroring the iOS `.wheel` picker
- * style: a fixed viewport of rows that snap to center, with the selected
+ * A scrolling wheel (spinner) picker: a fixed viewport of rows that
+ * snap to center, with the selected
  * row highlighted in a pill and neighboring rows fading with distance.
  *
  * @param items The row labels.

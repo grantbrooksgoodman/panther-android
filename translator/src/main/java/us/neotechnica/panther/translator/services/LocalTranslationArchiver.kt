@@ -1,5 +1,6 @@
 //
 //  LocalTranslationArchiver.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -21,8 +22,7 @@ import us.neotechnica.panther.translator.models.Translation
  * [TranslationArchiverDelegate] is registered through
  * [Translator.config][us.neotechnica.panther.translator.Translator.config].
  *
- * **Note:** the iOS original persists to `UserDefaults`. This built-in
- * fallback is in-memory only; the host app registers a persistent
+ * **Note:** this built-in fallback is in-memory only; the host app registers a persistent
  * delegate at startup, which supersedes it.
  */
 object LocalTranslationArchiver : TranslationArchiverDelegate {

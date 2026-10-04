@@ -1,5 +1,6 @@
 //
 //  Networking.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -59,7 +60,7 @@ object Networking {
      * and write to the backend.
      *
      * **Note:** The remote read/write enablement service is
-     * deferred; this value defaults to `true`.
+     * not yet wired; this value defaults to `true`.
      */
     val isReadWriteEnabled: Boolean
         get() = readWriteEnabled.wrappedValue
@@ -121,8 +122,8 @@ object Networking {
     /**
      * Returns the time-to-live, in milliseconds, for a cache
      * sample whose backing fetch began at `startMillis`, with a
-     * floor of 250 milliseconds. Mirrors the iOS heuristic of
-     * caching a value for roughly as long as its fetch took.
+     * floor of 250 milliseconds: a value is cached for
+     * roughly as long as its fetch took.
      */
     internal fun cacheExpiryMillis(startMillis: Long): Long {
         val elapsed = abs(System.currentTimeMillis() - startMillis)

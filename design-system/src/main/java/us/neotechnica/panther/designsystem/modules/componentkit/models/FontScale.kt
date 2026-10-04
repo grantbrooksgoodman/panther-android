@@ -1,5 +1,6 @@
 //
 //  FontScale.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -8,10 +9,9 @@
 package us.neotechnica.panther.designsystem.modules.componentkit.models
 
 /**
- * The point size of a font, corresponding to standard iOS Dynamic
- * Type sizes.
+ * The point size of a font.
  *
- * The predefined cases map to standard iOS Dynamic Type sizes:
+ * The predefined cases map to standard type sizes:
  * [Large] is 28 points (Title 1), [Medium] is 17 points (Body), and
  * [Small] is 13 points (Footnote). Use [Custom] for an arbitrary size.
  */

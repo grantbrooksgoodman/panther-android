@@ -1,9 +1,9 @@
 //
 //  UserContentContainer.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 20/08/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.views
@@ -76,7 +76,7 @@ fun UserContentContainer(modifier: Modifier = Modifier) {
 
     // The conversations list's view-model and scroll state are hoisted here,
     // where they survive pushes to a chat, so returning lands where the user
-    // left off (and without re-loading), as on iOS. The container is composed
+    // left off (and without re-loading). The container is composed
     // for the whole signed-in session, so these outlive the pushed pages.
     val conversationsViewModel = remember { buildConversationsPageViewModel() }
     val conversationsListState = rememberLazyListState()
@@ -86,7 +86,7 @@ fun UserContentContainer(modifier: Modifier = Modifier) {
     }
 
     // The conversations list is always composed; map its coverage by a pushed
-    // page to the iOS appear/disappear lifecycle so returning to the root
+    // page to an appear/disappear lifecycle so returning to the root
     // refreshes it.
     LaunchedEffect(topPath == null) {
         conversationsViewModel.send(
@@ -100,7 +100,7 @@ fun UserContentContainer(modifier: Modifier = Modifier) {
 
     Box(modifier = modifier.fillMaxSize()) {
         // The conversations list is the always-composed root layer, so it is
-        // never disposed by a push and its scroll position survives, as on iOS.
+        // never disposed by a push and its scroll position survives.
         // Pushed pages animate in over it and are opaque.
         // Drawn edge-to-edge (no system-bar padding here) so the cell context
         // menu's dim scrim can cover the whole screen; the page insets its own
@@ -160,28 +160,28 @@ fun UserContentContainer(modifier: Modifier = Modifier) {
                         is UserContentNavigatorState.SeguePath.Chat ->
                             ChatPageView(path.conversationIDKey, path.focusedMessageID, Modifier.fillMaxSize())
 
-                        // Drawn edge-to-edge so its grouped background bleeds past the system bars,
-                        // matching iOS; the page insets its own content.
+                        // Drawn edge-to-edge so its grouped background bleeds past the system bars;
+                        // the page insets its own content.
                         is UserContentNavigatorState.SeguePath.ChatInfo ->
                             ChatInfoPageView(path.conversationIDKey, Modifier.fillMaxSize())
 
-                        // Drawn edge-to-edge so its grouped background bleeds past the system bars,
-                        // matching iOS; the page insets its own content.
+                        // Drawn edge-to-edge so its grouped background bleeds past the system bars;
+                        // the page insets its own content.
                         UserContentNavigatorState.SeguePath.NewChat ->
                             NewChatPageView(Modifier.fillMaxSize())
 
-                        // Drawn edge-to-edge so its grouped background bleeds past the system bars,
-                        // matching iOS; the page insets its own content.
+                        // Drawn edge-to-edge so its grouped background bleeds past the system bars;
+                        // the page insets its own content.
                         UserContentNavigatorState.SeguePath.Settings ->
                             SettingsPageView(Modifier.fillMaxSize())
 
-                        // Drawn edge-to-edge so its grouped background bleeds past the system bars,
-                        // matching iOS; the page insets its own content.
+                        // Drawn edge-to-edge so its grouped background bleeds past the system bars;
+                        // the page insets its own content.
                         UserContentNavigatorState.SeguePath.ChangeLanguage ->
                             ChangeLanguagePageView(Modifier.fillMaxSize())
 
-                        // Drawn edge-to-edge so its grouped background bleeds past the system bars,
-                        // matching iOS; the page insets its own content.
+                        // Drawn edge-to-edge so its grouped background bleeds past the system bars;
+                        // the page insets its own content.
                         UserContentNavigatorState.SeguePath.InviteLanguagePicker ->
                             InviteLanguagePickerView(Modifier.fillMaxSize())
                     }

@@ -1,5 +1,6 @@
 //
 //  HostedTranslationArchiver.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -44,9 +45,8 @@ import us.neotechnica.panther.translator.services.LocalTranslationArchiver
  * derivation of a new language pair from two archived ones – and fall
  * back to per-hash network reads only while the snapshot is stale.
  */
-// LargeClass suppressed: the iOS `HostedTranslationArchiver` disables
-// `type_body_length` for the same reason (the snapshot, derivation, and
-// archive read/write responsibilities are cohesive).
+// LargeClass suppressed: the snapshot, derivation, and archive
+// read/write responsibilities are cohesive.
 @Suppress("LargeClass", "TooManyFunctions")
 internal class HostedTranslationArchiver {
     // MARK: - Types

@@ -1,5 +1,6 @@
 //
 //  TimestampDateFormatter.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -18,7 +19,7 @@ import java.util.TimeZone
  *
  * All serialized dates share one format –
  * `yyyy-MM-dd HH:mm:ss zzz` in the POSIX locale, pinned to UTC –
- * matching the iOS `TimestampDateFormatterDependency`. Formatted
+ * in a fixed serialized form. Formatted
  * output always renders the zone token as `GMT`:
  *
  * ```
@@ -27,9 +28,9 @@ import java.util.TimeZone
  *
  * Parsing accepts any zone the platform recognizes (`GMT`,
  * `UTC`, `GMT+2`, named zones) and rejects strings without a
- * zone token, mirroring the iOS formatter's tolerance. The
+ * zone token. The
  * golden fixtures in
- * `src/test/resources/parity/timestamp_vectors.json` and
+ * `timestamp_vectors.json` and
  * `timestamp_parse_vectors.json` pin both behaviors.
  *
  * All methods are thread-safe.
@@ -37,7 +38,7 @@ import java.util.TimeZone
 class TimestampDateFormatter {
     // MARK: - Properties
 
-    // Formatting writes the zone as a literal: iOS always emits
+    // Formatting writes the zone as a literal; always emitting
     // "GMT" for the pinned UTC zone, and rendering zzz through
     // the platform would emit "UTC" on some JVM versions.
     private val formatFormatter =

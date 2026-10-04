@@ -1,5 +1,6 @@
 //
 //  NetworkClient.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -16,7 +17,7 @@ import java.net.URL
 /**
  * A minimal HTTP client for the translators' API fast paths.
  *
- * Mirrors the iOS translators' use of `URLSession` for the Google and
+ * Serves the Google and
  * Reverso JSON endpoints. Requests run on [Dispatchers.IO] and return
  * the response body, throwing [TranslationError] on a non-200 status.
  */

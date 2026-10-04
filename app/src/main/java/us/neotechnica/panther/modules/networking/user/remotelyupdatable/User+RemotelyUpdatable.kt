@@ -1,5 +1,6 @@
 //
 //  User+RemotelyUpdatable.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -95,9 +96,8 @@ suspend fun User.update(
  * fields to the user node in a single atomic update. Upserts the
  * updated user into the session store.
  *
- * This is the multi-field analog of [update]; it mirrors iOS's
- * result-builder `update { Assign(...) }`. Fields written this way
- * bypass the per-field [willWrite] incremental-diff handling, so it
+ * This is the multi-field analog of [update]. Fields written this
+ * way bypass the per-field [willWrite] incremental-diff handling, so it
  * is intended for whole-value scalar and list fields rather than the
  * `blockedUserIDs` or `pushTokens` diff fields.
  */
@@ -163,7 +163,7 @@ suspend fun User.willWrite(
 // MARK: - Did Write
 
 /** Applies a completed single-field remote update, upserting the updated user into the session store. */
-@Suppress("UnusedParameter") // `key` matches the iOS `didWrite(_:forKey:)` signature shared across updatable types.
+@Suppress("UnusedParameter") // `key` matches the shared updatable-type write signature.
 fun User.didWrite(
     updated: User,
     key: UserUpdatableKey,

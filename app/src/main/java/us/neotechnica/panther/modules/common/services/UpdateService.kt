@@ -1,5 +1,6 @@
 //
 //  UpdateService.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -222,9 +223,8 @@ object UpdateService {
         activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
     }
 
-    // The start of the calendar day for the given date, mirroring the
-    // iOS `Date.comparator`, so the postponement interval is counted
-    // in whole calendar days.
+    // The start of the calendar day for the given date, so the
+    // postponement interval is counted in whole calendar days.
     private fun startOfDay(date: Date): Long {
         val calendar = Calendar.getInstance()
         calendar.time = date

@@ -1,5 +1,6 @@
 //
 //  BuildInfoOverlay.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -15,7 +16,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStor
 /**
  * Controls the visibility of the build-info overlay.
  *
- * Mirrors the iOS `BuildInfoOverlay`. The hidden state is published as
+ * The hidden state is published as
  * a [StateFlow] so the overlay view reacts to changes, and it is
  * persisted across launches.
  */

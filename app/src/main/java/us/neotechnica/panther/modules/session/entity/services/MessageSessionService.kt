@@ -1,5 +1,6 @@
 //
 //  MessageSessionService.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -118,7 +119,7 @@ object MessageSessionService {
     /**
      * Sends [mediaFile] as a media message to the given recipients.
      *
-     * Mirrors the iOS ordering: the media and its thumbnail are uploaded
+     * The media and its thumbnail are uploaded
      * first, then the message is written and recipients are notified.
      *
      * @return The updated (or newly created) conversation.

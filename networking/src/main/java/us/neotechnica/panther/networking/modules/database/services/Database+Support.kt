@@ -1,5 +1,6 @@
 //
 //  Database+Support.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -19,9 +20,8 @@ import kotlin.time.Duration
 
 private const val MILLIS_PER_SECOND = 1000.0
 
-// The catalogued `AppException.timedOut` code. On iOS this code is the
-// hash of the timed-out descriptor; the Android descriptor differs, so
-// the code is assigned explicitly to keep timeout matching faithful.
+// The catalogued `AppException.timedOut` code is assigned explicitly
+// (its descriptor-derived hash differs) to keep timeout matching faithful.
 private const val TIMED_OUT_ERROR_CODE = "801F"
 
 /**
@@ -85,7 +85,7 @@ internal suspend fun <T> guardedFirebaseOperation(
         throw cancellation
     } catch (throwable: Throwable) {
         val exception = (throwable as? Exception) ?: Exception.from(throwable, ExceptionMetadata(sender))
-        // iOS's HealthEvidence.classify treats a "no value exists" result as honest latency
+        // A "no value exists" result is honest latency
         // evidence – the server answered, there simply was no data – so record it before rethrowing.
         if (exception.isEqual(to = AppException.noValueExists)) {
             Networking.health.recordLatencySample((System.currentTimeMillis() - start) / MILLIS_PER_SECOND)

@@ -1,5 +1,6 @@
 //
 //  UserSessionService.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -56,7 +57,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStora
  * re-resolves them, while a change to their device identifier signs the
  * device out to preserve a single active session.
  */
-// iOS applies `swiftlint:disable file_length type_body_length` to this service.
+// This service exceeds the file-length and type-body-length limits.
 @Suppress("LargeClass")
 object UserSessionService {
     // MARK: - Types
@@ -125,7 +126,7 @@ object UserSessionService {
                         // Claim the session for this device before observing, so the
                         // deviceID watcher does not sign this device out against a node
                         // deviceID last written by another device or a prior install.
-                        // (iOS claims this at splash via updateDeviceIDIfNeeded.)
+                        // (The device ID is claimed here on first run.)
                         runCatching { currentUser?.updateDeviceIDIfNeeded() }
                             .onFailure { Logger.log("Failed to claim device ID. ${it.message}") }
 

@@ -1,5 +1,6 @@
 //
 //  Storage.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -139,8 +140,7 @@ class Storage : StorageDelegate {
 
     /**
      * Prepends the active environment's short string to [path] so
-     * storage is isolated per environment, mirroring the iOS
-     * `String.prependingCurrentEnvironment` (for example,
+     * storage is isolated per environment (for example,
      * `"media/x.jpg"` → `"dev/media/x.jpg"`).
      */
     private fun environmentPath(path: String): String = "${Networking.config.environment.shortString}/${path.trim('/')}"

@@ -1,5 +1,6 @@
 //
 //  Milestone.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -10,12 +11,12 @@ package us.neotechnica.panther.subsystem.modules.foundation.models
 /**
  * The release-cycle stage of a build.
  *
- * Mirrors the iOS `Build.Milestone`. Each milestone has a single-
+ * Each milestone has a single-
  * character [shortString] that is appended to build numbers in the
  * build-info overlay (for example, `"b"` for beta).
  */
 enum class Milestone(
-    /** The underlying raw value, matching the iOS `rawValue`. */
+    /** The underlying raw value. */
     val rawValue: String,
     /** A single-character abbreviation for this milestone. */
     val shortString: String,

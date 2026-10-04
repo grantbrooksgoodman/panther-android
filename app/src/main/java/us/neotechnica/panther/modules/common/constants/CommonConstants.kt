@@ -1,5 +1,6 @@
 //
 //  CommonConstants.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -10,8 +11,7 @@ package us.neotechnica.panther.modules.common.constants
 /**
  * Sentinel identifiers shared across the networking and session layers.
  *
- * Mirrors the iOS `CommonConstants` values used to mark placeholder
- * conversations and messages.
+ * Values used to mark placeholder conversations and messages.
  */
 object CommonConstants {
     /** The identifier of a not-yet-created conversation. */

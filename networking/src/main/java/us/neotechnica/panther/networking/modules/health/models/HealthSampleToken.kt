@@ -1,5 +1,6 @@
 //
 //  HealthSampleToken.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -10,8 +11,7 @@ package us.neotechnica.panther.networking.modules.health.models
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 
 /**
- * A once-only recording guard for health instrumentation, mirroring the
- * iOS `HealthSampleToken`.
+ * A once-only recording guard for health instrumentation.
  *
  * Each instrumented operation creates a single token shared between the
  * timeout handler and the operation's completion path. Exactly one of

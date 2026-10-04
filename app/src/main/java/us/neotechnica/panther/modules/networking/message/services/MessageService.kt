@@ -1,5 +1,6 @@
 //
 //  MessageService.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -27,7 +28,7 @@ import us.neotechnica.panther.networking.modules.translation.models.TranslationR
 
 /**
  * Reads [Message] records from the database, upserting each into the
- * [SessionStore]. Ported from the iOS `MessageService` read path.
+ * [SessionStore].
  */
 object MessageService {
     // MARK: - Properties
@@ -41,7 +42,7 @@ object MessageService {
     /** Returns the messages with the given IDs, upserting them into the store. */
     suspend fun getMessages(ids: List<String>): List<Message> =
         coroutineScope {
-            // Fail the batch if any message cannot be fetched, matching iOS.
+            // Fail the batch if any message cannot be fetched.
             ids.map { id -> async { getMessage(id) } }.awaitAll()
         }
 

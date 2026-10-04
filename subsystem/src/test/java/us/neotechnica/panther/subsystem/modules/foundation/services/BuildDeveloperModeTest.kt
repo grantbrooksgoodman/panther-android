@@ -2,8 +2,8 @@
 //  BuildDeveloperModeTest.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman on 30/09/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.subsystem.modules.foundation.services
@@ -16,7 +16,7 @@ import org.junit.Test
 import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
 import java.util.Date
 
-/** Verifies the developer-mode members ported in Parity II Phase 9.4. */
+/** Verifies the developer-mode members. */
 class BuildDeveloperModeTest {
     @Before
     fun setUp() {

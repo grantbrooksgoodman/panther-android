@@ -1,9 +1,9 @@
 //
 //  LoggerPresentationService.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 31/08/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.common.services
@@ -34,8 +34,7 @@ import kotlin.time.Duration.Companion.seconds
  * requests to this delegate. Register the service once at launch
  * with `Logger.setPresentationDelegate(LoggerPresentationService)`.
  *
- * This is the Android counterpart of the presentation performed by
- * the iOS logger through `CoreKit`: error alerts and informational
+ * Presents logger output: error alerts and informational
  * alerts route through AlertKit, while lightweight feedback routes
  * through a [Toast].
  */

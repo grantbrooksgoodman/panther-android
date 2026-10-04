@@ -1,9 +1,9 @@
 //
 //  MediaPreviewOverlay.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 24/08/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.components
@@ -56,8 +56,7 @@ import us.neotechnica.panther.modules.networking.message.models.MediaFile
  * A full-screen preview over a conversation's media, opened from a chat
  * bubble or the ChatInfo attachments list. Swipe to page through every
  * item, starting at [startIndex]: images are pinch-zoomable, videos play
- * inline, and documents open in an external viewer. Mirrors the iOS
- * `QuickViewer` media preview.
+ * inline, and documents open in an external viewer.
  *
  * @param mediaFiles The conversation's media, in display order.
  * @param startIndex The index of the item to show first.

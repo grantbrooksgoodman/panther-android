@@ -1,5 +1,6 @@
 //
 //  PantherTheme.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -37,8 +38,7 @@ val LocalPantherColors =
  * [ThemeService], provides the resulting [PantherColors] through
  * [LocalPantherColors], and installs a matching Material color scheme.
  * It recomposes automatically when the theme, the appearance override,
- * or the system appearance changes – the Compose equivalent of the iOS
- * `ThemedView` redraw-on-appearance-change behavior.
+ * or the system appearance changes.
  *
  * @param content The themed content.
  */
@@ -83,8 +83,7 @@ fun PantherTheme(content: @Composable () -> Unit) {
  * A container whose content reflects the active theme.
  *
  * In Compose, theme colors flow from the [PantherTheme] root through
- * [LocalPantherColors], so [ThemedView] simply renders its content; it
- * exists for call-site parity with the iOS `ThemedView`.
+ * [LocalPantherColors], so [ThemedView] simply renders its content.
  *
  * @param content The themed content.
  */

@@ -1,9 +1,9 @@
 //
 //  PhoneNumberService.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 19/08/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.common.services
@@ -15,7 +15,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHas
 /**
  * Answers questions about phone numbers – calling codes, valid
  * lengths, and example numbers – from [CommonPropertyLists] and
- * libphonenumber. Ported from the iOS `PhoneNumberService`.
+ * libphonenumber.
  */
 object PhoneNumberService {
     // MARK: - Properties

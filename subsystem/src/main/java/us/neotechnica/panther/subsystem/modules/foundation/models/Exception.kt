@@ -1,5 +1,6 @@
 //
 //  Exception.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -284,7 +285,7 @@ class Exception(
 
 // Derives a four-character code from the descriptor: stop words
 // removed, letters only, lowercased, SHA-256, first two + last
-// two hex characters, uppercased. Mirrors the iOS derivation.
+// two hex characters, uppercased.
 private val String.errorCode: String
     get() {
         if (isEmpty()) return "0000"
@@ -320,7 +321,7 @@ private val String.errorCode: String
     }
 
 // Returns a copy of the map with each key's first character
-// uppercased, mirroring the iOS `withCapitalizedKeys` normalization.
+// uppercased.
 private fun Map<String, Any>.withCapitalizedKeys(): Map<String, Any> =
     entries.associate { (key, value) -> key.replaceFirstChar { it.uppercaseChar() } to value }
 

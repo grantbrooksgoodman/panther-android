@@ -1,5 +1,6 @@
 //
 //  BuildInfoOverlayView.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -45,7 +46,7 @@ import androidx.compose.material3.Text as Material3Text
 /**
  * A persistent diagnostic banner showing the build's code name,
  * version, build number, milestone, and revision, plus live memory
- * usage. Mirrors the iOS `BuildInfoOverlayView`.
+ * usage.
  *
  * The overlay is shown for prerelease milestones only (never in a
  * general-release build). Tapping it reveals the full build details;
@@ -161,7 +162,7 @@ private fun BuildInfoDetailsDialog(onDismiss: () -> Unit) {
     )
 }
 
-/** The dot color signalling the build's network environment, mirroring the iOS indicator dot. */
+/** The dot color signalling the build's network environment. */
 private fun environmentColor(environment: String): Color =
     when (environment) {
         "development" -> ENVIRONMENT_COLOR_DEVELOPMENT

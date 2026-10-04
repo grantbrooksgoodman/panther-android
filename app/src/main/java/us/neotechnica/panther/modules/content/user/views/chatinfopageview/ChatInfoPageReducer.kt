@@ -2,8 +2,8 @@
 //  ChatInfoPageReducer.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman on 23/02/2024.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.views.chatinfopageview
@@ -250,8 +250,8 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
 
     // MARK: - Reduce
 
-    // Mirrors the iOS ChatInfoPageReducer.reduce, which carries
-    // `// swiftlint:disable cyclomatic_complexity function_body_length`.
+    // The reduce dispatch handles every action; the suppressions below
+    // cover its size and complexity.
     @Suppress("CyclomaticComplexMethod", "LongMethod")
     override fun reduce(
         state: State,

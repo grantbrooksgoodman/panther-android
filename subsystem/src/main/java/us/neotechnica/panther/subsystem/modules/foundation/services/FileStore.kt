@@ -1,5 +1,6 @@
 //
 //  FileStore.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -13,8 +14,7 @@ import java.io.File
 /**
  * The app's on-disk document store.
  *
- * The Android analog of the iOS `FileManager.documentsDirectoryURL`,
- * this resolves paths against the application's private files
+ * Resolves paths against the application's private files
  * directory so relative paths remain valid across launches.
  * [initialize] must be called once with the application context
  * before use.

@@ -2,8 +2,8 @@
 //  PhoneNumber+CommonExtensions.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman on 19/08/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.common.extensions
@@ -16,9 +16,7 @@ import us.neotechnica.panther.modules.common.models.PhoneNumber
  * Returns the national number formatted for the given region's
  * conventions, without a calling-code prefix.
  *
- * Mirrors the iOS `PhoneNumber.partiallyFormatted(forRegion:)`, which
- * uses PhoneNumberKit's partial formatter; this port uses
- * libphonenumber's `AsYouTypeFormatter`.
+ * Uses libphonenumber's `AsYouTypeFormatter`.
  *
  * @param regionCode The region whose conventions to use; defaults to
  *   the number's own region.
@@ -36,7 +34,7 @@ fun PhoneNumber.partiallyFormatted(regionCode: String? = null): String {
 
 /**
  * Returns the number formatted for display, prefixed with `+` and its
- * calling code, mirroring the iOS `PhoneNumber.formattedString`.
+ * calling code.
  *
  * @param regionCode The region whose conventions to use; defaults to
  *   the number's own region.

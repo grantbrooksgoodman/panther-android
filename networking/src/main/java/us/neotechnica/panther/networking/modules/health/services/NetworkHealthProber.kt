@@ -1,5 +1,6 @@
 //
 //  NetworkHealthProber.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -22,8 +23,7 @@ import java.net.URL
 import kotlin.math.max
 
 /**
- * A demand-driven, rate-limited network prober, mirroring the iOS
- * `NetworkHealthProber`.
+ * A demand-driven, rate-limited network prober.
  *
  * It fires only when asked, never on a timer, and only when every gate
  * passes: probing configured, device online and foregrounded, path

@@ -1,9 +1,9 @@
 //
 //  ConversationCellViewData.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 20/08/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.models
@@ -32,10 +32,8 @@ import java.util.Locale
  * The display data for a single conversation cell: title, message
  * preview, timestamp, and unread state.
  *
- * **Note:** the iOS original also resolves contact names and photos;
- * this Phase 6 port derives the title from the conversation metadata or
+ * **Note:** the title is derived from the conversation metadata or
  * the other participant's phone number, with an initials avatar.
- * Contact integration is deferred.
  */
 data class ConversationCellViewData(
     val title: String,
@@ -73,7 +71,7 @@ data class ConversationCellViewData(
          *
          * When [searchQuery] is non-blank, the preview and date reflect
          * the most recent message matching the query rather than the
-         * latest message, mirroring the iOS search behavior.
+         * latest message.
          */
         suspend fun build(
             conversation: Conversation,
@@ -240,9 +238,8 @@ data class ConversationCellViewData(
 
 /**
  * Manages the in-memory conversation-cell view-data cache, keyed by
- * search query and then conversation identifier. Mirrors the iOS
- * `ConversationCellViewDataCache`. Data derived for a mock conversation
- * is never cached.
+ * search query and then conversation identifier. Data derived for
+ * a mock conversation is never cached.
  */
 object ConversationCellViewDataCache {
     // MARK: - Properties

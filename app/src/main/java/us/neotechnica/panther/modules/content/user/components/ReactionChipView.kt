@@ -2,8 +2,8 @@
 //  ReactionChipView.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman on 03/10/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.components
@@ -105,8 +105,7 @@ internal fun reactionChoicesFor(
     }
 }
 
-// The background color of a reaction style's square icon, mirroring the
-// iOS `Reaction.Style.squareIconBackgroundColor` hex values.
+// The background color of a reaction style's square icon.
 internal val Reaction.Style.squareIconColor: Color
     get() =
         when (this) {

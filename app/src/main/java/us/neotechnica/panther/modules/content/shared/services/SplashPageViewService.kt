@@ -2,8 +2,8 @@
 //  SplashPageViewService.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman on 27/09/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.shared.services
@@ -72,8 +72,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
-// The iOS `SplashPageViewService` disables `cyclomatic_complexity`,
-// `file_length`, `function_body_length`, and `type_body_length`.
+// This splash orchestration is large; the suppressions below cover
+// its size and complexity.
 /**
  * The service that initializes the app's data bundle behind the splash
  * page.
@@ -228,7 +228,7 @@ object SplashPageViewService {
         DependencyValues.current.alertKitConfig.registerReportDelegate(ErrorReportingService)
         DependencyValues.current.alertKitConfig.registerTranslationDelegate(AlertKitTranslationService)
 
-        /* Breadcrumbs Capture Setup: absent – BreadcrumbsCaptureService is deferred. */
+        /* Breadcrumbs capture: not provided. */
 
         /* Store Observation Setup */
 
@@ -318,10 +318,9 @@ object SplashPageViewService {
      * The first call attempts a database repair; a subsequent call
      * after another failure resets the application entirely.
      *
-     * **Note:** Per the parity plan, `IntegrityService.repairDatabase()`
-     * – and the iOS `updateRequired` → `isForcedUpdateRequired` branch
-     * that follows it – are deferred to a separate plan, so the first
-     * call performs no repair.
+     * **Note:** `IntegrityService.repairDatabase()` and the forced-update
+     * branch that follows it are not provided, so the first call
+     * performs no repair.
      */
     @Suppress("RedundantSuspendModifier")
     suspend fun performRetryHandler() {
@@ -379,7 +378,7 @@ object SplashPageViewService {
      * the network health to degrade to poor, or for a fallback deadline
      * to elapse on a network that has produced no health evidence. It
      * then reports progress as nearly complete, applies the cached
-     * user's language, and schedules a deferred resolution of the
+     * user's language, and schedules a delayed resolution of the
      * user's data for when the network health recovers.
      *
      * @return `true` if the app loaded from the cached user; otherwise,

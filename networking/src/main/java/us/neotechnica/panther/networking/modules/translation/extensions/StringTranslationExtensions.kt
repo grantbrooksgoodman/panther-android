@@ -1,5 +1,6 @@
 //
 //  StringTranslationExtensions.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -25,8 +26,7 @@ internal const val TRANSLATION_COMPONENT_SEPARATOR = "–"
 // MARK: - Percent Encoding
 
 /**
- * The string percent-encoded like the iOS
- * `addingPercentEncoding(withAllowedCharacters: .alphanumerics)`.
+ * The string percent-encoded, escaping all but alphanumerics.
  *
  * Empirically – and pinned by `translation_reference_vectors.json` –
  * that character set leaves only ASCII `[0-9A-Za-z]` unescaped and
@@ -48,8 +48,8 @@ internal val String.alphaEncoded: String
     }
 
 /**
- * The string with its percent-escapes decoded, like the iOS
- * `removingPercentEncoding`, or `null` if a `%` escape is malformed.
+ * The string with its percent-escapes decoded, or `null` if a `%`
+ * escape is malformed.
  *
  * Unlike form decoding, `+` is preserved (not turned into a space).
  */

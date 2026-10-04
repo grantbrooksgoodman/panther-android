@@ -1,5 +1,6 @@
 //
 //  LocalAudioFilePath.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -74,7 +75,7 @@ data class LocalAudioFilePath(
          *
          * The output audio lives under the hosting key of the *resolved*
          * translation – the message's reference whose language pair matches
-         * [translation] – mirroring the iOS `translation.reference.hostingKey`.
+         * [translation].
          * A message may carry several references (for example, one per
          * participant language in a group), so the first reference is not
          * necessarily the resolved one.

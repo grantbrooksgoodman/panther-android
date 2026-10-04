@@ -1,5 +1,6 @@
 //
 //  Auth.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -161,7 +162,7 @@ class Auth : AuthDelegate {
     }
 
     // Captures the Firebase error code under the same user-info key
-    // the iOS SDK populates, so reducers can mark user-caused auth
+    // the SDK populates, so reducers can mark user-caused auth
     // failures (invalid input, expired session) as non-reportable.
     private fun wrap(throwable: Throwable): Exception {
         (throwable as? Exception)?.let { return it }

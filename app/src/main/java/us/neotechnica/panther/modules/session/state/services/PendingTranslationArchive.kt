@@ -1,5 +1,6 @@
 //
 //  PendingTranslationArchive.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -10,7 +11,7 @@ package us.neotechnica.panther.modules.session.state.services
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 
 /**
- * Holds hosted-archive fan-out entries for deferred-archival
+ * Holds hosted-archive fan-out entries for pending-archival
  * translations until the message commit that carries them drains them
  * into its payload.
  *

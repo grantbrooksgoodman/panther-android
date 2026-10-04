@@ -1,5 +1,6 @@
 //
 //  SFSymbol.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -55,12 +56,11 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
- * Maps the SF Symbol names used by the iOS app to their nearest
- * Material Symbol, standing in for SF Symbols (which are unavailable on
- * Android).
+ * Maps SF Symbol names to their nearest Material Symbol (SF Symbols
+ * are unavailable on Android).
  *
- * Unknown names resolve to a warning symbol, mirroring the iOS
- * fallback. Extend the mapping as later phases introduce new symbols.
+ * Unknown names resolve to a warning symbol. Extend the mapping as
+ * new symbols are introduced.
  */
 object SFSymbol {
     // MARK: - Methods

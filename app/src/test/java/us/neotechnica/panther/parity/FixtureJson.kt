@@ -1,5 +1,6 @@
 //
 //  FixtureJson.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -17,7 +18,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.longOrNull
 
 /**
- * Loads a parity fixture as a Kotlin value tree whose types match
+ * Loads a golden fixture as a Kotlin value tree whose types match
  * what Firebase Realtime Database yields at runtime (`String`,
  * `Boolean`, `Long`, `Double`, `Map`, `List`).
  */

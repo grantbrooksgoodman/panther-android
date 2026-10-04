@@ -1,5 +1,6 @@
 //
 //  StringExtensions.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -13,8 +14,7 @@ import us.neotechnica.panther.translator.Translator
 // MARK: - Hashing
 
 /**
- * The SHA-256 encoded hash of this string, matching the iOS
- * `String.encodedHash` (`encodedHashOf([self])`). Used as the archive
+ * The SHA-256 encoded hash of this string, used as the archive
  * key for a translation input value.
  */
 internal val String.encodedHash: String

@@ -1,5 +1,6 @@
 //
 //  TranslationResolver.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -20,8 +21,7 @@ import us.neotechnica.panther.translator.models.TranslationInput
 /**
  * Resolves a [TranslationReference] back into a [Translation].
  *
- * This is the decode half of the iOS `Translation: Serializable`
- * conformance (deferred in Phase 4): an inline archived value decodes
+ * This decodes a reference: an inline archived value decodes
  * directly, a hash-only archived reference resolves through the hosted
  * archive, and an idempotent reference decodes its Base64 input.
  */

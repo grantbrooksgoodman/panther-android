@@ -1,5 +1,6 @@
 //
 //  NetworkActivityIndicatorHost.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -26,7 +27,7 @@ import us.neotechnica.panther.subsystem.modules.shared.models.SharedState
 
 /**
  * Hosts the [NetworkActivityIndicator] at the app root, gated on the
- * persisted enablement flag (Phase 11 adds the toggle). Tapping the
+ * persisted enablement flag. Tapping the
  * indicator runs the delegate's tap action, or presents a summary of
  * the current network health.
  *

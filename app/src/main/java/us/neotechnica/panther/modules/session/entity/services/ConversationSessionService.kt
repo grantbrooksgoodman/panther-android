@@ -1,5 +1,6 @@
 //
 //  ConversationSessionService.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -126,7 +127,7 @@ object ConversationSessionService {
         } else {
             SessionStore.upsertConversation(conversation)
             reference.wrappedValue = CurrentConversationReference.Stored(conversation.id.key)
-            // Live-observe the open conversation (iOS starts this on view-appear).
+            // Live-observe the open conversation.
             ConversationObserverService.startObserving(conversation.id.key)
             // Persist the open conversation so process death can restore it (R6.2).
             persistOpenConversationIDKey(conversation.id.key)

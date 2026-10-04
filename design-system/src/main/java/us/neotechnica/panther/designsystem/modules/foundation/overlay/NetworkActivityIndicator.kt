@@ -1,5 +1,6 @@
 //
 //  NetworkActivityIndicator.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -21,8 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 /**
- * A small circular indicator that reflects in-flight network activity,
- * mirroring the iOS `NetworkActivityIndicator`. The networking module
+ * A small circular indicator that reflects in-flight network activity. The networking module
  * has no Compose dependency, so the activity state and colors are
  * supplied by the caller (see `NetworkActivityIndicatorService`).
  *

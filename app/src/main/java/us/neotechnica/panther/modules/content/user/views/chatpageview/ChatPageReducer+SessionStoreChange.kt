@@ -1,9 +1,9 @@
 //
 //  ChatPageReducer+SessionStoreChange.kt
-//  Panther
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.views.chatpageview

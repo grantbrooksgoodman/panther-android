@@ -1,5 +1,6 @@
 //
 //  Build.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -19,11 +20,11 @@ import java.util.Locale
  * milestone, and the derived identifiers shown in the build-info
  * overlay.
  *
- * Mirrors the iOS `Build`. It is populated once at startup via
+ * It is populated once at startup via
  * [initialize] with values injected by the per-compile build-number
  * bump in the app module's Gradle script (which stamps the build
  * number and dates into a `build_info.properties` asset on every
- * compile, the analog of the iOS Run Script phase).
+ * compile).
  */
 object Build {
     // MARK: - Properties

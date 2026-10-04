@@ -2,8 +2,8 @@
 //  CacheDomains.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman on 25/09/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.bundle
@@ -22,7 +22,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.CacheDomain
  *
  * Additional domains are registered as their backing caches land in
  * later phases; the caches without a counterpart yet are tracked in
- * the parity progress record rather than stubbed.
+ * the progress record rather than stubbed.
  */
 object CacheDomainList : CacheDomainListDelegate {
     override val appCacheDomains: List<CacheDomain> =

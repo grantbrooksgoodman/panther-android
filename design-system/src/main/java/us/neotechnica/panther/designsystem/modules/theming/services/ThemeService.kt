@@ -1,5 +1,6 @@
 //
 //  ThemeService.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -29,7 +30,7 @@ import us.neotechnica.panther.subsystem.modules.shared.models.send
  * the `themedViewAppearanceChanged` shared event.
  *
  * **Note:** theme selection is held in memory for this phase; persisting
- * the selection across launches is deferred.
+ * the selection across launches is not yet implemented.
  */
 object ThemeService {
     // MARK: - Properties

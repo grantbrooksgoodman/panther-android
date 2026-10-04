@@ -1,5 +1,6 @@
 //
 //  AccountDeletionService.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -42,9 +43,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
  * record. Individual failures are accumulated and a single compiled
  * exception is thrown at the end.
  *
- * A determinate progress bar tracks the per-conversation work. The two
- * database integrity-repair passes iOS performs are out of scope for
- * Android (D-III-10).
+ * A determinate progress bar tracks the per-conversation work. The two database integrity-repair passes are out of scope
+ * (D-III-10).
  */
 object AccountDeletionService {
     // MARK: - Properties
@@ -129,8 +129,8 @@ object AccountDeletionService {
                 UserSessionService.currentUser?.update(UserUpdatableKey.CONVERSATION_IDS, to = emptyList<ConversationID>())
             }?.let(exceptions::add)
 
-            // iOS repairs database integrity here; the two repair passes are out of scope for
-            // Android per D-III-10.
+            // The two database integrity-repair passes are out of scope
+            // (D-III-10).
 
             progressAlert.updateProgress(1.0)
             Persistent.setString(PersistentStorageKey.currentUserID, null)

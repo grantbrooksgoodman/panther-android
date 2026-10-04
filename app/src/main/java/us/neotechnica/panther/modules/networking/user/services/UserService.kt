@@ -1,5 +1,6 @@
 //
 //  UserService.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -144,7 +145,7 @@ object UserService {
             throw Exception("No ID keys provided.", userInfo = mapOf("UserIDs" to ids.toString()), metadata = ExceptionMetadata(this))
         }
 
-        // Fail the batch if any user cannot be fetched, matching iOS.
+        // Fail the batch if any user cannot be fetched.
         return coroutineScope {
             ids.map { id -> async { getUser(id, bypassSnapshotCache, cacheStrategy) } }.awaitAll()
         }

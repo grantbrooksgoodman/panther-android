@@ -1,9 +1,9 @@
 //
 //  ChatPageView.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 20/08/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.views.chatpageview
@@ -222,7 +222,7 @@ private fun buildChatPageViewModel(): ViewModel<ChatPageReducer.State, ChatPageR
 
 /**
  * Saves the given media file to the device, showing a success HUD on
- * completion. Mirrors iOS's `handleSaveAction`.
+ * completion.
  */
 private suspend fun saveMedia(mediaFile: MediaFile) {
     try {
@@ -235,7 +235,7 @@ private suspend fun saveMedia(mediaFile: MediaFile) {
 
 /**
  * Presents an action sheet for a failed message, offering to retry or
- * delete it. Mirrors iOS's `presentFailedMessageActionSheet`.
+ * delete it.
  */
 private suspend fun presentFailedMessageActionSheet(
     messageID: String,
@@ -256,7 +256,7 @@ private suspend fun presentFailedMessageActionSheet(
     ).present(translating = emptyList())
 }
 
-// Mirrors the iOS `MediaActionHandlerService.attachMediaButtonTapped` action sheet.
+// The attach-media action sheet.
 private suspend fun presentAttachMediaSheet(pickers: ContentPickers) {
     HapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
     ActionSheetAlert(

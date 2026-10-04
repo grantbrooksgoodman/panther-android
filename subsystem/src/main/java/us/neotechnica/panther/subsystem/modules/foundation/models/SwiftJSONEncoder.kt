@@ -1,5 +1,6 @@
 //
 //  SwiftJSONEncoder.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -13,13 +14,13 @@ package us.neotechnica.panther.subsystem.modules.foundation.models
  *
  * Identity hashes are computed over the JSON encoding of a
  * string array (see [EncodedHashable][us.neotechnica.panther.subsystem.modules.foundation.interfaces.EncodedHashable]),
- * so the encoded bytes must match the iOS output exactly – a
+ * so the encoded bytes must match the reference output exactly – a
  * one-byte difference silently diverges every identity hash the
  * two platforms share.
  *
  * The escaping rules below mirror an unconfigured Foundation
  * `JSONEncoder`, pinned by the golden fixtures in
- * `src/test/resources/parity/encoded_hash_vectors.json`:
+ * `encoded_hash_vectors.json`:
  *
  * - Compact output – no whitespace.
  * - Short escapes: `\"`, `\\`, `\/`, `\b`, `\f`, `\n`, `\r`,

@@ -1,5 +1,6 @@
 //
 //  HapticsService.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -11,10 +12,9 @@ import android.view.HapticFeedbackConstants
 import us.neotechnica.panther.translator.Translator
 
 /**
- * Plays haptic feedback, standing in for the iOS `HapticsService`.
+ * Plays haptic feedback.
  *
- * iOS drives six `UIFeedbackGenerator` styles; Android has no direct
- * analog, so each style maps to the closest [HapticFeedbackConstants]
+ * Each style maps to the closest [HapticFeedbackConstants]
  * value played on the current activity's view (see [generateFeedback]).
  */
 object HapticsService {
@@ -58,9 +58,8 @@ object HapticsService {
     /**
      * Prepares the given style's generator to receive events.
      *
-     * A no-op on Android: `View.performHapticFeedback` has no pre-warm
-     * analog to iOS's `UIFeedbackGenerator.prepare()`. Retained for API
-     * parity with the iOS `HapticsService`.
+     * A no-op: `View.performHapticFeedback` has no pre-warm step, and
+     * it is retained for signature compatibility.
      *
      * @param generatorStyle The style of generator to prepare.
      */

@@ -1,5 +1,6 @@
 //
 //  TextFit.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -12,9 +13,7 @@ import androidx.compose.ui.text.style.TextOverflow
 
 /**
  * Describes how a text component fits its bounds, bundling the line,
- * shrink, overflow, and alignment behavior that iOS expresses through
- * `lineLimit`, `minimumScaleFactor`, `truncationMode`, and
- * `multilineTextAlignment`.
+ * shrink, overflow, and alignment behavior.
  *
  * The default value imposes no constraints: the text spans as many
  * lines as it needs, never shrinks, clips anything that overflows, and

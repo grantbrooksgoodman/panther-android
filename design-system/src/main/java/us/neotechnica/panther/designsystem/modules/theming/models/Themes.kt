@@ -1,5 +1,6 @@
 //
 //  Themes.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -10,10 +11,9 @@ package us.neotechnica.panther.designsystem.modules.theming.models
 import androidx.compose.ui.graphics.Color
 
 /**
- * The app's built-in themes, ported from the iOS `UIThemes`
- * definitions.
+ * The app's built-in themes.
  *
- * **Note:** the iOS `prevaricationMode` theme is omitted, as
+ * **Note:** the prevarication-mode theme is omitted, as
  * prevarication mode is cut from the MVP.
  */
 object Themes {

@@ -2,8 +2,8 @@
 //  Build+CommonExtensions.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman on 27/09/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.common.extensions
@@ -15,7 +15,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Build
  * A Boolean value that indicates whether the current build is running
  * on an emulator.
  *
- * The Android analog of the iOS `UIDevice.isSimulator` check.
+ * Resolved once at startup from the device characteristics.
  */
 val Build.isEmulator: Boolean
     get() =

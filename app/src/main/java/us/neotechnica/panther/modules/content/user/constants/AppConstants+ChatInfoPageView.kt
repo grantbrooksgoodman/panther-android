@@ -1,9 +1,9 @@
 //
 //  AppConstants+ChatInfoPageView.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 24/08/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.constants
@@ -69,8 +69,8 @@ object ChatInfoPageViewColors {
 // MARK: - String
 
 // Non-translated per-screen constants. The `ChatInfoPageViewStrings`
-// name is reserved for the translated-label-strings object (mirroring
-// iOS); these format, separator, and Android-specific labels live here.
+// name is reserved for the translated-label-strings object; these
+// format, separator, and Android-specific labels live here.
 object ChatInfoPageViewConstants {
     const val ADD_CONTACT_BUTTON_IMAGE_SYSTEM_NAME = "plus"
     const val FILE_TYPE_SEPARATOR = " • "

@@ -1,5 +1,6 @@
 //
 //  PlatformColors.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -10,9 +11,8 @@ package us.neotechnica.panther.designsystem.modules.theming.models
 import androidx.compose.ui.graphics.Color
 
 /**
- * Compose-color approximations of the iOS system colors referenced by
- * the ported themes, so the Android palette matches iOS within the
- * ~80% visual-parity budget.
+ * Compose-color approximations of the system colors the themes
+ * reference.
  */
 internal object PlatformColors {
     val black = Color.Black
@@ -24,8 +24,7 @@ internal object PlatformColors {
 }
 
 /**
- * Returns an opaque [Color] from a `0xRRGGBB` value, mirroring the iOS
- * `UIColor(hex:)` helper.
+ * Returns an opaque [Color] from a `0xRRGGBB` value.
  *
  * @param value The 24-bit red-green-blue value.
  *

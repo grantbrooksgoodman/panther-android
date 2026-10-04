@@ -2,8 +2,8 @@
 //  ConversationsPageViewService.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman on 03/10/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.services
@@ -108,7 +108,7 @@ object ConversationsPageViewService {
     /**
      * Reapplies the page's appearance after a trait collection change.
      *
-     * If the chat page is presented, the update is deferred until it
+     * If the chat page is presented, the update waits until it
      * closes.
      */
     fun traitCollectionChanged() {
@@ -149,7 +149,7 @@ object ConversationsPageViewService {
     /**
      * Keeps the open chat page consistent with a session store change.
      *
-     * If a message is being sent, handling is deferred until the send
+     * If a message is being sent, handling waits until the send
      * completes. Otherwise, this method marks unread messages as read
      * – updating the app badge – and notifies observers that the
      * current conversation's metadata changed. If the chat page is not

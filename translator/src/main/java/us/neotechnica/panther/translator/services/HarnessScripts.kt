@@ -1,5 +1,6 @@
 //
 //  HarnessScripts.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -13,8 +14,7 @@ import us.neotechnica.panther.translator.models.TranslationPlatform
  * The document-start JavaScript the web-view harness injects to keep
  * scraped translation pages lean and headless-friendly.
  *
- * The scripts are ported verbatim from the iOS `BaseTranslator`
- * hardening scripts: they suppress focus, block image/media loads via
+ * The scripts harden the scraped page: they suppress focus, block image/media loads via
  * a page CSP, deny permission prompts, disable animations and service
  * workers, fake a visible/idle foreground state, and (for every
  * platform except DeepL) neutralize lazy-loading observers.

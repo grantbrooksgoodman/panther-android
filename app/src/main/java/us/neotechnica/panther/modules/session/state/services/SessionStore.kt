@@ -1,5 +1,6 @@
 //
 //  SessionStore.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -43,7 +44,7 @@ private typealias Floats = SessionStoreFloats
  * messages, and users, persists them to disk, and publishes a
  * [SessionStoreChange] whenever its contents change.
  */
-// The iOS SessionStore disables swiftlint file_length/type_body_length.
+// This store exceeds the file-length and type-body-length limits.
 @Suppress("LargeClass")
 object SessionStore {
     // MARK: - Types

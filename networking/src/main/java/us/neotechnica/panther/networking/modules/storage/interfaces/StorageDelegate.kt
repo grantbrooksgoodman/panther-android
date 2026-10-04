@@ -1,5 +1,6 @@
 //
 //  StorageDelegate.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -14,10 +15,7 @@ import java.io.File
  * An interface for reading and writing binary files in remote
  * storage.
  *
- * **Note:** This Phase 2 port provides the download and upload
- * primitives only. Media-specific features – transcoding,
- * progress reporting, and directory listing – are added in later
- * phases.
+ * **Note:** This provides the download and upload primitives only.
  *
  * A default implementation backed by Firebase Storage is provided
  * automatically.

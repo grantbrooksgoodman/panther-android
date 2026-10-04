@@ -1,9 +1,9 @@
 //
 //  MediaItemView.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 24/08/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.components
@@ -39,7 +39,7 @@ import us.neotechnica.panther.modules.common.models.MediaFileExtension
 /**
  * A row describing a media file in a conversation's shared-media list: a
  * thumbnail, the media type, the sender, and the timestamp. Tapping the
- * row opens the media preview. Mirrors the iOS `MediaItemView`.
+ * row opens the media preview.
  *
  * @param data The display inputs for the row.
  * @param onClick The action performed when the row is tapped.

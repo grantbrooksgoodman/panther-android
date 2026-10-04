@@ -1,5 +1,6 @@
 //
 //  SystemFontFamily.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -21,7 +22,7 @@ import androidx.compose.ui.text.font.Font as ComposeFont
  * bundled exclusively in the debug source set (`src/debug/res/font`) and
  * never ship in a release build — which falls back to Inter via the
  * `src/release` variant of this declaration. Using the real typeface in
- * debug lets the Android UI be compared pixel-for-pixel against iOS.
+ * debug renders text in the true system face.
  */
 val SystemFontFamily: FontFamily =
     FontFamily(

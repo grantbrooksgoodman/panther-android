@@ -1,5 +1,6 @@
 //
 //  AudioFile.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -15,10 +16,9 @@ import java.io.File
  * An audio file stored in the app's documents directory, and its content
  * duration.
  *
- * **Note:** the iOS `AudioFile` locates its content by absolute URL and
- * loads its duration asynchronously on creation; this port locates it by
- * [relativePath] (like [MediaFile]) and leaves [contentDuration] `null`
- * until playback resolves it (Phase R4.2).
+ * **Note:** This locates its content by [relativePath] (like
+ * [MediaFile]) and leaves [contentDuration] `null` until playback
+ * resolves it.
  */
 data class AudioFile(
     /** The file's path, relative to the documents directory. */

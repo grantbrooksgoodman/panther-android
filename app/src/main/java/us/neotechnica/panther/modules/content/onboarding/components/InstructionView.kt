@@ -1,9 +1,9 @@
 //
 //  InstructionView.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 19/08/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.onboarding.components
@@ -26,8 +26,7 @@ import us.neotechnica.panther.modules.content.onboarding.constants.InstructionVi
 
 /**
  * A leading-aligned title-and-subtitle header shown atop onboarding
- * pages, constrained to the leading half of the screen width to match
- * the iOS `InstructionView`.
+ * pages, constrained to the leading half of the screen width.
  *
  * @param strings The resolved instruction strings.
  * @param modifier The modifier for this view.

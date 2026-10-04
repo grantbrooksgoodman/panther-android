@@ -1,9 +1,9 @@
 //
 //  AudioMessagePlaybackService.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 03/09/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.services
@@ -39,9 +39,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStora
  * Manages audio message playback: tap-to-play/pause, playback-progress,
  * and auto-advance to the next audio message when one finishes.
  *
- * **Note:** the iOS original plays through an `AVAudioPlayer` and
- * activates an `AVAudioSession`; this port uses Android `MediaPlayer` with
- * an `AudioFocusRequest` (see `DEVIATIONS.md`) rather than Media3/ExoPlayer,
+ * **Note:** Playback uses Android `MediaPlayer` with an
+ * `AudioFocusRequest` (see `DEVIATIONS.md`) rather than Media3/ExoPlayer,
  * which would add a dependency without benefit for single-file playback.
  */
 object AudioMessagePlaybackService {

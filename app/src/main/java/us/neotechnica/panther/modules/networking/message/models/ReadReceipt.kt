@@ -1,5 +1,6 @@
 //
 //  ReadReceipt.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -69,7 +70,6 @@ data class ReadReceipt(
 
 /**
  * Manages the in-memory read-receipt cache, keyed by encoded string.
- * Mirrors the iOS `ReadReceiptCache`.
  */
 object ReadReceiptCache {
     // MARK: - Properties

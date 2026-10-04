@@ -1,9 +1,9 @@
 //
 //  TextToSpeechService.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 01/09/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.common.services
@@ -22,14 +22,10 @@ import androidx.compose.runtime.setValue
 import java.util.Locale
 
 /**
- * Synthesizes speech from text aloud, standing in for the iOS
- * `TextToSpeechService` speak path.
+ * Synthesizes speech from text aloud.
  *
- * **Note:** the iOS original also renders speech to audio files for audio
- * messages; that path arrives with audio messages (Phase R4). Android
- * `TextToSpeech` exposes a narrower voice inventory than iOS's
- * `AVSpeechSynthesisVoice`, so [highestQualityVoice] approximates the iOS
- * enhanced- and premium-quality preference with the best on-device voice.
+ * **Note:** rendering speech to audio files arrives with audio
+ * messages. [highestQualityVoice] selects the best on-device voice.
  */
 object TextToSpeechService {
     // MARK: - Properties
@@ -146,8 +142,7 @@ object TextToSpeechService {
         speakingMessageIDState = messageID
         spokenRangeState = null
 
-        // Request transient audio focus before speaking, the analog of
-        // iOS's `activateAudioSession()`.
+        // Request transient audio focus before speaking.
         requestFocus()
         engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, UTTERANCE_ID)
     }

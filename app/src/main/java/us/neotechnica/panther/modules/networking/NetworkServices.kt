@@ -1,5 +1,6 @@
 //
 //  NetworkServices.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -22,7 +23,7 @@ import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.Dep
  * delegates directly.
  *
  * **Note:** the integrity and schema-migration accessors are omitted;
- * those services are deferred to a separate plan (D-II-2).
+ * those services are not yet provided (D-II-2).
  */
 object NetworkServices {
     /** The authentication delegate. */

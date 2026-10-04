@@ -1,5 +1,6 @@
 //
 //  HostedContentType.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -14,7 +15,7 @@ import us.neotechnica.panther.modules.common.models.MediaFileExtension
  * The kind of content a message carries.
  *
  * Text is a first-class case; audio and media carry their file
- * identifiers and extensions, mirroring the iOS `HostedContentType`.
+ * identifiers and extensions.
  */
 sealed interface HostedContentType {
     // MARK: - Properties

@@ -1,9 +1,9 @@
 //
 //  ChatPageReducer.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 20/08/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.views.chatpageview
@@ -258,8 +258,8 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             }
 
             Action.ViewDisappeared -> {
-                // Mirror iOS (ChatPageViewService): clear the current-conversation
-                // pointer only when the page is truly being dismissed – not when it
+                // Clear the current-conversation pointer only when the page is
+                // truly being dismissed – not when it
                 // is covered by a sub-page of the same conversation, which on Android
                 // is a push that disposes the chat. Clearing it there would strand
                 // chat info's own actions, such as adding a participant, that read the

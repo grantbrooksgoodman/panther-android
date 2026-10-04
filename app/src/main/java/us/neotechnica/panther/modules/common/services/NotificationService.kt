@@ -1,5 +1,6 @@
 //
 //  NotificationService.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -132,7 +133,7 @@ object NotificationService {
                 conversationIDKey = conversationIDKey,
             )
 
-        // Notify every recipient concurrently, mirroring iOS; a recipient with no registered
+        // Notify every recipient concurrently; a recipient with no registered
         // push tokens is skipped silently (see notifyUser), and any other failure propagates.
         coroutineScope {
             users.map { user -> async { notifyUser(user, request) } }.awaitAll()

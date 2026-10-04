@@ -2,8 +2,8 @@
 //  InviteQRCodePageView.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman on 30/09/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.views.inviteqrcodepageview
@@ -47,7 +47,7 @@ private typealias Floats = InviteQRCodePageViewFloats
 
 /**
  * The invite QR code page: a QR code others can scan to be invited to
- * the app, mirroring the iOS `InviteQRCodePageView`.
+ * the app.
  *
  * @param modifier The modifier for this view.
  */

@@ -2,8 +2,8 @@
 //  RecipientBarContactSelectionUIService.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman on 03/10/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.services
@@ -55,7 +55,7 @@ object RecipientBarContactSelectionUIService {
      * maximum number of recipients has been reached.
      *
      * @param contactPair The contact pair to add as a recipient.
-     * @param performInputBarFix Retained for naming parity; has no effect.
+     * @param performInputBarFix Unused; retained for signature compatibility.
      */
     fun selectContactPair(
         contactPair: ContactPair,

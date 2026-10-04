@@ -1,5 +1,6 @@
 //
 //  Conversation+SessionExtensions.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -263,8 +264,7 @@ private suspend fun Conversation.fetchAndCommitMessages(ids: Set<String>?) {
  * Resolves each message's translation into the persistent archive, so a
  * conversation presents from memory without visibly resolving on entry.
  *
- * Mirrors iOS, which resolves a message's translation as it decodes the
- * message; on Android the resolved translation lands in the archive that
+ * The resolved translation lands in the archive that
  * the chat page seeds from synchronously. Failures are swallowed by
  * [resolvedTranslation], so warming never fails message resolution.
  */

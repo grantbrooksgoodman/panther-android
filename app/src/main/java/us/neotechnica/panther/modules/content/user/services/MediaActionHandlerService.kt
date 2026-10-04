@@ -1,9 +1,9 @@
 //
 //  MediaActionHandlerService.kt
-//  Panther
+//  Panther Android
 //
-//  Created by Grant Brooks Goodman on 01/09/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.services
@@ -62,12 +62,10 @@ private typealias Strings = MediaActionHandlerStrings
  * [MediaFile] – compressing images, staging videos and documents, and
  * generating thumbnails.
  *
- * **Note:** iOS transcodes videos with `AVAssetExportSession`; Android has
- * no equivalent, so videos are staged unchanged (see `DEVIATIONS.md`).
- * iOS generates a document thumbnail for any type with `QLThumbnailGenerator`;
- * Android renders PDF thumbnails only, sending other document types without
- * one. Sending the resulting media file lands with the send pipeline
- * (Phase R3.4).
+ * **Note:** Videos are staged unchanged (there is no system
+ * transcoder; see `DEVIATIONS.md`). PDF thumbnails are rendered;
+ * other document types are sent without one. Sending the resulting
+ * media file lands with the send pipeline.
  */
 object MediaActionHandlerService {
     // MARK: - Properties
@@ -264,9 +262,6 @@ object MediaActionHandlerService {
     /**
      * Transcodes the video at [inputUri] to [outputFile] as an H.264/AAC
      * MP4, scaling the short side to a medium quality target.
-     *
-     * Mirrors the iOS `compressVideo(at:outputURL:)`, which exports with
-     * `AVAssetExportPresetMediumQuality`.
      *
      * @throws Exception if the existing output cannot be removed.
      */

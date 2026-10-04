@@ -1,5 +1,6 @@
 //
 //  ActivityAction+SessionExtensions.kt
+//  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
@@ -30,9 +31,8 @@ val ActivityAction.isCurrentUserAdded: Boolean
  * A human-readable description of the activity, with participant names
  * wrapped in `⌘…⌘` sentinels so the system-message cell can bold them.
  *
- * **Note:** this Phase 7 port renders a fixed English description from
- * the session store; the iOS original resolves localized templates and
- * contact names (deferred with the localization/contact layers).
+ * **Note:** this renders a fixed English description from the session
+ * store; localized templates and contact names are not yet resolved.
  */
 val Activity.description: String
     get() {
