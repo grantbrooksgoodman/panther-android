@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
+import us.neotechnica.panther.designsystem.modules.foundation.modifiers.onSwipeDown
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.onboarding.components.InstructionView
@@ -58,7 +59,7 @@ fun VerifyNumberPageView(modifier: Modifier = Modifier) {
         modifier = modifier,
         onRetry = { viewModel.send(VerifyNumberPageReducer.Action.ViewAppeared) },
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize().onSwipeDown { viewModel.send(VerifyNumberPageReducer.Action.DidSwipeDown) }) {
             InstructionView(state.instructionViewStrings)
 
             Spacer(Modifier.weight(1f))

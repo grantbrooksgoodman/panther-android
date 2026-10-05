@@ -8,10 +8,10 @@
 
 package us.neotechnica.panther.modules.content.user.models
 
+import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
 import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
-import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
 import us.neotechnica.panther.modules.networking.message.models.Message
@@ -22,6 +22,7 @@ import us.neotechnica.panther.modules.session.entity.extensions.isReadByCurrentU
 import us.neotechnica.panther.modules.session.entity.extensions.messages
 import us.neotechnica.panther.modules.session.entity.extensions.resolvedText
 import us.neotechnica.panther.modules.session.entity.extensions.users
+import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -186,7 +187,9 @@ data class ConversationCellViewData(
                         contentType.fileExtension.isVideo -> "🎥 ${LocalizedStringKey.Video.localized()}"
                         else -> "📎 ${LocalizedStringKey.Attachment.localized()}"
                     }
-                HostedContentType.Text -> lastMessage.resolvedText(languageCode)
+                // A system message's resolved text carries `⌘…⌘` emphasis
+                // sentinels; strip them so the list preview shows clean text.
+                HostedContentType.Text -> lastMessage.resolvedText(languageCode).sanitized
             }
         }
 

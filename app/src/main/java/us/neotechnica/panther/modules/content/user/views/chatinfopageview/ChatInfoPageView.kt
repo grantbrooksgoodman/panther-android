@@ -60,9 +60,9 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.common.contacts.components.ContactCardPresenter
 import us.neotechnica.panther.modules.common.contacts.components.rememberContactCardPresenter
 import us.neotechnica.panther.modules.common.extensions.formattedString
-import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.content.user.components.AddContactButton
 import us.neotechnica.panther.modules.content.user.components.ChatInfoContactSelectorHost
 import us.neotechnica.panther.modules.content.user.components.ChatParticipantView
@@ -101,9 +101,12 @@ private typealias Strings = ChatInfoPageViewConstants
  * A conversation's info page.
  *
  * For a group: a large avatar, the conversation title, a rename
- * action, an expandable participants card whose rows swipe to remove
- * and tap to open a contact card, and a leave action. For a
- * one-to-one conversation: the other participant's contact card.
+ * action, an expandable participants card, and a leave action. A
+ * participant row opens a contact card on tap and swipes to remove the
+ * participant; a long press removes a saved device contact through the
+ * contact sheet, while a number that is not a saved contact offers
+ * removal from the sheet its tap already opens. For a one-to-one
+ * conversation: the other participant's contact card.
  *
  * @param conversationIDKey The identifier key of the conversation.
  * @param modifier The modifier for this view.
@@ -151,7 +154,7 @@ fun ChatInfoPageView(
                     onDone = { viewModel.send(ChatInfoPageReducer.Action.DoneHeaderItemTapped) },
                     onContactTap =
                         singleParticipant?.firstUser?.let { user ->
-                            { presentContactCard(user.phoneNumber, user.displayName) }
+                            { presentContactCard.onTap(user.phoneNumber, user.displayName, null) }
                         },
                 )
 
@@ -165,7 +168,7 @@ fun ChatInfoPageView(
                     )
                 } else if (singleParticipant != null) {
                     SingleContactCard(singleParticipant) {
-                        singleParticipant.firstUser?.let { presentContactCard(it.phoneNumber, it.displayName) }
+                        singleParticipant.firstUser?.let { presentContactCard.onTap(it.phoneNumber, it.displayName, null) }
                     }
                 }
 
@@ -193,7 +196,7 @@ private fun GroupContent(
     state: ChatInfoPageReducer.State,
     viewModel: ViewModel<ChatInfoPageReducer.State, ChatInfoPageReducer.Action>,
     showMediaSegment: Boolean,
-    presentContactCard: (PhoneNumber?, String?) -> Unit,
+    presentContactCard: ContactCardPresenter,
     onPreviewIndexChange: (Int?) -> Unit,
 ) {
     Components.CapsuleButton(
@@ -232,7 +235,20 @@ private fun GroupContent(
             showsRemoveUserSwipeAction = state.showsRemoveUserSwipeAction,
             onToggle = { viewModel.send(ChatInfoPageReducer.Action.ChatInfoCellTapped) },
             onAddContact = { viewModel.send(ChatInfoPageReducer.Action.AddContactButtonTapped) },
-            onParticipantTap = { participant -> presentContactCard(participant.firstUser?.phoneNumber, participant.displayName) },
+            onParticipantTap = { participant ->
+                val removeFromConversation: (() -> Unit)? =
+                    if (state.showsRemoveUserSwipeAction) {
+                        { viewModel.send(ChatInfoPageReducer.Action.RemoveUserButtonTapped(participant)) }
+                    } else {
+                        null
+                    }
+                presentContactCard.onTap(participant.firstUser?.phoneNumber, participant.displayName, removeFromConversation)
+            },
+            onParticipantLongPress = { participant ->
+                presentContactCard.onLongPress(participant.firstUser?.phoneNumber, participant.displayName) {
+                    viewModel.send(ChatInfoPageReducer.Action.RemoveUserButtonTapped(participant))
+                }
+            },
             onUserInfoBadgeTapped = { viewModel.send(ChatInfoPageReducer.Action.UserInfoBadgeTapped(it.firstUser)) },
             onRemove = { viewModel.send(ChatInfoPageReducer.Action.RemoveUserButtonTapped(it)) },
         )
@@ -399,6 +415,7 @@ private fun ParticipantsCard(
     onToggle: () -> Unit,
     onAddContact: () -> Unit,
     onParticipantTap: (ChatParticipant) -> Unit,
+    onParticipantLongPress: (ChatParticipant) -> Unit,
     onUserInfoBadgeTapped: (ChatParticipant) -> Unit,
     onRemove: (ChatParticipant) -> Unit,
 ) {
@@ -415,10 +432,20 @@ private fun ParticipantsCard(
                 CardDivider()
                 ChatParticipantView(
                     participant = participant,
-                    showsRemoveUserSwipeAction = showsRemoveUserSwipeAction,
                     onTap = { onParticipantTap(participant) },
                     onUserInfoBadgeTapped = { onUserInfoBadgeTapped(participant) },
-                    onRemove = { onRemove(participant) },
+                    onRemove =
+                        if (showsRemoveUserSwipeAction) {
+                            { onRemove(participant) }
+                        } else {
+                            null
+                        },
+                    onLongPress =
+                        if (showsRemoveUserSwipeAction) {
+                            { onParticipantLongPress(participant) }
+                        } else {
+                            null
+                        },
                 )
             }
             if (showAddContact) {

@@ -17,16 +17,21 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import us.neotechnica.panther.bundle.resignFirstResponders
 import us.neotechnica.panther.modules.content.onboarding.views.OnboardingContainerView
 import us.neotechnica.panther.modules.content.shared.views.splashpageview.SplashPageReducer
 import us.neotechnica.panther.modules.content.shared.views.splashpageview.SplashPageView
 import us.neotechnica.panther.modules.content.user.views.UserContentContainer
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
+import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 
 /**
  * The app's root view.
@@ -41,6 +46,17 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 fun RootView(modifier: Modifier = Modifier) {
     val navigation = remember { DependencyValues.current.navigation }
     val state by navigation.state.collectAsState()
+
+    // Fulfills app-wide keyboard-dismissal requests sent through
+    // KeyboardService, mirroring iOS's uiApplication.resignFirstResponders().
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    LaunchedEffect(Unit) {
+        DependencyValues.current.sharedEvents.resignFirstResponders.events.collect {
+            focusManager.clearFocus(force = true)
+            keyboardController?.hide()
+        }
+    }
 
     AnimatedContent(
         contentKey = { it?.let { path -> path::class } },

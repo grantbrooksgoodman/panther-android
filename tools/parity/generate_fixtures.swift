@@ -105,7 +105,7 @@ let timestampEpochs: [Double] = [
     0,
     1,
     -1,
-    86_399,
+    86399,
     951_827_696, // 2000-02-29 (leap day)
     1_234_567_890,
     1_755_642_600, // 2026-era value
@@ -124,7 +124,7 @@ let timestampVectors = timestampEpochs.map { epoch -> TimestampVector in
     )
 }
 
-// Parse-tolerance vectors: zone tokens the formatter accepts.
+/// Parse-tolerance vectors: zone tokens the formatter accepts.
 struct ParseVector: Codable {
     let string: String
     let epochMillis: Int64?
@@ -159,7 +159,7 @@ let fixedDate = Date(timeIntervalSince1970: 1_755_642_600)
 let fixedDateString = timestampFormatter.string(from: fixedDate)
 let epochZeroString = timestampFormatter.string(from: Date(timeIntervalSince1970: 0))
 
-// PhoneNumber (label/internalFormattedString nil per decode path).
+/// PhoneNumber (label/internalFormattedString nil per decode path).
 let phoneNumberEncoded: [String: Any] = [
     "callingCode": "1",
     "nationalNumberString": "5551234567",
@@ -195,10 +195,10 @@ conversationHashFactors.append("\(userID): !")
 conversationHashFactors.append("!") // requiresConsentFromInitiator nil
 conversationHashFactors.append("\(userID) | false")
 conversationHashFactors.append("\(peerUserID) | false")
-// reactionMetadata decodes [empty] back to nil, so a round-tripped
-// conversation excludes reaction hashes from its factors. The empty
-// activity placeholder, by contrast, decodes to [emptyActivity] and
-// DOES contribute emptyActivityHash (see Conversation decode).
+/// reactionMetadata decodes [empty] back to nil, so a round-tripped
+/// conversation excludes reaction hashes from its factors. The empty
+/// activity placeholder, by contrast, decodes to [emptyActivity] and
+/// DOES contribute emptyActivityHash (see Conversation decode).
 let conversationHash = encodedHash(conversationHashFactors.sorted())
 
 let userHashFactors: [String] = [

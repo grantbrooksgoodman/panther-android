@@ -12,6 +12,7 @@ import us.neotechnica.panther.bundle.Application
 import us.neotechnica.panther.bundle.conversationsPageReappeared
 import us.neotechnica.panther.bundle.conversationsSearchQuery
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
+import us.neotechnica.panther.modules.common.services.KeyboardService
 import us.neotechnica.panther.modules.content.user.services.ConversationsPageViewService
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.session.entity.extensions.conversations
@@ -220,8 +221,11 @@ class ConversationsPageReducer : Reducer<ConversationsPageReducer.State, Convers
             Action.HandleChatPageStoreChange ->
                 ReduceResult(state, Effect.fireAndForget { viewService.handleChatPageStoreChange() })
 
-            is Action.IsSearchingChanged ->
+            is Action.IsSearchingChanged -> {
+                // Dismiss the keyboard when search is cleared.
+                if (state.isSearching && !action.isSearching) KeyboardService.resignFirstResponders()
                 ReduceResult(state.copy(isSearching = action.isSearching))
+            }
 
             Action.PulledToRefresh ->
                 if (state.isSearching) {

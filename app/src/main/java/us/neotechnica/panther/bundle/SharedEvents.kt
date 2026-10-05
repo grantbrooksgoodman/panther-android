@@ -39,6 +39,10 @@ val SharedEvents.messageOutboxDidChange: EventStream<Unit>
 val SharedEvents.networkActivityOccurred: EventStream<Unit>
     get() = event("networkActivityOccurred")
 
+/** An event that requests dismissal of the keyboard, resigning any active first responder. */
+val SharedEvents.resignFirstResponders: EventStream<Unit>
+    get() = event("resignFirstResponders")
+
 /**
  * An event that fires whenever the session store changes, carrying a
  * [SessionStoreChange] describing what was upserted or removed.

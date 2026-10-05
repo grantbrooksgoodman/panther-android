@@ -80,12 +80,20 @@ fun MessageContextMenu(
     val haptics = LocalHapticFeedback.current
     var anchorBounds by remember { mutableStateOf(Rect.Zero) }
 
+    // The gesture handler reads these through snapshot state so its
+    // pointer-input coroutine can key on the gesture's stable shape (see
+    // below) instead of restarting on every recomposition. A restart
+    // discards an in-progress long press, so a bubble that recomposes
+    // mid-press (an incoming receipt, speech highlight, audio progress)
+    // would otherwise drop its context menu.
+    val currentActions by rememberUpdatedState(actions)
+    val currentContent by rememberUpdatedState(content)
+    val currentOnTap by rememberUpdatedState(onTap)
+    val currentReactionChoices by rememberUpdatedState(reactionChoices)
+
     // Register this menu under its key so it can be opened
     // programmatically (such as focusing a message from search).
     if (menuKey != null && controller != null) {
-        val currentActions by rememberUpdatedState(actions)
-        val currentReactionChoices by rememberUpdatedState(reactionChoices)
-        val currentContent by rememberUpdatedState(content)
         DisposableEffect(menuKey, controller) {
             controller.register(menuKey) {
                 val hasMenu = currentActions.isNotEmpty() || currentReactionChoices.isNotEmpty()
@@ -124,37 +132,50 @@ fun MessageContextMenu(
         // clearing the name above it.
         header?.let { Box(Modifier.alpha(if (isLifted) 0f else 1f)) { it() } }
 
+        // Key the detector on the gesture's stable shape, not on the
+        // per-recomposition identities of the action and reaction lists:
+        // whether a tap is handled, and whether a double tap applies a
+        // reaction. Both hold steady across a bubble's lifetime, so the
+        // detector persists and its callbacks read the latest values
+        // through the snapshot state declared above.
+        val handlesTap = onTap != null
+        val hasDoubleTapDefault = reactionChoices.any { it.isDoubleTapDefault }
+
         Box(
             Modifier
                 .onGloballyPositioned { coordinates ->
                     anchorBounds = Rect(coordinates.positionInRoot(), coordinates.size.toSize())
-                }.pointerInput(actions, reactionChoices, controller, onTap) {
-                    // A non-null onDoubleTap delays single taps, so install one only for a double-tap-default reaction.
-                    val doubleTapChoice = reactionChoices.firstOrNull { it.isDoubleTapDefault }
+                }.pointerInput(controller, handlesTap, hasDoubleTapDefault) {
                     detectTapGestures(
-                        onTap = onTap?.let { tap -> { tap() } },
+                        onTap = if (handlesTap) { { currentOnTap?.invoke() } } else null,
+                        // A non-null onDoubleTap delays single taps, so install one only for a double-tap-default reaction.
                         onDoubleTap =
-                            doubleTapChoice?.let { choice ->
+                            if (hasDoubleTapDefault) {
                                 {
-                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    choice.onSelect()
+                                    val choice = currentReactionChoices.firstOrNull { it.isDoubleTapDefault }
+                                    if (choice != null) {
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        choice.onSelect()
+                                    }
                                 }
+                            } else {
+                                null
                             },
                         onLongPress = {
-                            val hasMenu = actions.isNotEmpty() || reactionChoices.isNotEmpty()
+                            val hasMenu = currentActions.isNotEmpty() || currentReactionChoices.isNotEmpty()
                             if (hasMenu && controller?.canBegin == true && anchorBounds != Rect.Zero) {
                                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                 controller.present(
                                     ActiveContextMenu(
                                         anchorBounds,
                                         alignment,
-                                        actions,
-                                        reactionChoices,
+                                        currentActions,
+                                        currentReactionChoices,
                                         liftScale,
                                         liftedBackground,
                                         menuLeadingOffset,
                                         alignsMenuCardToLeadingEdge,
-                                        content,
+                                        currentContent,
                                     ),
                                 )
                             }

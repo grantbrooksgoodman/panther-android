@@ -15,6 +15,7 @@ import us.neotechnica.panther.modules.content.user.extensions.chatPageHeaderLabe
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.content.user.services.AudioMessagePlaybackService
 import us.neotechnica.panther.modules.content.user.services.ContextMenuActionHandlerService
+import us.neotechnica.panther.modules.content.user.services.ReadReceiptService
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.message.models.AudioMessageReference
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
@@ -268,6 +269,12 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
                     TextToSpeechService.stop()
                     AudioMessagePlaybackService.stopPlayback()
                     ContextMenuActionHandlerService.resetSpeakingMessage()
+                    // Flush read receipts for any message that arrived within the
+                    // mark-read debounce window just before the page was left. The
+                    // page's own mark-read effect runs on the view model's scope, so
+                    // disposing the page cancels it mid-flight; this detached flush
+                    // outlives the view model and catches those stragglers.
+                    ReadReceiptService.flushUnreadMessages(state.conversationIDKey)
                     ConversationSessionService.setCurrentConversation(null)
                 }
                 ReduceResult(state)

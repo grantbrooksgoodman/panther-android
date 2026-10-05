@@ -12,6 +12,7 @@ import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.common.extensions.partiallyFormatted
 import us.neotechnica.panther.modules.common.models.PhoneNumber
+import us.neotechnica.panther.modules.common.services.KeyboardService
 import us.neotechnica.panther.modules.common.services.PhoneNumberService
 import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.content.onboarding.components.InstructionViewStrings
@@ -54,6 +55,8 @@ class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNum
         data object BackButtonTapped : Action
 
         data object ContinueButtonTapped : Action
+
+        data object DidSwipeDown : Action
 
         data object RunContinueButtonEffect : Action
 
@@ -139,11 +142,18 @@ class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNum
                 ReduceResult(state)
             }
 
-            Action.ContinueButtonTapped ->
+            Action.ContinueButtonTapped -> {
+                KeyboardService.resignFirstResponders()
                 ReduceResult(
                     state,
                     Effect.task(delay = CONTINUE_DELAY_MILLIS.milliseconds) { Action.RunContinueButtonEffect },
                 )
+            }
+
+            Action.DidSwipeDown -> {
+                KeyboardService.resignFirstResponders()
+                ReduceResult(state)
+            }
 
             Action.RunContinueButtonEffect -> {
                 Overlay.show()

@@ -10,6 +10,7 @@ package us.neotechnica.panther.modules.content.onboarding.views.authcodepageview
 
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
+import us.neotechnica.panther.modules.common.services.KeyboardService
 import us.neotechnica.panther.modules.content.onboarding.components.InstructionViewStrings
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
 import us.neotechnica.panther.navigation.OnboardingNavigatorState
@@ -43,6 +44,8 @@ class AuthCodePageReducer : Reducer<AuthCodePageReducer.State, AuthCodePageReduc
         data object BackButtonTapped : Action
 
         data object ContinueButtonTapped : Action
+
+        data object DidSwipeDown : Action
 
         data object RunContinueButtonEffect : Action
 
@@ -93,11 +96,18 @@ class AuthCodePageReducer : Reducer<AuthCodePageReducer.State, AuthCodePageReduc
                 ReduceResult(state)
             }
 
-            Action.ContinueButtonTapped ->
+            Action.ContinueButtonTapped -> {
+                KeyboardService.resignFirstResponders()
                 ReduceResult(
                     state,
                     Effect.task(delay = CONTINUE_DELAY_MILLIS.milliseconds) { Action.RunContinueButtonEffect },
                 )
+            }
+
+            Action.DidSwipeDown -> {
+                KeyboardService.resignFirstResponders()
+                ReduceResult(state)
+            }
 
             Action.RunContinueButtonEffect -> {
                 Overlay.show()

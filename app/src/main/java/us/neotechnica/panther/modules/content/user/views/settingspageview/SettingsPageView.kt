@@ -114,7 +114,7 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
                     onDone = { viewModel.send(SettingsPageReducer.Action.DoneToolbarButtonTapped) },
                 )
 
-                ContactDetailCard(state = state, onTap = presentContactCard)
+                ContactDetailCard(state = state, onTap = { phoneNumber, name -> presentContactCard.onTap(phoneNumber, name, null) })
 
                 SettingsActionCards(state = state, send = viewModel::send, navigation = navigation)
 

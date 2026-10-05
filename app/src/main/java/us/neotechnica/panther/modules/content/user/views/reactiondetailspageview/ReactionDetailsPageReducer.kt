@@ -9,6 +9,7 @@
 package us.neotechnica.panther.modules.content.user.views.reactiondetailspageview
 
 import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheets
+import us.neotechnica.panther.modules.common.services.KeyboardService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
@@ -70,7 +71,10 @@ class ReactionDetailsPageReducer : Reducer<ReactionDetailsPageReducer.State, Rea
         action: Action,
     ): ReduceResult<State, Action> =
         when (action) {
-            Action.ViewAppeared -> ReduceResult(state)
+            Action.ViewAppeared -> {
+                KeyboardService.resignFirstResponders()
+                ReduceResult(state)
+            }
 
             Action.ViewDisappeared -> ReduceResult(state)
 

@@ -9,12 +9,16 @@
 package us.neotechnica.panther.modules.session.entity.extensions
 
 import us.neotechnica.panther.modules.common.constants.CommonConstants
+import us.neotechnica.panther.modules.common.extensions.formattedString
+import us.neotechnica.panther.modules.common.models.PhoneNumber
+import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.networking.conversation.models.Activity
 import us.neotechnica.panther.modules.networking.conversation.models.ActivityAction
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.message.models.TranslationReference
 import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.modules.translation.extensions.system
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
@@ -31,8 +35,11 @@ val ActivityAction.isCurrentUserAdded: Boolean
  * A human-readable description of the activity, with participant names
  * wrapped in `⌘…⌘` sentinels so the system-message cell can bold them.
  *
- * **Note:** this renders a fixed English description from the session
- * store; localized templates and contact names are not yet resolved.
+ * Each participant name resolves to the contact's name when known,
+ * falling back to the participant's formatted phone number.
+ *
+ * **Note:** this renders a fixed English description; localized
+ * templates are not yet resolved.
  */
 val Activity.description: String
     get() {
@@ -41,7 +48,8 @@ val Activity.description: String
             is ActivityAction.AddedToConversation ->
                 "$actor added ⌘${displayName(action.userID)}⌘ to the conversation."
             ActivityAction.ChangedGroupPhoto -> "$actor changed the group photo."
-            ActivityAction.LeftConversation -> "$actor left the conversation."
+            ActivityAction.LeftConversation ->
+                "⌘${displayNameForPhoneNumberString(userID)}⌘ left the conversation."
             is ActivityAction.RemovedFromConversation ->
                 "$actor removed ⌘${displayName(action.userID)}⌘ from the conversation."
             ActivityAction.RemovedGroupPhoto -> "$actor removed the group photo."
@@ -75,5 +83,25 @@ val Activity.message: Message
 private fun displayName(userID: String): String {
     if (userID == User.currentUserID) return "You"
     val user = SessionStore.users[userID] ?: return "Someone"
-    return "+${user.phoneNumber.callingCode} ${user.phoneNumber.nationalNumberString}"
+    return user.displayName
+}
+
+/**
+ * Resolves the display name for a participant stored as a compiled
+ * phone number string, as the `leftConversation` activity records it.
+ *
+ * Strings that contain letters are treated as user identifiers for
+ * backward compatibility and resolved through [displayName]. Otherwise,
+ * the string is matched against the current user and the session store
+ * by compiled number, falling back to the formatted phone number.
+ */
+private fun displayNameForPhoneNumberString(phoneNumberString: String): String {
+    // Backward compatibility. Remove in a future update.
+    if (phoneNumberString.any { it.isLetter() }) return displayName(phoneNumberString)
+
+    val currentUserNumberString = UserSessionService.currentUser?.phoneNumber?.compiledNumberString
+    if (phoneNumberString == currentUserNumberString) return "You"
+
+    val user = SessionStore.users.values.firstOrNull { it.phoneNumber.compiledNumberString == phoneNumberString }
+    return user?.displayName ?: PhoneNumber(phoneNumberString).formattedString()
 }

@@ -9,7 +9,7 @@
 package us.neotechnica.panther.modules.content.user.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -40,29 +40,30 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Build
  *
  * Shows the participant's avatar, name, and a user-info badge
  * (tappable only in developer mode), and opens the participant's
- * contact card on a row tap. When removal is allowed, a trailing
- * swipe reveals a red remove action.
+ * contact card on a row tap. A non-`null` [onRemove] enables a trailing
+ * remove swipe; a non-`null` [onLongPress] handles a long press.
  *
  * @param participant The participant to display.
- * @param showsRemoveUserSwipeAction Whether the trailing remove swipe
- *   is enabled.
  * @param onTap The action performed on a row tap.
  * @param onUserInfoBadgeTapped The action performed when the user-info
  *   badge is tapped in developer mode.
- * @param onRemove The action performed when the row is swiped to
- *   remove the participant.
+ * @param onRemove The action performed when the row is swiped to remove
+ *   the participant, or `null` to disable the remove swipe.
+ * @param onLongPress The action performed on a long press, or `null` to
+ *   disable it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatParticipantView(
     participant: ChatParticipant,
-    showsRemoveUserSwipeAction: Boolean,
     onTap: () -> Unit,
     onUserInfoBadgeTapped: () -> Unit,
-    onRemove: () -> Unit,
+    onRemove: (() -> Unit)?,
+    onLongPress: (() -> Unit)?,
 ) {
-    if (!showsRemoveUserSwipeAction) {
-        RowContent(participant, onTap, onUserInfoBadgeTapped)
+    val remove = onRemove
+    if (remove == null) {
+        RowContent(participant, onTap, onUserInfoBadgeTapped, onLongPress)
         return
     }
 
@@ -71,7 +72,7 @@ fun ChatParticipantView(
             // Never actually dismiss: the swipe triggers the removal flow
             // (which presents its own confirmation) and the row snaps back.
             confirmValueChange = { value ->
-                if (value == SwipeToDismissBoxValue.EndToStart) onRemove()
+                if (value == SwipeToDismissBoxValue.EndToStart) remove()
                 false
             },
         )
@@ -80,7 +81,7 @@ fun ChatParticipantView(
         enableDismissFromStartToEnd = false,
         backgroundContent = { RemoveSwipeBackground() },
     ) {
-        RowContent(participant, onTap, onUserInfoBadgeTapped)
+        RowContent(participant, onTap, onUserInfoBadgeTapped, onLongPress)
     }
 }
 
@@ -91,6 +92,7 @@ private fun RowContent(
     participant: ChatParticipant,
     onTap: () -> Unit,
     onUserInfoBadgeTapped: () -> Unit,
+    onLongPress: (() -> Unit)?,
 ) {
     val colors = LocalPantherColors.current
     Row(
@@ -99,7 +101,7 @@ private fun RowContent(
             Modifier
                 .fillMaxWidth()
                 .background(colors.groupedRowBackground)
-                .clickable(onClick = onTap)
+                .combinedClickable(onClick = onTap, onLongClick = onLongPress)
                 .padding(horizontal = ChatInfoPageViewFloats.cardHorizontalPadding, vertical = ChatInfoPageViewFloats.rowVerticalPadding),
     ) {
         AvatarImageView(

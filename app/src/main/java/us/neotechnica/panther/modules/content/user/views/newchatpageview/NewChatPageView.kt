@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalBottomSheet
@@ -34,6 +35,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -48,7 +50,9 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
+import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.services.InviteService
+import us.neotechnica.panther.modules.common.services.KeyboardService
 import us.neotechnica.panther.modules.content.user.components.ContactPairCellView
 import us.neotechnica.panther.modules.content.user.components.ContentPickers
 import us.neotechnica.panther.modules.content.user.components.DeliveryProgressView
@@ -61,6 +65,7 @@ import us.neotechnica.panther.modules.content.user.extensions.hasContactsBesides
 import us.neotechnica.panther.modules.content.user.extensions.syncIfNeeded
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.content.user.services.RecipientBarContactSelectionUIService
+import us.neotechnica.panther.modules.content.user.views.chatpageview.ChatPageView
 import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageReducer
 import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageView
 import us.neotechnica.panther.modules.content.user.views.newchatpageview.NewChatPageReducer.Action
@@ -161,15 +166,12 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
                 onAdd = { scope.launch { selectContactButtonTapped(context, navigation) } },
             )
 
-            LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                items(state.suggestions, key = { it.contact.encodedHash }) { contactPair ->
-                    ContactPairCellView(
-                        contactPair = contactPair,
-                        action = { viewModel.send(Action.SuggestionTapped(contactPair)) },
-                    )
-                    HorizontalDivider(color = colors.groupedContentBackground)
-                }
-            }
+            SuggestionsOrConversationPreview(
+                suggestions = state.suggestions,
+                existingConversationIDKey = state.existingConversationIDKey,
+                onSuggestionTapped = { viewModel.send(Action.SuggestionTapped(it)) },
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+            )
 
             MessageInputBar(
                 text = state.inputText,
@@ -189,6 +191,47 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
             ) {
                 ContactSelectorPageView(entryPoint = ContactSelectorPageReducer.EntryPoint.NEW_CHAT_PAGE_VIEW)
             }
+        }
+    }
+}
+
+// The whitespace shows contact suggestions while a recipient is being
+// typed; otherwise, when the selected recipients match an existing
+// conversation, it previews that conversation.
+@Composable
+private fun SuggestionsOrConversationPreview(
+    suggestions: List<ContactPair>,
+    existingConversationIDKey: String?,
+    onSuggestionTapped: (ContactPair) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalPantherColors.current
+    Box(modifier = modifier) {
+        when {
+            suggestions.isNotEmpty() -> {
+                // Dismiss the keyboard once the contact list starts scrolling.
+                val suggestionsListState = rememberLazyListState()
+                LaunchedEffect(suggestionsListState) {
+                    snapshotFlow { suggestionsListState.isScrollInProgress }
+                        .collect { if (it) KeyboardService.resignFirstResponders() }
+                }
+                LazyColumn(state = suggestionsListState, modifier = Modifier.fillMaxSize()) {
+                    items(suggestions, key = { it.contact.encodedHash }) { contactPair ->
+                        ContactPairCellView(
+                            contactPair = contactPair,
+                            action = { onSuggestionTapped(contactPair) },
+                        )
+                        HorizontalDivider(color = colors.groupedContentBackground)
+                    }
+                }
+            }
+
+            existingConversationIDKey != null ->
+                ChatPageView(
+                    conversationIDKey = existingConversationIDKey,
+                    embedded = true,
+                    modifier = Modifier.fillMaxSize(),
+                )
         }
     }
 }

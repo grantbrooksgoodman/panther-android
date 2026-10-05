@@ -41,6 +41,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.components.Messa
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.modules.common.services.HapticsService
+import us.neotechnica.panther.modules.common.services.KeyboardService
 import us.neotechnica.panther.modules.content.user.components.ContentPickers
 import us.neotechnica.panther.modules.content.user.components.DeliveryProgressView
 import us.neotechnica.panther.modules.content.user.components.MediaPreviewOverlay
@@ -75,24 +76,35 @@ import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
  * user, with a long-press context menu, delivery status, and an input
  * bar that sends through the outbox-backed delivery pipeline.
  *
+ * When [embedded], the view renders only the message list – omitting its
+ * header and input bar, the presented-state tracking, and the
+ * current-conversation teardown – so the new chat page can preview an
+ * existing conversation between its recipient and input bars while owning
+ * that lifecycle itself.
+ *
  * @param conversationIDKey The identifier key of the conversation.
  * @param focusedMessageID The identifier of a message to reveal and
  *   highlight – for example, one navigated to from search – or `null`.
  * @param modifier The modifier for this view.
+ * @param embedded Whether the view is embedded as a message-list preview
+ *   rather than presented as the full chat page.
  */
 @Composable
 fun ChatPageView(
     conversationIDKey: String,
     focusedMessageID: String? = null,
     modifier: Modifier = Modifier,
+    embedded: Boolean = false,
 ) {
     val viewModel = remember { buildChatPageViewModel() }
 
     DisposableEffect(Unit) {
-        ChatPageStateService.setIsPresented(true)
+        if (!embedded) ChatPageStateService.setIsPresented(true)
         onDispose {
-            ChatPageStateService.setIsPresented(false)
-            viewModel.send(ChatPageReducer.Action.ViewDisappeared)
+            if (!embedded) {
+                ChatPageStateService.setIsPresented(false)
+                viewModel.send(ChatPageReducer.Action.ViewDisappeared)
+            }
             viewModel.close()
         }
     }
@@ -133,18 +145,25 @@ fun ChatPageView(
                 SpeechSynthesizerDidFinishOrCancel()
                 FocusedMessageInteractionEffect(focusedMessageID = state.focusedMessageID)
 
-                Column(modifier = Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
-                    ChatHeaderWithDeliveryProgress(
-                        conversationIDKey = state.conversationIDKey,
-                        service = deliveryProgressIndicatorService,
-                    )
+                Column(
+                    modifier = if (embedded) Modifier.fillMaxSize() else Modifier.fillMaxSize().systemBarsPadding().imePadding(),
+                ) {
+                    if (!embedded) {
+                        ChatHeaderWithDeliveryProgress(
+                            conversationIDKey = state.conversationIDKey,
+                            service = deliveryProgressIndicatorService,
+                        )
+                    }
 
                     MessageList(
                         state = state,
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                         onToggleAlternate = { viewModel.send(ChatPageReducer.Action.ToggleAlternate(it)) },
                         onToggleAudioTranscription = { viewModel.send(ChatPageReducer.Action.ToggleAudioTranscription(it)) },
-                        onTapMedia = { previewMessageID = it },
+                        onTapMedia = {
+                            KeyboardService.resignFirstResponders()
+                            previewMessageID = it
+                        },
                         onReact = { message, style -> viewModel.send(ChatPageReducer.Action.React(message, style)) },
                         onSpeak = { messageID, text -> viewModel.send(ChatPageReducer.Action.Speak(messageID, text)) },
                         onFailedIndicatorTapped = { messageID ->
@@ -153,22 +172,24 @@ fun ChatPageView(
                         onSaveMedia = { mediaFile -> scope.launch { saveMedia(mediaFile) } },
                     )
 
-                    MessageInputBar(
-                        text = state.inputText,
-                        placeholder = LocalizedStringKey.NewMessage.localized(),
-                        isSending = state.isSendingMessage || state.hasSendingOutboxEntry,
-                        onTextChange = { viewModel.send(ChatPageReducer.Action.InputChanged(it)) },
-                        onSend = {
-                            if (state.pendingAttachment != null) {
-                                viewModel.send(ChatPageReducer.Action.SendMedia)
-                            } else {
-                                viewModel.send(ChatPageReducer.Action.SendTapped)
-                            }
-                        },
-                        onAttach = { scope.launch { presentAttachMediaSheet(pickers) } },
-                        attachmentPreview = attachmentPreview,
-                        onRemoveAttachment = { viewModel.send(ChatPageReducer.Action.RemoveAttachment) },
-                    )
+                    if (!embedded) {
+                        MessageInputBar(
+                            text = state.inputText,
+                            placeholder = LocalizedStringKey.NewMessage.localized(),
+                            isSending = state.isSendingMessage || state.hasSendingOutboxEntry,
+                            onTextChange = { viewModel.send(ChatPageReducer.Action.InputChanged(it)) },
+                            onSend = {
+                                if (state.pendingAttachment != null) {
+                                    viewModel.send(ChatPageReducer.Action.SendMedia)
+                                } else {
+                                    viewModel.send(ChatPageReducer.Action.SendTapped)
+                                }
+                            },
+                            onAttach = { scope.launch { presentAttachMediaSheet(pickers) } },
+                            attachmentPreview = attachmentPreview,
+                            onRemoveAttachment = { viewModel.send(ChatPageReducer.Action.RemoveAttachment) },
+                        )
+                    }
                 }
             }
 

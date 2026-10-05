@@ -18,6 +18,7 @@ import us.neotechnica.panther.bundle.Application
 import us.neotechnica.panther.bundle.inviteLanguagePicker
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
@@ -114,12 +115,12 @@ object InviteService {
      * If the user declines translation, the invitation is composed
      * targeting the system language. If the user accepts, all presented
      * sheets are dismissed and the invite language picker is presented.
-     * Canceling the alert does nothing.
+     * Canceling the action sheet does nothing.
      *
      * @throws Exception if composing the invitation fails.
      */
     suspend fun presentInvitationPrompt() {
-        val shouldPresentInviteLanguagePicker = presentTranslationAlert() ?: return
+        val shouldPresentInviteLanguagePicker = presentTranslationActionSheet() ?: return
 
         if (!shouldPresentInviteLanguagePicker) {
             return composeInvitation(null)
@@ -217,28 +218,24 @@ object InviteService {
         )
     }
 
-    private suspend fun presentTranslationAlert(): Boolean? {
+    private suspend fun presentTranslationActionSheet(): Boolean? {
         var shouldTranslate: Boolean? = null
-        val acceptTranslationAction = Action("Yes, translate", style = ActionStyle.PREFERRED) { shouldTranslate = true }
+        val acceptTranslationAction = Action("Yes, translate") { shouldTranslate = true }
         val rejectTranslationAction = Action("No, don't translate") { shouldTranslate = false }
         val message =
             "Would you like ⌘${Build.finalName}⌘ to translate the invitation message into another language?"
 
-        Alert(
+        ActionSheetAlert(
             title = "Translate Invitation",
             message = message,
-            actions =
-                listOf(
-                    acceptTranslationAction,
-                    rejectTranslationAction,
-                    Action(LocalizedStringKey.Cancel.localized(), style = ActionStyle.CANCEL) {},
-                ),
+            actions = listOf(acceptTranslationAction, rejectTranslationAction),
+            cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
         ).present(
             translating =
                 listOf(
-                    Alert.TranslationOptionKey.Actions(listOf(acceptTranslationAction, rejectTranslationAction)),
-                    Alert.TranslationOptionKey.Message,
-                    Alert.TranslationOptionKey.Title,
+                    ActionSheetAlert.TranslationOptionKey.Actions(listOf(acceptTranslationAction, rejectTranslationAction)),
+                    ActionSheetAlert.TranslationOptionKey.Message,
+                    ActionSheetAlert.TranslationOptionKey.Title,
                 ),
         )
 

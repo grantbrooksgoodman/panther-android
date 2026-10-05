@@ -20,6 +20,7 @@ import us.neotechnica.panther.bundle.shouldNotifyOfConversationAvailability
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationAlert
 import us.neotechnica.panther.modules.common.models.ContactPair
+import us.neotechnica.panther.modules.common.services.KeyboardService
 import us.neotechnica.panther.modules.content.user.extensions.contactPair
 import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.content.user.extensions.withUser
@@ -247,11 +248,12 @@ object ChatInfoPageViewService {
     // MARK: - View Lifecycle
 
     /**
-     * Responds to the chat info page appearing by scheduling a metadata
-     * change notification for when any in-flight message send
-     * completes.
+     * Responds to the chat info page appearing by dismissing the
+     * keyboard and scheduling a metadata change notification for when
+     * any in-flight message send completes.
      */
     fun viewAppeared() {
+        KeyboardService.resignFirstResponders()
         MessageDeliveryService.addEffectUponIsSendingMessage(
             state = false,
             id = MessageDeliveryServiceEffectID.updateChatInfoPageView,

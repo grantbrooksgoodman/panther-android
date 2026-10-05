@@ -18,6 +18,7 @@ import us.neotechnica.panther.bundle.developermode.DangerZone
 import us.neotechnica.panther.bundle.reloadingConversationIDKeys
 import us.neotechnica.panther.bundle.traitCollectionChanged
 import us.neotechnica.panther.modules.common.services.InviteService
+import us.neotechnica.panther.modules.common.services.KeyboardService
 import us.neotechnica.panther.modules.common.services.PushTokenService
 import us.neotechnica.panther.modules.common.services.ReviewService
 import us.neotechnica.panther.modules.content.user.models.ChatPageStateServiceEffectID
@@ -240,6 +241,8 @@ object ConversationsPageViewService {
     }
 
     private suspend fun showPromptsIfNeeded() {
+        // Dismiss the keyboard before presenting a startup prompt over the page.
+        KeyboardService.resignFirstResponders()
         if (!InviteService.suggestInvitationIfNeeded()) {
             ReviewService.promptToReview()
         }

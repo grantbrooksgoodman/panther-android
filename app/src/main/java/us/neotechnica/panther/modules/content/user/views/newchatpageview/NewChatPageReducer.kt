@@ -116,6 +116,10 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
             val contactPairs: List<ContactPair>,
         ) : Action
 
+        data class ResolvedConversationReturned(
+            val existingConversationIDKey: String?,
+        ) : Action
+
         data class SelectedContactPairsChanged(
             val selectedContactPairs: List<ContactPair>,
         ) : Action
@@ -144,7 +148,7 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
         val resolvedContactPairs: List<ContactPair> = emptyList(),
         val selectedContactPairs: List<ContactPair> = emptyList(),
         val shouldUseBoldDoneToolbarButton: Boolean = false,
-        val didNavigateToChat: Boolean = false,
+        val existingConversationIDKey: String? = null,
     ) {
         /** The contact suggestions matching [recipientQuery], excluding already-selected recipients. */
         val suggestions: List<ContactPair>
@@ -174,8 +178,15 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
             }
 
             Action.ViewDisappeared -> {
+                // Clear the current-conversation pointer only when leaving
+                // without navigating into a chat (e.g. cancel). When the first
+                // message was sent, the page navigated into the created
+                // conversation and the chat now reads this pointer – clearing it
+                // would blank that chat. The recipient-bar reset below emits an
+                // empty selection, so guard it the same way (see
+                // SelectedContactPairsChanged).
+                if (!hasNavigatedToChat()) ConversationSessionService.setCurrentConversation(null)
                 RecipientBarContactSelectionUIService.reset()
-                if (!state.didNavigateToChat) ConversationSessionService.setCurrentConversation(null)
                 ReduceResult(state)
             }
 
@@ -230,11 +241,21 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
             is Action.ResolvedContactPairsReturned ->
                 ReduceResult(state.copy(resolvedContactPairs = action.contactPairs))
 
+            is Action.ResolvedConversationReturned ->
+                ReduceResult(state.copy(existingConversationIDKey = action.existingConversationIDKey))
+
             is Action.SelectedContactPairsChanged ->
-                ReduceResult(
-                    state.copy(selectedContactPairs = action.selectedContactPairs),
-                    resolveConversationEffect(action.selectedContactPairs),
-                )
+                // Ignore the empty selection emitted while the page tears down
+                // after navigating into the sent conversation – resolving it
+                // would reset the current conversation and blank that chat.
+                if (hasNavigatedToChat()) {
+                    ReduceResult(state)
+                } else {
+                    ReduceResult(
+                        state.copy(selectedContactPairs = action.selectedContactPairs),
+                        resolveConversationEffect(action.selectedContactPairs),
+                    )
+                }
 
             is Action.SendReturned -> {
                 DependencyValues.current.navigation.navigate(
@@ -242,7 +263,7 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
                         UserContentRoute.Stack(listOf(UserContentNavigatorState.SeguePath.Chat(action.conversationIDKey))),
                     ),
                 )
-                ReduceResult(state.copy(didNavigateToChat = true))
+                ReduceResult(state)
             }
 
             is Action.SendFailed -> {
@@ -252,6 +273,16 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
         }
 
     // MARK: - Auxiliary
+
+    /**
+     * Whether the page has navigated into a chat – i.e. the first message
+     * was sent and the created conversation is now shown. Teardown work
+     * (clearing the pointer, resolving the emptied selection) must not run
+     * in this case, or it would blank the conversation just opened.
+     */
+    private fun hasNavigatedToChat(): Boolean =
+        DependencyValues.current.navigation.state.value.userContent.stack
+            .lastOrNull() is UserContentNavigatorState.SeguePath.Chat
 
     private fun resolveContactPairsEffect(): Effect<Action> =
         Effect.run { send ->
@@ -321,7 +352,7 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
     }
 
     private fun resolveConversationEffect(selectedContactPairs: List<ContactPair>): Effect<Action> =
-        Effect.run {
+        Effect.run { send ->
             val userIDs = selectedContactPairs.userIDs
             val users = selectedContactPairs.users
             val sortedUserIDs = userIDs.sorted()
@@ -348,6 +379,7 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
                     else -> Conversation.mock(withUsers = users)
                 }
             ConversationSessionService.setCurrentConversation(conversation)
+            send(Action.ResolvedConversationReturned(existingConversation?.id?.key))
         }
 
     private fun sendEffect(text: String): Effect<Action> =

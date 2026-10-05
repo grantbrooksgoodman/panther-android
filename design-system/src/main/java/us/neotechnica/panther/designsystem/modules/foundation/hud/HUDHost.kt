@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
 import kotlinx.coroutines.delay
 
 /**
@@ -140,7 +141,7 @@ private fun HUDCard(presentation: HUDPresenter.Presentation) {
                 Text(
                     fontSize = STATUS_FONT_SIZE.sp,
                     fontWeight = FontWeight.Bold,
-                    text = text,
+                    text = text.sanitized,
                     textAlign = TextAlign.Center,
                 )
             }

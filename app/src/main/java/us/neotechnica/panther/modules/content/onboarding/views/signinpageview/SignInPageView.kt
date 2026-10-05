@@ -33,6 +33,7 @@ import us.neotechnica.panther.R
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
+import us.neotechnica.panther.designsystem.modules.foundation.modifiers.onSwipeDown
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.onboarding.constants.SignInPageViewFloats
@@ -71,7 +72,7 @@ fun SignInPageView(modifier: Modifier = Modifier) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().onSwipeDown { viewModel.send(SignInPageReducer.Action.DidSwipeDown) },
         ) {
             Image(
                 painter = painterResource(R.drawable.hello_wordmark),
