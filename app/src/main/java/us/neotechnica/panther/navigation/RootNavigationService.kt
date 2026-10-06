@@ -2,8 +2,8 @@
 //  RootNavigationService.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.navigation
@@ -73,10 +73,7 @@ private object SettingsNavigator {
         state: SettingsNavigatorState,
     ): SettingsNavigatorState =
         when (route) {
-            SettingsRoute.Pop -> state.copy(stack = state.stack.dropLast(1))
-            is SettingsRoute.Push -> state.copy(stack = state.stack + route.path)
             is SettingsRoute.Sheet -> state.copy(sheet = route.path)
-            is SettingsRoute.Stack -> state.copy(stack = route.paths)
         }
 }
 
@@ -86,9 +83,6 @@ private object ChatNavigator {
         state: ChatNavigatorState,
     ): ChatNavigatorState =
         when (route) {
-            ChatRoute.Pop -> state.copy(stack = state.stack.dropLast(1))
-            is ChatRoute.Push -> state.copy(stack = state.stack + route.path)
             is ChatRoute.Sheet -> state.copy(sheet = route.path)
-            is ChatRoute.Stack -> state.copy(stack = route.paths)
         }
 }

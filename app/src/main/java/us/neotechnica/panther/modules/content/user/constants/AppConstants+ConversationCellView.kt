@@ -2,8 +2,8 @@
 //  AppConstants+ConversationCellView.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.constants
@@ -21,10 +21,7 @@ object ConversationCellViewFloats {
     val chevronSize: Dp = 14.dp
     val chevronStartPadding: Dp = 4.dp
     val dateSpacerWidth: Dp = 8.dp
-    val languageChipCornerRadius: Dp = 4.dp
-    val languageChipHorizontalPadding: Dp = 5.dp
     val languageChipStartPadding: Dp = 6.dp
-    val languageChipVerticalPadding: Dp = 1.dp
     val rowBottomPadding: Dp = 14.dp
     val rowEndPadding: Dp = 16.dp
     val rowStartPadding: Dp = 12.dp

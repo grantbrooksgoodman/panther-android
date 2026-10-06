@@ -2,8 +2,8 @@
 //  NavigatorStates.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.navigation
@@ -78,18 +78,13 @@ data class UserContentNavigatorState(
         data object Settings : SeguePath
 
         data object ChangeLanguage : SeguePath
-
-        data object InviteLanguagePicker : SeguePath
     }
 }
 
 /** The settings flow's navigation state. */
 data class SettingsNavigatorState(
     val sheet: SheetPath? = null,
-    val stack: List<SeguePath> = emptyList(),
 ) {
-    sealed interface SeguePath : Paths
-
     /** The sheet destinations presented over the settings flow. */
     sealed interface SheetPath : Paths {
         /** The invite QR code sheet. */
@@ -100,12 +95,7 @@ data class SettingsNavigatorState(
 /** The chat flow's navigation state. */
 data class ChatNavigatorState(
     val sheet: SheetPath? = null,
-    val stack: List<SeguePath> = emptyList(),
 ) {
-    sealed interface SeguePath : Paths {
-        data object ChatInfo : SeguePath
-    }
-
     /** The sheet destinations presented over the chat flow. */
     sealed interface SheetPath : Paths {
         data object ContactSelector : SheetPath
@@ -129,7 +119,7 @@ val RootNavigatorState.descriptor: String?
         val top =
             when (modalPath) {
                 RootNavigatorState.ModalPath.Onboarding -> onboarding.stack.lastOrNull()
-                RootNavigatorState.ModalPath.UserContent -> chat.stack.lastOrNull() ?: userContent.stack.lastOrNull()
+                RootNavigatorState.ModalPath.UserContent -> userContent.stack.lastOrNull()
                 RootNavigatorState.ModalPath.Splash -> null
             }
         return (top ?: modalPath).pathDescriptor

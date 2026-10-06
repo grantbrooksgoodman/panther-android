@@ -2,8 +2,8 @@
 //  LoggerDomains.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.bundle
@@ -38,8 +38,6 @@ object LoggerDomainSubscription : LoggerDomainSubscriptionDelegate {
             LoggerDomain.conversationObserver,
             LoggerDomain.conversationStore,
             LoggerDomain.conversationSync,
-            LoggerDomain.dataIntegrity,
-            LoggerDomain.dataUsage,
             LoggerDomain.exception,
             LoggerDomain.general,
             LoggerDomain.Networking.auth,
@@ -48,8 +46,6 @@ object LoggerDomainSubscription : LoggerDomainSubscriptionDelegate {
             LoggerDomain.localization,
             LoggerDomain.notifications,
             LoggerDomain.outbox,
-            LoggerDomain.penPals,
-            LoggerDomain.schemaMigration,
             LoggerDomain.translation,
             LoggerDomain.userSession,
             LoggerDomain.userStore,

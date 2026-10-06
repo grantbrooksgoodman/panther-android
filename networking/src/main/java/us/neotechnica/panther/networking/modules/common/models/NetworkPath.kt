@@ -2,8 +2,8 @@
 //  NetworkPath.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.networking.modules.common.models
@@ -32,7 +32,6 @@ value class NetworkPath(
     companion object {
         val audioMessageInputs = NetworkPath("audioMessageInputs")
         val audioTranslations = NetworkPath("audioTranslations")
-        val breadcrumbs = NetworkPath("breadcrumbs")
         val conversations = NetworkPath("conversations")
         val deletedUsers = NetworkPath("deletedUsers")
         val invalidatedCaches = NetworkPath("invalidatedCaches")

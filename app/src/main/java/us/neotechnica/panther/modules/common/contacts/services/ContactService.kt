@@ -2,18 +2,15 @@
 //  ContactService.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.common.contacts.services
 
-import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.ContactsContract
-import androidx.core.content.ContextCompat
 import us.neotechnica.panther.bundle.contactPairArchiveService
 import us.neotechnica.panther.modules.common.contacts.models.DeviceContact
 import us.neotechnica.panther.modules.common.extensions.ContactPairArchiveServiceStorageKey
@@ -22,6 +19,7 @@ import us.neotechnica.panther.modules.common.models.Contact
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.models.NumberPair
 import us.neotechnica.panther.modules.common.models.PhoneNumber
+import us.neotechnica.panther.modules.common.services.PermissionService
 import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.content.user.extensions.uniquedByPhoneNumber
 import us.neotechnica.panther.modules.content.user.extensions.userIDs
@@ -109,7 +107,7 @@ object ContactService {
      */
     fun deviceContactLookupUri(compiledNumberString: String): Uri? {
         val resolver = appContext?.contentResolver ?: return null
-        if (!hasContactPermission()) return null
+        if (PermissionService.contactPermissionStatus != PermissionService.PermissionStatus.GRANTED) return null
 
         val filterUri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(compiledNumberString))
         val projection = arrayOf(ContactsContract.PhoneLookup._ID, ContactsContract.PhoneLookup.LOOKUP_KEY)
@@ -122,13 +120,6 @@ object ContactService {
             return ContactsContract.Contacts.getLookupUri(cursor.getLong(idIndex), lookupKey)
         }
         return null
-    }
-
-    /** A Boolean value that indicates whether read access to the device's contacts is held. */
-    fun hasContactPermission(): Boolean {
-        val context = appContext ?: return false
-        return ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) ==
-            PackageManager.PERMISSION_GRANTED
     }
 
     // MARK: - Auxiliary
@@ -163,7 +154,7 @@ object ContactService {
 
     private fun fetchContactPairs(users: List<User>): List<ContactPair> {
         val resolver = appContext?.contentResolver
-        if (!hasContactPermission() || resolver == null) {
+        if (PermissionService.contactPermissionStatus != PermissionService.PermissionStatus.GRANTED || resolver == null) {
             throw Exception("Not authorized for contacts.", isReportable = false, metadata = ExceptionMetadata(this))
         }
 

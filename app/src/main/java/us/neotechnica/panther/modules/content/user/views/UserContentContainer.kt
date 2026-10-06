@@ -2,20 +2,20 @@
 //  UserContentContainer.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.views
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.foundation.background
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -33,7 +33,6 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.modules.content.user.constants.UserContentContainerFloats
 import us.neotechnica.panther.modules.content.user.constants.UserContentContainerStrings
 import us.neotechnica.panther.modules.content.user.views.changelanguagepageview.ChangeLanguagePageView
-import us.neotechnica.panther.modules.content.shared.components.invitelanguagepickerview.InviteLanguagePickerView
 import us.neotechnica.panther.modules.content.user.views.chatinfopageview.ChatInfoPageView
 import us.neotechnica.panther.modules.content.user.views.chatpageview.ChatPageView
 import us.neotechnica.panther.modules.content.user.views.conversationspageview.ConversationsPageReducer
@@ -179,11 +178,6 @@ fun UserContentContainer(modifier: Modifier = Modifier) {
                         // the page insets its own content.
                         UserContentNavigatorState.SeguePath.ChangeLanguage ->
                             ChangeLanguagePageView(Modifier.fillMaxSize())
-
-                        // Drawn edge-to-edge so its grouped background bleeds past the system bars;
-                        // the page insets its own content.
-                        UserContentNavigatorState.SeguePath.InviteLanguagePicker ->
-                            InviteLanguagePickerView(Modifier.fillMaxSize())
                     }
                 }
             }

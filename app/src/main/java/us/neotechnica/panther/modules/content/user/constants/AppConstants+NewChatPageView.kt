@@ -2,8 +2,8 @@
 //  AppConstants+NewChatPageView.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.constants
@@ -20,7 +20,6 @@ object NewChatPageViewFloats {
     val chipRemoveIconSize: Dp = 12.dp
     val chipRemoveIconStartPadding: Dp = 4.dp
     val chipSpacing: Dp = 6.dp
-    val closeButtonGlyphSize: Dp = 18.dp
     val fieldMinWidth: Dp = 120.dp
     val fieldVerticalPadding: Dp = 4.dp
     val headerHorizontalPadding: Dp = 16.dp
@@ -38,10 +37,4 @@ object NewChatPageViewFloats {
     val toLabelEndPadding: Dp = 6.dp
 
     const val CHIP_BACKGROUND_ALPHA = 0.15f
-}
-
-// MARK: - String
-
-object NewChatPageViewStrings {
-    const val CLOSE = "Close"
 }

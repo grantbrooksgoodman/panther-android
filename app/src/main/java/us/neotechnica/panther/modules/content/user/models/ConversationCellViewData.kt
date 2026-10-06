@@ -2,8 +2,8 @@
 //  ConversationCellViewData.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.models
@@ -47,8 +47,6 @@ data class ConversationCellViewData(
     val hasContactName: Boolean,
     val isGroup: Boolean,
     val participantCount: Int,
-    val otherLanguageCode: String?,
-    val otherRegionCode: String?,
     val otherUser: User?,
 ) {
     companion object {
@@ -63,8 +61,6 @@ data class ConversationCellViewData(
                 hasContactName = false,
                 isGroup = false,
                 participantCount = 0,
-                otherLanguageCode = null,
-                otherRegionCode = null,
                 otherUser = null,
             )
 
@@ -112,8 +108,6 @@ data class ConversationCellViewData(
                     hasContactName = hasName,
                     isGroup = isGroup,
                     participantCount = users.size,
-                    otherLanguageCode = if (!isGroup) users.firstOrNull()?.languageCode else null,
-                    otherRegionCode = if (!isGroup) users.firstOrNull()?.phoneNumber?.regionCode else null,
                     otherUser = if (!isGroup) users.firstOrNull() else null,
                 )
 

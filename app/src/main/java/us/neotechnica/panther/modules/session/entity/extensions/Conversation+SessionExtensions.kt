@@ -2,8 +2,8 @@
 //  Conversation+SessionExtensions.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.session.entity.extensions
@@ -11,21 +11,20 @@ package us.neotechnica.panther.modules.session.entity.extensions
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import us.neotechnica.panther.networking.Networking
-import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
-import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.modules.common.constants.CommonConstants
-import us.neotechnica.panther.modules.networking.conversation.services.ConversationService
-import us.neotechnica.panther.modules.networking.message.services.MessageService
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationMetadata
 import us.neotechnica.panther.modules.networking.conversation.models.Participant
 import us.neotechnica.panther.modules.networking.message.models.Message
+import us.neotechnica.panther.modules.networking.message.services.MessageService
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.state.services.SessionStore
-import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.modules.networking.user.services.UserService
+import us.neotechnica.panther.modules.session.entity.services.UserSessionService
+import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
+import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestampDateFormatter
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
@@ -118,11 +117,6 @@ suspend fun Conversation.resolveUsers(forceUpdate: Boolean = false) {
     userCoalescer.submitUnlessCancelled("${id.encoded}/$forceUpdate") {
         fetchAndCommitUsers(forceUpdate)
     }
-}
-
-/** Refetches the conversation's full record into the store. */
-suspend fun Conversation.resolve() {
-    ConversationService.getConversation(id.key)
 }
 
 /**

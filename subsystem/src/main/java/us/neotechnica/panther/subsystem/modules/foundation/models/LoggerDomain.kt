@@ -2,8 +2,8 @@
 //  LoggerDomain.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.subsystem.modules.foundation.models
@@ -63,12 +63,6 @@ value class LoggerDomain(
         /** The domain for conversation synchronization. */
         val conversationSync = LoggerDomain("conversationSync")
 
-        /** The domain for data-integrity checks. */
-        val dataIntegrity = LoggerDomain("dataIntegrity")
-
-        /** The domain for data-usage accounting. */
-        val dataUsage = LoggerDomain("dataUsage")
-
         /** The domain for caught exceptions. */
         val exception = LoggerDomain("exception")
 
@@ -89,12 +83,6 @@ value class LoggerDomain(
 
         /** The domain for the message outbox. */
         val outbox = LoggerDomain("outbox")
-
-        /** The domain for PenPals features. */
-        val penPals = LoggerDomain("penPals")
-
-        /** The domain for schema migration. */
-        val schemaMigration = LoggerDomain("schemaMigration")
 
         /** The domain for the session store. */
         val sessionStore = LoggerDomain("sessionStore")

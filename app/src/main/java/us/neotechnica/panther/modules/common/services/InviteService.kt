@@ -2,8 +2,8 @@
 //  InviteService.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.common.services
@@ -70,7 +70,7 @@ object InviteService {
             val sufficientAppOpenCount = appOpenCount == 0 || appOpenCount == 1 || appOpenCount % 2 == 0
             val currentUser = UserSessionService.currentUser
 
-            if (!ContactService.hasContactPermission()) return false
+            if (PermissionService.contactPermissionStatus != PermissionService.PermissionStatus.GRANTED) return false
             if (hasContactsBesidesCurrentUser()) return false
             if (!(currentUser?.conversations).isNullOrEmpty()) return false
             if (!(currentUser?.conversationIDs).isNullOrEmpty()) return false

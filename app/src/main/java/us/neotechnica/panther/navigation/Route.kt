@@ -2,8 +2,8 @@
 //  Route.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.navigation
@@ -77,36 +77,16 @@ sealed interface UserContentRoute {
 
 /** Routes handled by the settings navigator. */
 sealed interface SettingsRoute {
-    data object Pop : SettingsRoute
-
-    data class Push(
-        val path: SettingsNavigatorState.SeguePath,
-    ) : SettingsRoute
-
     /** Presents the given sheet over the settings flow, or dismisses it when `null`. */
     data class Sheet(
         val path: SettingsNavigatorState.SheetPath?,
-    ) : SettingsRoute
-
-    data class Stack(
-        val paths: List<SettingsNavigatorState.SeguePath>,
     ) : SettingsRoute
 }
 
 /** Routes handled by the chat navigator. */
 sealed interface ChatRoute {
-    data object Pop : ChatRoute
-
-    data class Push(
-        val path: ChatNavigatorState.SeguePath,
-    ) : ChatRoute
-
     /** Presents the given sheet over the chat flow, or dismisses it when `null`. */
     data class Sheet(
         val path: ChatNavigatorState.SheetPath?,
-    ) : ChatRoute
-
-    data class Stack(
-        val paths: List<ChatNavigatorState.SeguePath>,
     ) : ChatRoute
 }
