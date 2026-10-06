@@ -272,7 +272,8 @@ object Application {
             finalName = FINAL_NAME,
             bundleVersion = BuildConfig.VERSION_NAME,
             environment = BuildConfig.NETWORK_ENVIRONMENT,
-            milestone = resolveBuildMilestone(),
+            // TODO: FIX BEFORE PLAY STORE RELEASE.
+            milestone = Milestone.BETA, // resolveBuildMilestone(),
             buildDate = Date(buildDate * MILLIS_PER_SECOND),
             firstCompileDate = Date(firstCompileDate * MILLIS_PER_SECOND),
         )

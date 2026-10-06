@@ -16,6 +16,7 @@ import us.neotechnica.panther.modules.networking.conversation.models.Conversatio
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.session.entity.extensions.cachedTranslation
 import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.session.entity.extensions.isMock
 import us.neotechnica.panther.modules.session.entity.extensions.isReadByCurrentUser
@@ -24,6 +25,7 @@ import us.neotechnica.panther.modules.session.entity.extensions.resolvedText
 import us.neotechnica.panther.modules.session.entity.extensions.users
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
+import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -90,7 +92,7 @@ data class ConversationCellViewData(
             val matchingMessage =
                 searchQuery
                     .takeIf { it.isNotBlank() }
-                    ?.let { query -> messages.lastOrNull { it.matchesSearchQuery(query) } }
+                    ?.let { query -> messages.lastOrNull { it.textContains(query, languageCode) } }
             val lastMessage = matchingMessage ?: messages.lastOrNull()
             val users = conversation.users.orEmpty()
             val isGroup = conversation.participants.size > 2
@@ -129,10 +131,11 @@ data class ConversationCellViewData(
             query: String,
         ): String? {
             if (query.isBlank()) return null
+            val languageCode = RuntimeStorage.languageCode
             return conversation.messages
                 .orEmpty()
                 .sortedBy { it.sentDate.time }
-                .lastOrNull { it.matchesSearchQuery(query) }
+                .lastOrNull { it.textContains(query, languageCode) }
                 ?.id
         }
 
@@ -147,19 +150,23 @@ data class ConversationCellViewData(
             val trimmed = query.trim()
             if (trimmed.isEmpty()) return true
             if (title(conversation).lowercase().contains(trimmed.lowercase())) return true
-            return conversation.messages?.any { it.matchesSearchQuery(trimmed) } == true
+            val languageCode = RuntimeStorage.languageCode
+            return conversation.messages?.any { it.textContains(trimmed, languageCode) } == true
         }
 
         // MARK: - Auxiliary
 
-        private fun Message.matchesSearchQuery(query: String): Boolean {
-            val lowercased = query.lowercase()
-            return translations?.any {
-                it.input.value
-                    .lowercase()
-                    .contains(lowercased) ||
-                    it.output.lowercase().contains(lowercased)
-            } == true
+        // Mirrors the chat bubble: the current user's own message matches on
+        // its input text; a received message matches on its output translated
+        // into [languageCode]. Resolves from local sources only, so a message
+        // whose translation is not yet cached does not match.
+        private fun Message.textContains(
+            searchTerm: String,
+            languageCode: String,
+        ): Boolean {
+            val translation = cachedTranslation(languageCode) ?: return false
+            val comparator = if (isFromCurrentUser) translation.input.value else translation.output.sanitized
+            return comparator.lowercase().trim().contains(searchTerm.lowercase().trim())
         }
 
         /** The resolved title (`titleLabelText`) for the given conversation. */
