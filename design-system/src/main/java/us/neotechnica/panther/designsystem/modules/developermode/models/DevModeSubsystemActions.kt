@@ -64,14 +64,14 @@ object DevModeSubsystemActions {
                         }
                     val resetPreferencesAction =
                         Action("Reset Preferences") {
-                            Persistent.reset(preserving = emptyList())
+                            Persistent.reset()
                             HUD.showSuccess(text = "Reset Preferences")
                         }
                     val eraseAllAction =
                         Action("Erase All Content & Settings", style = ActionStyle.DESTRUCTIVE_PREFERRED) {
                             CoreUtilities.clearCaches()
                             CoreUtilities.eraseDocumentsDirectory()
-                            Persistent.reset(preserving = emptyList())
+                            Persistent.reset()
                             HUD.showSuccess()
                         }
 

@@ -2,8 +2,8 @@
 //  LoggerDomainSubscriptionDelegate.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.subsystem.modules.foundation.interfaces
@@ -17,8 +17,9 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
  * Register an implementation once at launch to control the initial
  * logging configuration. The subsystem reads the delegate's values
  * during setup and subscribes to the returned domains automatically.
- * When no delegate is registered, output for every domain is
- * produced.
+ * When no delegate is registered,
+ * [DefaultLoggerDomainSubscriptionDelegate] supplies the built-in
+ * subsystem domains.
  */
 interface LoggerDomainSubscriptionDelegate {
     // MARK: - Properties
@@ -40,4 +41,26 @@ interface LoggerDomainSubscriptionDelegate {
      * subscribed to later at runtime.
      */
     val subscribedDomains: List<LoggerDomain>
+}
+
+/**
+ * The default logger domain subscription, which subscribes to all
+ * built-in subsystem domains and excludes none from the session
+ * record.
+ *
+ * The logger uses this delegate whenever no app-level
+ * [LoggerDomainSubscriptionDelegate] is registered.
+ */
+object DefaultLoggerDomainSubscriptionDelegate : LoggerDomainSubscriptionDelegate {
+    override val domainsExcludedFromSessionRecord: List<LoggerDomain> = emptyList()
+
+    override val subscribedDomains: List<LoggerDomain> =
+        listOf(
+            LoggerDomain.alertKit,
+            LoggerDomain.caches,
+            LoggerDomain.concurrency,
+            LoggerDomain.general,
+            LoggerDomain.localization,
+            LoggerDomain.translation,
+        )
 }

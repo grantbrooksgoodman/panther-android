@@ -34,8 +34,8 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.modules.content.user.constants.MediaMessageBubbleColors
 import us.neotechnica.panther.modules.content.user.constants.MediaMessageBubbleFloats
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
+import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import androidx.compose.material3.Text as Material3Text
 
 /**

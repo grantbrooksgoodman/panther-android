@@ -8,7 +8,6 @@
 
 package us.neotechnica.panther.subsystem.modules.foundation.services
 
-import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -27,6 +26,45 @@ import java.util.Locale
  * compile).
  */
 object Build {
+    // MARK: - Types
+
+    /**
+     * The release-cycle stage of a build.
+     *
+     * Each milestone has a single-character [shortString] that is
+     * appended to build numbers in the build-info overlay (for
+     * example, `"b"` for beta).
+     */
+    enum class Milestone(
+        /** The underlying raw value. */
+        val rawValue: String,
+        /** A single-character abbreviation for this milestone. */
+        val shortString: String,
+    ) {
+        /** A very early development build. */
+        PRE_ALPHA("pre-alpha", "p"),
+
+        /** An early development build with core features in progress. */
+        ALPHA("alpha", "a"),
+
+        /** A feature-complete build undergoing testing. */
+        BETA("beta", "b"),
+
+        /** A build that is a candidate for general release. */
+        RELEASE_CANDIDATE("release candidate", "c"),
+
+        /** A production release distributed through the store. */
+        GENERAL_RELEASE("general", "g"),
+        ;
+
+        // MARK: - Companion
+
+        companion object {
+            /** The milestone matching [rawValue], or `null` if unrecognized. */
+            fun from(rawValue: String): Milestone? = entries.firstOrNull { it.rawValue == rawValue }
+        }
+    }
+
     // MARK: - Properties
 
     /** The build number of the most recent store release. */

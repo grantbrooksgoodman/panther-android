@@ -29,7 +29,6 @@ import us.neotechnica.panther.modules.common.services.AnalyticsService.Analytics
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
 import us.neotechnica.panther.modules.content.user.extensions.hasContactsBesidesCurrentUser
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.session.entity.extensions.conversations
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.networking.Networking
@@ -40,6 +39,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
+import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.TranslationInput
 import kotlin.time.Duration

@@ -2,13 +2,15 @@
 //  CacheDomain.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.subsystem.modules.foundation.models
 
 import us.neotechnica.panther.subsystem.AppSubsystem
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.EncodedHashStore
+import us.neotechnica.panther.subsystem.modules.localization.services.LocalizedStringResolver
 
 /**
  * A named group of cached entries that can be cleared as a unit.
@@ -30,8 +32,18 @@ class CacheDomain(
     // MARK: - Companion
 
     companion object {
+        /** The cache domain for identity-hash lookups. */
+        val encodedHash = CacheDomain("encodedHash") { EncodedHashStore.clearStore() }
+
+        /** The cache domain for localized string lookups. */
+        val localization = CacheDomain("localization") { LocalizedStringResolver.clearCache() }
+
         /** The subsystem's own built-in cache domains. */
-        val subsystemCases: List<CacheDomain> = emptyList()
+        val subsystemCases: List<CacheDomain> =
+            listOf(
+                encodedHash,
+                localization,
+            )
 
         /** Every registered cache domain, combining app and subsystem domains. */
         val allCases: List<CacheDomain>

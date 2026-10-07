@@ -2,8 +2,8 @@
 //  Persistent.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.subsystem.modules.foundation.services
@@ -190,15 +190,51 @@ object Persistent {
     // MARK: - Reset
 
     /**
-     * Removes every persisted value, preserving only the entries for
-     * the given keys.
+     * A rule that determines which persisted keys survive a reset.
      *
-     * Both scalar values and archives are cleared.
-     *
-     * @param preserving The keys whose values survive the reset.
+     * Pass a strategy to [reset] to control which entries are
+     * retained – for example,
+     * `KeyPreservationStrategy.PermanentAndSubsystemKeys(plus = listOf(key))`.
      */
-    fun reset(preserving: List<PersistentStorageKey>) {
-        val preservedRawValues = preserving.map { it.rawValue }.toSet()
+    sealed interface KeyPreservationStrategy {
+        /** Preserve only the specified keys. */
+        data class Custom(
+            val keys: List<PersistentStorageKey>,
+        ) : KeyPreservationStrategy
+
+        /** Preserve nothing; all keys are removed. */
+        data object None : KeyPreservationStrategy
+
+        /**
+         * Preserve the permanent keys registered through the
+         * [PermanentPersistentStorageKeyDelegate][us.neotechnica.panther.subsystem.modules.foundation.interfaces.PermanentPersistentStorageKeyDelegate],
+         * the subsystem keys, and any additional keys.
+         */
+        data class PermanentAndSubsystemKeys(
+            val plus: List<PersistentStorageKey>? = null,
+        ) : KeyPreservationStrategy
+
+        /** Preserve the subsystem keys and any additional keys. */
+        data class SubsystemKeys(
+            val plus: List<PersistentStorageKey>? = null,
+        ) : KeyPreservationStrategy
+    }
+
+    /**
+     * Removes every persisted value, preserving only the entries
+     * selected by the given strategy.
+     *
+     * Both scalar values and archives are cleared. The default
+     * strategy preserves the permanent keys registered through the
+     * [PermanentPersistentStorageKeyDelegate][us.neotechnica.panther.subsystem.modules.foundation.interfaces.PermanentPersistentStorageKeyDelegate]
+     * and the subsystem keys.
+     *
+     * @param preserving The preservation strategy. Defaults to
+     *   [KeyPreservationStrategy.PermanentAndSubsystemKeys].
+     */
+    fun reset(preserving: KeyPreservationStrategy = KeyPreservationStrategy.PermanentAndSubsystemKeys()) {
+        val preservedKeys = resolveKeys(preserving)
+        val preservedRawValues = preservedKeys.map { it.rawValue }.toSet()
 
         testScalars?.let { store ->
             store.withValue { it.value = it.value.filterKeys { key -> key in preservedRawValues } }
@@ -212,7 +248,7 @@ object Persistent {
         }
 
         val preservedArchives =
-            preserving.mapNotNull { key ->
+            preservedKeys.mapNotNull { key ->
                 val file = FileStore.resolve(archivePath(key))
                 if (file != null && file.exists()) key.rawValue to file.readText() else null
             }
@@ -225,16 +261,17 @@ object Persistent {
         }
     }
 
-    /**
-     * Returns the keys preserved across a reset: the permanent keys,
-     * the subsystem keys, and any additional keys.
-     *
-     * @param plus Additional keys to preserve, or `null` for none.
-     */
-    fun permanentAndSubsystemKeys(plus: List<PersistentStorageKey>? = null): List<PersistentStorageKey> {
-        val permanentKeys = AppSubsystem.delegates.permanentPersistentStorageKeys?.permanentKeys ?: emptyList()
-        return ((plus ?: emptyList()) + permanentKeys + PersistentStorageKey.subsystemKeys).distinct()
-    }
+    private fun resolveKeys(strategy: KeyPreservationStrategy): List<PersistentStorageKey> =
+        when (strategy) {
+            is KeyPreservationStrategy.Custom -> strategy.keys.distinct()
+            KeyPreservationStrategy.None -> emptyList()
+            is KeyPreservationStrategy.PermanentAndSubsystemKeys -> {
+                val permanentKeys = AppSubsystem.delegates.permanentPersistentStorageKeys?.permanentKeys ?: emptyList()
+                ((strategy.plus ?: emptyList()) + permanentKeys + PersistentStorageKey.subsystemKeys).distinct()
+            }
+            is KeyPreservationStrategy.SubsystemKeys ->
+                ((strategy.plus ?: emptyList()) + PersistentStorageKey.subsystemKeys).distinct()
+        }
 
     // MARK: - Auxiliary
 

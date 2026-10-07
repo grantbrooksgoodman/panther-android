@@ -38,7 +38,6 @@ import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.developermode.services.DevModeService
-import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.BuildInfoOverlay
 import androidx.compose.material3.Text as Material3Text
@@ -56,7 +55,7 @@ import androidx.compose.material3.Text as Material3Text
  */
 @Composable
 fun BuildInfoOverlayView(modifier: Modifier = Modifier) {
-    if (!Build.isConfigured || Build.milestone == Milestone.GENERAL_RELEASE) return
+    if (!Build.isConfigured || Build.milestone == Build.Milestone.GENERAL_RELEASE) return
 
     val isHidden by BuildInfoOverlay.isHidden.collectAsState()
     if (isHidden) return
@@ -119,7 +118,7 @@ fun BuildInfoOverlayView(modifier: Modifier = Modifier) {
 private fun BuildInfoDetailsDialog(onDismiss: () -> Unit) {
     val details =
         listOf(
-            "Milestone" to Build.milestone.rawValue.replaceFirstChar { it.uppercase() },
+            "Build.Milestone" to Build.milestone.rawValue.replaceFirstChar { it.uppercase() },
             "Bundle Version" to "${Build.bundleVersion} (${Build.buildNumber})",
             "Revision" to "${Build.bundleRevision} (${Build.revisionBuildNumber})",
             "SKU" to Build.buildSKU,

@@ -38,7 +38,6 @@ object LoggerDomainSubscription : LoggerDomainSubscriptionDelegate {
             LoggerDomain.conversationObserver,
             LoggerDomain.conversationStore,
             LoggerDomain.conversationSync,
-            LoggerDomain.exception,
             LoggerDomain.general,
             LoggerDomain.Networking.auth,
             LoggerDomain.Networking.health,
@@ -51,3 +50,69 @@ object LoggerDomainSubscription : LoggerDomainSubscriptionDelegate {
             LoggerDomain.userStore,
         )
 }
+
+// MARK: - App Logger Domains
+
+/** The domain for analytics event logging. */
+val LoggerDomain.Companion.analytics: LoggerDomain
+    get() = LoggerDomain("analytics")
+
+/** The domain for bug-prevention diagnostics. */
+val LoggerDomain.Companion.bugPrevention: LoggerDomain
+    get() = LoggerDomain("bugPrevention")
+
+/** The domain for chat-page presentation state. */
+val LoggerDomain.Companion.chatPageState: LoggerDomain
+    get() = LoggerDomain("chatPageState")
+
+/** The domain for the client session's lifecycle. */
+val LoggerDomain.Companion.clientSession: LoggerDomain
+    get() = LoggerDomain("clientSession")
+
+/** The domain for device-contact resolution. */
+val LoggerDomain.Companion.contacts: LoggerDomain
+    get() = LoggerDomain("contacts")
+
+/** The domain for conversation-level operations. */
+val LoggerDomain.Companion.conversation: LoggerDomain
+    get() = LoggerDomain("conversation")
+
+/** The domain for the conversation observer. */
+val LoggerDomain.Companion.conversationObserver: LoggerDomain
+    get() = LoggerDomain("conversationObserver")
+
+/** The domain for the conversation archive store. */
+val LoggerDomain.Companion.conversationStore: LoggerDomain
+    get() = LoggerDomain("conversationStore")
+
+/** The domain for conversation synchronization. */
+val LoggerDomain.Companion.conversationSync: LoggerDomain
+    get() = LoggerDomain("conversationSync")
+
+/** The domain for the message archive store. */
+val LoggerDomain.Companion.messageStore: LoggerDomain
+    get() = LoggerDomain("messageStore")
+
+/** The domain for push and in-app notifications. */
+val LoggerDomain.Companion.notifications: LoggerDomain
+    get() = LoggerDomain("notifications")
+
+/** The domain for the message outbox. */
+val LoggerDomain.Companion.outbox: LoggerDomain
+    get() = LoggerDomain("outbox")
+
+/** The domain for the session store. */
+val LoggerDomain.Companion.sessionStore: LoggerDomain
+    get() = LoggerDomain("sessionStore")
+
+/** The domain for UI cache invalidation. */
+val LoggerDomain.Companion.uiCacheInvalidation: LoggerDomain
+    get() = LoggerDomain("uiCacheInvalidation")
+
+/** The domain for the current-user session. */
+val LoggerDomain.Companion.userSession: LoggerDomain
+    get() = LoggerDomain("userSession")
+
+/** The domain for the user archive store. */
+val LoggerDomain.Companion.userStore: LoggerDomain
+    get() = LoggerDomain("userStore")

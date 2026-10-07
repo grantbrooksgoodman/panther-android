@@ -8,6 +8,11 @@
 
 package us.neotechnica.panther.modules.session.state.services
 
+import us.neotechnica.panther.bundle.conversationStore
+import us.neotechnica.panther.bundle.messageStore
+import us.neotechnica.panther.bundle.sessionStore
+import us.neotechnica.panther.bundle.sessionStoreDidChange
+import us.neotechnica.panther.bundle.userStore
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
 import us.neotechnica.panther.modules.networking.message.models.Message
@@ -15,7 +20,6 @@ import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.filteringSystemMessages
 import us.neotechnica.panther.modules.session.entity.extensions.isEmpty
 import us.neotechnica.panther.modules.session.entity.extensions.isMock
-import us.neotechnica.panther.bundle.sessionStoreDidChange
 import us.neotechnica.panther.modules.session.state.constants.SessionStoreFloats
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
 import us.neotechnica.panther.networking.modules.common.extensions.SessionStoreStorageKey

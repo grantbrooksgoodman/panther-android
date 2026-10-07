@@ -17,15 +17,20 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
+import us.neotechnica.panther.bundle.Application
+import us.neotechnica.panther.bundle.clientSession
 import us.neotechnica.panther.designsystem.modules.alertkit.dependencies.alertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ErrorAlert
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
+import us.neotechnica.panther.modules.common.extensions.currentUserIDNotSet
 import us.neotechnica.panther.modules.common.extensions.isEmulator
 import us.neotechnica.panther.modules.common.extensions.isOnline
-import us.neotechnica.panther.modules.common.extensions.currentUserIDNotSet
 import us.neotechnica.panther.modules.common.models.RemoteCacheStatus
 import us.neotechnica.panther.modules.common.services.AlertKitTranslationService
 import us.neotechnica.panther.modules.common.services.CommonServices
@@ -35,7 +40,6 @@ import us.neotechnica.panther.modules.content.user.extensions.syncIfNeeded
 import us.neotechnica.panther.modules.content.user.extensions.updateDeviceIDIfNeeded
 import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.networking.NetworkServices
 import us.neotechnica.panther.modules.networking.common.populateTemporaryCaches
 import us.neotechnica.panther.modules.networking.networking
@@ -57,18 +61,14 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
-import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
-import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
-import us.neotechnica.panther.subsystem.modules.foundation.services.Build
-import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
-import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
-import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
+import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
+import us.neotechnica.panther.subsystem.modules.foundation.services.Build
+import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Task
+import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.shared.models.SharedState
-import us.neotechnica.panther.bundle.Application
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -247,14 +247,14 @@ object SplashPageViewService {
                 )
 
             setInitializationProgress(1f)
-            RuntimeStorage.languageCode = currentUser.languageCode
+            CoreUtilities.setLanguageCode(currentUser.languageCode)
             return
         }
 
         /* Pre-flight Configuration: enhanced-translation configuration is cut. */
 
         Logger.setReportsErrorsAutomatically(
-            !Build.isEmulator && Build.milestone == Milestone.GENERAL_RELEASE,
+            !Build.isEmulator && Build.milestone == Build.Milestone.GENERAL_RELEASE,
         )
 
         services.review.incrementAppOpenCount()
@@ -410,7 +410,7 @@ object SplashPageViewService {
         }
 
         setInitializationProgress(CACHED_USER_PROGRESS)
-        RuntimeStorage.languageCode = currentUser.languageCode
+        CoreUtilities.setLanguageCode(currentUser.languageCode)
 
         appScope.launch { resolveCurrentUserDataWhenNetworkRecovers() }
         return true

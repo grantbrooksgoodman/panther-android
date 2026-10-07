@@ -67,10 +67,30 @@ class PersistentArchiveTest {
         Persistent.setString(drop, "dropped")
         Persistent.setArchive(archived, listOf(mapOf("id" to "a")))
 
-        Persistent.reset(preserving = listOf(keep))
+        Persistent.reset(Persistent.KeyPreservationStrategy.Custom(listOf(keep)))
 
         assertEquals("kept", Persistent.string(keep))
         assertNull(Persistent.string(drop))
         assertNull(Persistent.archive(archived) { it })
+    }
+
+    @Test
+    fun `default reset strategy preserves subsystem keys`() {
+        Persistent.setBoolean(PersistentStorageKey.isDeveloperModeEnabled, true)
+        Persistent.setString(PersistentStorageKey("ephemeral"), "value")
+
+        Persistent.reset()
+
+        assertEquals(true, Persistent.booleanOrNull(PersistentStorageKey.isDeveloperModeEnabled))
+        assertNull(Persistent.string(PersistentStorageKey("ephemeral")))
+    }
+
+    @Test
+    fun `none strategy clears every key`() {
+        Persistent.setBoolean(PersistentStorageKey.isDeveloperModeEnabled, true)
+
+        Persistent.reset(Persistent.KeyPreservationStrategy.None)
+
+        assertNull(Persistent.booleanOrNull(PersistentStorageKey.isDeveloperModeEnabled))
     }
 }

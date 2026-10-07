@@ -2,8 +2,8 @@
 //  LocalizedStringKey.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.localization.models
@@ -16,7 +16,7 @@ import us.neotechnica.panther.subsystem.modules.localization.interfaces.Localize
  * Each entry corresponds to a top-level key in the app's localized
  * strings, exposing its snake-case [referent] – the key used to look
  * the value up. Resolve a value with
- * [localized][us.neotechnica.panther.modules.localization.models.localized].
+ * [localized][us.neotechnica.panther.subsystem.modules.localization.models.localized].
  */
 enum class LocalizedStringKey(
     override val referent: String,

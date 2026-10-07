@@ -50,8 +50,6 @@ import us.neotechnica.panther.modules.content.user.extensions.contactPair
 import us.neotechnica.panther.modules.content.user.extensions.removeCurrentPushToken
 import us.neotechnica.panther.modules.content.user.models.SquareIconViewConfiguration
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.localization.models.localized
-import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
 import us.neotechnica.panther.modules.session.entity.services.ModerationSessionService
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.navigation.RootNavigatorState
@@ -65,7 +63,6 @@ import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.Dep
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
-import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.models.StoredItemKey
 import us.neotechnica.panther.subsystem.modules.foundation.models.overriddenLanguageCode
@@ -74,6 +71,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
+import us.neotechnica.panther.subsystem.modules.localization.models.localized
+import us.neotechnica.panther.subsystem.modules.localization.services.LocalizedStringResolver
 import kotlin.time.Duration.Companion.milliseconds
 
 // MARK: - Constants Accessors
@@ -249,7 +248,7 @@ object SettingsPageViewService {
     fun promptToEnterPrereleaseMode() {
         scope.launch {
             val buildMilestoneKey = PersistentStorageKey.application(ApplicationStorageKey.BUILD_MILESTONE_STRING)
-            if (Build.milestone != Milestone.GENERAL_RELEASE) {
+            if (Build.milestone != Build.Milestone.GENERAL_RELEASE) {
                 val confirmed =
                     ConfirmationAlert(
                         title = ENTER_PRERELEASE_MODE_EXIT_TITLE,
@@ -291,7 +290,7 @@ object SettingsPageViewService {
                 return@launch
             }
 
-            Persistent.setString(buildMilestoneKey, Milestone.BETA.rawValue)
+            Persistent.setString(buildMilestoneKey, Build.Milestone.BETA.rawValue)
             val exitAction =
                 Action(SettingsStrings.EXIT, style = ActionStyle.DESTRUCTIVE_PREFERRED) { Application.beginGracefulExit() }
             Alert(
@@ -373,7 +372,7 @@ object SettingsPageViewService {
      *   general-release builds.
      */
     fun developerModeListItems(): List<DeveloperModeListItem>? {
-        if (Build.milestone == Milestone.GENERAL_RELEASE) return null
+        if (Build.milestone == Build.Milestone.GENERAL_RELEASE) return null
 
         val items = mutableListOf<DeveloperModeListItem>()
         val currentUser = UserSessionService.currentUser

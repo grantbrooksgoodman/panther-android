@@ -26,9 +26,9 @@ import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDel
 import us.neotechnica.panther.networking.modules.database.models.DatabaseOperation
 import us.neotechnica.panther.networking.modules.database.models.QueryStrategy
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
+import us.neotechnica.panther.subsystem.modules.foundation.models.Coalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
-import us.neotechnica.panther.subsystem.modules.foundation.models.KeyedCoalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
@@ -52,7 +52,7 @@ class Database : DatabaseDelegate {
     // MARK: - Companion
 
     private companion object {
-        val coalescer = KeyedCoalescer<String, Result<Any?>>()
+        val coalescer = Coalescer<String, Result<Any?>>()
     }
 
     // MARK: - DatabaseDelegate Conformance

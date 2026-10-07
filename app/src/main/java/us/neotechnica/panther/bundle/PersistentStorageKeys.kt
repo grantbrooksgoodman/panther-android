@@ -2,8 +2,8 @@
 //  PersistentStorageKeys.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.bundle
@@ -39,6 +39,44 @@ object PermanentKeyDelegate : PermanentPersistentStorageKeyDelegate {
             PersistentStorageKey.networking(NetworkingStorageKey.NETWORK_ENVIRONMENT),
         )
 }
+
+// MARK: - Keys
+
+/** The signed-in user's identifier. */
+val PersistentStorageKey.Companion.currentUserID: PersistentStorageKey
+    get() = PersistentStorageKey("currentUserID")
+
+/** The persisted message outbox archive (JSON). */
+val PersistentStorageKey.Companion.messageOutbox: PersistentStorageKey
+    get() = PersistentStorageKey("messageOutbox")
+
+/** The key of the conversation open when the app was last backgrounded, restored after process death. */
+val PersistentStorageKey.Companion.openConversationIDKey: PersistentStorageKey
+    get() = PersistentStorageKey("openConversationIDKey")
+
+/** The hosted app share link. */
+val PersistentStorageKey.Companion.appShareLink: PersistentStorageKey
+    get() = PersistentStorageKey("appShareLink")
+
+/** The hosted App Store build number. */
+val PersistentStorageKey.Companion.appStoreBuildNumber: PersistentStorageKey
+    get() = PersistentStorageKey("appStoreBuildNumber")
+
+/** Whether the app should force an update. */
+val PersistentStorageKey.Companion.shouldForceUpdate: PersistentStorageKey
+    get() = PersistentStorageKey("shouldForceUpdate")
+
+/** The build number the user was last forced to update from. */
+val PersistentStorageKey.Companion.buildNumberWhenLastForcedToUpdate: PersistentStorageKey
+    get() = PersistentStorageKey("buildNumberWhenLastForcedToUpdate")
+
+/** The relaunch count since a postponed update. */
+val PersistentStorageKey.Companion.relaunchesSinceLastPostponedUpdate: PersistentStorageKey
+    get() = PersistentStorageKey("relaunchesSinceLastPostponedUpdate")
+
+/** The epoch of the first postponed update. */
+val PersistentStorageKey.Companion.firstPostponedUpdate: PersistentStorageKey
+    get() = PersistentStorageKey("firstPostponedUpdate")
 
 // MARK: - Methods
 

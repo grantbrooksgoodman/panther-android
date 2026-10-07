@@ -2,13 +2,12 @@
 //  Exception+AuthExtensions.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.networking.modules.auth.extensions
 
-import us.neotechnica.panther.subsystem.modules.foundation.extensions.notReportable
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 
 /**
@@ -34,5 +33,12 @@ const val FIREBASE_AUTH_ERROR_CODE_KEY = "FIRAuthErrorUserInfoNameKey"
  */
 fun Exception.notReportableForAuthCodes(codes: Set<String>): Exception {
     val code = userInfo?.get(FIREBASE_AUTH_ERROR_CODE_KEY) as? String
-    return if (code in codes) notReportable() else this
+    if (code !in codes || !isReportable) return this
+    return Exception(
+        descriptor,
+        isReportable = false,
+        userInfo = userInfo,
+        underlyingExceptions = underlyingExceptions,
+        metadata = metadata,
+    )
 }

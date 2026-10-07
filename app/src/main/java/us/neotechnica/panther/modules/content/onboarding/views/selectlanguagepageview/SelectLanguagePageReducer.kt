@@ -11,7 +11,6 @@ package us.neotechnica.panther.modules.content.onboarding.views.selectlanguagepa
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.content.onboarding.components.InstructionViewStrings
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
-import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
 import us.neotechnica.panther.navigation.OnboardingNavigatorState
 import us.neotechnica.panther.navigation.OnboardingRoute
 import us.neotechnica.panther.navigation.Route
@@ -22,8 +21,10 @@ import us.neotechnica.panther.networking.modules.translation.models.TranslationO
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
+import us.neotechnica.panther.subsystem.modules.localization.services.LocalizedStringResolver
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
 import java.util.Locale
@@ -88,7 +89,7 @@ class SelectLanguagePageReducer : Reducer<SelectLanguagePageReducer.State, Selec
                 // tentatively picked, so returning to it after Continue does not translate it into
                 // that selection. Because the page is recreated on pop, the active
                 // language is reset here instead. The wheel still reflects the prior selection.
-                RuntimeStorage.languageCode = Locale.getDefault().language
+                CoreUtilities.setLanguageCode(Locale.getDefault().language)
                 val displayNames = LocalizedStringResolver.languageDisplayNames()
                 val languages = displayNames.values.sorted()
                 val selectedCode = OnboardingService.languageCode ?: RuntimeStorage.languageCode
@@ -114,7 +115,7 @@ class SelectLanguagePageReducer : Reducer<SelectLanguagePageReducer.State, Selec
 
             Action.ContinueButtonTapped -> {
                 val languageCode = state.selectedLanguageCode
-                RuntimeStorage.languageCode = languageCode
+                CoreUtilities.setLanguageCode(languageCode)
                 OnboardingService.setLanguageCode(languageCode)
                 navigate(OnboardingRoute.Push(OnboardingNavigatorState.SeguePath.VerifyNumber))
                 ReduceResult(state)

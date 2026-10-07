@@ -8,6 +8,8 @@
 
 package us.neotechnica.panther.modules.session
 
+import us.neotechnica.panther.bundle.clientSession
+import us.neotechnica.panther.bundle.currentUserID
 import us.neotechnica.panther.modules.session.entity.interfaces.DeliveryProgressIndicator
 import us.neotechnica.panther.modules.session.entity.models.EntitySession
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
@@ -23,9 +25,9 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetad
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
+import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
-import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 
 /**
  * The container for the current client's session.
@@ -94,7 +96,7 @@ object ClientSession {
             )
 
         Logger.log("Setting language code to ${languageCode.uppercase()}.", domain = LoggerDomain.clientSession)
-        RuntimeStorage.languageCode = languageCode
+        CoreUtilities.setLanguageCode(languageCode)
     }
 
     // MARK: - Companion

@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.content.onboarding.views.signinpageview
 
+import us.neotechnica.panther.bundle.currentUserID
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.common.extensions.partiallyFormatted

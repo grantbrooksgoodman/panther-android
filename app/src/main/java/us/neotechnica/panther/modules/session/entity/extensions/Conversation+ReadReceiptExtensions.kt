@@ -8,13 +8,14 @@
 
 package us.neotechnica.panther.modules.session.entity.extensions
 
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.bundle.conversation
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.message.models.ReadReceipt
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestampDateFormatter
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash

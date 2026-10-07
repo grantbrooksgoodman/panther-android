@@ -51,7 +51,6 @@ import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewFlo
 import us.neotechnica.panther.modules.content.user.services.DeveloperModeListItem
 import us.neotechnica.panther.modules.content.user.views.inviteqrcodepageview.InviteQRCodePageView
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.Route
@@ -62,6 +61,7 @@ import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 

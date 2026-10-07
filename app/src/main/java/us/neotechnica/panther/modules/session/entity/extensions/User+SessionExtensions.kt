@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.session.entity.extensions
 
+import us.neotechnica.panther.bundle.currentUserID
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.state.services.SessionStore

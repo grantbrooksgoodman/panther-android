@@ -21,9 +21,9 @@ import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifi
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.DataSample
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.subsystem.modules.foundation.models.Coalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
-import us.neotechnica.panther.subsystem.modules.foundation.models.KeyedCoalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 
@@ -38,9 +38,9 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 object UserService {
     // MARK: - Properties
 
-    private val allUsersCoalescer = KeyedCoalescer<String, List<User>>()
+    private val allUsersCoalescer = Coalescer<String, List<User>>()
     private val cachedUserDataSnapshots = LockIsolated<List<DataSample>?>(null)
-    private val userCoalescer = KeyedCoalescer<String, User>()
+    private val userCoalescer = Coalescer<String, User>()
 
     private val database get() = Networking.config.databaseDelegate
 

@@ -16,12 +16,14 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import us.neotechnica.panther.bundle.buildNumberWhenLastForcedToUpdate
+import us.neotechnica.panther.bundle.firstPostponedUpdate
+import us.neotechnica.panther.bundle.relaunchesSinceLastPostponedUpdate
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.modules.common.extensions.MetadataServiceStorageKey
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -29,6 +31,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStor
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
+import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.shared.models.SharedState
 import us.neotechnica.panther.subsystem.modules.shared.models.isForcedUpdateRequired
 import us.neotechnica.panther.translator.Translator

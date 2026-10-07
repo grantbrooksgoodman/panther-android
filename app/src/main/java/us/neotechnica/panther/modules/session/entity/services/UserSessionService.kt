@@ -17,6 +17,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.Application
+import us.neotechnica.panther.bundle.userSession
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
 import us.neotechnica.panther.modules.content.user.extensions.ignoredConversationIDKeys
 import us.neotechnica.panther.modules.content.user.extensions.updateDeviceIDIfNeeded
@@ -38,14 +39,15 @@ import us.neotechnica.panther.modules.session.sync.models.SyncSession
 import us.neotechnica.panther.modules.session.sync.services.ConversationObserverService
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList
+import us.neotechnica.panther.subsystem.modules.foundation.models.Coalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.models.SingleSlotCoalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
+import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
-import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 
 /**
  * Resolves and keeps live the signed-in user and their world.
@@ -77,12 +79,12 @@ object UserSessionService {
 
     // MARK: - Properties
 
-    private val conversationCoalescer = SingleSlotCoalescer<Unit>()
-    private val messageCoalescer = SingleSlotCoalescer<Unit>()
+    private val conversationCoalescer = SingleSlotCoalescer<Unit>(Coalescer.Policy.REPLACE)
+    private val messageCoalescer = SingleSlotCoalescer<Unit>(Coalescer.Policy.REPLACE)
     private val observationJob = LockIsolated<Job?>(null)
     private val observationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val updateState = LockIsolated(UpdateState.IDLE)
-    private val userCoalescer = SingleSlotCoalescer<Unit>()
+    private val userCoalescer = SingleSlotCoalescer<Unit>(Coalescer.Policy.REPLACE)
 
     // MARK: - Computed Properties
 
@@ -101,15 +103,15 @@ object UserSessionService {
         resolveCurrentUserRecord()
 
         if (DataType.CONVERSATIONS in dataTypes) {
-            conversationCoalescer(SingleSlotCoalescer.Mode.LAST_CALLER_WINS) { resolveCurrentUserConversations() }
+            conversationCoalescer { resolveCurrentUserConversations() }
         }
 
         if (DataType.MESSAGES in dataTypes) {
-            messageCoalescer(SingleSlotCoalescer.Mode.LAST_CALLER_WINS) { resolveMessagesOnCurrentUserConversations() }
+            messageCoalescer { resolveMessagesOnCurrentUserConversations() }
         }
 
         if (DataType.USERS in dataTypes) {
-            userCoalescer(SingleSlotCoalescer.Mode.LAST_CALLER_WINS) { resolveUsersOnCurrentUserConversations() }
+            userCoalescer { resolveUsersOnCurrentUserConversations() }
         }
     }
 
@@ -217,7 +219,7 @@ object UserSessionService {
 
         // Apply the user's stored language before resolving messages, so
         // translation warming targets the language the chat will display.
-        currentUser?.languageCode?.let { RuntimeStorage.languageCode = it }
+        currentUser?.languageCode?.let { CoreUtilities.setLanguageCode(it) }
     }
 
     private suspend fun resolveCurrentUserConversations() {

@@ -12,12 +12,16 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.selects.select
+import us.neotechnica.panther.bundle.clientSession
+import us.neotechnica.panther.modules.common.extensions.failedToGenerateMediaFile
+import us.neotechnica.panther.modules.common.extensions.timedOut
 import us.neotechnica.panther.modules.content.shared.dependencies.splashPageViewService
 import us.neotechnica.panther.modules.content.shared.services.SplashPageViewService
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
+import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.OnboardingRoute
 import us.neotechnica.panther.navigation.PendingChatNavigation
 import us.neotechnica.panther.navigation.RootNavigatorState
@@ -35,9 +39,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
-import us.neotechnica.panther.navigation.Navigation
-import us.neotechnica.panther.modules.common.extensions.failedToGenerateMediaFile
-import us.neotechnica.panther.modules.common.extensions.timedOut
 
 /**
  * The reducer that drives the splash page.

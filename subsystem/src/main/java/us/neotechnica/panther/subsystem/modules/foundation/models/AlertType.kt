@@ -57,7 +57,7 @@ sealed interface AlertType {
          * builds.
          *
          * Returns `null` when the current build milestone is
-         * [Milestone.GENERAL_RELEASE], effectively silencing the
+         * [Build.Milestone.GENERAL_RELEASE], effectively silencing the
          * alert in production.
          */
         val toastInPrerelease: AlertType?
@@ -79,7 +79,7 @@ sealed interface AlertType {
             style: ToastStyle? = null,
             isPersistent: Boolean = true,
         ): AlertType? {
-            if (Build.milestone == Milestone.GENERAL_RELEASE) return null
+            if (Build.milestone == Build.Milestone.GENERAL_RELEASE) return null
             return Toast(style = style, isPersistent = isPersistent)
         }
     }

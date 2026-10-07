@@ -17,7 +17,6 @@ import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.networking.modules.database.services.CoreDatabaseStore
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
-import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
 import us.neotechnica.panther.subsystem.modules.foundation.models.StoredItemKey
 import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
@@ -66,7 +65,7 @@ suspend fun DatabaseDelegate.populateTemporaryCaches() {
         )
     }
 
-    if (Build.milestone != Milestone.GENERAL_RELEASE) {
+    if (Build.milestone != Build.Milestone.GENERAL_RELEASE) {
         Toast.show(
             Toast(
                 Toast.Type.Capsule(ToastStyle.INFO),

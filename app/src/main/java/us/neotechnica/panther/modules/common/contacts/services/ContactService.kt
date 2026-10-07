@@ -12,6 +12,7 @@ import android.content.Context
 import android.net.Uri
 import android.provider.ContactsContract
 import us.neotechnica.panther.bundle.contactPairArchiveService
+import us.neotechnica.panther.bundle.contacts
 import us.neotechnica.panther.modules.common.contacts.models.DeviceContact
 import us.neotechnica.panther.modules.common.extensions.ContactPairArchiveServiceStorageKey
 import us.neotechnica.panther.modules.common.extensions.emptyContactList

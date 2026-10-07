@@ -25,7 +25,6 @@ import us.neotechnica.panther.designsystem.modules.developermode.models.DevModeA
 import us.neotechnica.panther.designsystem.modules.developermode.models.DevModeSubsystemActions
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
-import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 
 /**
@@ -251,7 +250,7 @@ object DevModeService {
      * This method has no effect on general-release builds.
      */
     fun promptToToggle() {
-        if (Build.milestone == Milestone.GENERAL_RELEASE) return
+        if (Build.milestone == Build.Milestone.GENERAL_RELEASE) return
         scope.launch {
             if (Build.isDeveloperModeEnabled) {
                 val confirmed =

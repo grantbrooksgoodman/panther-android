@@ -13,11 +13,16 @@ package us.neotechnica.panther.subsystem.modules.foundation.models
  *
  * Logger domains partition log messages into logical channels so
  * that you can subscribe to only the output you care about. Declare
- * app-specific domains as constants:
+ * app-specific domains as companion extension properties:
  *
  * ```kotlin
- * val CONVERSATION_LOGGER_DOMAIN = LoggerDomain("conversation")
+ * val LoggerDomain.Companion.networking: LoggerDomain
+ *     get() = LoggerDomain("networking")
  * ```
+ *
+ * The subsystem provides several built-in domains – including
+ * [general], [alertKit], [caches], [concurrency], [localization],
+ * and [translation] – that cover its own internal logging.
  */
 @JvmInline
 value class LoggerDomain(
@@ -30,41 +35,11 @@ value class LoggerDomain(
         /** The domain for the alert and toast presentation layer. */
         val alertKit = LoggerDomain("alertKit")
 
-        /** The domain for analytics event logging. */
-        val analytics = LoggerDomain("analytics")
-
-        /** The domain for bug-prevention diagnostics. */
-        val bugPrevention = LoggerDomain("bugPrevention")
-
         /** The domain for cache lifecycle output. */
         val caches = LoggerDomain("caches")
 
-        /** The domain for chat-page presentation state. */
-        val chatPageState = LoggerDomain("chatPageState")
-
-        /** The domain for the client session's lifecycle. */
-        val clientSession = LoggerDomain("clientSession")
-
         /** The domain for concurrency and task scheduling. */
         val concurrency = LoggerDomain("concurrency")
-
-        /** The domain for device-contact resolution. */
-        val contacts = LoggerDomain("contacts")
-
-        /** The domain for conversation-level operations. */
-        val conversation = LoggerDomain("conversation")
-
-        /** The domain for the conversation observer. */
-        val conversationObserver = LoggerDomain("conversationObserver")
-
-        /** The domain for the conversation archive store. */
-        val conversationStore = LoggerDomain("conversationStore")
-
-        /** The domain for conversation synchronization. */
-        val conversationSync = LoggerDomain("conversationSync")
-
-        /** The domain for caught exceptions. */
-        val exception = LoggerDomain("exception")
 
         /** The default domain for uncategorized output. */
         val general = LoggerDomain("general")
@@ -72,32 +47,8 @@ value class LoggerDomain(
         /** The domain for localization and translation resolution. */
         val localization = LoggerDomain("localization")
 
-        /** The domain for the message archive store. */
-        val messageStore = LoggerDomain("messageStore")
-
-        /** The domain for push and in-app notifications. */
-        val notifications = LoggerDomain("notifications")
-
-        /** The domain for reactive observation. */
-        val observer = LoggerDomain("observer")
-
-        /** The domain for the message outbox. */
-        val outbox = LoggerDomain("outbox")
-
-        /** The domain for the session store. */
-        val sessionStore = LoggerDomain("sessionStore")
-
         /** The domain for string translation. */
         val translation = LoggerDomain("translation")
-
-        /** The domain for UI cache invalidation. */
-        val uiCacheInvalidation = LoggerDomain("uiCacheInvalidation")
-
-        /** The domain for the current-user session. */
-        val userSession = LoggerDomain("userSession")
-
-        /** The domain for the user archive store. */
-        val userStore = LoggerDomain("userStore")
 
         // MARK: - Networking
 

@@ -11,6 +11,7 @@ package us.neotechnica.panther.modules.session.entity.extensions
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import us.neotechnica.panther.bundle.conversation
 import us.neotechnica.panther.modules.common.constants.CommonConstants
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
@@ -28,9 +29,9 @@ import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestampDateFormatter
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
+import us.neotechnica.panther.subsystem.modules.foundation.models.Coalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
-import us.neotechnica.panther.subsystem.modules.foundation.models.KeyedCoalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
@@ -299,8 +300,8 @@ private suspend fun Conversation.fetchAndCommitUsers(forceUpdate: Boolean) {
 
 // MARK: - Coalescers
 
-private val messageCoalescer = KeyedCoalescer<String, Unit>()
-private val userCoalescer = KeyedCoalescer<String, Unit>()
+private val messageCoalescer = Coalescer<String, Unit>()
+private val userCoalescer = Coalescer<String, Unit>()
 
 // MARK: - Constants
 

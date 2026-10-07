@@ -2,17 +2,17 @@
 //  LocalizedStringResolver.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
-package us.neotechnica.panther.modules.localization.services
+package us.neotechnica.panther.subsystem.modules.localization.services
 
 import android.content.Context
 import org.json.JSONObject
-import us.neotechnica.panther.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.localization.interfaces.LocalizedStringKeyRepresentable
+import us.neotechnica.panther.subsystem.modules.localization.models.LocalizationSource
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -64,6 +64,11 @@ object LocalizedStringResolver {
      */
     fun initialize(context: Context) {
         appContext = context.applicationContext
+    }
+
+    /** Removes every loaded localization table, forcing a reload on next access. */
+    fun clearCache() {
+        tables.clear()
     }
 
     // MARK: - Resolution

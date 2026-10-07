@@ -11,7 +11,7 @@ package us.neotechnica.panther.translator.services
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import us.neotechnica.panther.subsystem.modules.foundation.models.KeyedCoalescer
+import us.neotechnica.panther.subsystem.modules.foundation.models.Coalescer
 import us.neotechnica.panther.translator.Translator
 import us.neotechnica.panther.translator.extensions.capitalized
 import us.neotechnica.panther.translator.extensions.containsLetters
@@ -39,7 +39,7 @@ import us.neotechnica.panther.translator.models.TranslationPlatform
 object TranslationService {
     // MARK: - Properties
 
-    private val coalescer = KeyedCoalescer<String, Translation>()
+    private val coalescer = Coalescer<String, Translation>()
 
     // MARK: - Translate
 

@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.services
 
+import us.neotechnica.panther.bundle.chatPageState
 import us.neotechnica.panther.modules.content.user.models.ChatPageStateServiceEffectID
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain

@@ -20,6 +20,7 @@ import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.Translation
@@ -71,7 +72,7 @@ object AlertKitTranslationService : TranslationDelegate {
                 when {
                     result == null -> {
                         if (!timeoutConfig.returnsInputsOnFailure) throw timedOutException()
-                        Logger.log(timedOutException())
+                        Logger.log(timedOutException(), domain = LoggerDomain.Networking.hostedTranslation)
                         fallbackTranslations
                     }
 
@@ -86,7 +87,7 @@ object AlertKitTranslationService : TranslationDelegate {
                     else -> {
                         val exception = result.toException()
                         if (!timeoutConfig.returnsInputsOnFailure) throw exception
-                        Logger.log(exception)
+                        Logger.log(exception, domain = LoggerDomain.Networking.hostedTranslation)
                         fallbackTranslations
                     }
                 }

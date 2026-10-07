@@ -15,6 +15,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import us.neotechnica.panther.bundle.conversation
+import us.neotechnica.panther.bundle.messageOutboxDidChange
+import us.neotechnica.panther.bundle.openConversationIDKey
+import us.neotechnica.panther.bundle.sessionStoreDidChange
 import us.neotechnica.panther.bundle.shouldNotifyOfConversationAvailability
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
 import us.neotechnica.panther.modules.common.constants.CommonConstants
@@ -29,10 +33,8 @@ import us.neotechnica.panther.modules.session.entity.extensions.asDisplayMessage
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.modules.session.entity.extensions.filteringSystemMessages
 import us.neotechnica.panther.modules.session.entity.extensions.hydrated
-import us.neotechnica.panther.bundle.messageOutboxDidChange
 import us.neotechnica.panther.modules.session.entity.extensions.messages
 import us.neotechnica.panther.modules.session.entity.extensions.offsetFromCurrentUserAdditionDate
-import us.neotechnica.panther.bundle.sessionStoreDidChange
 import us.neotechnica.panther.modules.session.entity.extensions.sortedByAscendingSentDate
 import us.neotechnica.panther.modules.session.entity.extensions.uniquedByID
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
@@ -51,6 +53,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHas
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
+import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.models.StoredItemKey
 import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
@@ -343,6 +346,7 @@ object ConversationSessionService {
                             userInfo = mapOf("ConversationIDKey" to idKey),
                             metadata = ExceptionMetadata(this),
                         ),
+                        domain = LoggerDomain.conversation,
                     )
 
                     // Dismiss the chat page when the current conversation is

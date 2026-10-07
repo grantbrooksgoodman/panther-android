@@ -20,7 +20,6 @@ import kotlinx.coroutines.launch
 import us.neotechnica.panther.designsystem.modules.alertkit.interfaces.ReportDelegate
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.localization.models.localized
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.navigation.descriptor
@@ -33,11 +32,11 @@ import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHas
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
-import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
 import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
+import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.translator.Translator
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -69,7 +68,7 @@ object ErrorReportingService : ReportDelegate, ErrorReportDelegate {
         get() = _reportedErrorCodes.wrappedValue
 
     private val bundleVersionString: String
-        get() = "${if (Build.milestone == Milestone.GENERAL_RELEASE) Build.finalName else Build.codeName} (${Build.bundleVersion})"
+        get() = "${if (Build.milestone == Build.Milestone.GENERAL_RELEASE) Build.finalName else Build.codeName} (${Build.bundleVersion})"
 
     // MARK: - ReportDelegate Conformance
 

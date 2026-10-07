@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.session.sync.services
 
+import us.neotechnica.panther.bundle.conversationSync
 import us.neotechnica.panther.modules.networking.conversation.models.Activity
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
@@ -33,9 +34,9 @@ import us.neotechnica.panther.networking.modules.common.extensions.typeMismatch
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
+import us.neotechnica.panther.subsystem.modules.foundation.models.Coalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
-import us.neotechnica.panther.subsystem.modules.foundation.models.KeyedCoalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
@@ -419,7 +420,7 @@ class ConversationSyncService {
     // MARK: - Companion
 
     companion object {
-        private val coalescer = KeyedCoalescer<String, Conversation>()
+        private val coalescer = Coalescer<String, Conversation>()
         private val recentlyFailedSyncRecords = LockIsolated(setOf<SynchronizationRecord>())
 
         private const val KEY_HAS_DELETED = "hasDeletedConversation"

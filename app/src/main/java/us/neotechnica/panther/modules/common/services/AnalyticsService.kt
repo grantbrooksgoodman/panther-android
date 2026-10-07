@@ -15,16 +15,17 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import us.neotechnica.panther.bundle.analytics
+import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.navigation.descriptor
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkEnvironment
-import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
-import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
+import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
@@ -100,7 +101,7 @@ object AnalyticsService {
     val shouldEnableDataCollection: Boolean
         get() =
             Networking.config.environment == NetworkEnvironment.PRODUCTION &&
-                Build.milestone == Milestone.GENERAL_RELEASE
+                Build.milestone == Build.Milestone.GENERAL_RELEASE
 
     // MARK: - Log Event
 
@@ -134,8 +135,6 @@ object AnalyticsService {
                 }
             }
 
-            // `Logger.log(exception)` is domain-fixed to `.exception`, so the
-            // parameters are carried but the analytics domain is not set.
             Logger.log(
                 Exception(
                     "Logging analytics event \"${event.eventName}\".",
@@ -143,6 +142,7 @@ object AnalyticsService {
                     userInfo = parameters,
                     metadata = ExceptionMetadata(this@AnalyticsService),
                 ),
+                domain = LoggerDomain.analytics,
             )
 
             val bundle = Bundle()

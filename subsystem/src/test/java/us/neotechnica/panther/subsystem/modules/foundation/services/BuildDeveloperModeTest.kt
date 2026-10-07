@@ -13,7 +13,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
+import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import java.util.Date
 
 /** Verifies the developer-mode members. */
@@ -25,14 +25,14 @@ class BuildDeveloperModeTest {
 
     @Test
     fun `expiration override code derives from code name letter positions`() {
-        configure(Milestone.BETA)
+        configure(Build.Milestone.BETA)
         // "Hello": H (08), middle 'l' (12), o (15).
         assertEquals("081215", Build.expirationOverrideCode)
     }
 
     @Test
     fun `developer mode toggles and persists on prerelease builds`() {
-        configure(Milestone.BETA)
+        configure(Build.Milestone.BETA)
         assertFalse(Build.isDeveloperModeEnabled)
 
         Build.setIsDeveloperModeEnabled(true)
@@ -44,12 +44,12 @@ class BuildDeveloperModeTest {
 
     @Test
     fun `developer mode is always disabled on general-release builds`() {
-        configure(Milestone.GENERAL_RELEASE)
+        configure(Build.Milestone.GENERAL_RELEASE)
         Build.setIsDeveloperModeEnabled(true)
         assertFalse(Build.isDeveloperModeEnabled)
     }
 
-    private fun configure(milestone: Milestone) {
+    private fun configure(milestone: Build.Milestone) {
         Build.initialize(
             appStoreBuildNumber = 0,
             buildNumber = 1,

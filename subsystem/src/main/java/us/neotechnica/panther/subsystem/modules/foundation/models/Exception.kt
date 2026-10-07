@@ -2,14 +2,16 @@
 //  Exception.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.subsystem.modules.foundation.models
 
 import us.neotechnica.panther.subsystem.AppSubsystem
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
+import us.neotechnica.panther.subsystem.modules.localization.models.Localized
+import us.neotechnica.panther.subsystem.modules.localization.models.SubsystemStringKey
 import java.security.MessageDigest
 
 /**
@@ -67,6 +69,8 @@ class Exception(
     enum class UserInfo(
         val rawValue: String,
     ) {
+        DESCRIPTOR("Descriptor"),
+        ERROR_CODE("ErrorCode"),
         STATIC_ERROR_CODE("StaticErrorCode"),
         USER_FACING_DESCRIPTOR("UserFacingDescriptor"),
     }
@@ -77,8 +81,9 @@ class Exception(
         /**
          * Creates an exception from a Kotlin [Throwable].
          *
-         * The throwable's type and message are captured into the
-         * descriptor and user info.
+         * The throwable's message becomes the descriptor, and its
+         * fully qualified type name becomes the static error code, so
+         * every instance of the same throwable type shares one [code].
          *
          * @param throwable The throwable to wrap.
          * @param metadata The source-location metadata for this
@@ -94,7 +99,63 @@ class Exception(
                 throwable.message ?: throwable.javaClass.simpleName,
                 userInfo =
                     mapOf(
-                        "ThrowableType" to throwable.javaClass.name,
+                        UserInfo.STATIC_ERROR_CODE.rawValue to "[${throwable.javaClass.name}]",
+                    ),
+                metadata = metadata,
+            )
+
+        /**
+         * Returns a non-reportable exception indicating the operation
+         * was abandoned because the calling task was cancelled.
+         *
+         * Cancellation is a control-flow signal rather than a failure;
+         * exceptions created with this factory should be handled
+         * silently and never surfaced to the user.
+         *
+         * @param metadata The source-location metadata for this
+         *   exception.
+         */
+        fun cancelled(metadata: ExceptionMetadata): Exception =
+            Exception(
+                "The operation was cancelled.",
+                isReportable = false,
+                metadata = metadata,
+            )
+
+        /**
+         * Returns a non-reportable exception indicating the internet
+         * connection is offline.
+         *
+         * @param metadata The source-location metadata for this
+         *   exception.
+         */
+        fun internetConnectionOffline(metadata: ExceptionMetadata): Exception =
+            Exception(
+                "Internet connection is offline.",
+                isReportable = false,
+                userInfo =
+                    mapOf(
+                        UserInfo.USER_FACING_DESCRIPTOR.rawValue to
+                            Localized(SubsystemStringKey.INTERNET_CONNECTION_OFFLINE).wrappedValue,
+                    ),
+                metadata = metadata,
+            )
+
+        /**
+         * Returns a non-reportable exception indicating the operation
+         * timed out.
+         *
+         * @param metadata The source-location metadata for this
+         *   exception.
+         */
+        fun timedOut(metadata: ExceptionMetadata): Exception =
+            Exception(
+                "The operation timed out. Please try again later.",
+                isReportable = false,
+                userInfo =
+                    mapOf(
+                        UserInfo.USER_FACING_DESCRIPTOR.rawValue to
+                            Localized(SubsystemStringKey.TIMED_OUT).wrappedValue,
                     ),
                 metadata = metadata,
             )
@@ -135,7 +196,21 @@ class Exception(
      * source-location identifier.
      */
     val id: String
-        get() = code + metadata.id
+        get() = (code + metadata.id).lowercase()
+
+    /**
+     * A copy of this exception with its descriptor and error code
+     * merged into the user info under the reserved [UserInfo.DESCRIPTOR]
+     * and [UserInfo.ERROR_CODE] keys, for inclusion in a filed report.
+     */
+    val hydrated: Exception
+        get() =
+            appending(
+                mapOf(
+                    UserInfo.DESCRIPTOR.rawValue to descriptor,
+                    UserInfo.ERROR_CODE.rawValue to code,
+                ),
+            )
 
     /**
      * The full chain of underlying exceptions, recursively
@@ -173,8 +248,8 @@ class Exception(
                     ?: AppSubsystem.delegates.exceptionMetadata?.userFacingDescriptor(descriptor)
             if (resolved != null) return resolved
 
-            return if (Build.milestone == Milestone.GENERAL_RELEASE) {
-                SOMETHING_WENT_WRONG
+            return if (Build.milestone == Build.Milestone.GENERAL_RELEASE) {
+                Localized(SubsystemStringKey.SOMETHING_WENT_WRONG).wrappedValue
             } else {
                 descriptor
             }
@@ -324,5 +399,3 @@ private val String.errorCode: String
 // uppercased.
 private fun Map<String, Any>.withCapitalizedKeys(): Map<String, Any> =
     entries.associate { (key, value) -> key.replaceFirstChar { it.uppercaseChar() } to value }
-
-private const val SOMETHING_WENT_WRONG = "Something went wrong. Please try again later."

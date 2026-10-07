@@ -31,7 +31,6 @@ import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.content.user.services.AudioMessagePlaybackService
 import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
 import us.neotechnica.panther.modules.content.user.services.SettingsPageViewService
-import us.neotechnica.panther.modules.localization.services.LocalizedStringResolver
 import us.neotechnica.panther.modules.networking.translation.delegates.LocalTranslationArchiverDelegate
 import us.neotechnica.panther.modules.networking.user.models.DeviceID
 import us.neotechnica.panther.modules.session.entity.extensions.UserSessionServiceStorageKey
@@ -40,9 +39,9 @@ import us.neotechnica.panther.modules.session.state.services.MessageOutboxServic
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.modules.session.sync.services.ConversationObserverService
 import us.neotechnica.panther.navigation.ChatRoute
-import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.RootNavigatorState
 import us.neotechnica.panther.navigation.RootRoute
+import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.SettingsRoute
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
@@ -52,7 +51,6 @@ import us.neotechnica.panther.networking.modules.health.models.NetworkHealthConf
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealthProbeConfiguration
 import us.neotechnica.panther.subsystem.AppSubsystem
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
-import us.neotechnica.panther.subsystem.modules.foundation.models.Milestone
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.models.StoredItemKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
@@ -61,11 +59,9 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
-import us.neotechnica.panther.subsystem.modules.foundation.services.Task
-import us.neotechnica.panther.translator.Translator
+import us.neotechnica.panther.subsystem.modules.localization.services.LocalizedStringResolver
 import java.util.Date
 import java.util.Properties
-import kotlin.system.exitProcess
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -180,7 +176,7 @@ object Application {
 
         Persistent.reset(
             preserving =
-                Persistent.permanentAndSubsystemKeys(
+                Persistent.KeyPreservationStrategy.PermanentAndSubsystemKeys(
                     plus =
                         if (preserveCurrentUserID) {
                             listOf(
@@ -227,7 +223,7 @@ object Application {
         DependencyValues.current.navigation.navigate(
             Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.Splash)),
         )
-        Task.delayed(by = 1.seconds) { exitGracefully() }
+        CoreUtilities.exitGracefully()
     }
 
     // MARK: - Auxiliary
@@ -235,6 +231,7 @@ object Application {
     private fun initializeServices(context: Context) {
         AnalyticsService.initialize(context)
         LocalizedStringResolver.initialize(context)
+        RuntimeStorage.languageCodeDictionary = LocalizedStringResolver.languageDisplayNames()
         Persistent.initialize(context)
         FileStore.initialize(context)
         CommonPropertyLists.initialize(context)
@@ -273,18 +270,18 @@ object Application {
             bundleVersion = BuildConfig.VERSION_NAME,
             environment = BuildConfig.NETWORK_ENVIRONMENT,
             // TODO: FIX BEFORE PLAY STORE RELEASE.
-            milestone = Milestone.BETA, // resolveBuildMilestone(),
+            milestone = Build.Milestone.BETA, // resolveBuildMilestone(),
             buildDate = Date(buildDate * MILLIS_PER_SECOND),
             firstCompileDate = Date(firstCompileDate * MILLIS_PER_SECOND),
         )
     }
 
-    private fun resolveBuildMilestone(): Milestone {
+    private fun resolveBuildMilestone(): Build.Milestone {
         val key = PersistentStorageKey.application(ApplicationStorageKey.BUILD_MILESTONE_STRING)
         val persisted = Persistent.string(key)
         val milestone =
-            persisted?.let { Milestone.from(it) }
-                ?: if (Build.isEmulator) Milestone.BETA else Milestone.GENERAL_RELEASE
+            persisted?.let { Build.Milestone.from(it) }
+                ?: if (Build.isEmulator) Build.Milestone.BETA else Build.Milestone.GENERAL_RELEASE
         Persistent.setString(key, milestone.rawValue)
         return milestone
     }
@@ -325,7 +322,7 @@ object Application {
         if (Build.isEmulator && Persistent.booleanOrNull(hasRunOnceKey) == null) {
             Networking.config.setEnvironment(NetworkEnvironment.DEVELOPMENT)
             Persistent.setBoolean(hasRunOnceKey, true)
-        } else if (Build.milestone == Milestone.GENERAL_RELEASE) {
+        } else if (Build.milestone == Build.Milestone.GENERAL_RELEASE) {
             Networking.config.setEnvironment(NetworkEnvironment.PRODUCTION)
         }
     }
@@ -335,11 +332,6 @@ object Application {
         context.filesDir?.listFiles()?.forEach { it.deleteRecursively() }
         context.noBackupFilesDir?.listFiles()?.forEach { it.deleteRecursively() }
         context.cacheDir?.listFiles()?.forEach { it.deleteRecursively() }
-    }
-
-    private fun exitGracefully() {
-        Translator.config.currentActivityProvider?.invoke()?.finishAffinity()
-        exitProcess(0)
     }
 
     // MARK: - Constants

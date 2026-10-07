@@ -79,7 +79,7 @@ object NetworkingOptions {
         Networking.config.setEnvironment(environment)
         CoreUtilities.clearCaches()
         CoreUtilities.eraseDocumentsDirectory()
-        Persistent.reset(preserving = emptyList())
+        Persistent.reset()
 
         Alert(
             message = "Switched to ${environment.displayName} environment. You must now restart the app.",
