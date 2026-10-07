@@ -2,8 +2,8 @@
 //  SFSymbol.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.designsystem.modules.componentkit.models
@@ -146,5 +146,21 @@ object SFSymbol {
             "speaker.wave.2.circle" to Icons.Filled.VolumeUp,
             "speaker.wave.2.bubble" to Icons.Filled.VolumeUp,
             "speaker.slash.circle" to Icons.Filled.VolumeOff,
+            "chevron.forward" to Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            "chevron.backward" to Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+            "chevron.compact.right" to Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            "chevron.right.circle" to Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            "chevron.down.circle" to Icons.Filled.KeyboardArrowDown,
+            "person.2.circle.fill" to Icons.Filled.Group,
+            "doc.circle.fill" to Icons.Filled.Description,
+            "wifi.slash" to Icons.Filled.VolumeOff,
+            "externaldrive.trianglebadge.exclamationmark" to Icons.Filled.Warning,
+            "exclamationmark.triangle" to Icons.Filled.Warning,
+            "exclamationmark.triangle.fill" to Icons.Filled.Warning,
+            "exclamationmark.octagon.fill" to Icons.Filled.Error,
+            "info.circle.fill" to Icons.Filled.Info,
+            "x.circle.fill" to Icons.Filled.Cancel,
+            "questionmark.circle.fill" to Icons.Filled.Info,
+            "questionmark.square.dashed" to Icons.Filled.Warning,
         )
 }

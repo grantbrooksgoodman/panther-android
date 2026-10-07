@@ -103,7 +103,7 @@ fun RecipientBar(
     ) {
         Components.Text(
             LocalizedStringKey.To.localized(),
-            color = colors.subtitleText,
+            foregroundColor = colors.subtitleText,
             modifier = Modifier.padding(end = RecipientBarFloats.toLabelEndPadding),
         )
 
@@ -129,7 +129,7 @@ fun RecipientBar(
                     .background(colors.groupedContentBackground)
                     .clickable(onClick = onAdd),
         ) {
-            Components.Symbol("plus", color = colors.accent, modifier = Modifier.size(RecipientBarFloats.addButtonGlyphSize))
+            Components.Symbol("plus", foregroundColor = colors.accent, modifier = Modifier.size(RecipientBarFloats.addButtonGlyphSize))
         }
     }
 }
@@ -217,10 +217,10 @@ private fun RecipientChip(
                     bottom = RecipientBarFloats.recipientChipVerticalPadding,
                 ),
     ) {
-        Components.Text(contactPair.contact.fullName, color = contentColor, font = Font.systemMedium(FontScale.Small))
+        Components.Text(contactPair.contact.fullName, foregroundColor = contentColor, font = Font.systemMedium(FontScale.Small))
         Components.Symbol(
             "xmark",
-            color = contentColor,
+            foregroundColor = contentColor,
             modifier =
                 Modifier
                     .padding(start = RecipientBarFloats.chipRemoveIconStartPadding)

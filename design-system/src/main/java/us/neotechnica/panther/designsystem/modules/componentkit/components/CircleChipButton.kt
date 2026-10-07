@@ -62,7 +62,7 @@ fun CircleChipButton(
                 .clickable(enabled = enabled, onClick = onClick)
                 .semantics { this.contentDescription = contentDescription },
     ) {
-        Components.Symbol(systemName, color = tint, modifier = Modifier.size(glyphSize))
+        Components.Symbol(systemName, foregroundColor = tint, modifier = Modifier.size(glyphSize))
     }
 }
 

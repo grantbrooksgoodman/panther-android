@@ -52,13 +52,13 @@ internal fun ReactionChipView(chip: ReactionChip) {
     ) {
         Components.Text(
             chip.style.emojiValue,
-            color = colors.titleText,
+            foregroundColor = colors.titleText,
             font = Font.system(FontScale.Custom(ChatMessageCellFloats.REACTION_FONT_SIZE)),
         )
         if (chip.count > 1) {
             Components.Text(
                 chip.count.toString(),
-                color = colors.subtitleText,
+                foregroundColor = colors.subtitleText,
                 font = Font.system(FontScale.Small),
                 modifier = Modifier.padding(start = ChatMessageCellFloats.reactionChipCountStartPadding),
             )

@@ -14,7 +14,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.traitCollectionChanged
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationAlert
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
@@ -60,7 +60,7 @@ object ModerationSessionService {
 
     private data class ModerationAlertData(
         val actions: List<Action>,
-        val translationOptionKeys: List<ActionSheetAlert.TranslationOptionKey>,
+        val translationOptionKeys: List<ActionSheet.TranslationOptionKey>,
     )
 
     // MARK: - Properties
@@ -134,7 +134,7 @@ object ModerationSessionService {
         }
 
         val alertData = alertData(type, contactPairs)
-        ActionSheetAlert(
+        ActionSheet(
             title = "${type.firstUppercase()} Users",
             actions = alertData.actions,
             cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
@@ -162,9 +162,9 @@ object ModerationSessionService {
 
         val translationOptionKeys =
             listOf(
-                ActionSheetAlert.TranslationOptionKey.Actions(listOf(allUsersAction)),
-                ActionSheetAlert.TranslationOptionKey.Message,
-                ActionSheetAlert.TranslationOptionKey.Title,
+                ActionSheet.TranslationOptionKey.Actions(listOf(allUsersAction)),
+                ActionSheet.TranslationOptionKey.Message,
+                ActionSheet.TranslationOptionKey.Title,
             )
 
         if (actions.size <= 1) return ModerationAlertData(actions, translationOptionKeys)
@@ -281,7 +281,11 @@ object ModerationSessionService {
             to = if (blockedUserIDs.isBangQualifiedEmpty) bangQualifiedEmptyList else blockedUserIDs,
         )
 
-        DependencyValues.current.sharedEvents.traitCollectionChanged.send(Unit)
+        DependencyValues
+            .current
+            .sharedEvents
+            .traitCollectionChanged
+            .send(Unit)
     }
 
     private fun ModerationType.firstUppercase(): String = rawValue.replaceFirstChar { it.uppercase() }

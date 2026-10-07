@@ -157,7 +157,7 @@ private fun PlayBadge() {
     ) {
         Components.Symbol(
             "play.fill",
-            color = MediaMessageBubbleColors.playGlyph,
+            foregroundColor = MediaMessageBubbleColors.playGlyph,
             modifier = Modifier.size(MediaMessageBubbleFloats.playGlyphSize),
         )
     }
@@ -183,8 +183,8 @@ private fun DocumentContent(
                 .widthIn(max = MediaMessageBubbleFloats.imageMaxWidth),
     ) {
         Components.Symbol(
-            "doc.fill",
-            color = foreground,
+            "doc.circle.fill",
+            foregroundColor = foreground,
             modifier = Modifier.size(MediaMessageBubbleFloats.documentIconSize),
         )
         Material3Text(

@@ -159,7 +159,7 @@ private fun MessageContent(
         modifier = Modifier.fillMaxWidth(),
     ) {
         if (row.isGroup && !isOwn) {
-            SenderAvatar(show = row.showSenderAvatar, initials = row.senderInitials)
+            SenderAvatar(show = row.showSenderAvatar)
         }
         if (row.isFailed) {
             FailedOutboxIndicator(
@@ -281,11 +281,15 @@ private fun BottomLabel(
         chips.forEach { chip -> ReactionChipView(chip) }
         if (status != null) {
             if (chips.isNotEmpty()) {
-                Components.Text(ChatMessageCellStrings.STATUS_SEPARATOR, color = colors.subtitleText, font = Font.system(FontScale.Small))
+                Components.Text(
+                    ChatMessageCellStrings.STATUS_SEPARATOR,
+                    foregroundColor = colors.subtitleText,
+                    font = Font.system(FontScale.Small),
+                )
             }
             Components.Text(
                 status.first,
-                color = if (status.second) ChatMessageCellColors.error else colors.subtitleText,
+                foregroundColor = if (status.second) ChatMessageCellColors.error else colors.subtitleText,
                 font = Font.system(FontScale.Small),
             )
         }

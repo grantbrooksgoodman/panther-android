@@ -2,8 +2,8 @@
 //  PermissionPageView.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.onboarding.views.permissionpageview
@@ -55,7 +55,7 @@ fun PermissionPageView(modifier: Modifier = Modifier) {
     StatefulView(
         state = state.viewState,
         modifier = modifier,
-        onRetry = { viewModel.send(PermissionPageReducer.Action.ViewAppeared) },
+        exceptionRetryHandler = { viewModel.send(PermissionPageReducer.Action.ViewAppeared) },
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             InstructionView(state.instructionViewStrings)
@@ -86,15 +86,14 @@ fun PermissionPageView(modifier: Modifier = Modifier) {
 
                 Components.CapsuleButton(
                     text = state.strings.value(PermissionPageViewStrings.finishButtonText),
-                    onClick = { viewModel.send(PermissionPageReducer.Action.FinishButtonTapped) },
+                    action = { viewModel.send(PermissionPageReducer.Action.FinishButtonTapped) },
                     isEnabled = state.isFinishButtonEnabled,
-                    primary = true,
                     modifier = Modifier.padding(vertical = Floats.finishButtonVerticalPadding),
                 )
 
                 Components.Button(
                     text = state.strings.value(PermissionPageViewStrings.backButtonText),
-                    color = if (state.isBackButtonEnabled) colors.titleText else colors.disabled,
+                    foregroundColor = if (state.isBackButtonEnabled) colors.titleText else colors.disabled,
                     onClick = { if (state.isBackButtonEnabled) viewModel.send(PermissionPageReducer.Action.BackButtonTapped) },
                     font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),
                     modifier = Modifier.padding(top = Floats.backButtonTopPadding),

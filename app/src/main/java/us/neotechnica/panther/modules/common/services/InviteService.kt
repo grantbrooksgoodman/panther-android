@@ -18,9 +18,9 @@ import us.neotechnica.panther.bundle.Application
 import us.neotechnica.panther.bundle.inviteLanguagePicker
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
+import us.neotechnica.panther.designsystem.modules.foundation.extensions.cancelAction
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheet
 import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheets
@@ -28,7 +28,6 @@ import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.services.AnalyticsService.AnalyticsEvent
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
 import us.neotechnica.panther.modules.content.user.extensions.hasContactsBesidesCurrentUser
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.session.entity.extensions.conversations
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.networking.Networking
@@ -39,7 +38,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
-import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.TranslationInput
 import kotlin.time.Duration
@@ -115,12 +113,12 @@ object InviteService {
      * If the user declines translation, the invitation is composed
      * targeting the system language. If the user accepts, all presented
      * sheets are dismissed and the invite language picker is presented.
-     * Canceling the action sheet does nothing.
+     * Canceling the alert does nothing.
      *
      * @throws Exception if composing the invitation fails.
      */
     suspend fun presentInvitationPrompt() {
-        val shouldPresentInviteLanguagePicker = presentTranslationActionSheet() ?: return
+        val shouldPresentInviteLanguagePicker = presentTranslationAlert() ?: return
 
         if (!shouldPresentInviteLanguagePicker) {
             return composeInvitation(null)
@@ -208,7 +206,7 @@ object InviteService {
 
         Alert(
             message = message,
-            actions = listOf(inviteAction, Action(LocalizedStringKey.Cancel.localized(), style = ActionStyle.CANCEL) {}),
+            actions = listOf(inviteAction, Action.cancelAction),
         ).present(
             translating =
                 listOf(
@@ -218,24 +216,30 @@ object InviteService {
         )
     }
 
-    private suspend fun presentTranslationActionSheet(): Boolean? {
+    private suspend fun presentTranslationAlert(): Boolean? {
         var shouldTranslate: Boolean? = null
-        val acceptTranslationAction = Action("Yes, translate") { shouldTranslate = true }
+        val acceptTranslationAction =
+            Action(
+                "Yes, translate",
+                style = ActionStyle.PREFERRED,
+            ) { shouldTranslate = true }
         val rejectTranslationAction = Action("No, don't translate") { shouldTranslate = false }
-        val message =
-            "Would you like ⌘${Build.finalName}⌘ to translate the invitation message into another language?"
 
-        ActionSheetAlert(
+        Alert(
             title = "Translate Invitation",
-            message = message,
-            actions = listOf(acceptTranslationAction, rejectTranslationAction),
-            cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
+            message = "Would you like ⌘${Build.finalName}⌘ to translate the invitation message into another language?",
+            actions =
+                listOf(
+                    acceptTranslationAction,
+                    rejectTranslationAction,
+                    Action.cancelAction,
+                ),
         ).present(
             translating =
                 listOf(
-                    ActionSheetAlert.TranslationOptionKey.Actions(listOf(acceptTranslationAction, rejectTranslationAction)),
-                    ActionSheetAlert.TranslationOptionKey.Message,
-                    ActionSheetAlert.TranslationOptionKey.Title,
+                    Alert.TranslationOptionKey.Actions(listOf(acceptTranslationAction, rejectTranslationAction)),
+                    Alert.TranslationOptionKey.Message,
+                    Alert.TranslationOptionKey.Title,
                 ),
         )
 

@@ -81,13 +81,13 @@ fun InviteLanguagePickerView(modifier: Modifier = Modifier) {
                 value = state.searchQuery,
                 onValueChange = { viewModel.send(InviteLanguagePickerReducer.Action.SearchQueryChanged(it)) },
                 singleLine = true,
-                placeholder = { Components.Text(LocalizedStringKey.Search.localized(), color = colors.subtitleText) },
+                placeholder = { Components.Text(LocalizedStringKey.Search.localized(), foregroundColor = colors.subtitleText) },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = Floats.horizontalPadding, vertical = Floats.rowVerticalPadding),
             )
 
             if (isNoResults) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Components.Text(state.noResultsLabelText, color = colors.subtitleText)
+                    Components.Text(state.noResultsLabelText, foregroundColor = colors.subtitleText)
                 }
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -123,7 +123,7 @@ private fun Header(
         )
         Components.Text(
             state.navigationTitle,
-            color = colors.titleText,
+            foregroundColor = colors.titleText,
             font = Font.systemBold(FontScale.Large),
             modifier = Modifier.align(Alignment.Center),
         )
@@ -155,9 +155,9 @@ private fun LanguageRow(
                 .clickable { onClick() }
                 .padding(horizontal = Floats.horizontalPadding, vertical = Floats.rowVerticalPadding),
     ) {
-        Components.Text(name, color = colors.titleText, modifier = Modifier.weight(1f))
+        Components.Text(name, foregroundColor = colors.titleText, modifier = Modifier.weight(1f))
         if (isSelected) {
-            Components.Symbol("checkmark", color = colors.titleText, modifier = Modifier.size(Floats.checkmarkSize))
+            Components.Symbol("checkmark", foregroundColor = colors.titleText, modifier = Modifier.size(Floats.checkmarkSize))
         }
     }
 }

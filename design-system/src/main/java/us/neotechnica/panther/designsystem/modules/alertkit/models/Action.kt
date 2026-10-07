@@ -30,4 +30,6 @@ class Action(
     val style: ActionStyle = ActionStyle.DEFAULT,
     /** The effect to run when the user taps the button. */
     val effect: () -> Unit,
-)
+) {
+    companion object
+}

@@ -152,13 +152,13 @@ object ErrorReportingService : ReportDelegate, ErrorReportDelegate {
 
             Toast.show(
                 Toast(
-                    Toast.Type.Capsule(ToastStyle.SUCCESS),
+                    Toast.ToastType.Capsule(ToastStyle.SUCCESS),
                     message = LocalizedStringKey.ErrorReportedSuccessfully.localized(),
                     perpetuation =
                         if (Build.isDeveloperModeEnabled) {
-                            Toast.Perpetuation.Persistent
+                            Toast.PerpetuationStrategy.Persistent
                         } else {
-                            Toast.Perpetuation.Ephemeral(SUCCESS_TOAST_SECONDS.seconds)
+                            Toast.PerpetuationStrategy.Ephemeral(SUCCESS_TOAST_SECONDS.seconds)
                         },
                 ),
                 onTap = toastAction(parentDirectoryName),

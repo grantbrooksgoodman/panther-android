@@ -2,8 +2,8 @@
 //  SelectLanguagePageView.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.onboarding.views.selectlanguagepageview
@@ -53,7 +53,7 @@ fun SelectLanguagePageView(modifier: Modifier = Modifier) {
     StatefulView(
         state = state.viewState,
         modifier = modifier,
-        onRetry = { viewModel.send(SelectLanguagePageReducer.Action.ViewAppeared) },
+        exceptionRetryHandler = { viewModel.send(SelectLanguagePageReducer.Action.ViewAppeared) },
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             InstructionView(state.instructionViewStrings)
@@ -66,7 +66,7 @@ fun SelectLanguagePageView(modifier: Modifier = Modifier) {
             ) {
                 Components.Text(
                     state.strings.value(SelectLanguagePageViewStrings.instructionLabelText),
-                    color = colors.subtitleText,
+                    foregroundColor = colors.subtitleText,
                     font = Font.systemSemibold(),
                     modifier = Modifier.padding(vertical = Floats.instructionLabelVerticalPadding),
                 )
@@ -84,14 +84,13 @@ fun SelectLanguagePageView(modifier: Modifier = Modifier) {
 
                 Components.CapsuleButton(
                     text = state.strings.value(SelectLanguagePageViewStrings.continueButtonText),
-                    onClick = { viewModel.send(SelectLanguagePageReducer.Action.ContinueButtonTapped) },
-                    primary = true,
+                    action = { viewModel.send(SelectLanguagePageReducer.Action.ContinueButtonTapped) },
                     modifier = Modifier.padding(vertical = Floats.continueButtonVerticalPadding),
                 )
 
                 Components.Button(
                     text = state.strings.value(SelectLanguagePageViewStrings.backButtonText),
-                    color = colors.titleText,
+                    foregroundColor = colors.titleText,
                     onClick = { viewModel.send(SelectLanguagePageReducer.Action.BackButtonTapped) },
                     font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),
                     modifier = Modifier.padding(top = Floats.backButtonTopPadding),

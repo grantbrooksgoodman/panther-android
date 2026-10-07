@@ -77,7 +77,6 @@ object SettingsPageViewConstants {
     const val RESTORE_LANGUAGE_CODE_BUTTON_TEXT_PREFIX = "Restore Language to"
     const val SHARE_TO_ANOTHER_APP = "Share to Another App"
     const val SHOW_QR_CODE = "Show QR Code"
-    const val SIGN_OUT = "Sign out"
     const val SIGN_OUT_BUTTON_TEXT = "Sign out"
     const val TOGGLE_DEVELOPER_MODE = "Toggle Developer Mode"
 

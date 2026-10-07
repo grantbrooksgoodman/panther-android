@@ -6,14 +6,14 @@
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
-package us.neotechnica.panther.modules.common.services
+package us.neotechnica.panther.designsystem.modules.foundation.services
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import us.neotechnica.panther.bundle.resignFirstResponders
+import us.neotechnica.panther.designsystem.modules.foundation.extensions.resignFirstResponders
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 import kotlin.time.Duration
@@ -46,7 +46,11 @@ object KeyboardService {
      *   request, or `null` to request it once.
      */
     fun resignFirstResponders(repeatingFor: Duration? = null) {
-        DependencyValues.current.sharedEvents.resignFirstResponders.send(Unit)
+        DependencyValues
+            .current
+            .sharedEvents
+            .resignFirstResponders
+            .send(Unit)
 
         val duration = repeatingFor ?: return
         serviceScope.launch {
@@ -54,7 +58,11 @@ object KeyboardService {
             while (elapsed < duration) {
                 delay(REPEAT_INTERVAL)
                 elapsed += REPEAT_INTERVAL
-                DependencyValues.current.sharedEvents.resignFirstResponders.send(Unit)
+                DependencyValues
+                    .current
+                    .sharedEvents
+                    .resignFirstResponders
+                    .send(Unit)
             }
         }
     }

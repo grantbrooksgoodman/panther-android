@@ -93,7 +93,7 @@ fun AudioMessageBubble(
         ) {
             Components.Symbol(
                 if (isPlaying) "pause.fill" else "play.fill",
-                color = bubbleColor,
+                foregroundColor = bubbleColor,
                 modifier = Modifier.size(GLYPH_SIZE),
             )
         }
@@ -105,7 +105,7 @@ fun AudioMessageBubble(
             modifier = Modifier.weight(1f).clip(RoundedCornerShape(PROGRESS_RADIUS)),
         )
 
-        Components.Text(durationString(labelSeconds), color = glyphColor, font = Font.system(FontScale.Small))
+        Components.Text(durationString(labelSeconds), foregroundColor = glyphColor, font = Font.system(FontScale.Small))
     }
 }
 

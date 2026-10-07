@@ -120,7 +120,7 @@ fun MessageInputBar(
                         ).padding(horizontal = 14.dp, vertical = 9.dp),
             ) {
                 if (text.isEmpty()) {
-                    Components.Text(placeholder, color = colors.subtitleText)
+                    Components.Text(placeholder, foregroundColor = colors.subtitleText)
                 }
                 BasicTextField(
                     value = text,
@@ -176,7 +176,7 @@ private fun InputBarButton(
                 modifier = Modifier.size(INDICATOR_SIZE),
             )
         } else {
-            Components.Symbol(symbol, color = glyphColor, modifier = Modifier.size(GLYPH_SIZE))
+            Components.Symbol(symbol, foregroundColor = glyphColor, modifier = Modifier.size(GLYPH_SIZE))
         }
     }
 }
@@ -218,7 +218,7 @@ private fun MediaAttachmentPreview(
                     .clickable(onClick = onRemove)
                     .semantics { contentDescription = "Remove attachment" },
         ) {
-            Components.Symbol("xmark", color = colors.background, modifier = Modifier.size(PREVIEW_REMOVE_GLYPH))
+            Components.Symbol("xmark", foregroundColor = colors.background, modifier = Modifier.size(PREVIEW_REMOVE_GLYPH))
         }
     }
 }

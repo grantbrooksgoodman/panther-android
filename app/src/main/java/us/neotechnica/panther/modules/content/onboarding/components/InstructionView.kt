@@ -50,12 +50,12 @@ fun InstructionView(
         ) {
             Components.Text(
                 strings.titleLabelText,
-                color = colors.titleText,
+                foregroundColor = colors.titleText,
                 font = Font.systemBold(FontScale.Large),
             )
             Components.Text(
                 strings.subtitleLabelText,
-                color = colors.subtitleText,
+                foregroundColor = colors.subtitleText,
                 font = Font.system(FontScale.Custom(InstructionViewFloats.SUBTITLE_LABEL_FONT_SIZE)),
             )
         }

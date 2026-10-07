@@ -10,12 +10,12 @@ package us.neotechnica.panther.designsystem.modules.componentkit.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -37,10 +37,14 @@ internal fun ReactionRow(
 ) {
     val colors = LocalPantherColors.current
 
+    val containerColor =
+        (if (isSystemInDarkTheme()) SYSTEM_GRAY3_DARK else SYSTEM_GRAY3_LIGHT)
+            .copy(alpha = REACTION_ROW_BACKGROUND_ALPHA)
     Row(
         Modifier
             .clip(RoundedCornerShape(REACTION_ROW_CORNER_RADIUS))
-            .background(colors.reactionButtonBackground)
+            .background(containerColor)
+            .padding(start = REACTION_ROW_LEADING_INSET)
             .padding(REACTION_ROW_PADDING),
         horizontalArrangement = Arrangement.spacedBy(REACTION_ROW_SPACING),
     ) {
@@ -50,18 +54,27 @@ internal fun ReactionRow(
                 modifier =
                     Modifier
                         .size(REACTION_BUTTON_SIZE)
-                        .clip(CircleShape)
+                        .clip(RoundedCornerShape(REACTION_BUTTON_CORNER_RADIUS))
                         .background(if (choice.isSelected) choice.selectedColor else Color.Transparent)
                         .clickable { onSelect(choice) },
             ) {
-                Components.Text(choice.emoji, color = colors.titleText, font = Font.system(FontScale.Custom(REACTION_EMOJI_FONT_SIZE)))
+                Components.Text(
+                    choice.emoji,
+                    foregroundColor = colors.titleText,
+                    font = Font.system(FontScale.Custom(REACTION_EMOJI_FONT_SIZE)),
+                )
             }
         }
     }
 }
 
-private val REACTION_ROW_CORNER_RADIUS = 26.dp
+private val REACTION_BUTTON_CORNER_RADIUS = 17.5.dp
+private val REACTION_BUTTON_SIZE = 35.dp
+private const val REACTION_EMOJI_FONT_SIZE = 15f
+private const val REACTION_ROW_BACKGROUND_ALPHA = 0.8f
+private val REACTION_ROW_CORNER_RADIUS = 5.dp
+private val REACTION_ROW_LEADING_INSET = 10.dp
 private val REACTION_ROW_PADDING = 6.dp
-private val REACTION_ROW_SPACING = 2.dp
-private val REACTION_BUTTON_SIZE = 40.dp
-private const val REACTION_EMOJI_FONT_SIZE = 22f
+private val REACTION_ROW_SPACING = 8.dp
+private val SYSTEM_GRAY3_DARK = Color(0xFF48484A)
+private val SYSTEM_GRAY3_LIGHT = Color(0xFFC7C7CC)

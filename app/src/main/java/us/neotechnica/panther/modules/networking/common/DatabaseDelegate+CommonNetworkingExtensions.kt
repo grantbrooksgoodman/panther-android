@@ -68,9 +68,9 @@ suspend fun DatabaseDelegate.populateTemporaryCaches() {
     if (Build.milestone != Build.Milestone.GENERAL_RELEASE) {
         Toast.show(
             Toast(
-                Toast.Type.Capsule(ToastStyle.INFO),
+                Toast.ToastType.Capsule(ToastStyle.INFO),
                 message = "Established database snapshot.",
-                perpetuation = Toast.Perpetuation.Ephemeral(SNAPSHOT_TOAST_MILLIS.milliseconds),
+                perpetuation = Toast.PerpetuationStrategy.Ephemeral(SNAPSHOT_TOAST_MILLIS.milliseconds),
             ),
         )
     }

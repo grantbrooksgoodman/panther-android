@@ -15,26 +15,28 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpSize
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
-import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.content.user.components.AvatarImageView
 import us.neotechnica.panther.modules.content.user.components.UserInfoBadgeView
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewColors
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewFloats
+import us.neotechnica.panther.modules.content.user.extensions.decodedImageBitmap
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import androidx.compose.material3.Text as Material3Text
@@ -116,13 +118,13 @@ fun ConversationCellView(
                 Spacer(modifier = Modifier.width(ConversationCellViewFloats.dateSpacerWidth))
                 Components.Text(
                     state.dateLabelText,
-                    color = colors.subtitleText,
+                    foregroundColor = colors.subtitleText,
                     font = Font.system(FontScale.Small),
                     modifier = Modifier.alpha(contentAlpha),
                 )
                 Components.Symbol(
-                    "chevron.right",
-                    color = colors.subtitleText,
+                    "chevron.forward",
+                    foregroundColor = colors.subtitleText,
                     modifier =
                         Modifier
                             .padding(start = ConversationCellViewFloats.chevronStartPadding)
@@ -152,10 +154,9 @@ private fun Avatar(
     // circle-clipped, so the count badge is never cut off at the corner.
     Box(modifier = Modifier.size(ConversationCellViewFloats.avatarSize)) {
         AvatarImageView(
-            modifier = Modifier.fillMaxSize(),
-            imageData = imageData,
-            initials = if (!data.isGroup && data.hasContactName) data.initials else "",
-            fallbackSymbol = if (data.isGroup) "person.2" else "person.crop.circle.fill",
+            remember(imageData) { imageData?.decodedImageBitmap() },
+            badgeCount = if (data.isGroup) -1 else 0,
+            size = DpSize(ConversationCellViewFloats.avatarSize, ConversationCellViewFloats.avatarSize),
         )
 
         if (data.isGroup) {
@@ -171,7 +172,7 @@ private fun Avatar(
             ) {
                 Components.Text(
                     data.participantCount.toString(),
-                    color = colors.titleText,
+                    foregroundColor = colors.titleText,
                     font = Font.systemBold(FontScale.Small),
                 )
             }

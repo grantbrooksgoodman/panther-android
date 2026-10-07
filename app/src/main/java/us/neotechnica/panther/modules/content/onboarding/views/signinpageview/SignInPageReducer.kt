@@ -10,12 +10,12 @@ package us.neotechnica.panther.modules.content.onboarding.views.signinpageview
 
 import us.neotechnica.panther.bundle.currentUserID
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
+import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardService
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.common.extensions.partiallyFormatted
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.services.AnalyticsService.AnalyticsEvent
-import us.neotechnica.panther.modules.common.services.KeyboardService
 import us.neotechnica.panther.modules.common.services.PhoneNumberService
 import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
@@ -213,7 +213,7 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
             is Action.AccountDoesNotExistAlertDismissed -> reduceAccountDoesNotExistAlertDismissed(state, action)
 
             is Action.VerifyPhoneNumberReturned -> {
-                Overlay.hide()
+                Overlay.removeOverlay()
                 ReduceResult(
                     state.copy(
                         authID = action.authID,
@@ -225,7 +225,7 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
             }
 
             is Action.VerifyPhoneNumberFailed -> {
-                Overlay.hide()
+                Overlay.removeOverlay()
                 Logger.log(
                     action.exception.notReportableForAuthCodes(PHONE_USER_ERROR_CODES),
                     with = AlertType.toast,
@@ -236,7 +236,7 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
             }
 
             is Action.AuthenticateUserReturned -> {
-                Overlay.hide()
+                Overlay.removeOverlay()
                 Persistent.setString(PersistentStorageKey.currentUserID, action.userID)
                 AnalyticsService.logEvent(AnalyticsEvent.LOG_IN)
                 // Clear the onboarding stack so a later sign-out returns to
@@ -247,7 +247,7 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
             }
 
             is Action.AuthenticateUserFailed -> {
-                Overlay.hide()
+                Overlay.removeOverlay()
                 Logger.log(
                     action.exception.notReportableForAuthCodes(VERIFICATION_USER_ERROR_CODES),
                     with = AlertType.toast,
@@ -299,7 +299,7 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
                     .merge(verifyPhoneNumberEffect(state.phoneNumber).cancellable(VerifyPhoneNumberCancelID)),
             )
         } else {
-            Overlay.hide()
+            Overlay.removeOverlay()
             ReduceResult(
                 state,
                 Effect.run { send ->
@@ -312,7 +312,7 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
         state: State,
         action: Action.AccountDoesNotExistAlertDismissed,
     ): ReduceResult<State, Action> {
-        Overlay.hide()
+        Overlay.removeOverlay()
         if (action.cancelled) {
             return ReduceResult(
                 state.copy(isBackButtonEnabled = true, isContinueButtonEnabled = state.numberIsValidLength),
@@ -355,7 +355,7 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
     }
 
     private fun reduceRunContinueButtonEffect(state: State): ReduceResult<State, Action> {
-        Overlay.show()
+        Overlay.addOverlay(activityIndicator = Overlay.OverlayActivityIndicatorConfiguration.largeWhite)
         val disabled = state.copy(isBackButtonEnabled = false, isContinueButtonEnabled = false)
         return when (state.configuration) {
             Configuration.PHONE_NUMBER -> {

@@ -8,11 +8,15 @@
 
 package us.neotechnica.panther.designsystem.modules.alertkit
 
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.yield
 import us.neotechnica.panther.designsystem.modules.alertkit.interfaces.ReportDelegate
 import us.neotechnica.panther.designsystem.modules.alertkit.interfaces.TranslationDelegate
 import us.neotechnica.panther.designsystem.modules.alertkit.models.HUDConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TranslationTimeoutConfig
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.translator.models.LanguagePair
@@ -32,6 +36,7 @@ object AlertKitConfig {
 
     /** The registered report delegate, or `null` if none. */
     var reportDelegate: ReportDelegate? = null
+        private set
 
     /** The registered translation delegate, or `null` if none. */
     var translationDelegate: TranslationDelegate? = null
@@ -141,12 +146,18 @@ object AlertKitConfig {
 
     internal suspend fun getTranslations(inputs: List<TranslationInput>): List<Translation> {
         val delegate = translationDelegate ?: return emptyList()
-        return delegate.getTranslations(
-            inputs = inputs,
-            languagePair = LanguagePair(from = sourceLanguageCode, to = targetLanguageCode),
-            hudConfig = translationHUDConfig,
-            timeoutConfig = translationTimeoutConfig,
-        )
+        return try {
+            delegate.getTranslations(
+                inputs = inputs,
+                languagePair = LanguagePair(from = sourceLanguageCode, to = targetLanguageCode),
+                hudConfig = translationHUDConfig,
+                timeoutConfig = translationTimeoutConfig,
+            )
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (throwable: Throwable) {
+            throw AlertKit.Error.TranslationFailed(throwable.message ?: throwable.toString(), throwable)
+        }
     }
 
     internal suspend fun <A, R> presentWithTranslation(
@@ -156,10 +167,26 @@ object AlertKitConfig {
         presentTranslated: suspend (A) -> R,
     ): R {
         if (!shouldTranslate) return presentDirectly()
+
+        // Yield to the main dispatcher so pending UI work can complete
+        // before a potentially long-running translation begins.
+        yield()
+
         return try {
             presentTranslated(translate())
-        } catch (exception: Exception) {
-            Logger.log(exception)
+        } catch (_: CancellationException) {
+            Logger.log(
+                "Translation cancelled; presenting untranslated content.",
+                domain = LoggerDomain.alertKit,
+            )
+
+            presentDirectly()
+        } catch (throwable: Throwable) {
+            Logger.log(
+                Exception.from(throwable, ExceptionMetadata(this)),
+                domain = LoggerDomain.alertKit,
+            )
+
             presentDirectly()
         }
     }

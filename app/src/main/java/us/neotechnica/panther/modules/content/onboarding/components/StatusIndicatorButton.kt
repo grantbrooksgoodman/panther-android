@@ -71,7 +71,7 @@ fun StatusIndicatorButton(
         Spacer(Modifier.width(StatusIndicatorButtonFloats.iconTrailingPadding))
         Components.Text(
             label,
-            color = if (isDetermined) colors.subtitleText else Color.White,
+            foregroundColor = if (isDetermined) colors.subtitleText else Color.White,
             font = Font.systemBold(FontScale.Custom(StatusIndicatorButtonFloats.LABEL_FONT_SIZE)),
         )
     }
@@ -91,12 +91,12 @@ private fun StatusCircle(isGranted: Boolean?) {
         modifier = Modifier.size(StatusIndicatorButtonFloats.circleSize).clip(CircleShape).background(fillColor),
     ) {
         when (isGranted) {
-            true -> Components.Symbol("checkmark", color = Color.White, modifier = Modifier.size(glyphSize))
-            false -> Components.Symbol("xmark", color = Color.White, modifier = Modifier.size(glyphSize))
+            true -> Components.Symbol("checkmark", foregroundColor = Color.White, modifier = Modifier.size(glyphSize))
+            false -> Components.Symbol("xmark", foregroundColor = Color.White, modifier = Modifier.size(glyphSize))
             null ->
                 Components.Text(
                     StatusIndicatorButtonStrings.UNDETERMINED_GLYPH,
-                    color = Color.White,
+                    foregroundColor = Color.White,
                     font = Font.systemBold(),
                 )
         }

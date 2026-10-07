@@ -25,7 +25,7 @@ import us.neotechnica.panther.bundle.Application.ResetCompletionProcedure
 import us.neotechnica.panther.bundle.application
 import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationAlert
@@ -212,15 +212,15 @@ object SettingsPageViewService {
                     )
                 }
 
-            ActionSheetAlert(
+            ActionSheet(
                 title = SettingsStrings.INVITE_FRIENDS,
                 actions = listOf(shareToOtherAppAction, showQRCodeAction),
                 cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
             ).present(
                 translating =
                     listOf(
-                        ActionSheetAlert.TranslationOptionKey.Actions(),
-                        ActionSheetAlert.TranslationOptionKey.Title,
+                        ActionSheet.TranslationOptionKey.Actions(),
+                        ActionSheet.TranslationOptionKey.Title,
                     ),
             )
         }
@@ -307,7 +307,7 @@ object SettingsPageViewService {
     fun sendFeedbackButtonTapped() {
         scope.launch {
             val reportBugAction = Action(SettingsStrings.REPORT_BUG) { AlertKitConfig.reportDelegate?.reportBug() }
-            ActionSheetAlert(
+            ActionSheet(
                 title = SettingsStrings.FILE_A_REPORT,
                 actions =
                     listOf(
@@ -318,8 +318,8 @@ object SettingsPageViewService {
             ).present(
                 translating =
                     listOf(
-                        ActionSheetAlert.TranslationOptionKey.Actions(listOf(reportBugAction)),
-                        ActionSheetAlert.TranslationOptionKey.Title,
+                        ActionSheet.TranslationOptionKey.Actions(listOf(reportBugAction)),
+                        ActionSheet.TranslationOptionKey.Title,
                     ),
             )
         }
@@ -347,15 +347,16 @@ object SettingsPageViewService {
      */
     fun signOutButtonTapped() {
         scope.launch {
-            val confirmed =
-                ActionSheetAlert(
-                    confirmButtonTitle = SettingsStrings.SIGN_OUT,
-                    cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
-                    isDestructive = true,
-                ).present(translating = listOf(ActionSheetAlert.TranslationOptionKey.Actions()))
+            val signOutAction =
+                Action(
+                    "Sign Out",
+                    style = ActionStyle.DESTRUCTIVE_PREFERRED,
+                ) { scope.launch { performSignOut() } }
 
-            if (!confirmed) return@launch
-            performSignOut()
+            ActionSheet(
+                actions = listOf(signOutAction),
+                cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
+            ).present(translating = listOf(ActionSheet.TranslationOptionKey.Actions()))
         }
     }
 
@@ -528,10 +529,10 @@ object SettingsPageViewService {
                 }
             }
 
-        ActionSheetAlert(
+        ActionSheet(
             actions = listOf(deleteAccountAction),
             cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
-        ).present(translating = listOf(ActionSheetAlert.TranslationOptionKey.Actions()))
+        ).present(translating = listOf(ActionSheet.TranslationOptionKey.Actions()))
     }
 
     private fun clearCachesAndExit() {

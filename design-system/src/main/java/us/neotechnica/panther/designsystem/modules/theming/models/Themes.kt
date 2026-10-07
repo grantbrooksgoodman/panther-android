@@ -2,8 +2,8 @@
 //  Themes.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.designsystem.modules.theming.models
@@ -25,7 +25,7 @@ object Themes {
             name = "Default",
             items =
                 setOf(
-                    item(ColoredItemType.accent, PlatformColors.systemBlue),
+                    item(ColoredItemType.accent, PlatformColors.black, PlatformColors.white),
                     item(ColoredItemType.background, PlatformColors.white, PlatformColors.black),
                     item(ColoredItemType.disabled, PlatformColors.systemGray3),
                     item(ColoredItemType.groupedContentBackground, rgb(0xF2F2F7), rgb(0x1C1C1E)),

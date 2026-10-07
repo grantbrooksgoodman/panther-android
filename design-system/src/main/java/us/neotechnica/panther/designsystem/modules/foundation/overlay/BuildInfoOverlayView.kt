@@ -85,7 +85,7 @@ fun BuildInfoOverlayView(modifier: Modifier = Modifier) {
     ) {
         Components.Text(
             statsText,
-            color = Color.White,
+            foregroundColor = Color.White,
             font = Font.system(FontScale.Small),
             modifier = Modifier.background(Color.Black).padding(horizontal = OVERLAY_HORIZONTAL_PADDING),
         )
@@ -103,7 +103,7 @@ fun BuildInfoOverlayView(modifier: Modifier = Modifier) {
             )
             Components.Text(
                 Build.buildInfoString,
-                color = Color.White,
+                foregroundColor = Color.White,
                 font = Font.systemBold(FontScale.Small),
             )
         }

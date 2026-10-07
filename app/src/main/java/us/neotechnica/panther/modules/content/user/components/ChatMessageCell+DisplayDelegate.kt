@@ -11,7 +11,6 @@ package us.neotechnica.panther.modules.content.user.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -21,8 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.DpSize
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
-import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
@@ -52,7 +51,7 @@ internal fun FailedOutboxIndicator(
     ) {
         Components.Symbol(
             ChatPageViewStrings.FAILED_OUTBOX_INDICATOR_BUTTON_IMAGE_SYSTEM_NAME,
-            color = ChatMessageCellColors.error,
+            foregroundColor = ChatMessageCellColors.error,
             modifier = Modifier.size(ChatPageViewFloats.failedOutboxIndicatorButtonSize),
         )
     }
@@ -68,7 +67,7 @@ internal fun SenderNameLabel(row: ChatMessageRowData) {
     val colors = LocalPantherColors.current
     Components.Text(
         row.senderName,
-        color = colors.subtitleText,
+        foregroundColor = colors.subtitleText,
         font = Font.systemMedium(FontScale.Small),
         modifier =
             Modifier.padding(
@@ -80,23 +79,17 @@ internal fun SenderNameLabel(row: ChatMessageRowData) {
 
 /**
  * The sender's avatar shown to the leading edge of a received group
- * message, aligned to the bubble's bottom. Renders the sender's initials
- * when a contact match exists, otherwise a generic person glyph. When
- * [show] is `false`, it reserves the same width so consecutive bubbles
- * stay aligned.
+ * message, aligned to the bubble's bottom. Renders a generic person
+ * glyph. When [show] is `false`, it reserves the same width so
+ * consecutive bubbles stay aligned.
  */
 @Composable
-internal fun SenderAvatar(
-    show: Boolean,
-    initials: String,
-) {
+internal fun SenderAvatar(show: Boolean) {
     Box(modifier = Modifier.padding(end = ChatMessageCellFloats.senderAvatarSpacing).size(ChatMessageCellFloats.senderAvatarSize)) {
         if (!show) return@Box
         AvatarImageView(
-            modifier = Modifier.fillMaxSize(),
-            initials = initials,
-            glyphSize = ChatMessageCellFloats.senderAvatarGlyphSize,
-            initialsFont = Font.systemSemibold(FontScale.Small),
+            null,
+            size = DpSize(ChatMessageCellFloats.senderAvatarSize, ChatMessageCellFloats.senderAvatarSize),
         )
     }
 }
@@ -142,7 +135,7 @@ internal fun MessageBubble(
         } else {
             Components.Text(
                 text.ifBlank { " " },
-                color = if (isOwn) Color.White else receivedTextColor,
+                foregroundColor = if (isOwn) Color.White else receivedTextColor,
                 font = font,
             )
         }

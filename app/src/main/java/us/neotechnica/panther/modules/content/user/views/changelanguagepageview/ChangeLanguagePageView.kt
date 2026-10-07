@@ -2,8 +2,8 @@
 //  ChangeLanguagePageView.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.user.views.changelanguagepageview
@@ -67,7 +67,7 @@ fun ChangeLanguagePageView(modifier: Modifier = Modifier) {
     StatefulView(
         state = state.viewState,
         modifier = modifier.background(colors.groupedContentBackground),
-        onRetry = { viewModel.send(ChangeLanguagePageReducer.Action.ViewAppeared) },
+        exceptionRetryHandler = { viewModel.send(ChangeLanguagePageReducer.Action.ViewAppeared) },
     ) {
         Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
             Header(
@@ -98,9 +98,8 @@ fun ChangeLanguagePageView(modifier: Modifier = Modifier) {
 
                 Components.CapsuleButton(
                     text = state.strings.value(ChangeLanguagePageViewStrings.confirmButtonText),
-                    onClick = { viewModel.send(ChangeLanguagePageReducer.Action.ConfirmButtonTapped) },
+                    action = { viewModel.send(ChangeLanguagePageReducer.Action.ConfirmButtonTapped) },
                     isEnabled = state.isConfirmButtonEnabled,
-                    primary = true,
                 )
             }
 
@@ -125,12 +124,12 @@ private fun Header(
     ) {
         Components.Text(
             title,
-            color = colors.titleText,
+            foregroundColor = colors.titleText,
             font = Font.systemBold(FontScale.Large),
             modifier = Modifier.align(Alignment.Center),
         )
         CircleChipButton(
-            systemName = "chevron.left",
+            systemName = "chevron.backward",
             contentDescription = "Back",
             onClick = onBack,
             modifier = Modifier.align(Alignment.CenterStart),

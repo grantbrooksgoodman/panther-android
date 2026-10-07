@@ -80,7 +80,7 @@ fun WelcomePageView(modifier: Modifier = Modifier) {
 
             Components.Text(
                 state.welcomeLabelText,
-                color = colors.titleText,
+                foregroundColor = colors.titleText,
                 font = Font.systemBold(FontScale.Large),
                 modifier =
                     Modifier
@@ -96,14 +96,13 @@ fun WelcomePageView(modifier: Modifier = Modifier) {
 
             Components.CapsuleButton(
                 text = state.strings.value(WelcomePageViewStrings.continueButtonText),
-                onClick = { viewModel.send(WelcomePageReducer.Action.ContinueButtonTapped) },
-                primary = true,
+                action = { viewModel.send(WelcomePageReducer.Action.ContinueButtonTapped) },
                 modifier = Modifier.padding(vertical = Floats.continueButtonVerticalPadding),
             )
 
             Components.Button(
                 text = state.strings.value(WelcomePageViewStrings.signInButtonText),
-                color = colors.titleText,
+                foregroundColor = colors.titleText,
                 onClick = { viewModel.send(WelcomePageReducer.Action.SignInButtonTapped) },
                 font = Font.system(FontScale.Custom(Floats.SIGN_IN_BUTTON_LABEL_FONT_SIZE)),
             )

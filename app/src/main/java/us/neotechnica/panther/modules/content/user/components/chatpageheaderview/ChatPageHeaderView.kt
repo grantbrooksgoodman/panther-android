@@ -29,16 +29,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.zIndex
 import us.neotechnica.panther.bundle.sessionStoreDidChange
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
-import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
 import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.content.user.components.AvatarImageView
 import us.neotechnica.panther.modules.content.user.constants.ChatPageHeaderViewFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatPageHeaderViewStrings
 import us.neotechnica.panther.modules.content.user.extensions.chatPageHeaderLabelText
+import us.neotechnica.panther.modules.content.user.extensions.decodedImageBitmap
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
@@ -97,10 +99,10 @@ fun ChatPageHeaderView(
                     .semantics { contentDescription = "Conversation info" },
         ) {
             AvatarImageView(
-                modifier = Modifier.size(Floats.avatarSize).zIndex(1f),
-                imageData = conversation.metadata.imageData,
-                fallbackSymbol = if (isGroup) Strings.GROUP_AVATAR_FALLBACK_SYMBOL else Strings.AVATAR_FALLBACK_SYMBOL,
-                glyphSize = Floats.avatarGlyphSize,
+                remember(conversation.metadata.imageData) { conversation.metadata.imageData?.decodedImageBitmap() },
+                badgeCount = if (isGroup) -1 else 0,
+                size = DpSize(Floats.avatarSize, Floats.avatarSize),
+                modifier = Modifier.zIndex(1f),
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -116,10 +118,10 @@ fun ChatPageHeaderView(
                             bottom = Floats.pillVerticalPadding,
                         ),
             ) {
-                Components.Text(title.ifBlank { " " }, color = colors.titleText, font = Font.systemSemibold())
+                Components.Text(title.ifBlank { " " }, foregroundColor = colors.titleText, font = Font.systemSemibold())
                 Components.Symbol(
                     Strings.CHAT_INFO_CHEVRON_IMAGE_SYSTEM_NAME,
-                    color = colors.subtitleText,
+                    foregroundColor = colors.subtitleText,
                     modifier = Modifier.size(Floats.pillChevronSize).padding(start = Floats.pillChevronStartPadding),
                 )
             }

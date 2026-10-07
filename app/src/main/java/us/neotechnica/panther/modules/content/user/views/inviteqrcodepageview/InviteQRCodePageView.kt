@@ -73,7 +73,7 @@ fun InviteQRCodePageView(modifier: Modifier = Modifier) {
                 ) {
                     Components.Text(
                         state.strings.value(InviteQRCodePageViewStrings.instructionLabelText),
-                        color = colors.titleText,
+                        foregroundColor = colors.titleText,
                         font = Font.systemSemibold(FontScale.Large),
                         textAlign = TextAlign.Center,
                         modifier =

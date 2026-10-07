@@ -8,12 +8,21 @@
 
 package us.neotechnica.panther.designsystem.modules.alertkit.services
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
+import us.neotechnica.panther.designsystem.modules.alertkit.models.AttributedStringConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextFieldAttributes
+import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * A description of the alert currently requested for presentation.
@@ -29,6 +38,8 @@ sealed interface PresentedAlert {
         val title: String?,
         val message: String?,
         val actions: List<Action>,
+        val messageAttributes: AttributedStringConfig? = null,
+        val titleAttributes: AttributedStringConfig? = null,
         val onSelect: (Int) -> Unit,
     ) : PresentedAlert
 
@@ -38,6 +49,8 @@ sealed interface PresentedAlert {
         val message: String,
         val cancelAction: Action,
         val confirmAction: Action,
+        val messageAttributes: AttributedStringConfig? = null,
+        val titleAttributes: AttributedStringConfig? = null,
         val onResult: (Boolean) -> Unit,
     ) : PresentedAlert
 
@@ -60,20 +73,23 @@ sealed interface PresentedAlert {
         val cancelButtonStyle: ActionStyle,
         val confirmButtonTitle: String,
         val confirmButtonStyle: ActionStyle,
-        val isConfirmEnabled: ((String) -> Boolean)?,
+        val messageAttributes: AttributedStringConfig? = null,
+        val titleAttributes: AttributedStringConfig? = null,
+        val onTextFieldChange: ((String?) -> Unit)?,
         val onResult: (String?) -> Unit,
     ) : PresentedAlert
 
     /**
      * A bottom action sheet offering a list of actions and a cancel
-     * button. A binary confirm/cancel sheet is the single-action
-     * case.
+     * button.
      */
     data class ActionSheet(
         val title: String?,
         val message: String?,
         val actions: List<Action>,
         val cancelButtonTitle: String,
+        val messageAttributes: AttributedStringConfig? = null,
+        val titleAttributes: AttributedStringConfig? = null,
         val onSelect: (Int) -> Unit,
         val onCancel: () -> Unit,
     ) : PresentedAlert
@@ -85,6 +101,8 @@ sealed interface PresentedAlert {
         val cancelButtonTitle: String?,
         val cancelButtonStyle: ActionStyle,
         val progress: StateFlow<Double>,
+        val messageAttributes: AttributedStringConfig? = null,
+        val titleAttributes: AttributedStringConfig? = null,
         val onCancel: (() -> Unit)?,
     ) : PresentedAlert
 }
@@ -92,28 +110,68 @@ sealed interface PresentedAlert {
 /**
  * The single source of truth for the alert currently being presented.
  *
- * Only one alert is presented at a time; presenting a new alert
- * replaces any current one.
+ * Only one alert is presented at a time; presenting another alert
+ * queues it until the current one dismisses and no modal display
+ * blocks user interaction.
  */
 object AlertPresenter {
     // MARK: - Properties
 
+    private val mutableActionEnabledOverrides = MutableStateFlow<Map<Int, Boolean>>(emptyMap())
     private val mutableCurrent = MutableStateFlow<PresentedAlert?>(null)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    private var onDisplaced: (() -> Unit)? = null
 
     // MARK: - Computed Properties
 
     /** The alert currently requested for presentation, or `null`. */
     val current: StateFlow<PresentedAlert?> = mutableCurrent.asStateFlow()
 
+    internal val actionEnabledOverrides: StateFlow<Map<Int, Boolean>> = mutableActionEnabledOverrides.asStateFlow()
+
     // MARK: - Methods
 
-    /** Requests presentation of the given alert. */
-    fun present(alert: PresentedAlert) {
-        mutableCurrent.value = alert
+    /**
+     * Requests presentation of the given alert, queueing it while
+     * another alert is presented or a modal display blocks user
+     * interaction.
+     *
+     * @param alert The alert to present.
+     * @param onDisplaced A closure invoked if the alert is dismissed
+     *   without one of its actions being selected.
+     */
+    fun present(
+        alert: PresentedAlert,
+        onDisplaced: (() -> Unit)? = null,
+    ) {
+        scope.launch {
+            while (HUD.isBlockingUserInteraction || mutableCurrent.value != null) {
+                delay(RETRY_INTERVAL_MILLISECONDS.milliseconds)
+            }
+
+            HUD.hide(after = Duration.ZERO)
+            this@AlertPresenter.onDisplaced = onDisplaced
+            mutableActionEnabledOverrides.value = emptyMap()
+            mutableCurrent.value = alert
+        }
     }
 
     /** Dismisses the current alert, if any. */
     fun dismiss() {
+        mutableActionEnabledOverrides.value = emptyMap()
         mutableCurrent.value = null
+        val displaced = onDisplaced
+        onDisplaced = null
+        displaced?.invoke()
+    }
+
+    internal fun setActionEnabled(
+        index: Int,
+        isEnabled: Boolean,
+    ) {
+        mutableActionEnabledOverrides.value = mutableActionEnabledOverrides.value + (index to isEnabled)
     }
 }
+
+private const val RETRY_INTERVAL_MILLISECONDS = 100L

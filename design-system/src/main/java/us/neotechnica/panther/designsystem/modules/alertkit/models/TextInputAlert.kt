@@ -9,12 +9,13 @@
 package us.neotechnica.panther.designsystem.modules.alertkit.models
 
 import kotlinx.coroutines.suspendCancellableCoroutine
+import us.neotechnica.panther.designsystem.modules.alertkit.AlertKit
 import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.firstOutput
+import us.neotechnica.panther.designsystem.modules.alertkit.extensions.nonDefaultUnique
 import us.neotechnica.panther.designsystem.modules.alertkit.services.AlertPresenter
 import us.neotechnica.panther.designsystem.modules.alertkit.services.PresentedAlert
 import us.neotechnica.panther.translator.models.TranslationInput
-import kotlin.coroutines.resume
 
 /**
  * An alert that prompts the user for a single line of text.
@@ -29,6 +30,19 @@ import kotlin.coroutines.resume
  * ).present()
  * ```
  *
+ * To respond to changes in the text field as the user types,
+ * register a callback with [onTextFieldChange] before presenting
+ * the alert:
+ *
+ * ```kotlin
+ * alert.onTextFieldChange { text ->
+ *     // Respond to changes in the text field.
+ * }
+ * ```
+ *
+ * The observer is automatically removed when the alert is
+ * dismissed.
+ *
  * Pass translation keys to [present] to translate the alert's content
  * into the user's language before presentation.
  */
@@ -36,11 +50,10 @@ class TextInputAlert(
     private val title: String? = null,
     private val message: String,
     private val attributes: TextFieldAttributes = TextFieldAttributes(),
-    private val cancelButtonTitle: String = DEFAULT_CANCEL_BUTTON_TITLE,
+    private val cancelButtonTitle: String = AlertKit.Constants.DEFAULT_CANCEL_BUTTON_TITLE,
     private val cancelButtonStyle: ActionStyle = ActionStyle.CANCEL,
-    private val confirmButtonTitle: String = DEFAULT_CONFIRM_BUTTON_TITLE,
+    private val confirmButtonTitle: String = AlertKit.Constants.DEFAULT_CONFIRM_BUTTON_TITLE,
     private val confirmButtonStyle: ActionStyle = ActionStyle.PREFERRED,
-    private val isConfirmEnabled: ((String) -> Boolean)? = null,
 ) {
     // MARK: - Types
 
@@ -56,7 +69,7 @@ class TextInputAlert(
         data object Message : TranslationOptionKey
 
         /** The text field's placeholder. */
-        data object Placeholder : TranslationOptionKey
+        data object PlaceholderText : TranslationOptionKey
 
         /** The text prepopulated in the field. */
         data object SampleText : TranslationOptionKey
@@ -65,20 +78,85 @@ class TextInputAlert(
         data object Title : TranslationOptionKey
     }
 
+    // MARK: - Properties
+
+    private var messageAttributes: AttributedStringConfig? = null
+    private var onTextFieldChangeHandler: ((String?) -> Unit)? = null
+    private var titleAttributes: AttributedStringConfig? = null
+
     // MARK: - Methods
+
+    /**
+     * Disables the action at the specified index in the currently
+     * presented alert.
+     *
+     * @param index The zero-based index of the action to disable.
+     */
+    fun disableAction(index: Int) {
+        AlertPresenter.setActionEnabled(index, false)
+    }
+
+    /**
+     * Enables the action at the specified index in the currently
+     * presented alert.
+     *
+     * @param index The zero-based index of the action to enable.
+     */
+    fun enableAction(index: Int) {
+        AlertPresenter.setActionEnabled(index, true)
+    }
+
+    /**
+     * Registers a callback that is invoked when the text field's
+     * text changes.
+     *
+     * Call this method before presenting the alert. The callback is
+     * released when the alert is dismissed.
+     *
+     * @param perform The closure to call when the text changes.
+     */
+    fun onTextFieldChange(perform: (String?) -> Unit) {
+        onTextFieldChangeHandler = perform
+    }
+
+    /**
+     * Sets the attributed string configuration for the alert's
+     * message.
+     *
+     * Call this method before presenting the alert to customize the
+     * appearance of the message text.
+     *
+     * @param messageAttributes The attributed string configuration
+     *   to apply to the message.
+     */
+    fun setMessageAttributes(messageAttributes: AttributedStringConfig) {
+        this.messageAttributes = messageAttributes
+    }
+
+    /**
+     * Sets the attributed string configuration for the alert's
+     * title.
+     *
+     * Call this method before presenting the alert to customize the
+     * appearance of the title text.
+     *
+     * @param titleAttributes The attributed string configuration to
+     *   apply to the title.
+     */
+    fun setTitleAttributes(titleAttributes: AttributedStringConfig) {
+        this.titleAttributes = titleAttributes
+    }
 
     /**
      * Presents the alert and suspends until the user confirms or
      * cancels.
      *
-     * When [isConfirmEnabled] is provided, the confirm button is
-     * enabled live as the field's text changes, only while the closure
-     * returns `true`.
-     *
      * @return The entered text on confirmation, or `null` on cancel.
      */
     suspend fun present(): String? =
         suspendCancellableCoroutine { continuation ->
+            val guard = ContinuationGuard<String?>(continuation, fallbackValue = null)
+
             AlertPresenter.present(
                 PresentedAlert.TextInput(
                     title = title,
@@ -88,11 +166,14 @@ class TextInputAlert(
                     cancelButtonStyle = cancelButtonStyle,
                     confirmButtonTitle = confirmButtonTitle,
                     confirmButtonStyle = confirmButtonStyle,
-                    isConfirmEnabled = isConfirmEnabled,
+                    messageAttributes = messageAttributes,
+                    titleAttributes = titleAttributes,
+                    onTextFieldChange = onTextFieldChangeHandler,
                 ) { result ->
+                    guard.resume(result)
                     AlertPresenter.dismiss()
-                    if (continuation.isActive) continuation.resume(result)
                 },
+                onDisplaced = { guard.fallback() },
             )
 
             continuation.invokeOnCancellation { AlertPresenter.dismiss() }
@@ -114,7 +195,7 @@ class TextInputAlert(
                 TranslationOptionKey.CancelButtonTitle,
                 TranslationOptionKey.ConfirmButtonTitle,
                 TranslationOptionKey.Message,
-                TranslationOptionKey.Placeholder,
+                TranslationOptionKey.PlaceholderText,
                 TranslationOptionKey.SampleText,
                 TranslationOptionKey.Title,
             ),
@@ -141,16 +222,21 @@ class TextInputAlert(
             translatedAttributes = translatedAttributes.replacingSampleText(translations.firstOutput(it))
         }
 
-        return TextInputAlert(
-            title = title?.let { translations.firstOutput(it) },
-            message = translations.firstOutput(message),
-            attributes = translatedAttributes,
-            cancelButtonTitle = translations.firstOutput(cancelButtonTitle),
-            cancelButtonStyle = cancelButtonStyle,
-            confirmButtonTitle = translations.firstOutput(confirmButtonTitle),
-            confirmButtonStyle = confirmButtonStyle,
-            isConfirmEnabled = isConfirmEnabled,
-        )
+        val alert =
+            TextInputAlert(
+                title = title?.let { translations.firstOutput(it) },
+                message = translations.firstOutput(message),
+                attributes = translatedAttributes,
+                cancelButtonTitle = translations.firstOutput(cancelButtonTitle),
+                cancelButtonStyle = cancelButtonStyle,
+                confirmButtonTitle = translations.firstOutput(confirmButtonTitle),
+                confirmButtonStyle = confirmButtonStyle,
+            )
+
+        messageAttributes?.let { alert.setMessageAttributes(it) }
+        onTextFieldChangeHandler?.let { alert.onTextFieldChange(it) }
+        titleAttributes?.let { alert.setTitleAttributes(it) }
+        return alert
     }
 
     private fun translationInputs(keys: List<TranslationOptionKey>): List<TranslationInput> {
@@ -160,23 +246,12 @@ class TextInputAlert(
                 TranslationOptionKey.CancelButtonTitle -> inputs.add(TranslationInput(cancelButtonTitle))
                 TranslationOptionKey.ConfirmButtonTitle -> inputs.add(TranslationInput(confirmButtonTitle))
                 TranslationOptionKey.Message -> inputs.add(TranslationInput(message))
-                TranslationOptionKey.Placeholder -> attributes.placeholderText?.let { inputs.add(TranslationInput(it)) }
+                TranslationOptionKey.PlaceholderText -> attributes.placeholderText?.let { inputs.add(TranslationInput(it)) }
                 TranslationOptionKey.SampleText -> attributes.sampleText?.let { inputs.add(TranslationInput(it)) }
                 TranslationOptionKey.Title -> title?.let { inputs.add(TranslationInput(it)) }
             }
         }
 
-        // nonDefaultUnique: translate each unique string once, leaving the
-        // default button titles to be localized from the string catalog.
-        return inputs
-            .distinctBy { it.value }
-            .filterNot { it.value == DEFAULT_CANCEL_BUTTON_TITLE || it.value == DEFAULT_CONFIRM_BUTTON_TITLE }
-    }
-
-    // MARK: - Companion
-
-    private companion object {
-        const val DEFAULT_CANCEL_BUTTON_TITLE = "Cancel"
-        const val DEFAULT_CONFIRM_BUTTON_TITLE = "Confirm"
+        return inputs.nonDefaultUnique
     }
 }

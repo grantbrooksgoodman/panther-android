@@ -47,8 +47,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
 import kotlinx.coroutines.delay
+import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
 
 /**
  * Renders the heads-up display requested through [HUDPresenter].
@@ -133,7 +133,7 @@ private fun HUDCard(presentation: HUDPresenter.Presentation) {
                 is HUDPresenter.Presentation.Flash ->
                     when (presentation.image) {
                         HUD.HUDImage.SUCCESS -> StatusIcon(Icons.Filled.CheckCircle, SUCCESS_COLOR)
-                        HUD.HUDImage.EXCLAMATION -> StatusIcon(Icons.Filled.Warning, Color.Unspecified)
+                        HUD.HUDImage.EXCLAMATION -> StatusIcon(Icons.Filled.Warning, EXCLAMATION_COLOR)
                     }
             }
 
@@ -172,10 +172,11 @@ private const val CARD_SIZE = 130
 private const val CONTENT_SPACING = 12
 private const val ENTER_INITIAL_SCALE = 1.4f
 private const val EXIT_TARGET_SCALE = 0.3f
-private const val ICON_SIZE = 48
+private const val ICON_SIZE = 70
 private const val SHADOW_ELEVATION = 8
 private const val STATUS_FONT_SIZE = 24
 
 private val DARK_BACKGROUND = Color(0xFF3A3A3C)
+private val EXCLAMATION_COLOR = Color(0xFFAAAAAA)
 private val LIGHT_BACKGROUND = Color(0xFFE5E5EA)
 private val SUCCESS_COLOR = Color(0xFF34C759)

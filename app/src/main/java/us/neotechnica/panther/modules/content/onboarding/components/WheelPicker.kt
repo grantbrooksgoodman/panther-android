@@ -116,7 +116,7 @@ fun WheelPicker(
                 ) {
                     Components.Text(
                         item,
-                        color = colors.titleText,
+                        foregroundColor = colors.titleText,
                         font = Font.system,
                         modifier = Modifier.graphicsLayer { this.alpha = alpha },
                     )

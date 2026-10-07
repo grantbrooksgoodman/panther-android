@@ -360,7 +360,7 @@ object ConversationSessionService {
                         if (RuntimeStorage.shouldNotifyOfConversationAvailability) {
                             Toast.show(
                                 Toast(
-                                    Toast.Type.Banner(ToastStyle.INFO),
+                                    Toast.ToastType.Banner(ToastStyle.INFO),
                                     message = "This conversation is no longer available.",
                                 ),
                                 translating = listOf(Toast.TranslationOptionKey.Message, Toast.TranslationOptionKey.Title),

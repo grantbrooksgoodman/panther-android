@@ -86,7 +86,7 @@ fun AddContactButton(
         ) {
             Components.Symbol(
                 ChatInfoPageViewConstants.ADD_CONTACT_BUTTON_IMAGE_SYSTEM_NAME,
-                color = contentColor,
+                foregroundColor = contentColor,
                 modifier =
                     Modifier.size(
                         width = ChatInfoPageViewFloats.addContactButtonImageWidth,
@@ -94,7 +94,11 @@ fun AddContactButton(
                     ),
             )
         }
-        Components.Text(text, color = contentColor, modifier = Modifier.padding(start = ChatInfoPageViewFloats.rowTextStartPadding))
+        Components.Text(
+            text,
+            foregroundColor = contentColor,
+            modifier = Modifier.padding(start = ChatInfoPageViewFloats.rowTextStartPadding),
+        )
     }
 }
 

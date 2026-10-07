@@ -14,7 +14,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.Application
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationAlert
 import us.neotechnica.panther.designsystem.modules.developermode.models.DevModeAction
@@ -81,7 +81,7 @@ object DangerZone {
                 }
                 actions.add(resetPushTokensAction.toAction())
 
-                ActionSheetAlert(
+                ActionSheet(
                     title = "Danger Zone",
                     message = "Exercise caution when using these options.",
                     actions = actions,
@@ -128,7 +128,7 @@ object DangerZone {
             )
         }
 
-        ActionSheetAlert(
+        ActionSheet(
             title = "Delete Conversations",
             message = "Select the granularity of conversations to delete.",
             actions = actions,

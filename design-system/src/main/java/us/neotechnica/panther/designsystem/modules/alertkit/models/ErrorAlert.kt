@@ -9,14 +9,15 @@
 package us.neotechnica.panther.designsystem.modules.alertkit.models
 
 import kotlinx.coroutines.suspendCancellableCoroutine
+import us.neotechnica.panther.designsystem.modules.alertkit.AlertKit
 import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.firstOutput
+import us.neotechnica.panther.designsystem.modules.alertkit.extensions.nonDefaultUnique
 import us.neotechnica.panther.designsystem.modules.alertkit.services.AlertPresenter
 import us.neotechnica.panther.designsystem.modules.alertkit.services.PresentedAlert
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.translator.models.TranslationInput
-import kotlin.coroutines.resume
 
 /**
  * An alert that reports an error to the user.
@@ -38,8 +39,8 @@ import kotlin.coroutines.resume
  */
 class ErrorAlert(
     private val exception: Exception,
-    private val dismissButtonTitle: String = "Dismiss",
-    private val sendErrorReportButtonTitle: String = "Send Error Report",
+    private val dismissButtonTitle: String = AlertKit.Constants.DEFAULT_DISMISS_BUTTON_TITLE,
+    private val sendErrorReportButtonTitle: String = AlertKit.Constants.DEFAULT_SEND_ERROR_REPORT_BUTTON_TITLE,
     private val errorDescription: String = exception.userFacingDescriptor,
 ) {
     // MARK: - Types
@@ -59,10 +60,31 @@ class ErrorAlert(
     // MARK: - Methods
 
     /**
+     * Disables the action at the specified index in the currently
+     * presented alert.
+     *
+     * @param index The zero-based index of the action to disable.
+     */
+    fun disableAction(index: Int) {
+        AlertPresenter.setActionEnabled(index, false)
+    }
+
+    /**
+     * Enables the action at the specified index in the currently
+     * presented alert.
+     *
+     * @param index The zero-based index of the action to enable.
+     */
+    fun enableAction(index: Int) {
+        AlertPresenter.setActionEnabled(index, true)
+    }
+
+    /**
      * Presents the error alert and suspends until the user dismisses it.
      */
     suspend fun present(): Unit =
         suspendCancellableCoroutine { continuation ->
+            val guard = ContinuationGuard(continuation, fallbackValue = Unit)
             val showsReportAction =
                 exception.isReportable &&
                     !Logger.reportsErrorsAutomatically &&
@@ -75,20 +97,21 @@ class ErrorAlert(
                     dismissButtonTitle = dismissButtonTitle,
                     sendReportButtonTitle = if (showsReportAction) sendErrorReportButtonTitle else null,
                     onDismiss = {
+                        guard.resume(Unit)
                         AlertPresenter.dismiss()
-                        if (continuation.isActive) continuation.resume(Unit)
                     },
                     onSendReport =
                         if (showsReportAction) {
                             {
-                                AlertPresenter.dismiss()
                                 AlertKitConfig.reportDelegate?.fileReport(exception)
-                                if (continuation.isActive) continuation.resume(Unit)
+                                guard.resume(Unit)
+                                AlertPresenter.dismiss()
                             }
                         } else {
                             null
                         },
                 ),
+                onDisplaced = { guard.fallback() },
             )
 
             continuation.invokeOnCancellation { AlertPresenter.dismiss() }
@@ -142,6 +165,6 @@ class ErrorAlert(
             }
         }
 
-        return inputs.distinctBy { it.value }.filter { it.value.isNotBlank() }
+        return inputs.nonDefaultUnique.filter { it.value.isNotBlank() }
     }
 }

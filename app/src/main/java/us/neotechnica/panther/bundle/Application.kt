@@ -17,6 +17,7 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.HUDConfig
 import us.neotechnica.panther.designsystem.modules.developermode.services.DevModeService
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheets
+import us.neotechnica.panther.designsystem.modules.foundation.services.SoundPlayer
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.ApplicationStorageKey
 import us.neotechnica.panther.modules.common.extensions.isEmulator
@@ -63,7 +64,6 @@ import us.neotechnica.panther.subsystem.modules.localization.services.LocalizedS
 import java.util.Date
 import java.util.Properties
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * The app's bootstrap configuration and shared application
@@ -219,7 +219,7 @@ object Application {
      * exit flows share this sequence.
      */
     fun beginGracefulExit() {
-        Overlay.show()
+        Overlay.addOverlay(activityIndicator = Overlay.OverlayActivityIndicatorConfiguration.largeWhite)
         DependencyValues.current.navigation.navigate(
             Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.Splash)),
         )
@@ -234,6 +234,7 @@ object Application {
         RuntimeStorage.languageCodeDictionary = LocalizedStringResolver.languageDisplayNames()
         Persistent.initialize(context)
         FileStore.initialize(context)
+        SoundPlayer.initialize(context)
         CommonPropertyLists.initialize(context)
         ContactService.initialize(context)
         DeviceID.initialize(context)
@@ -263,6 +264,7 @@ object Application {
     private fun configureBuild(context: Context) {
         val (buildNumber, buildDate, firstCompileDate) = readBuildInfo(context)
         Build.initialize(
+            context = context,
             appStoreBuildNumber = APP_STORE_BUILD_NUMBER,
             buildNumber = buildNumber,
             codeName = CODE_NAME,

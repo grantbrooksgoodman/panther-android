@@ -146,10 +146,10 @@ class PantherMessagingService : FirebaseMessagingService() {
 
         Toast.show(
             Toast(
-                Toast.Type.Capsule(),
+                Toast.ToastType.Capsule(),
                 title = title.ifBlank { null },
                 message = body,
-                perpetuation = Toast.Perpetuation.Ephemeral(IN_APP_TOAST_SECONDS.seconds),
+                perpetuation = Toast.PerpetuationStrategy.Ephemeral(IN_APP_TOAST_SECONDS.seconds),
             ),
             onTap = {
                 DependencyValues.current.navigation.navigate(

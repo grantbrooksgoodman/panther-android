@@ -30,9 +30,11 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import us.neotechnica.panther.designsystem.R
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAction
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAlignment
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ReactionChoice
+import us.neotechnica.panther.designsystem.modules.foundation.services.SoundPlayer
 
 /**
  * Wraps a message bubble so a long press lifts it and presents [actions]
@@ -147,7 +149,12 @@ fun MessageContextMenu(
                     anchorBounds = Rect(coordinates.positionInRoot(), coordinates.size.toSize())
                 }.pointerInput(controller, handlesTap, hasDoubleTapDefault) {
                     detectTapGestures(
-                        onTap = if (handlesTap) { { currentOnTap?.invoke() } } else null,
+                        onTap =
+                            if (handlesTap) {
+                                { currentOnTap?.invoke() }
+                            } else {
+                                null
+                            },
                         // A non-null onDoubleTap delays single taps, so install one only for a double-tap-default reaction.
                         onDoubleTap =
                             if (hasDoubleTapDefault) {
@@ -164,6 +171,7 @@ fun MessageContextMenu(
                         onLongPress = {
                             val hasMenu = currentActions.isNotEmpty() || currentReactionChoices.isNotEmpty()
                             if (hasMenu && controller?.canBegin == true && anchorBounds != Rect.Zero) {
+                                SoundPlayer.play(R.raw.selection)
                                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                 controller.present(
                                     ActiveContextMenu(

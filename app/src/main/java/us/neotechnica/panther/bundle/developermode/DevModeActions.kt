@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.Application
 import us.neotechnica.panther.bundle.userSessionService
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextFieldAttributes
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAlert
 import us.neotechnica.panther.designsystem.modules.developermode.interfaces.DevModeAppActionDelegate
@@ -50,7 +50,7 @@ object AppDevModeActions : DevModeAppActionDelegate {
         get() =
             DevModeAction(title = "UI Options") {
                 scope.launch {
-                    ActionSheetAlert(
+                    ActionSheet(
                         title = "UI Options",
                         actions = listOf(Action("Trigger Forced Update Modal") { triggerForcedUpdateModal() }),
                     ).present(translating = emptyList())
@@ -61,7 +61,7 @@ object AppDevModeActions : DevModeAppActionDelegate {
         get() =
             DevModeAction(title = "User Options") {
                 scope.launch {
-                    ActionSheetAlert(
+                    ActionSheet(
                         title = "User Options",
                         actions = listOf(Action("Set Current User ID") { scope.launch { setCurrentUserID() } }),
                     ).present(translating = emptyList())

@@ -8,9 +8,12 @@
 
 package us.neotechnica.panther.designsystem.modules.componentkit.components
 
+import android.graphics.Bitmap
+import android.os.Build
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -23,8 +26,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAction
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAlignment
@@ -121,21 +131,67 @@ fun ContextMenuHost(
             progress.animateTo(
                 targetValue = 1f,
                 animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
+                initialVelocity = PRESENTATION_SPRING_INITIAL_VELOCITY,
             )
         }
     }
 
+    // Modifier.blur is a no-op below API 31, so the pre-31 path captures
+    // the host into a graphics layer and draws a software-blurred copy
+    // behind the overlay instead.
+    val usesSoftwareBlur = Build.VERSION.SDK_INT < Build.VERSION_CODES.S
+    val hostLayer = rememberGraphicsLayer()
+    var softwareBlurredBackdrop by remember { mutableStateOf<ImageBitmap?>(null) }
+
+    LaunchedEffect(controller.active) {
+        softwareBlurredBackdrop =
+            if (usesSoftwareBlur && controller.active != null) {
+                softwareBlurred(hostLayer.toImageBitmap())
+            } else {
+                null
+            }
+    }
+
     Box(modifier.fillMaxSize()) {
-        // Modifier.blur is a no-op below API 31, so the pre-31 path relies on
-        // the dimmed scrim instead of a blur.
-        Box(Modifier.blur(BLUR_RADIUS * progress.value)) {
+        Box(
+            if (usesSoftwareBlur) {
+                Modifier.drawWithContent {
+                    hostLayer.record { this@drawWithContent.drawContent() }
+                    drawLayer(hostLayer)
+                }
+            } else {
+                Modifier.blur(BLUR_RADIUS * progress.value)
+            },
+        ) {
             CompositionLocalProvider(LocalContextMenuController provides controller) {
                 content()
             }
         }
 
         controller.active?.let { active ->
+            softwareBlurredBackdrop?.let { backdrop ->
+                Image(
+                    bitmap = backdrop,
+                    contentDescription = null,
+                    contentScale = ContentScale.FillBounds,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+
             ContextMenuOverlay(active = active, progress = progress.value, onDismiss = controller::dismiss)
         }
     }
 }
+
+// Approximates a blur by downscaling the capture and re-expanding it
+// with bilinear filtering.
+private fun softwareBlurred(image: ImageBitmap): ImageBitmap {
+    val bitmap = image.asAndroidBitmap()
+    val scaledWidth = (bitmap.width / SOFTWARE_BLUR_DOWNSCALE_FACTOR).coerceAtLeast(1)
+    val scaledHeight = (bitmap.height / SOFTWARE_BLUR_DOWNSCALE_FACTOR).coerceAtLeast(1)
+    val downscaled = Bitmap.createScaledBitmap(bitmap, scaledWidth, scaledHeight, true)
+    return Bitmap.createScaledBitmap(downscaled, bitmap.width, bitmap.height, true).asImageBitmap()
+}
+
+private const val PRESENTATION_SPRING_INITIAL_VELOCITY = 4f
+private const val SOFTWARE_BLUR_DOWNSCALE_FACTOR = 16

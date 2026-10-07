@@ -14,7 +14,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.Application
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.designsystem.modules.developermode.models.DevModeAction
@@ -38,7 +38,7 @@ object NetworkingOptions {
     val networkingOptionsAction: DevModeAction =
         DevModeAction(title = "Networking Options") {
             scope.launch {
-                ActionSheetAlert(
+                ActionSheet(
                     title = "Networking Options",
                     actions =
                         listOf(
@@ -69,7 +69,7 @@ object NetworkingOptions {
                 Action("Switch to ${environment.displayName}", style = style) { scope.launch { switchTo(environment) } }
             }
 
-        ActionSheetAlert(
+        ActionSheet(
             title = "Switch from ${current.displayName} Environment",
             actions = actions,
         ).present(translating = emptyList())

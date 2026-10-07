@@ -63,7 +63,8 @@ class PantherApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        us.neotechnica.panther.bundle.Application.initialize(this)
+        us.neotechnica.panther.bundle.Application
+            .initialize(this)
 
         setUpFirebaseAnalytics()
         setUpConnectionStatusEffects()
@@ -144,9 +145,9 @@ class PantherApplication : Application() {
     private fun showOfflineModeToast() {
         Toast.show(
             Toast(
-                Toast.Type.Capsule(ToastStyle.WARNING),
+                Toast.ToastType.Capsule(ToastStyle.WARNING),
                 message = LocalizedStringKey.OfflineMode.localized(),
-                perpetuation = Toast.Perpetuation.Ephemeral(OFFLINE_TOAST_SECONDS.seconds),
+                perpetuation = Toast.PerpetuationStrategy.Ephemeral(OFFLINE_TOAST_SECONDS.seconds),
             ),
         )
     }

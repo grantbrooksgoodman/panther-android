@@ -56,13 +56,13 @@ internal fun ContextMenuCard(
             ) {
                 Components.Text(
                     action.title,
-                    color = contentColor,
+                    foregroundColor = contentColor,
                     font = Font.system,
                     modifier = Modifier.weight(1f),
                 )
                 Components.Symbol(
                     action.systemImageName,
-                    color = contentColor,
+                    foregroundColor = contentColor,
                     modifier = Modifier.size(MENU_ICON_SIZE),
                 )
             }

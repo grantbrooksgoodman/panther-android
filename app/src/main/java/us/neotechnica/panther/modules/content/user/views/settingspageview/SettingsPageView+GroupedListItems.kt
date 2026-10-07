@@ -192,13 +192,13 @@ fun SettingsListRow(
         SquareIconView(configuration, Modifier.size(GroupedFloats.iconSize))
         Components.Text(
             title,
-            color = if (isEnabled) colors.titleText else colors.subtitleText,
+            foregroundColor = if (isEnabled) colors.titleText else colors.subtitleText,
             modifier = Modifier.weight(1f).padding(start = GroupedFloats.iconTitleStartPadding),
         )
         if (showsDisclosure) {
             Components.Symbol(
-                "chevron.right",
-                color = colors.subtitleText,
+                "chevron.forward",
+                foregroundColor = colors.subtitleText,
                 modifier = Modifier.size(GroupedFloats.disclosureChevronSize),
             )
         }

@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.chatInfoPageLoadingStateUpdated
 import us.neotechnica.panther.bundle.currentConversationActivityChanged
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.modules.common.extensions.formattedString
@@ -137,11 +137,11 @@ object ContactSelectorPageViewService {
                     Action("Add to Conversation", style = ActionStyle.PREFERRED) {
                         serviceScope.launch { addToConversation(userID, conversation) }
                     }
-                ActionSheetAlert(
+                ActionSheet(
                     message = user.displayName,
                     actions = listOf(addToConversationAction),
                     cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
-                ).present(translating = listOf(ActionSheetAlert.TranslationOptionKey.Actions(emptyList())))
+                ).present(translating = listOf(ActionSheet.TranslationOptionKey.Actions(emptyList())))
             }
 
             ContactSelectorPageReducer.EntryPoint.NEW_CHAT_PAGE_VIEW -> {

@@ -65,6 +65,6 @@ fun UserInfoBadgeView(
                     vertical = UserInfoBadgeViewFloats.labelViewVerticalPadding,
                 ),
     ) {
-        Components.Text(labelText, color = colors.subtitleText, font = Font.systemSemibold(FontScale.Small))
+        Components.Text(labelText, foregroundColor = colors.subtitleText, font = Font.systemSemibold(FontScale.Small))
     }
 }

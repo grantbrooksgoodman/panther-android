@@ -135,18 +135,18 @@ class PermissionPageReducer : Reducer<PermissionPageReducer.State, PermissionPag
             }
 
             Action.FinishButtonTapped -> {
-                Overlay.show()
+                Overlay.addOverlay(activityIndicator = Overlay.OverlayActivityIndicatorConfiguration.largeWhite)
                 ReduceResult(
                     state.copy(isBackButtonEnabled = false, isFinishButtonEnabled = false),
                     Effect.run { send ->
-                        send(Action.EulaAlertDismissed(OnboardingService.presentEulaAlert()))
+                        send(Action.EulaAlertDismissed(OnboardingService.presentEULAAlert()))
                     },
                 )
             }
 
             is Action.EulaAlertDismissed ->
                 if (action.cancelled) {
-                    Overlay.hide()
+                    Overlay.removeOverlay()
                     ReduceResult(state.copy(isBackButtonEnabled = true, isFinishButtonEnabled = true))
                 } else {
                     ReduceResult(
@@ -163,7 +163,7 @@ class PermissionPageReducer : Reducer<PermissionPageReducer.State, PermissionPag
                 }
 
             is Action.CreateUserReturned -> {
-                Overlay.hide()
+                Overlay.removeOverlay()
                 val exception = action.exception
                 if (exception != null) {
                     Logger.log(exception, with = AlertType.toast)

@@ -31,10 +31,10 @@ import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.common.models.MediaFileExtension
 import us.neotechnica.panther.modules.content.user.constants.MediaItemViewColors
 import us.neotechnica.panther.modules.content.user.constants.MediaItemViewFloats
 import us.neotechnica.panther.modules.content.user.models.MediaItemViewData
-import us.neotechnica.panther.modules.common.models.MediaFileExtension
 
 /**
  * A row describing a media file in a conversation's shared-media list: a
@@ -63,10 +63,10 @@ fun MediaItemView(
     ) {
         Thumbnail(data)
         Column(modifier = Modifier.weight(1f).padding(start = MediaItemViewFloats.textStartPadding)) {
-            Components.Text(data.mediaTypeLabelText, color = colors.titleText, font = Font.systemSemibold())
+            Components.Text(data.mediaTypeLabelText, foregroundColor = colors.titleText, font = Font.systemSemibold())
             Components.Text(
                 data.senderLabelText,
-                color = MediaItemViewColors.senderLabelForeground,
+                foregroundColor = MediaItemViewColors.senderLabelForeground,
                 font = Font.system(FontScale.Small),
                 modifier = Modifier.padding(top = MediaItemViewFloats.senderTopPadding),
             )
@@ -74,7 +74,7 @@ fun MediaItemView(
         Spacer(modifier = Modifier.width(MediaItemViewFloats.textStartPadding))
         Components.Text(
             data.timestampLabelText,
-            color = MediaItemViewColors.timestampLabelForeground,
+            foregroundColor = MediaItemViewColors.timestampLabelForeground,
             font = Font.system(FontScale.Small),
         )
     }
@@ -109,7 +109,7 @@ private fun Thumbnail(data: MediaItemViewData) {
         } else {
             Components.Symbol(
                 glyphFor(file.fileExtension),
-                color = MediaItemViewColors.thumbnailGlyph,
+                foregroundColor = MediaItemViewColors.thumbnailGlyph,
                 modifier = Modifier.size(MediaItemViewFloats.glyphSize),
             )
         }
@@ -120,5 +120,5 @@ private fun glyphFor(fileExtension: MediaFileExtension): String =
     when {
         fileExtension.isVideo -> "film.fill"
         fileExtension.isImage -> "photo.fill"
-        else -> "doc.fill"
+        else -> "doc.circle.fill"
     }

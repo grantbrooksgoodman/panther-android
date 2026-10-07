@@ -58,7 +58,7 @@ fun GenericTextField(
             if (value.isEmpty()) {
                 Components.Text(
                     placeholder,
-                    color = colors.subtitleText,
+                    foregroundColor = colors.subtitleText,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
                 )

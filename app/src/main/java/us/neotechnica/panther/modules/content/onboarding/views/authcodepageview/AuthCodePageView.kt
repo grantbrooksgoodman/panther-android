@@ -2,8 +2,8 @@
 //  AuthCodePageView.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.onboarding.views.authcodepageview
@@ -25,7 +25,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
-import us.neotechnica.panther.designsystem.modules.foundation.modifiers.onSwipeDown
+import us.neotechnica.panther.designsystem.modules.foundation.modifiers.Swipe
+import us.neotechnica.panther.designsystem.modules.foundation.modifiers.onSwipe
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.onboarding.components.InstructionView
@@ -57,9 +58,9 @@ fun AuthCodePageView(modifier: Modifier = Modifier) {
     StatefulView(
         state = state.viewState,
         modifier = modifier,
-        onRetry = { viewModel.send(AuthCodePageReducer.Action.ViewAppeared) },
+        exceptionRetryHandler = { viewModel.send(AuthCodePageReducer.Action.ViewAppeared) },
     ) {
-        Column(modifier = Modifier.fillMaxSize().onSwipeDown { viewModel.send(AuthCodePageReducer.Action.DidSwipeDown) }) {
+        Column(modifier = Modifier.fillMaxSize().onSwipe(Swipe.DOWN) { viewModel.send(AuthCodePageReducer.Action.DidSwipeDown) }) {
             InstructionView(state.instructionViewStrings)
 
             Spacer(Modifier.weight(1f))
@@ -70,7 +71,7 @@ fun AuthCodePageView(modifier: Modifier = Modifier) {
             ) {
                 Components.Text(
                     state.strings.value(AuthCodePageViewStrings.instructionLabelText),
-                    color = colors.subtitleText,
+                    foregroundColor = colors.subtitleText,
                     font = Font.systemSemibold(),
                     modifier = Modifier.padding(vertical = Floats.instructionLabelVerticalPadding),
                 )
@@ -90,15 +91,14 @@ fun AuthCodePageView(modifier: Modifier = Modifier) {
 
                 Components.CapsuleButton(
                     text = state.strings.value(AuthCodePageViewStrings.continueButtonText),
-                    onClick = { viewModel.send(AuthCodePageReducer.Action.ContinueButtonTapped) },
+                    action = { viewModel.send(AuthCodePageReducer.Action.ContinueButtonTapped) },
                     isEnabled = state.isContinueButtonEnabled,
-                    primary = true,
                     modifier = Modifier.padding(vertical = Floats.continueButtonVerticalPadding),
                 )
 
                 Components.Button(
                     text = state.strings.value(AuthCodePageViewStrings.backButtonText),
-                    color = if (state.isBackButtonEnabled) colors.titleText else colors.disabled,
+                    foregroundColor = if (state.isBackButtonEnabled) colors.titleText else colors.disabled,
                     onClick = { if (state.isBackButtonEnabled) viewModel.send(AuthCodePageReducer.Action.BackButtonTapped) },
                     font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),
                     modifier = Modifier.padding(top = Floats.backButtonTopPadding),

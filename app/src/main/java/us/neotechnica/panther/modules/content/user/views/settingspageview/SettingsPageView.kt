@@ -36,9 +36,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.DpSize
 import us.neotechnica.panther.bundle.traitCollectionChanged
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
-import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
 import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
@@ -47,6 +47,7 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.modules.common.contacts.components.rememberContactCardPresenter
 import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.models.PhoneNumber
+import us.neotechnica.panther.modules.content.user.components.AvatarImageView
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewFloats
 import us.neotechnica.panther.modules.content.user.services.DeveloperModeListItem
 import us.neotechnica.panther.modules.content.user.views.inviteqrcodepageview.InviteQRCodePageView
@@ -156,7 +157,7 @@ private fun Header(
     ) {
         Components.Text(
             title,
-            color = colors.titleText,
+            foregroundColor = colors.titleText,
             font = Font.systemBold(FontScale.Large),
             modifier = Modifier.align(Alignment.Center),
         )
@@ -195,17 +196,17 @@ private fun ContactDetailCard(
                 .clickable { onTap(phoneNumber, contactName) }
                 .padding(Floats.cardPadding),
     ) {
-        AvatarImageView(modifier = Modifier.size(Floats.avatarSize), glyphSize = Floats.avatarGlyphSize)
+        AvatarImageView(null, size = DpSize(Floats.avatarSize, Floats.avatarSize))
         Column(modifier = Modifier.weight(1f).padding(start = Floats.contactNameStartPadding)) {
-            Components.Text(title, color = colors.titleText, font = Font.systemSemibold())
+            Components.Text(title, foregroundColor = colors.titleText, font = Font.systemSemibold())
             subtitle?.let {
-                Components.Text(it, color = colors.subtitleText, font = Font.system(FontScale.Small))
+                Components.Text(it, foregroundColor = colors.subtitleText, font = Font.system(FontScale.Small))
             }
         }
         if (subtitle != null) {
             Components.Symbol(
-                "chevron.right",
-                color = colors.subtitleText,
+                "chevron.forward",
+                foregroundColor = colors.subtitleText,
                 modifier = Modifier.size(Floats.contactChevronSize),
             )
         }
@@ -291,7 +292,7 @@ private fun BuildInfoButton(
     val colors = LocalPantherColors.current
     Components.Text(
         labelText,
-        color = colors.subtitleText,
+        foregroundColor = colors.subtitleText,
         font = Font.system(FontScale.Small),
         textAlign = TextAlign.Center,
         modifier =

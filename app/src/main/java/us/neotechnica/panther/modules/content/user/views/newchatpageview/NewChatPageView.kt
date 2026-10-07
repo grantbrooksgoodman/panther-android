@@ -42,17 +42,17 @@ import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.isNewChatPageDoneToolbarButtonEnabled
 import us.neotechnica.panther.bundle.messageOutboxDidChange
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.MessageInputBar
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
+import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.services.InviteService
-import us.neotechnica.panther.modules.common.services.KeyboardService
 import us.neotechnica.panther.modules.common.services.PermissionService
 import us.neotechnica.panther.modules.content.user.components.ContactPairCellView
 import us.neotechnica.panther.modules.content.user.components.ContentPickers
@@ -284,20 +284,22 @@ private suspend fun selectContactButtonTapped(
 }
 
 private suspend fun presentContactsPermissionCTA(context: Context) {
-    val shouldOpenSettings =
-        ActionSheetAlert(
-            title = "Contacts Access",
-            message = "Enable contacts access in Settings to choose a recipient.",
-            confirmButtonTitle = "Open Settings",
-            cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
-        ).present(
-            translating =
-                listOf(
-                    ActionSheetAlert.TranslationOptionKey.Actions(),
-                    ActionSheetAlert.TranslationOptionKey.Message,
-                    ActionSheetAlert.TranslationOptionKey.Title,
-                ),
-        )
+    var shouldOpenSettings = false
+    val openSettingsAction = AlertKitAction("Open Settings") { shouldOpenSettings = true }
+
+    ActionSheet(
+        title = "Contacts Access",
+        message = "Enable contacts access in Settings to choose a recipient.",
+        actions = listOf(openSettingsAction),
+        cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
+    ).present(
+        translating =
+            listOf(
+                ActionSheet.TranslationOptionKey.Actions(),
+                ActionSheet.TranslationOptionKey.Message,
+                ActionSheet.TranslationOptionKey.Title,
+            ),
+    )
     if (!shouldOpenSettings) return
 
     runCatching {
@@ -309,7 +311,7 @@ private suspend fun presentContactsPermissionCTA(context: Context) {
 
 // The attach-media action sheet.
 private suspend fun presentAttachMediaSheet(pickers: ContentPickers) {
-    ActionSheetAlert(
+    ActionSheet(
         title = "Attach media",
         actions =
             listOf(
@@ -321,8 +323,8 @@ private suspend fun presentAttachMediaSheet(pickers: ContentPickers) {
     ).present(
         translating =
             listOf(
-                ActionSheetAlert.TranslationOptionKey.Title,
-                ActionSheetAlert.TranslationOptionKey.Actions(),
+                ActionSheet.TranslationOptionKey.Title,
+                ActionSheet.TranslationOptionKey.Actions(),
             ),
     )
 }
@@ -346,13 +348,13 @@ private fun Header(
     ) {
         Components.Text(
             title,
-            color = colors.titleText,
+            foregroundColor = colors.titleText,
             font = Font.systemBold(FontScale.Large),
             modifier = Modifier.align(Alignment.Center),
         )
         Components.Text(
             doneText,
-            color = if (isDoneEnabled) colors.accent else colors.disabled,
+            foregroundColor = if (isDoneEnabled) colors.accent else colors.disabled,
             font = if (isDoneBold) Font.systemSemibold() else Font.system,
             modifier =
                 Modifier

@@ -9,18 +9,18 @@
 package us.neotechnica.panther.modules.content.onboarding.services
 
 import us.neotechnica.panther.bundle.currentUserID
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
+import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationAlert
+import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
+import us.neotechnica.panther.designsystem.modules.foundation.extensions.cancelAction
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.common.services.AnalyticsService
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.user.services.UserService
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
-import us.neotechnica.panther.subsystem.modules.localization.models.localized
 
 /**
  * Carries state through the onboarding flow and finalizes account
@@ -110,54 +110,78 @@ object OnboardingService {
     // MARK: - Alert Presentation
 
     /** Offers to sign up when no account exists; returns `true` if cancelled. */
-    suspend fun presentAccountDoesNotExistAlert(): Boolean =
-        !ConfirmationAlert(
+    suspend fun presentAccountDoesNotExistAlert(): Boolean {
+        var cancelled = true
+        val signUpAction =
+            Action(
+                "Sign Up",
+                style = ActionStyle.PREFERRED,
+            ) { cancelled = false }
+
+        Alert(
             message = "There is no account registered with this phone number. Please sign up instead.",
-            cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
-            confirmButtonTitle = "Sign Up",
-            confirmButtonStyle = ActionStyle.PREFERRED,
+            actions =
+                listOf(
+                    signUpAction,
+                    Action.cancelAction,
+                ),
         ).present(
             translating =
                 listOf(
-                    ConfirmationAlert.TranslationOptionKey.ConfirmButtonTitle,
-                    ConfirmationAlert.TranslationOptionKey.Message,
+                    Alert.TranslationOptionKey.Actions(listOf(signUpAction)),
+                    Alert.TranslationOptionKey.Message,
                 ),
         )
+
+        return cancelled
+    }
 
     /** Offers to sign in when an account exists; returns `true` if cancelled. */
-    suspend fun presentAccountExistsAlert(): Boolean =
-        !ConfirmationAlert(
+    suspend fun presentAccountExistsAlert(): Boolean {
+        var cancelled = true
+        val signInAction =
+            Action(
+                "Sign In",
+                style = ActionStyle.PREFERRED,
+            ) { cancelled = false }
+
+        Alert(
             message = "There is already an account registered with this phone number. Please sign in instead.",
-            cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
-            confirmButtonTitle = "Sign In",
-            confirmButtonStyle = ActionStyle.PREFERRED,
+            actions =
+                listOf(
+                    signInAction,
+                    Action.cancelAction,
+                ),
         ).present(
             translating =
                 listOf(
-                    ConfirmationAlert.TranslationOptionKey.ConfirmButtonTitle,
-                    ConfirmationAlert.TranslationOptionKey.Message,
+                    Alert.TranslationOptionKey.Actions(listOf(signInAction)),
+                    Alert.TranslationOptionKey.Message,
                 ),
         )
 
+        return cancelled
+    }
+
     /** Asks the user to agree to the conduct policy; returns `true` if declined. */
-    suspend fun presentEulaAlert(): Boolean =
-        // The no-arg `present()` translates nothing, so opt in explicitly
-        // to translate every string.
-        !ActionSheetAlert(
+    suspend fun presentEULAAlert(): Boolean {
+        var cancelled = true
+        val agreeAction =
+            Action(
+                "I Agree",
+                style = ActionStyle.PREFERRED,
+            ) { cancelled = false }
+
+        ActionSheet(
             message =
                 "I agree to help maintain a community of respect towards others " +
                     "via my personal conduct on this app.",
-            confirmButtonTitle = "I Agree",
+            actions = listOf(agreeAction),
             cancelButtonTitle = "I Do Not Agree",
-        ).present(
-            translating =
-                listOf(
-                    ActionSheetAlert.TranslationOptionKey.Actions(),
-                    ActionSheetAlert.TranslationOptionKey.CancelButtonTitle,
-                    ActionSheetAlert.TranslationOptionKey.Message,
-                    ActionSheetAlert.TranslationOptionKey.Title,
-                ),
-        )
+        ).present()
+
+        return cancelled
+    }
 
     // MARK: - Auxiliary
 

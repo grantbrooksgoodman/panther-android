@@ -9,8 +9,8 @@
 package us.neotechnica.panther.modules.content.onboarding.views.authcodepageview
 
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
+import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardService
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
-import us.neotechnica.panther.modules.common.services.KeyboardService
 import us.neotechnica.panther.modules.content.onboarding.components.InstructionViewStrings
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
 import us.neotechnica.panther.navigation.OnboardingNavigatorState
@@ -110,7 +110,7 @@ class AuthCodePageReducer : Reducer<AuthCodePageReducer.State, AuthCodePageReduc
             }
 
             Action.RunContinueButtonEffect -> {
-                Overlay.show()
+                Overlay.addOverlay(activityIndicator = Overlay.OverlayActivityIndicatorConfiguration.largeWhite)
                 val code = state.verificationCode
                 ReduceResult(
                     state.copy(isBackButtonEnabled = false, isContinueButtonEnabled = false),
@@ -132,14 +132,14 @@ class AuthCodePageReducer : Reducer<AuthCodePageReducer.State, AuthCodePageReduc
             }
 
             is Action.AuthenticateUserReturned -> {
-                Overlay.hide()
+                Overlay.removeOverlay()
                 OnboardingService.setUserID(action.userID)
                 navigate(OnboardingRoute.Push(OnboardingNavigatorState.SeguePath.Permission))
                 ReduceResult(state.copy(isBackButtonEnabled = true, isContinueButtonEnabled = true))
             }
 
             is Action.AuthenticateUserFailed -> {
-                Overlay.hide()
+                Overlay.removeOverlay()
                 Logger.log(
                     action.exception.notReportableForAuthCodes(VERIFICATION_USER_ERROR_CODES),
                     with = AlertType.toast,

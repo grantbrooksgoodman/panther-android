@@ -8,7 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.services
 
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextFieldAttributes
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAlert
@@ -46,15 +46,15 @@ internal suspend fun ChatInfoPageViewService.presentChangeMetadataActionSheet():
         )
     }
 
-    ActionSheetAlert(
+    ActionSheet(
         title = "Change name and photo",
         actions = actions,
         cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
     ).present(
         translating =
             listOf(
-                ActionSheetAlert.TranslationOptionKey.Actions(),
-                ActionSheetAlert.TranslationOptionKey.Title,
+                ActionSheet.TranslationOptionKey.Actions(),
+                ActionSheet.TranslationOptionKey.Title,
             ),
     )
 
@@ -84,7 +84,7 @@ private enum class MetadataChoice {
  */
 private suspend fun presentPhotoSourceSheet(): ChatInfoPageViewService.MetadataChangeType? {
     var choice: ChatInfoPageViewService.MetadataChangeType? = null
-    ActionSheetAlert(
+    ActionSheet(
         title = "Change name and photo",
         actions =
             listOf(
@@ -97,8 +97,8 @@ private suspend fun presentPhotoSourceSheet(): ChatInfoPageViewService.MetadataC
     ).present(
         translating =
             listOf(
-                ActionSheetAlert.TranslationOptionKey.Actions(),
-                ActionSheetAlert.TranslationOptionKey.Title,
+                ActionSheet.TranslationOptionKey.Actions(),
+                ActionSheet.TranslationOptionKey.Title,
             ),
     )
     return choice
@@ -115,7 +115,7 @@ private suspend fun presentChangeNameAlert(conversation: Conversation): ChatInfo
         conversation.metadata.name
             .takeUnless { it.isBangQualifiedEmpty }
             .orEmpty()
-    val input =
+    val textInputAlert =
         TextInputAlert(
             message = "Choose a new name for this conversation:",
             attributes =
@@ -125,8 +125,18 @@ private suspend fun presentChangeNameAlert(conversation: Conversation): ChatInfo
                 ),
             cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
             confirmButtonTitle = LocalizedStringKey.Done.localized(),
-            isConfirmEnabled = { it.none { character -> character in "⌘:" } },
-        ).present(translating = listOf(TextInputAlert.TranslationOptionKey.Message)) ?: return null
+        )
+
+    textInputAlert.onTextFieldChange { text ->
+        if (text?.any { it in "⌘:" } == true) {
+            textInputAlert.disableAction(1)
+        } else {
+            textInputAlert.enableAction(1)
+        }
+    }
+
+    val input =
+        textInputAlert.present(translating = listOf(TextInputAlert.TranslationOptionKey.Message)) ?: return null
 
     if (input.any { it in "⌘:" }) return null
     if (input == conversation.metadata.name) return null

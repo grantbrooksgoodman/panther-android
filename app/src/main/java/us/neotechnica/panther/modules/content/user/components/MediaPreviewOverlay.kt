@@ -168,13 +168,13 @@ private fun DocumentPage(mediaFile: MediaFile) {
         verticalArrangement = Arrangement.Center,
     ) {
         Components.Symbol(
-            "doc.fill",
-            color = MediaPreviewOverlayColors.foreground,
+            "doc.circle.fill",
+            foregroundColor = MediaPreviewOverlayColors.foreground,
             modifier = Modifier.size(MediaPreviewOverlayFloats.documentGlyphSize),
         )
         Components.Text(
             "${mediaFile.name}.${mediaFile.fileExtension.rawValue}",
-            color = MediaPreviewOverlayColors.foreground,
+            foregroundColor = MediaPreviewOverlayColors.foreground,
             textAlign = TextAlign.Center,
             modifier =
                 Modifier.padding(
@@ -185,8 +185,7 @@ private fun DocumentPage(mediaFile: MediaFile) {
         )
         Components.CapsuleButton(
             MediaPreviewOverlayStrings.OPEN,
-            onClick = { openExternally(context, mediaFile) },
-            primary = true,
+            action = { openExternally(context, mediaFile) },
             modifier = Modifier.padding(top = MediaPreviewOverlayFloats.documentSpacing),
         )
     }
@@ -210,7 +209,7 @@ private fun CloseButton(
     ) {
         Components.Symbol(
             "xmark",
-            color = MediaPreviewOverlayColors.foreground,
+            foregroundColor = MediaPreviewOverlayColors.foreground,
             modifier = Modifier.size(MediaPreviewOverlayFloats.closeButtonGlyphSize),
         )
     }

@@ -16,12 +16,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
@@ -40,7 +44,7 @@ import androidx.compose.material3.Text as Material3Text
  * Components.Text(
  *     "Hello, world!",
  *     font = Font.systemBold(FontScale.Large),
- *     color = LocalPantherColors.current.titleText,
+ *     foregroundColor = LocalPantherColors.current.titleText,
  * )
  * ```
  */
@@ -51,7 +55,7 @@ object Components {
      * Displays a styled string.
      *
      * @param text The string to display.
-     * @param color The color of the text.
+     * @param foregroundColor The color of the text.
      * @param font The font to apply. Defaults to [Font.system].
      * @param modifier The modifier for this component.
      * @param textAlign The horizontal alignment of the text, or `null`
@@ -60,14 +64,14 @@ object Components {
     @Composable
     fun Text(
         text: String,
-        color: Color,
+        foregroundColor: Color,
         font: Font = Font.system,
         modifier: Modifier = Modifier,
         textAlign: TextAlign? = null,
     ) {
         FittedText(
             text = text,
-            color = color,
+            foregroundColor = foregroundColor,
             fit = TextFit(textAlign = textAlign),
             font = font,
             modifier = modifier,
@@ -81,7 +85,7 @@ object Components {
      * fit the space it is given, per its [fit].
      *
      * @param text The string to display.
-     * @param color The color of the text.
+     * @param foregroundColor The color of the text.
      * @param fit How the text fits its bounds — its line, shrink,
      *   overflow, and alignment behavior.
      * @param font The font to apply. Defaults to [Font.system].
@@ -90,29 +94,36 @@ object Components {
     @Composable
     fun FittedText(
         text: String,
-        color: Color,
+        foregroundColor: Color,
         fit: TextFit,
         font: Font = Font.system,
         modifier: Modifier = Modifier,
     ) {
-        Material3Text(
-            text = text,
-            color = color,
-            autoSize =
-                if (fit.minimumScaleFactor < 1f) {
-                    TextAutoSize.StepBased(
-                        minFontSize = (font.scale.points * fit.minimumScaleFactor).sp,
-                        maxFontSize = font.scale.points.sp,
-                    )
-                } else {
-                    null
-                },
-            maxLines = fit.maxLines,
-            modifier = modifier,
-            overflow = fit.overflow,
-            style = font.textStyle,
-            textAlign = fit.textAlign,
-        )
+        // Text sizes are pinned: rendering with a unit font scale
+        // keeps a point size constant regardless of the user's
+        // font-size setting.
+        CompositionLocalProvider(
+            LocalDensity provides Density(LocalDensity.current.density, fontScale = 1f),
+        ) {
+            Material3Text(
+                text = text,
+                color = foregroundColor,
+                autoSize =
+                    if (fit.minimumScaleFactor < 1f) {
+                        TextAutoSize.StepBased(
+                            minFontSize = (font.scale.points * fit.minimumScaleFactor).sp,
+                            maxFontSize = font.scale.points.sp,
+                        )
+                    } else {
+                        null
+                    },
+                maxLines = fit.maxLines,
+                modifier = modifier,
+                overflow = fit.overflow,
+                style = font.textStyle,
+                textAlign = fit.textAlign,
+            )
+        }
     }
 
     // MARK: - Button
@@ -121,7 +132,7 @@ object Components {
      * A button that displays a styled text label.
      *
      * @param text The label text.
-     * @param color The color of the label.
+     * @param foregroundColor The color of the label.
      * @param onClick The action to perform when tapped.
      * @param font The font to apply to the label. Defaults to
      *   [Font.system].
@@ -130,7 +141,7 @@ object Components {
     @Composable
     fun Button(
         text: String,
-        color: Color,
+        foregroundColor: Color,
         onClick: () -> Unit,
         font: Font = Font.system,
         modifier: Modifier = Modifier,
@@ -138,7 +149,7 @@ object Components {
         Box(modifier = modifier.clickable(onClick = onClick)) {
             Text(
                 text,
-                color = color,
+                foregroundColor = foregroundColor,
                 font = font,
             )
         }
@@ -148,21 +159,21 @@ object Components {
      * A button that displays a symbol label.
      *
      * @param symbolName The SF Symbol name (mapped to a Material symbol).
-     * @param color The tint of the symbol.
+     * @param foregroundColor The tint of the symbol.
      * @param onClick The action to perform when tapped.
      * @param modifier The modifier for this component.
      */
     @Composable
     fun Button(
         symbolName: String,
-        color: Color,
+        foregroundColor: Color,
         onClick: () -> Unit,
         modifier: Modifier = Modifier,
     ) {
         Box(modifier = modifier.clickable(onClick = onClick)) {
             Symbol(
                 symbolName,
-                color = color,
+                foregroundColor = foregroundColor,
             )
         }
     }
@@ -170,45 +181,56 @@ object Components {
     // MARK: - Capsule Button
 
     /**
-     * A prominent, filled capsule button using the theme's accent fill.
+     * A prominent, filled capsule button with themed defaults.
      *
      * When disabled, it uses the theme's disabled fill and ignores
-     * taps. The label uses the theme's background color for contrast.
+     * taps.
      *
      * @param text The label text.
-     * @param onClick The action to perform when tapped.
+     * @param backgroundColor The capsule's fill color. The default
+     *   is the theme's accent color.
+     * @param font The font to apply to the label.
+     * @param foregroundColor The color of the label. The default is
+     *   the theme's background color.
+     * @param usesShadow Whether the capsule casts a shadow. The
+     *   default is `true`.
      * @param isEnabled Whether the button responds to taps.
      * @param modifier The modifier for this component.
+     * @param action The action to perform when tapped.
      */
     @Composable
+    @Suppress("LongParameterList")
     fun CapsuleButton(
         text: String,
-        onClick: () -> Unit,
+        backgroundColor: Color = LocalPantherColors.current.accent,
+        font: Font = Font.systemSemibold(),
+        foregroundColor: Color = LocalPantherColors.current.background,
+        usesShadow: Boolean = true,
         isEnabled: Boolean = true,
-        primary: Boolean = false,
         modifier: Modifier = Modifier,
+        action: () -> Unit,
     ) {
         val colors = LocalPantherColors.current
-        val fillColor =
-            when {
-                !isEnabled -> colors.disabled
-                primary -> colors.titleText
-                else -> colors.accent
-            }
+        val fillColor = if (isEnabled) backgroundColor else colors.disabled
         Box(
             contentAlignment = Alignment.Center,
             modifier =
                 modifier
-                    .shadow(CAPSULE_SHADOW_ELEVATION, RoundedCornerShape(CAPSULE_CORNER_RADIUS))
-                    .clip(RoundedCornerShape(CAPSULE_CORNER_RADIUS))
+                    .then(
+                        if (usesShadow) {
+                            Modifier.shadow(CAPSULE_SHADOW_ELEVATION, RoundedCornerShape(CAPSULE_CORNER_RADIUS))
+                        } else {
+                            Modifier
+                        },
+                    ).clip(RoundedCornerShape(CAPSULE_CORNER_RADIUS))
                     .background(fillColor)
-                    .clickable(enabled = isEnabled, onClick = onClick)
+                    .clickable(enabled = isEnabled, onClick = action)
                     .padding(
                         horizontal = CAPSULE_HORIZONTAL_PADDING,
                         vertical = CAPSULE_VERTICAL_PADDING,
                     ),
         ) {
-            Text(text, color = colors.background, font = Font.systemSemibold())
+            Text(text, foregroundColor = foregroundColor, font = font)
         }
     }
 
@@ -219,20 +241,29 @@ object Components {
      *
      * @param systemName The SF Symbol name. Unmapped names render a
      *   warning symbol.
-     * @param color The tint of the symbol.
+     * @param foregroundColor The tint of the symbol.
      * @param modifier The modifier for this component.
+     * @param weight The stroke weight to request. Accepted for
+     *   signature compatibility; vector symbols carry no weight
+     *   axis.
+     * @param usesIntrinsicSize Whether the symbol renders at its
+     *   intrinsic size rather than scaling to its bounds. The
+     *   default is `true`.
      */
+    @Suppress("UnusedParameter")
     @Composable
     fun Symbol(
         systemName: String,
-        color: Color,
+        foregroundColor: Color,
         modifier: Modifier = Modifier,
+        weight: FontWeight? = null,
+        usesIntrinsicSize: Boolean = true,
     ) {
         Icon(
             imageVector = SFSymbol.imageVector(systemName),
             contentDescription = null,
             modifier = modifier,
-            tint = color,
+            tint = foregroundColor,
         )
     }
 }

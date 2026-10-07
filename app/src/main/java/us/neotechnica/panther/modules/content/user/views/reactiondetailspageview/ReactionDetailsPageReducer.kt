@@ -9,7 +9,7 @@
 package us.neotechnica.panther.modules.content.user.views.reactiondetailspageview
 
 import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheets
-import us.neotechnica.panther.modules.common.services.KeyboardService
+import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.localization.models.localized

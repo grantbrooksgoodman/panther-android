@@ -9,10 +9,10 @@
 package us.neotechnica.panther.modules.content.onboarding.views.verifynumberpageview
 
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
+import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardService
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.common.extensions.partiallyFormatted
 import us.neotechnica.panther.modules.common.models.PhoneNumber
-import us.neotechnica.panther.modules.common.services.KeyboardService
 import us.neotechnica.panther.modules.common.services.PhoneNumberService
 import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.content.onboarding.components.InstructionViewStrings
@@ -156,7 +156,7 @@ class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNum
             }
 
             Action.RunContinueButtonEffect -> {
-                Overlay.show()
+                Overlay.addOverlay(activityIndicator = Overlay.OverlayActivityIndicatorConfiguration.largeWhite)
                 val phoneNumber = state.phoneNumber
                 ReduceResult(
                     state.copy(isBackButtonEnabled = false, isContinueButtonEnabled = false),
@@ -166,7 +166,7 @@ class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNum
 
             is Action.AccountExistsReturned ->
                 if (action.accountExists) {
-                    Overlay.hide()
+                    Overlay.removeOverlay()
                     ReduceResult(
                         state,
                         Effect.run { send ->
@@ -192,7 +192,7 @@ class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNum
             }
 
             is Action.VerifyPhoneNumberReturned -> {
-                Overlay.hide()
+                Overlay.removeOverlay()
                 OnboardingService.setAuthID(action.authID)
                 OnboardingService.setPhoneNumber(state.phoneNumber)
                 OnboardingService.setRegionCode(state.selectedRegionCode)
@@ -201,7 +201,7 @@ class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNum
             }
 
             is Action.VerifyPhoneNumberFailed -> {
-                Overlay.hide()
+                Overlay.removeOverlay()
                 Logger.log(
                     action.exception.notReportableForAuthCodes(PHONE_USER_ERROR_CODES),
                     with = AlertType.toast,

@@ -48,12 +48,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpSize
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.chatInfoPageLoadingStateUpdated
 import us.neotechnica.panther.bundle.currentConversationActivityChanged
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
-import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
 import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
@@ -64,6 +64,7 @@ import us.neotechnica.panther.modules.common.contacts.components.ContactCardPres
 import us.neotechnica.panther.modules.common.contacts.components.rememberContactCardPresenter
 import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.content.user.components.AddContactButton
+import us.neotechnica.panther.modules.content.user.components.AvatarImageView
 import us.neotechnica.panther.modules.content.user.components.ChatInfoContactSelectorHost
 import us.neotechnica.panther.modules.content.user.components.ChatParticipantView
 import us.neotechnica.panther.modules.content.user.components.MediaItemView
@@ -71,6 +72,7 @@ import us.neotechnica.panther.modules.content.user.components.MediaPreviewOverla
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewConstants
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewFloats
+import us.neotechnica.panther.modules.content.user.extensions.decodedImageBitmap
 import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.content.user.models.ChatParticipant
 import us.neotechnica.panther.modules.content.user.models.MediaItemViewData
@@ -201,8 +203,7 @@ private fun GroupContent(
 ) {
     Components.CapsuleButton(
         state.strings.value(ChatInfoPageViewStrings.changeMetadataButtonText),
-        onClick = { viewModel.send(ChatInfoPageReducer.Action.ChangeMetadataButtonTapped) },
-        primary = true,
+        action = { viewModel.send(ChatInfoPageReducer.Action.ChangeMetadataButtonTapped) },
         isEnabled = state.isChangeMetadataButtonEnabled,
         modifier =
             Modifier
@@ -296,15 +297,15 @@ private fun ChatInfoHeader(
     val contactTapModifier = if (onContactTap != null) Modifier.clickable(onClick = onContactTap) else Modifier
 
     AvatarImageView(
-        modifier = contactTapModifier.padding(top = Floats.avatarTopPadding).size(Floats.avatarSize),
-        imageData = conversation?.metadata?.imageData,
-        fallbackSymbol = if (isGroup) "person.2" else "person.crop.circle.fill",
-        glyphSize = Floats.avatarGlyphSize,
+        remember(conversation?.metadata?.imageData) { conversation?.metadata?.imageData?.decodedImageBitmap() },
+        badgeCount = if (isGroup) -1 else 0,
+        size = DpSize(Floats.avatarSize, Floats.avatarSize),
+        modifier = contactTapModifier.padding(top = Floats.avatarTopPadding),
     )
 
     Components.Text(
         title,
-        color = colors.titleText,
+        foregroundColor = colors.titleText,
         font = Font.systemBold(FontScale.Large),
         textAlign = TextAlign.Center,
         modifier =
@@ -334,9 +335,9 @@ private fun SingleContactCard(
                     .clickable(onClick = onTap)
                     .padding(horizontal = Floats.cardHorizontalPadding, vertical = Floats.rowVerticalPadding),
         ) {
-            Components.Text(number, color = colors.titleText, font = Font.systemSemibold())
+            Components.Text(number, foregroundColor = colors.titleText, font = Font.systemSemibold())
             Spacer(modifier = Modifier.weight(1f))
-            Components.Symbol("chevron.right", color = colors.subtitleText, modifier = Modifier.size(Floats.chevronGlyphSize))
+            Components.Symbol("chevron.forward", foregroundColor = colors.subtitleText, modifier = Modifier.size(Floats.chevronGlyphSize))
         }
     }
 }
@@ -377,7 +378,7 @@ private fun SegmentedControl(
             ) {
                 Components.Text(
                     title,
-                    color = if (isSelected) colors.titleText else colors.subtitleText,
+                    foregroundColor = if (isSelected) colors.titleText else colors.subtitleText,
                     font = if (isSelected) Font.systemSemibold(FontScale.Small) else Font.system(FontScale.Small),
                 )
             }
@@ -476,7 +477,7 @@ private fun ParticipantsHeaderRow(
         Column(modifier = Modifier.weight(1f)) {
             Components.Text(
                 "$count $peopleText",
-                color = colors.titleText,
+                foregroundColor = colors.titleText,
                 font = Font.systemBold(),
             )
             Material3Text(
@@ -498,8 +499,8 @@ private fun ParticipantsHeaderRow(
                     .border(Floats.chevronBoxBorderWidth, colors.subtitleText, CircleShape),
         ) {
             Components.Symbol(
-                if (isExpanded) "chevron.down" else "chevron.right",
-                color = colors.subtitleText,
+                if (isExpanded) "chevron.down.circle" else "chevron.right.circle",
+                foregroundColor = colors.subtitleText,
                 modifier = Modifier.size(Floats.chevronGlyphSize),
             )
         }
@@ -528,7 +529,7 @@ private fun LeaveRow(
     ) {
         Components.Text(
             text,
-            color = if (enabled) Colors.destructive else colors.subtitleText,
+            foregroundColor = if (enabled) Colors.destructive else colors.subtitleText,
         )
     }
 }

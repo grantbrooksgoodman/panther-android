@@ -21,6 +21,11 @@ import androidx.compose.runtime.Composable
  * navigation depth.
  */
 class RootSheet(
+    /**
+     * Whether swipe and scrim-tap dismissal are disabled, so the
+     * sheet can only be dismissed programmatically.
+     */
+    val interactiveDismissDisabled: Boolean = false,
     /** The composable content to present as a sheet. */
     val content: @Composable () -> Unit,
 ) {

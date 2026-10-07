@@ -16,8 +16,10 @@ import us.neotechnica.panther.bundle.Application
 import us.neotechnica.panther.bundle.shouldNotifyOfConversationAvailability
 import us.neotechnica.panther.bundle.userSessionService
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
+import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
+import us.neotechnica.panther.designsystem.modules.foundation.extensions.cancelAction
 import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
@@ -74,20 +76,27 @@ object ConversationCellViewService {
      *   `false`.
      */
     suspend fun presentDeletionActionSheet(title: String): Boolean {
-        val confirmed =
-            ActionSheetAlert(
-                title = title,
-                message = "Are you sure you'd like to delete this conversation?\nThis operation cannot be undone.",
-                actions = listOf(Action("Delete", style = ActionStyle.DESTRUCTIVE) {}),
-                cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
-            ).present(
-                translating =
-                    listOf(
-                        ActionSheetAlert.TranslationOptionKey.Actions(),
-                        ActionSheetAlert.TranslationOptionKey.Message,
-                    ),
-            )
-        return !confirmed
+        var cancelled = true
+        val deleteAction =
+            Action(
+                "Delete",
+                style = ActionStyle.DESTRUCTIVE,
+            ) { cancelled = false }
+
+        ActionSheet(
+            title = title,
+            message = "Are you sure you'd like to delete this conversation?\nThis operation cannot be undone.",
+            actions = listOf(deleteAction),
+            cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
+        ).present(
+            translating =
+                listOf(
+                    ActionSheet.TranslationOptionKey.Actions(),
+                    ActionSheet.TranslationOptionKey.Message,
+                ),
+        )
+
+        return cancelled
     }
 
     /**
@@ -110,18 +119,15 @@ object ConversationCellViewService {
                 "${LocalizedStringKey.Language.localized()}: $languageName\n" +
                     "${LocalizedStringKey.Region.localized()}: $regionName"
 
-            val actions =
-                if (Build.isDeveloperModeEnabled) {
-                    listOf(Action("Set to Current User", style = ActionStyle.PREFERRED) { setToCurrentUser(user) })
-                } else {
-                    emptyList()
-                }
+            val actions = mutableListOf(Action.cancelAction(title = LocalizedStringKey.Dismiss.localized()))
+            if (Build.isDeveloperModeEnabled) {
+                actions.add(Action("Set to Current User", style = ActionStyle.PREFERRED) { setToCurrentUser(user) })
+            }
 
-            ActionSheetAlert(
+            Alert(
                 title = user.displayName,
                 message = alertMessage,
                 actions = actions,
-                cancelButtonTitle = LocalizedStringKey.Dismiss.localized(),
             ).present(translating = emptyList())
         }
     }

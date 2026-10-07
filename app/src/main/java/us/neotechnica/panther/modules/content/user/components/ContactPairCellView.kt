@@ -75,17 +75,17 @@ fun ContactPairCellView(
             horizontalArrangement = Arrangement.spacedBy(ContactPairCellViewFloats.hStackSpacing),
         ) {
             if (contactPair.contact.firstName.isNotBlank()) {
-                Components.Text(contactPair.contact.firstName, color = foregroundColor)
+                Components.Text(contactPair.contact.firstName, foregroundColor = foregroundColor)
             }
 
-            Components.Text(contactPair.contact.lastName, color = foregroundColor, font = Font.systemSemibold())
+            Components.Text(contactPair.contact.lastName, foregroundColor = foregroundColor, font = Font.systemSemibold())
 
             if (contactPair.containsBlockedUser) {
-                Components.Text("(${LocalizedStringKey.Blocked.localized()})", color = foregroundColor)
+                Components.Text("(${LocalizedStringKey.Blocked.localized()})", foregroundColor = foregroundColor)
             }
 
             if (contactPair.containsCurrentUser) {
-                Components.Text(LocalizedStringKey.MyAccount.localized(), color = foregroundColor)
+                Components.Text(LocalizedStringKey.MyAccount.localized(), foregroundColor = foregroundColor)
             }
         }
 

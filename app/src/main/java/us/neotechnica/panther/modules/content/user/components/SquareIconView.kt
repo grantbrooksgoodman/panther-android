@@ -49,14 +49,14 @@ fun SquareIconView(
             is SquareIconViewConfiguration.OverlayConfiguration.Symbol ->
                 Components.Symbol(
                     overlay.name,
-                    color = overlay.foregroundColor,
+                    foregroundColor = overlay.foregroundColor,
                     modifier = Modifier.size(configuration.size.width * overlay.framePercentOfTotalSize),
                 )
 
             is SquareIconViewConfiguration.OverlayConfiguration.Text ->
                 Components.Text(
                     overlay.string,
-                    color = overlay.foregroundColor,
+                    foregroundColor = overlay.foregroundColor,
                     font = overlay.font,
                 )
         }

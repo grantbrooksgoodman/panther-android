@@ -8,6 +8,9 @@
 
 package us.neotechnica.panther.subsystem.modules.foundation.services
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -107,6 +110,9 @@ object Build {
     var isConfigured: Boolean = false
         private set
 
+    @Volatile
+    private var appContext: Context? = null
+
     // MARK: - Computed Properties
 
     /** The major version number extracted from [bundleVersion]. */
@@ -157,6 +163,13 @@ object Build {
         get() = deriveProjectID()
 
     /**
+     * A Boolean value that indicates whether the device currently
+     * has network connectivity.
+     */
+    val isOnline: Boolean
+        get() = getNetworkStatus()
+
+    /**
      * A Boolean value that indicates whether developer mode is
      * enabled.
      *
@@ -175,6 +188,7 @@ object Build {
     /** Populates the build configuration. Called once at startup. */
     @Suppress("LongParameterList")
     fun initialize(
+        context: Context? = null,
         appStoreBuildNumber: Int,
         buildNumber: Int,
         codeName: String,
@@ -185,6 +199,7 @@ object Build {
         buildDate: Date,
         firstCompileDate: Date,
     ) {
+        this.appContext = context?.applicationContext
         this.appStoreBuildNumber = appStoreBuildNumber
         this.buildNumber = buildNumber
         this.codeName = codeName
@@ -211,6 +226,14 @@ object Build {
     }
 
     // MARK: - Auxiliary
+
+    private fun getNetworkStatus(): Boolean {
+        val manager =
+            appContext?.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
+        val capabilities = manager.getNetworkCapabilities(manager.activeNetwork) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    }
 
     private fun alphabeticalPosition(character: Char): Int? {
         val lowercased = character.lowercaseChar()

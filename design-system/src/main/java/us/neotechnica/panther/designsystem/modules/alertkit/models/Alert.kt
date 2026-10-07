@@ -9,13 +9,14 @@
 package us.neotechnica.panther.designsystem.modules.alertkit.models
 
 import kotlinx.coroutines.suspendCancellableCoroutine
+import us.neotechnica.panther.designsystem.modules.alertkit.AlertKit
 import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.applying
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.firstOutput
+import us.neotechnica.panther.designsystem.modules.alertkit.extensions.nonDefaultUnique
 import us.neotechnica.panther.designsystem.modules.alertkit.services.AlertPresenter
 import us.neotechnica.panther.designsystem.modules.alertkit.services.PresentedAlert
 import us.neotechnica.panther.translator.models.TranslationInput
-import kotlin.coroutines.resume
 
 /**
  * An alert that displays a title, message, and a set of actions.
@@ -42,7 +43,7 @@ import kotlin.coroutines.resume
 class Alert(
     private val title: String? = null,
     private val message: String?,
-    private val actions: List<Action> = listOf(Action("OK", style = ActionStyle.CANCEL) {}),
+    private val actions: List<Action> = listOf(Action(AlertKit.Constants.DEFAULT_ACTION_TITLE, style = ActionStyle.CANCEL) {}),
 ) {
     // MARK: - Types
 
@@ -63,7 +64,60 @@ class Alert(
         data object Title : TranslationOptionKey
     }
 
+    // MARK: - Properties
+
+    private var messageAttributes: AttributedStringConfig? = null
+    private var titleAttributes: AttributedStringConfig? = null
+
     // MARK: - Methods
+
+    /**
+     * Disables the action at the specified index in the currently
+     * presented alert.
+     *
+     * @param index The zero-based index of the action to disable.
+     */
+    fun disableAction(index: Int) {
+        AlertPresenter.setActionEnabled(index, false)
+    }
+
+    /**
+     * Enables the action at the specified index in the currently
+     * presented alert.
+     *
+     * @param index The zero-based index of the action to enable.
+     */
+    fun enableAction(index: Int) {
+        AlertPresenter.setActionEnabled(index, true)
+    }
+
+    /**
+     * Sets the attributed string configuration for the alert's
+     * message.
+     *
+     * Call this method before presenting the alert to customize the
+     * appearance of the message text.
+     *
+     * @param messageAttributes The attributed string configuration
+     *   to apply to the message.
+     */
+    fun setMessageAttributes(messageAttributes: AttributedStringConfig) {
+        this.messageAttributes = messageAttributes
+    }
+
+    /**
+     * Sets the attributed string configuration for the alert's
+     * title.
+     *
+     * Call this method before presenting the alert to customize the
+     * appearance of the title text.
+     *
+     * @param titleAttributes The attributed string configuration to
+     *   apply to the title.
+     */
+    fun setTitleAttributes(titleAttributes: AttributedStringConfig) {
+        this.titleAttributes = titleAttributes
+    }
 
     /**
      * Presents the alert and suspends until the user selects an action,
@@ -71,16 +125,21 @@ class Alert(
      */
     suspend fun present(): Unit =
         suspendCancellableCoroutine { continuation ->
+            val guard = ContinuationGuard(continuation, fallbackValue = Unit)
+
             AlertPresenter.present(
                 PresentedAlert.Standard(
                     title = title,
                     message = message,
                     actions = actions,
+                    messageAttributes = messageAttributes,
+                    titleAttributes = titleAttributes,
                 ) { index ->
-                    AlertPresenter.dismiss()
                     actions.getOrNull(index)?.effect?.invoke()
-                    if (continuation.isActive) continuation.resume(Unit)
+                    guard.resume(Unit)
+                    AlertPresenter.dismiss()
                 },
+                onDisplaced = { guard.fallback() },
             )
 
             continuation.invokeOnCancellation { AlertPresenter.dismiss() }
@@ -116,11 +175,16 @@ class Alert(
         if (uniqueKeys.isEmpty()) return this
 
         val translations = AlertKitConfig.getTranslations(translationInputs(uniqueKeys))
-        return Alert(
-            title = title?.let { translations.firstOutput(it) },
-            message = message?.let { translations.firstOutput(it) },
-            actions = actions.applying(translations),
-        )
+        val alert =
+            Alert(
+                title = title?.let { translations.firstOutput(it) },
+                message = message?.let { translations.firstOutput(it) },
+                actions = actions.applying(translations),
+            )
+
+        messageAttributes?.let { alert.setMessageAttributes(it) }
+        titleAttributes?.let { alert.setTitleAttributes(it) }
+        return alert
     }
 
     private fun translationInputs(keys: List<TranslationOptionKey>): List<TranslationInput> {
@@ -142,8 +206,6 @@ class Alert(
             }
         }
 
-        return inputs.distinctBy { it.value }.filter { it.value != DEFAULT_ACTION_TITLE }
+        return inputs.nonDefaultUnique
     }
 }
-
-private const val DEFAULT_ACTION_TITLE = "OK"

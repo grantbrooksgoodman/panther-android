@@ -31,7 +31,7 @@ object ChatPageHeaderViewFloats {
 
 object ChatPageHeaderViewStrings {
     const val AVATAR_FALLBACK_SYMBOL = "person.crop.circle.fill"
-    const val BACK_BUTTON_IMAGE_SYSTEM_NAME = "chevron.left"
-    const val CHAT_INFO_CHEVRON_IMAGE_SYSTEM_NAME = "chevron.right"
-    const val GROUP_AVATAR_FALLBACK_SYMBOL = "person.2"
+    const val BACK_BUTTON_IMAGE_SYSTEM_NAME = "chevron.backward"
+    const val CHAT_INFO_CHEVRON_IMAGE_SYSTEM_NAME = "chevron.compact.right"
+    const val GROUP_AVATAR_FALLBACK_SYMBOL = "person.2.circle.fill"
 }

@@ -347,7 +347,7 @@ object UserSessionService {
         observationScope.launch(Dispatchers.Main) {
             Toast.show(
                 Toast(
-                    type = Toast.Type.Banner(style = ToastStyle.INFO),
+                    type = Toast.ToastType.Banner(style = ToastStyle.INFO),
                     title = "You have been signed out.",
                     message = "A sign-in was detected from another device.",
                 ),

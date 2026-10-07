@@ -25,10 +25,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.DpSize
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
-import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
-import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewFloats
@@ -105,14 +104,12 @@ private fun RowContent(
                 .padding(horizontal = ChatInfoPageViewFloats.cardHorizontalPadding, vertical = ChatInfoPageViewFloats.rowVerticalPadding),
     ) {
         AvatarImageView(
-            modifier = Modifier.size(ChatInfoPageViewFloats.rowAvatarSize),
-            initials = participant.initials,
-            glyphSize = ChatInfoPageViewFloats.rowAvatarGlyphSize,
-            initialsFont = Font.systemSemibold(FontScale.Small),
+            null,
+            size = DpSize(ChatInfoPageViewFloats.rowAvatarSize, ChatInfoPageViewFloats.rowAvatarSize),
         )
         Components.Text(
             participant.displayName,
-            color = colors.titleText,
+            foregroundColor = colors.titleText,
             font = Font.systemSemibold(),
             modifier = Modifier.padding(start = ChatInfoPageViewFloats.rowTextStartPadding),
         )
@@ -125,7 +122,11 @@ private fun RowContent(
             }
         }
         Spacer(modifier = Modifier.weight(1f))
-        Components.Symbol("chevron.right", color = colors.subtitleText, modifier = Modifier.size(ChatInfoPageViewFloats.chevronGlyphSize))
+        Components.Symbol(
+            "chevron.forward",
+            foregroundColor = colors.subtitleText,
+            modifier = Modifier.size(ChatInfoPageViewFloats.chevronGlyphSize),
+        )
     }
 }
 
@@ -141,14 +142,8 @@ private fun RemoveSwipeBackground() {
     ) {
         Components.Symbol(
             "trash",
-            color = Color.White,
+            foregroundColor = Color.White,
             modifier = Modifier.size(ChatInfoPageViewFloats.chevronGlyphSize),
         )
     }
 }
-
-// MARK: - Auxiliary
-
-/** The uppercased first letters of each word of the participant's name. */
-private val ChatParticipant.initials: String
-    get() = displayName.split(" ").mapNotNull { it.firstOrNull()?.uppercase() }.joinToString("")

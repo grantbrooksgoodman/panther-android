@@ -33,13 +33,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
-import us.neotechnica.panther.designsystem.modules.componentkit.components.SearchBar
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.componentkit.models.TextFit
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.models.ContactPair
+import us.neotechnica.panther.modules.content.shared.components.SearchBar
 import us.neotechnica.panther.modules.content.user.components.ContactPairCellView
 import us.neotechnica.panther.modules.content.user.constants.ContactSelectorPageViewFloats
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
@@ -86,11 +86,10 @@ fun ContactSelectorPageView(
             )
 
             SearchBar(
-                value = state.searchQuery,
-                placeholder = state.searchBarPlaceholderText,
-                onValueChange = { viewModel.send(ContactSelectorPageReducer.Action.SearchQueryChanged(it)) },
+                query = state.searchQuery,
+                onQueryChange = { viewModel.send(ContactSelectorPageReducer.Action.SearchQueryChanged(it)) },
                 modifier = Modifier.padding(horizontal = Floats.searchHorizontalPadding, vertical = Floats.searchVerticalPadding),
-                containerColor = colors.background,
+                placeholderText = state.searchBarPlaceholderText,
                 keyboardType =
                     if (entryPoint == ContactSelectorPageReducer.EntryPoint.CHAT_INFO_PAGE_VIEW) {
                         KeyboardType.Phone
@@ -147,7 +146,7 @@ private fun Header(
             if (showInvite) {
                 Components.FittedText(
                     inviteText,
-                    color = colors.accent,
+                    foregroundColor = colors.accent,
                     fit = buttonFit,
                     modifier = Modifier.align(Alignment.CenterStart).clickable(onClick = onInvite),
                 )
@@ -156,7 +155,7 @@ private fun Header(
 
         Components.FittedText(
             title,
-            color = colors.titleText,
+            foregroundColor = colors.titleText,
             fit =
                 TextFit(
                     maxLines = if (title.length >= Floats.titleLongCharacterThreshold) Floats.titleLongLineLimit else 1,
@@ -171,7 +170,7 @@ private fun Header(
         Box(modifier = Modifier.weight(1f)) {
             Components.FittedText(
                 LocalizedStringKey.Cancel.localized(),
-                color = colors.accent,
+                foregroundColor = colors.accent,
                 fit = buttonFit,
                 modifier = Modifier.align(Alignment.CenterEnd).clickable(onClick = onCancel),
             )
@@ -194,7 +193,7 @@ private fun ContactList(
             item(key = "section-$letter") {
                 Components.Text(
                     letter,
-                    color = colors.subtitleText,
+                    foregroundColor = colors.subtitleText,
                     font = Font.systemSemibold(FontScale.Small),
                     modifier =
                         Modifier.padding(
@@ -226,7 +225,7 @@ private fun NoResultsView(
             .padding(horizontal = Floats.emptyStateHorizontalPadding, vertical = Floats.emptyStateVerticalPadding)
     Components.Text(
         text,
-        color = if (isFindUser) colors.accent else colors.subtitleText,
+        foregroundColor = if (isFindUser) colors.accent else colors.subtitleText,
         textAlign = TextAlign.Center,
         modifier = modifier,
     )

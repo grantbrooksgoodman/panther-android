@@ -10,6 +10,7 @@ package us.neotechnica.panther.modules.networking.conversation.remotelyupdatable
 
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -48,6 +49,14 @@ class ConversationRemotelyUpdatableTest {
         Networking.config.registerDatabaseDelegate(database)
 
         conversation = runBlocking { Conversation.decode(FixtureJson.loadObject("conversation.json")) }
+    }
+
+    @After
+    fun tearDown() {
+        // Clear the current-conversation pointer so later store
+        // mutations in other test classes do not trigger the
+        // conversation-removed presentation path.
+        ConversationSessionService.setCurrentConversation(null)
     }
 
     // MARK: - Update Values

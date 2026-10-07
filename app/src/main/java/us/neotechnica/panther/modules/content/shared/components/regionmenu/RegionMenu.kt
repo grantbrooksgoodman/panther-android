@@ -93,12 +93,12 @@ fun RegionMenu(
     ) {
         Components.Text(
             RegionDetailService.emojiFlag(state.selectedRegionCode),
-            color = colors.titleText,
+            foregroundColor = colors.titleText,
             font = Font.system(FontScale.Custom(RegionMenuFloats.FLAG_FONT_SIZE)),
         )
         Components.Text(
             "+${RegionDetailService.callingCode(state.selectedRegionCode) ?: RegionMenuStrings.DEFAULT_CALLING_CODE}",
-            color = colors.titleText,
+            foregroundColor = colors.titleText,
             font = Font.system,
             modifier = Modifier.padding(top = RegionMenuFloats.callingCodeTopPadding),
         )
@@ -133,7 +133,7 @@ private fun RegionPickerView(
     Column(modifier = Modifier.padding(horizontal = RegionMenuFloats.searchHorizontalPadding)) {
         Components.Text(
             state.headerLabelText,
-            color = colors.titleText,
+            foregroundColor = colors.titleText,
             font = Font.systemBold(),
             modifier = Modifier.fillMaxWidth().padding(vertical = RegionMenuFloats.listItemVerticalPadding),
         )
@@ -150,7 +150,7 @@ private fun RegionPickerView(
         if (regionTitles == null) {
             Components.Text(
                 state.noResultsLabelText,
-                color = colors.subtitleText,
+                foregroundColor = colors.subtitleText,
                 modifier = Modifier.fillMaxWidth().padding(vertical = RegionMenuFloats.listItemVerticalPadding),
             )
         } else {
@@ -165,11 +165,11 @@ private fun RegionPickerView(
                                 .clickable { onRegionTitleSelected(regionTitle) }
                                 .padding(vertical = RegionMenuFloats.listItemVerticalPadding),
                     ) {
-                        Components.Text(regionTitle, color = colors.titleText)
+                        Components.Text(regionTitle, foregroundColor = colors.titleText)
                         if (regionTitle == state.selectedRegionTitle) {
                             Components.Symbol(
                                 systemName = "checkmark.circle.fill",
-                                color = Color.Green,
+                                foregroundColor = Color.Green,
                                 modifier = Modifier.padding(start = RegionMenuFloats.callingCodeTopPadding),
                             )
                         }

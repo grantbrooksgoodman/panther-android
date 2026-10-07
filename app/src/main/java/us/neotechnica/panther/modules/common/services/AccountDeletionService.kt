@@ -71,14 +71,14 @@ object AccountDeletionService {
 
         val exceptions = mutableListOf<Exception>()
         completedUnits.wrappedValue = 0.0
-        Overlay.show(alpha = OVERLAY_ALPHA, showsActivityIndicator = false)
+        Overlay.addOverlay(alpha = OVERLAY_ALPHA)
         val progressAlert =
             ProgressAlert(
                 title = LocalizedStringKey.DeletingData.localized(),
                 message = LocalizedStringKey.PleaseWait.localized(),
             )
         this.progressAlert = progressAlert
-        progressAlert.present()
+        progressAlert.present(translating = emptyList())
 
         try {
             // Add to deleted users + resolve conversations, in parallel.
@@ -141,7 +141,7 @@ object AccountDeletionService {
         } finally {
             this.progressAlert = null
             progressAlert.dismiss()
-            Overlay.hide()
+            Overlay.removeOverlay()
         }
 
         val first = exceptions.firstOrNull() ?: return

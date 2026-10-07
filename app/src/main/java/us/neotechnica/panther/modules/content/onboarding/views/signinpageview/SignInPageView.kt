@@ -2,8 +2,8 @@
 //  SignInPageView.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.onboarding.views.signinpageview
@@ -33,7 +33,8 @@ import us.neotechnica.panther.R
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
-import us.neotechnica.panther.designsystem.modules.foundation.modifiers.onSwipeDown
+import us.neotechnica.panther.designsystem.modules.foundation.modifiers.Swipe
+import us.neotechnica.panther.designsystem.modules.foundation.modifiers.onSwipe
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.onboarding.constants.SignInPageViewFloats
@@ -67,12 +68,12 @@ fun SignInPageView(modifier: Modifier = Modifier) {
     StatefulView(
         state = state.viewState,
         modifier = modifier,
-        onRetry = { viewModel.send(SignInPageReducer.Action.ViewAppeared) },
+        exceptionRetryHandler = { viewModel.send(SignInPageReducer.Action.ViewAppeared) },
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxSize().onSwipeDown { viewModel.send(SignInPageReducer.Action.DidSwipeDown) },
+            modifier = Modifier.fillMaxSize().onSwipe(Swipe.DOWN) { viewModel.send(SignInPageReducer.Action.DidSwipeDown) },
         ) {
             Image(
                 painter = painterResource(R.drawable.hello_wordmark),
@@ -88,7 +89,7 @@ fun SignInPageView(modifier: Modifier = Modifier) {
 
             Components.Text(
                 state.instructionLabelText,
-                color = colors.titleText,
+                foregroundColor = colors.titleText,
                 modifier =
                     Modifier.padding(
                         horizontal = Floats.instructionLabelHorizontalPadding,
@@ -142,15 +143,14 @@ fun SignInPageView(modifier: Modifier = Modifier) {
 
             Components.CapsuleButton(
                 text = state.continueButtonText,
-                onClick = { viewModel.send(SignInPageReducer.Action.ContinueButtonTapped) },
+                action = { viewModel.send(SignInPageReducer.Action.ContinueButtonTapped) },
                 isEnabled = state.isContinueButtonEnabled,
-                primary = true,
                 modifier = Modifier.padding(vertical = Floats.continueButtonVerticalPadding),
             )
 
             Components.Button(
                 text = state.strings.value(SignInPageViewStrings.backButtonText),
-                color = if (state.isBackButtonEnabled) colors.titleText else colors.disabled,
+                foregroundColor = if (state.isBackButtonEnabled) colors.titleText else colors.disabled,
                 onClick = { if (state.isBackButtonEnabled) viewModel.send(SignInPageReducer.Action.BackButtonTapped) },
                 font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),
                 modifier = Modifier.padding(top = Floats.backButtonTopPadding),

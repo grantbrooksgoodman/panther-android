@@ -33,15 +33,15 @@ import kotlinx.coroutines.withContext
 import us.neotechnica.panther.bundle.messageOutboxDidChange
 import us.neotechnica.panther.bundle.sessionStoreDidChange
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.componentkit.components.ContextMenuHost
 import us.neotechnica.panther.designsystem.modules.componentkit.components.LocalContextMenuController
 import us.neotechnica.panther.designsystem.modules.componentkit.components.MessageInputBar
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
+import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardService
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.modules.common.services.HapticsService
-import us.neotechnica.panther.modules.common.services.KeyboardService
 import us.neotechnica.panther.modules.content.user.components.ContentPickers
 import us.neotechnica.panther.modules.content.user.components.DeliveryProgressView
 import us.neotechnica.panther.modules.content.user.components.MediaPreviewOverlay
@@ -262,7 +262,7 @@ private suspend fun presentFailedMessageActionSheet(
     messageID: String,
     scope: CoroutineScope,
 ) {
-    ActionSheetAlert(
+    ActionSheet(
         actions =
             listOf(
                 Action(
@@ -280,7 +280,7 @@ private suspend fun presentFailedMessageActionSheet(
 // The attach-media action sheet.
 private suspend fun presentAttachMediaSheet(pickers: ContentPickers) {
     HapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
-    ActionSheetAlert(
+    ActionSheet(
         title = "Attach media",
         actions =
             listOf(
@@ -292,8 +292,8 @@ private suspend fun presentAttachMediaSheet(pickers: ContentPickers) {
     ).present(
         translating =
             listOf(
-                ActionSheetAlert.TranslationOptionKey.Title,
-                ActionSheetAlert.TranslationOptionKey.Actions(),
+                ActionSheet.TranslationOptionKey.Title,
+                ActionSheet.TranslationOptionKey.Actions(),
             ),
     )
 }

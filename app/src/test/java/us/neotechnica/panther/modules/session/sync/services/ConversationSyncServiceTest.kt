@@ -8,7 +8,11 @@
 
 package us.neotechnica.panther.modules.session.sync.services
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -26,6 +30,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import java.io.File
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ConversationSyncServiceTest {
     // MARK: - Setup
 
@@ -34,6 +39,12 @@ class ConversationSyncServiceTest {
 
     @Before
     fun setUp() {
+        // Store changes propagate to UI presenters, whose scopes
+        // target the main dispatcher; tests substitute one. The
+        // dispatcher stays installed because those observers outlive
+        // each test.
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+
         val directory = File(System.getProperty("java.io.tmpdir"), "conversation-sync-test-${System.nanoTime()}")
         directory.mkdirs()
         FileStore.initializeForTesting(directory)

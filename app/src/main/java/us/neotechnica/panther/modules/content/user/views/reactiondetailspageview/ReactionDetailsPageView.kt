@@ -113,7 +113,7 @@ fun ReactionDetailsPageView(
 
             Components.Text(
                 state.navigationTitle,
-                color = colors.titleText,
+                foregroundColor = colors.titleText,
                 font = Font.systemBold(FontScale.Large),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth().padding(bottom = Floats.titleBottomPadding),
@@ -158,7 +158,7 @@ private fun ReactionGroupList(groups: List<ReactionGroup>) {
                         ),
                     modifier = Modifier.padding(end = Floats.rowIconSpacing),
                 )
-                Components.Text(group.names, color = colors.titleText)
+                Components.Text(group.names, foregroundColor = colors.titleText)
             }
         }
     }

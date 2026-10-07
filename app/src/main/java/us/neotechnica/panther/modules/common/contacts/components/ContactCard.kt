@@ -29,15 +29,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
-import us.neotechnica.panther.designsystem.modules.componentkit.components.AvatarImageView
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.models.PhoneNumber
+import us.neotechnica.panther.modules.content.user.components.AvatarImageView
 
 /**
  * A contact identified for display.
@@ -164,15 +165,13 @@ private fun ContactDetailSheet(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             AvatarImageView(
-                modifier = Modifier.size(AVATAR_SIZE),
-                initials = info.initials,
-                glyphSize = AVATAR_GLYPH_SIZE,
-                initialsFont = Font.systemSemibold(FontScale.Large),
+                null,
+                size = DpSize(AVATAR_SIZE, AVATAR_SIZE),
             )
             val title = info.displayName ?: number
-            title?.let { Components.Text(it, color = colors.titleText, font = Font.systemSemibold(FontScale.Large)) }
+            title?.let { Components.Text(it, foregroundColor = colors.titleText, font = Font.systemSemibold(FontScale.Large)) }
             if (number != null && number != title) {
-                Components.Text(number, color = colors.subtitleText, font = Font.system)
+                Components.Text(number, foregroundColor = colors.subtitleText, font = Font.system)
             }
             if (showsAddToContacts) {
                 Button(
@@ -182,7 +181,7 @@ private fun ContactDetailSheet(
                         onDismiss()
                     },
                 ) {
-                    Components.Text(ADD_TO_CONTACTS_TITLE, color = Color.White, font = Font.systemSemibold())
+                    Components.Text(ADD_TO_CONTACTS_TITLE, foregroundColor = Color.White, font = Font.systemSemibold())
                 }
             }
             onRemoveFromConversation?.let { remove ->
@@ -194,7 +193,7 @@ private fun ContactDetailSheet(
                         remove()
                     },
                 ) {
-                    Components.Text(REMOVE_FROM_CONVERSATION_TITLE, color = Color.White, font = Font.systemSemibold())
+                    Components.Text(REMOVE_FROM_CONVERSATION_TITLE, foregroundColor = Color.White, font = Font.systemSemibold())
                 }
             }
         }
@@ -219,6 +218,5 @@ private fun addToContacts(
 }
 
 private val AVATAR_SIZE = 72.dp
-private val AVATAR_GLYPH_SIZE = 36.dp
 private const val ADD_TO_CONTACTS_TITLE = "Add to Contacts"
 private const val REMOVE_FROM_CONVERSATION_TITLE = "Remove from Conversation"

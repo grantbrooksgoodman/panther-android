@@ -14,7 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationAlert
@@ -207,7 +207,7 @@ object DevModeService {
                     Action("Disable Developer Mode", style = ActionStyle.DESTRUCTIVE) { promptToToggle() },
                 )
 
-            ActionSheetAlert(
+            ActionSheet(
                 title = DEVELOPER_MODE_OPTIONS_TITLE,
                 actions = actions,
             ).present(translating = emptyList())
@@ -230,7 +230,7 @@ object DevModeService {
                 actions.add(Action("Back", style = ActionStyle.CANCEL) { presentActionSheet() })
             }
 
-            ActionSheetAlert(
+            ActionSheet(
                 title = DEVELOPER_MODE_OPTIONS_TITLE,
                 actions = actions,
             ).present(translating = emptyList())

@@ -14,8 +14,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.Application
 import us.neotechnica.panther.bundle.Application.ResetCompletionProcedure
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
+import us.neotechnica.panther.designsystem.modules.foundation.extensions.cancelAction
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpdatableKey
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.updateValues
@@ -26,12 +28,12 @@ import us.neotechnica.panther.modules.session.entity.extensions.users
 import us.neotechnica.panther.modules.session.entity.extensions.visibleForCurrentUser
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList
+import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
-import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.localization.services.LocalizedStringResolver
 import us.neotechnica.panther.translator.models.Translation
 
@@ -70,24 +72,34 @@ object ChangeLanguagePageViewService {
             val languageName =
                 LocalizedStringResolver.languageDisplayNames()[selectedLanguageCode] ?: selectedLanguageCode.uppercase()
 
-            val confirmed =
-                ActionSheetAlert(
-                    title = "Change Language to ⌘$languageName⌘",
-                    message = "You must restart the app for this to take effect.",
-                    confirmButtonTitle = "Apply & Exit",
-                    cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
-                    isDestructive = true,
-                ).present(
-                    translating =
-                        listOf(
-                            ActionSheetAlert.TranslationOptionKey.Actions(),
-                            ActionSheetAlert.TranslationOptionKey.Message,
-                            ActionSheetAlert.TranslationOptionKey.Title,
-                        ),
-                )
+            val applyAndExitAction =
+                Action(
+                    "Apply & Exit",
+                    style = ActionStyle.DESTRUCTIVE_PREFERRED,
+                ) {
+                    scope.launch {
+                        runCatching {
+                            changeLanguage(selectedLanguageCode)
+                        }.onFailure { Logger.log(it.toException(), with = AlertType.toast) }
+                    }
+                }
 
-            if (!confirmed) return@launch
-            runCatching { changeLanguage(selectedLanguageCode) }.onFailure { Logger.log(it.toException()) }
+            ActionSheet(
+                title = "Change Language to ⌘$languageName⌘",
+                message = "You must restart the app for this to take effect.",
+                actions =
+                    listOf(
+                        applyAndExitAction,
+                        Action.cancelAction,
+                    ),
+            ).present(
+                translating =
+                    listOf(
+                        ActionSheet.TranslationOptionKey.Actions(listOf(applyAndExitAction)),
+                        ActionSheet.TranslationOptionKey.Message,
+                        ActionSheet.TranslationOptionKey.Title,
+                    ),
+            )
         }
     }
 

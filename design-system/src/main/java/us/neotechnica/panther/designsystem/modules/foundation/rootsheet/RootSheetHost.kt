@@ -10,6 +10,7 @@ package us.neotechnica.panther.designsystem.modules.foundation.rootsheet
 
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -21,7 +22,9 @@ import androidx.compose.runtime.getValue
  *
  * Mount this once at the root of the view hierarchy. Dismissing the
  * sheet, whether by swipe or scrim tap, routes through
- * [RootSheets.dismiss] so any `onDismiss` closure runs.
+ * [RootSheets.dismiss] so any `onDismiss` closure runs. A sheet with
+ * `interactiveDismissDisabled` ignores swipes and scrim taps and can
+ * only be dismissed programmatically.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,8 +33,14 @@ fun RootSheetHost() {
     val currentSheet = sheet ?: return
 
     ModalBottomSheet(
-        onDismissRequest = { RootSheets.dismiss() },
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        onDismissRequest = { if (!currentSheet.interactiveDismissDisabled) RootSheets.dismiss() },
+        sheetState =
+            rememberModalBottomSheetState(
+                skipPartiallyExpanded = true,
+                confirmValueChange = { value ->
+                    !(currentSheet.interactiveDismissDisabled && value == SheetValue.Hidden)
+                },
+            ),
     ) {
         currentSheet.content()
     }

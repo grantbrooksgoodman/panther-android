@@ -46,13 +46,13 @@ import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
 import us.neotechnica.panther.designsystem.modules.componentkit.components.ContextMenuHost
 import us.neotechnica.panther.designsystem.modules.componentkit.components.MessageContextMenu
-import us.neotechnica.panther.designsystem.modules.componentkit.components.SearchBar
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAction
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAlignment
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.content.shared.components.SearchBar
 import us.neotechnica.panther.modules.content.user.components.conversationcellview.ConversationCellReducer
 import us.neotechnica.panther.modules.content.user.components.conversationcellview.ConversationCellView
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewFloats
@@ -103,19 +103,19 @@ fun ConversationsPageView(
 
                 Components.Text(
                     state.strings.value(ConversationsPageViewStrings.navigationTitle),
-                    color = colors.titleText,
+                    foregroundColor = colors.titleText,
                     font = Font.systemBold(FontScale.Large),
                     modifier = Modifier.padding(horizontal = Floats.titleHorizontalPadding, vertical = Floats.titleVerticalPadding),
                 )
 
                 SearchBar(
-                    value = state.searchQuery,
-                    placeholder = state.strings.value(ConversationsPageViewStrings.searchBarPlaceholder),
-                    onValueChange = {
+                    query = state.searchQuery,
+                    onQueryChange = {
                         viewModel.send(ConversationsPageReducer.Action.SearchQueryChanged(it))
                         viewModel.send(ConversationsPageReducer.Action.IsSearchingChanged(it.isNotBlank()))
                     },
                     modifier = Modifier.padding(horizontal = Floats.searchHorizontalPadding),
+                    placeholderText = state.strings.value(ConversationsPageViewStrings.searchBarPlaceholder),
                 )
 
                 Spacer(modifier = Modifier.height(Floats.searchBottomSpacing))
@@ -153,7 +153,7 @@ fun ConversationsPageView(
                         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                             Components.Text(
                                 state.strings.value(ConversationsPageViewStrings.noConversationsLabelText),
-                                color = colors.subtitleText,
+                                foregroundColor = colors.subtitleText,
                             )
                         }
                     } else {

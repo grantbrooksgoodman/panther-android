@@ -2,19 +2,22 @@
 //  ToastHost.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 06/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.designsystem.modules.foundation.toast
 
+import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,17 +30,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -51,44 +49,70 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
+import us.neotechnica.panther.designsystem.modules.componentkit.models.SFSymbol
+import us.neotechnica.panther.designsystem.modules.foundation.constants.ToastViewColors
+import us.neotechnica.panther.designsystem.modules.foundation.constants.ToastViewFloats
+import us.neotechnica.panther.designsystem.modules.foundation.constants.ToastViewStrings
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
+
+// MARK: - Constants Accessors
+
+private typealias Colors = ToastViewColors
+private typealias Floats = ToastViewFloats
+private typealias Strings = ToastViewStrings
 
 /**
  * Renders the toast currently requested through [ToastPresenter].
  *
  * Place a single [ToastHost] near the root of the composition,
  * above the app's content, so that toasts presented from anywhere
- * appear over the current screen. Toasts appear from the top edge
- * and, unless persistent, dismiss themselves after their duration.
+ * appear over the current screen. Toasts appear from their
+ * appearance edge and, unless persistent, dismiss themselves after
+ * their duration. A top-edge banner can also be dismissed with an
+ * upward swipe.
  */
 @Composable
 fun ToastHost() {
     val presented by ToastPresenter.current.collectAsState()
+    val view = LocalView.current
 
     val ephemeralDuration =
-        (presented?.toast?.perpetuation as? Toast.Perpetuation.Ephemeral)?.duration
+        (presented?.toast?.perpetuation as? Toast.PerpetuationStrategy.Ephemeral)?.duration
     LaunchedEffect(presented) {
+        if (presented != null) view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
         val duration = ephemeralDuration ?: return@LaunchedEffect
         delay(duration)
         ToastPresenter.hide()
     }
 
+    val appearanceEdge =
+        (presented?.toast?.type as? Toast.ToastType.Banner)?.appearanceEdge
+            ?: Toast.AppearanceEdge.TOP
     Box(
-        contentAlignment = Alignment.TopCenter,
+        contentAlignment =
+            if (appearanceEdge == Toast.AppearanceEdge.BOTTOM) {
+                Alignment.BottomCenter
+            } else {
+                Alignment.TopCenter
+            },
         modifier =
             Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.statusBars),
     ) {
+        val fromBottom = appearanceEdge == Toast.AppearanceEdge.BOTTOM
         AnimatedVisibility(
-            enter = slideInVertically { -it } + fadeIn(),
-            exit = slideOutVertically { -it } + fadeOut(),
+            enter = slideInVertically { if (fromBottom) it else -it } + fadeIn(),
+            exit = slideOutVertically { if (fromBottom) it else -it } + fadeOut(),
             visible = presented != null,
         ) {
             presented?.let { current ->
@@ -96,16 +120,17 @@ fun ToastHost() {
                 val onTap =
                     current.onTap?.let { tap ->
                         {
+                            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             tap()
                             ToastPresenter.hide()
                         }
                     }
 
                 when (val type = current.toast.type) {
-                    is Toast.Type.Banner ->
+                    is Toast.ToastType.Banner ->
                         BannerToast(current.toast, type, onTap, onDismiss)
 
-                    is Toast.Type.Capsule ->
+                    is Toast.ToastType.Capsule ->
                         CapsuleToast(current.toast, type, onTap, onDismiss)
                 }
             }
@@ -118,44 +143,59 @@ fun ToastHost() {
 @Composable
 private fun BannerToast(
     toast: Toast,
-    type: Toast.Type.Banner,
+    type: Toast.ToastType.Banner,
     onTap: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
     val colors = LocalPantherColors.current
-    val accentColor = type.style.accentColor
+    val palette = type.colorPalette
+    val accentColor = palette?.accent ?: type.style.accentColor
+    val textColor = palette?.text ?: colors.titleText
 
     Surface(
-        color = colors.navigationBarBackground,
+        color = palette?.background ?: colors.navigationBarBackground,
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = BANNER_HORIZONTAL_PADDING.dp),
-        shadowElevation = SHADOW_ELEVATION.dp,
-        shape = RoundedCornerShape(BANNER_CORNER_RADIUS.dp),
+                .padding(
+                    horizontal = Floats.BANNER_HORIZONTAL_PADDING.dp,
+                    vertical = Floats.TOP_APPEARANCE_EDGE_Y_OFFSET.dp,
+                ).then(
+                    if (type.appearanceEdge == Toast.AppearanceEdge.TOP) {
+                        Modifier.pointerInput(toast) {
+                            detectVerticalDragGestures { _, dragAmount ->
+                                if (dragAmount < -SWIPE_DISMISS_THRESHOLD) onDismiss()
+                            }
+                        }
+                    } else {
+                        Modifier
+                    },
+                ),
+        shadowElevation = Floats.BANNER_SHADOW_RADIUS.dp,
+        shape = RoundedCornerShape(Floats.BANNER_CORNER_RADIUS.dp),
     ) {
         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
             accentColor?.let { color ->
                 Box(
                     modifier =
                         Modifier
-                            .width(ACCENT_STRIP_WIDTH.dp)
+                            .width(Floats.BANNER_OVERLAY_FRAME_WIDTH.dp)
                             .fillMaxHeight()
                             .background(color),
                 )
             }
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(CONTENT_SPACING.dp),
+                horizontalArrangement = Arrangement.spacedBy(Floats.BANNER_SPACER_MIN_LENGTH.dp),
                 modifier =
                     Modifier
                         .weight(1f)
                         .then(if (onTap != null) Modifier.clickable(onClick = onTap) else Modifier)
-                        .padding(CONTENT_PADDING.dp),
+                        .padding(Floats.BANNER_HORIZONTAL_PADDING.dp),
                 verticalAlignment = if (toast.title == null) Alignment.CenterVertically else Alignment.Top,
             ) {
                 accentColor?.let { color ->
-                    type.style.icon?.let { icon ->
+                    type.style.bannerIcon?.let { icon ->
                         Icon(
                             contentDescription = null,
                             imageVector = icon,
@@ -167,14 +207,16 @@ private fun BannerToast(
                 Column(verticalArrangement = Arrangement.spacedBy(TITLE_MESSAGE_SPACING.dp)) {
                     toast.title?.let { title ->
                         Text(
-                            color = colors.titleText,
+                            color = textColor.copy(alpha = Floats.BANNER_TITLE_LABEL_FOREGROUND_COLOR_OPACITY),
+                            fontSize = Floats.BANNER_TITLE_LABEL_FONT_SIZE.sp,
                             fontWeight = FontWeight.SemiBold,
                             text = title.sanitized,
                         )
                     }
 
                     Text(
-                        color = colors.titleText.copy(alpha = MESSAGE_ALPHA),
+                        color = textColor.copy(alpha = Floats.BANNER_MESSAGE_LABEL_FOREGROUND_COLOR_OPACITY),
+                        fontSize = Floats.BANNER_MESSAGE_LABEL_FONT_SIZE.sp,
                         fontWeight = if (toast.title == null) FontWeight.SemiBold else FontWeight.Normal,
                         text = toast.message.sanitized,
                     )
@@ -182,11 +224,20 @@ private fun BannerToast(
             }
 
             if (type.showsDismissButton) {
-                IconButton(onClick = onDismiss) {
+                IconButton(
+                    modifier =
+                        Modifier.sizeIn(
+                            minWidth = Floats.BANNER_DISMISS_BUTTON_MIN_SIZE.dp,
+                            minHeight = Floats.BANNER_DISMISS_BUTTON_MIN_SIZE.dp,
+                        ),
+                    onClick = onDismiss,
+                ) {
                     Icon(
                         contentDescription = "Dismiss",
-                        imageVector = Icons.Filled.Close,
-                        tint = colors.titleText.copy(alpha = DISMISS_BUTTON_ALPHA),
+                        imageVector = SFSymbol.imageVector(Strings.BANNER_DISMISS_BUTTON_IMAGE_SYSTEM_NAME),
+                        tint =
+                            (palette?.dismissButton ?: colors.titleText)
+                                .copy(alpha = Floats.BANNER_DISMISS_BUTTON_FOREGROUND_COLOR_OPACITY),
                     )
                 }
             }
@@ -199,7 +250,7 @@ private fun BannerToast(
 @Composable
 private fun CapsuleToast(
     toast: Toast,
-    type: Toast.Type.Capsule,
+    type: Toast.ToastType.Capsule,
     onTap: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
@@ -211,36 +262,61 @@ private fun CapsuleToast(
             Modifier
                 .padding(top = CAPSULE_TOP_PADDING.dp)
                 .clip(CircleShape)
-                .clickable(onClick = onTap ?: onDismiss),
-        shadowElevation = SHADOW_ELEVATION.dp,
+                .border(
+                    width = Floats.CAPSULE_OVERLAY_STROKE_LINE_WIDTH.dp,
+                    color = Colors.CAPSULE_OVERLAY_STROKE.copy(alpha = Floats.CAPSULE_OVERLAY_STROKE_COLOR_OPACITY),
+                    shape = CircleShape,
+                ).clickable(onClick = onTap ?: onDismiss),
+        shadowElevation = Floats.CAPSULE_SHADOW_RADIUS.dp,
         shape = CircleShape,
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(CONTENT_SPACING.dp),
+            horizontalArrangement = Arrangement.spacedBy(Floats.CAPSULE_MESSAGE_LABEL_HORIZONTAL_PADDING.dp),
             modifier =
                 Modifier.padding(
-                    horizontal = CAPSULE_HORIZONTAL_PADDING.dp,
-                    vertical = CAPSULE_VERTICAL_PADDING.dp,
+                    horizontal = Floats.CAPSULE_PRIMARY_HORIZONTAL_PADDING.dp,
+                    vertical = Floats.CAPSULE_VERTICAL_PADDING.dp,
                 ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             type.style.accentColor?.let { color ->
-                type.style.icon?.let { icon ->
+                type.style.capsuleIcon?.let { icon ->
                     Icon(
                         contentDescription = null,
                         imageVector = icon,
-                        modifier = Modifier.size(CAPSULE_ICON_SIZE.dp),
+                        modifier =
+                            Modifier.size(
+                                width = Floats.CAPSULE_IMAGE_FRAME_MAX_WIDTH.dp,
+                                height = Floats.CAPSULE_IMAGE_FRAME_MAX_HEIGHT.dp,
+                            ),
                         tint = color,
                     )
                 }
             }
 
-            Text(
-                color = colors.titleText,
-                fontWeight = FontWeight.SemiBold,
-                text = (toast.title ?: toast.message).sanitized,
-                textAlign = TextAlign.Center,
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                toast.title?.let { title ->
+                    Text(
+                        color = colors.titleText,
+                        fontSize = Floats.CAPSULE_TITLE_LABEL_FONT_SIZE.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        text = title.sanitized,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                Text(
+                    color =
+                        if (toast.title == null) {
+                            colors.titleText
+                        } else {
+                            Colors.CAPSULE_MESSAGE_LABEL_FOREGROUND
+                        },
+                    fontSize = Floats.CAPSULE_MESSAGE_LABEL_FONT_SIZE.sp,
+                    fontWeight = if (toast.title == null) FontWeight.SemiBold else FontWeight.Normal,
+                    text = toast.message.sanitized,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }
@@ -250,33 +326,33 @@ private fun CapsuleToast(
 private val ToastStyle.accentColor: Color?
     get() =
         when (this) {
-            ToastStyle.ERROR -> Color(0xFFFF3B30)
-            ToastStyle.INFO -> Color(0xFF007AFF)
-            ToastStyle.SUCCESS -> Color(0xFF34C759)
-            ToastStyle.WARNING -> Color(0xFFFF9500)
+            ToastStyle.ERROR -> Colors.DEFAULT_ERROR
+            ToastStyle.INFO -> Colors.DEFAULT_INFO
+            ToastStyle.SUCCESS -> Colors.DEFAULT_SUCCESS
+            ToastStyle.WARNING -> Colors.DEFAULT_WARNING
             ToastStyle.NONE -> null
         }
 
-private val ToastStyle.icon: ImageVector?
+private val ToastStyle.bannerIcon: ImageVector?
     get() =
         when (this) {
-            ToastStyle.ERROR -> Icons.Filled.Error
-            ToastStyle.INFO -> Icons.Filled.Info
-            ToastStyle.SUCCESS -> Icons.Filled.CheckCircle
-            ToastStyle.WARNING -> Icons.Filled.Warning
+            ToastStyle.ERROR -> SFSymbol.imageVector(Strings.BANNER_ERROR_ICON_IMAGE_SYSTEM_NAME)
+            ToastStyle.INFO -> SFSymbol.imageVector(Strings.BANNER_INFO_ICON_IMAGE_SYSTEM_NAME)
+            ToastStyle.SUCCESS -> SFSymbol.imageVector(Strings.BANNER_SUCCESS_ICON_IMAGE_SYSTEM_NAME)
+            ToastStyle.WARNING -> SFSymbol.imageVector(Strings.BANNER_WARNING_ICON_IMAGE_SYSTEM_NAME)
             ToastStyle.NONE -> null
         }
 
-private const val ACCENT_STRIP_WIDTH = 4
-private const val BANNER_CORNER_RADIUS = 16
-private const val BANNER_HORIZONTAL_PADDING = 12
-private const val CAPSULE_HORIZONTAL_PADDING = 20
-private const val CAPSULE_ICON_SIZE = 18
+private val ToastStyle.capsuleIcon: ImageVector?
+    get() =
+        when (this) {
+            ToastStyle.ERROR -> SFSymbol.imageVector(Strings.CAPSULE_ERROR_ICON_IMAGE_SYSTEM_NAME)
+            ToastStyle.INFO -> SFSymbol.imageVector(Strings.CAPSULE_INFO_ICON_IMAGE_SYSTEM_NAME)
+            ToastStyle.SUCCESS -> SFSymbol.imageVector(Strings.CAPSULE_SUCCESS_ICON_IMAGE_SYSTEM_NAME)
+            ToastStyle.WARNING -> SFSymbol.imageVector(Strings.CAPSULE_WARNING_ICON_IMAGE_SYSTEM_NAME)
+            ToastStyle.NONE -> null
+        }
+
 private const val CAPSULE_TOP_PADDING = 8
-private const val CAPSULE_VERTICAL_PADDING = 12
-private const val CONTENT_PADDING = 16
-private const val CONTENT_SPACING = 12
-private const val DISMISS_BUTTON_ALPHA = 0.5f
-private const val MESSAGE_ALPHA = 0.8f
-private const val SHADOW_ELEVATION = 8
+private const val SWIPE_DISMISS_THRESHOLD = 10
 private const val TITLE_MESSAGE_SPACING = 2

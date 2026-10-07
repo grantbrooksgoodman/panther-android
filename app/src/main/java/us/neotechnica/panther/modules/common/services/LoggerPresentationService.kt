@@ -108,16 +108,16 @@ object LoggerPresentationService : LoggerPresentationDelegate {
 
         val type =
             if (alertType.isPersistent) {
-                Toast.Type.Banner(style)
+                Toast.ToastType.Banner(style)
             } else {
-                Toast.Type.Capsule(style)
+                Toast.ToastType.Capsule(style)
             }
 
         val perpetuation =
             if (alertType.isPersistent) {
-                Toast.Perpetuation.Persistent
+                Toast.PerpetuationStrategy.Persistent
             } else {
-                Toast.Perpetuation.Ephemeral(TOAST_EPHEMERAL_DURATION_SECONDS.seconds)
+                Toast.PerpetuationStrategy.Ephemeral(TOAST_EPHEMERAL_DURATION_SECONDS.seconds)
             }
 
         // Reportable exceptions invite the user to file a report by tapping.

@@ -14,7 +14,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheetAlert
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextFieldAttributes
@@ -75,7 +75,7 @@ object DevModeSubsystemActions {
                             HUD.showSuccess()
                         }
 
-                    ActionSheetAlert(
+                    ActionSheet(
                         title = "Erase Content & Settings",
                         actions =
                             listOf(
@@ -130,7 +130,7 @@ object DevModeSubsystemActions {
                 HUD.showSuccess(text = "Set to ${languageName(languageCode)}")
             }
 
-        ActionSheetAlert(
+        ActionSheet(
             title = "Override Language Code",
             actions = listOf(specifyLanguageCodeAction, setToRandomLanguageCodeAction),
         ).present(translating = emptyList())
