@@ -26,13 +26,15 @@ internal val String.encodedHash: String
  * The string lowercased with all spaces (including non-breaking
  * spaces) and newlines removed.
  */
-internal fun String.lowercasedTrimmingWhitespaceAndNewlines(): String = lowercase().trimmingWhitespace().trimmingNewlines()
+internal val String.lowercasedTrimmingWhitespaceAndNewlines: String
+    get() = lowercase().trimmingWhitespace().trimmingNewlines()
 
 /**
  * The string with trailing spaces (including non-breaking spaces)
  * and newlines removed.
  */
-internal fun String.trimmingTrailingWhitespaceAndNewlines(): String = trimmingTrailingWhitespace().trimmingTrailingNewlines()
+internal val String.trimmingTrailingWhitespaceAndNewlines: String
+    get() = trimmingTrailingWhitespace().trimmingTrailingNewlines
 
 /** The string with trailing spaces and non-breaking spaces removed. */
 internal fun String.trimmingTrailingWhitespace(): String {
@@ -43,13 +45,25 @@ internal fun String.trimmingTrailingWhitespace(): String {
     return string
 }
 
-private fun String.trimmingTrailingNewlines(): String {
-    var string = this
-    while (string.endsWith("\n")) {
-        string = string.dropLast(1)
+/** The string with leading and trailing newlines removed. */
+internal val String.trimmingBorderedNewlines: String
+    get() {
+        var string = trimmingTrailingNewlines
+        while (string.startsWith("\n")) {
+            string = string.drop(1)
+        }
+        return string
     }
-    return string
-}
+
+/** The string with trailing newlines removed. */
+internal val String.trimmingTrailingNewlines: String
+    get() {
+        var string = this
+        while (string.endsWith("\n")) {
+            string = string.dropLast(1)
+        }
+        return string
+    }
 
 private fun String.trimmingNewlines(): String = replace("\n", "")
 

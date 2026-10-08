@@ -11,6 +11,8 @@ package us.neotechnica.panther.subsystem
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.CacheDomainListDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.ErrorReportDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.ExceptionMetadataDelegate
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.ForcedUpdateModalDelegate
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.HUDDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.LoggerDomainSubscriptionDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.PermanentPersistentStorageKeyDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
@@ -55,6 +57,10 @@ object AppSubsystem {
 
         private val _exceptionMetadata = LockIsolated<ExceptionMetadataDelegate?>(null)
 
+        private val _forcedUpdateModal = LockIsolated<ForcedUpdateModalDelegate?>(null)
+
+        private val _hud = LockIsolated<HUDDelegate?>(null)
+
         private val _loggerDomainSubscription = LockIsolated<LoggerDomainSubscriptionDelegate?>(null)
 
         private val _permanentPersistentStorageKeys = LockIsolated<PermanentPersistentStorageKeyDelegate?>(null)
@@ -93,6 +99,25 @@ object AppSubsystem {
          */
         val exceptionMetadata: ExceptionMetadataDelegate?
             get() = _exceptionMetadata.wrappedValue
+
+        /**
+         * The delegate that configures the forced-update modal.
+         *
+         * When this property is `null`, the forced-update flow is
+         * disabled.
+         */
+        val forcedUpdateModal: ForcedUpdateModalDelegate?
+            get() = _forcedUpdateModal.wrappedValue
+
+        /**
+         * The delegate that presents and dismisses a heads-up
+         * display on behalf of the subsystem.
+         *
+         * When this property is `null`, subsystem services perform
+         * their work without showing progress.
+         */
+        val hud: HUDDelegate?
+            get() = _hud.wrappedValue
 
         /**
          * The delegate that specifies which logger domains the app
@@ -142,6 +167,25 @@ object AppSubsystem {
          */
         fun registerExceptionMetadataDelegate(exceptionMetadataDelegate: ExceptionMetadataDelegate) {
             _exceptionMetadata.wrappedValue = exceptionMetadataDelegate
+        }
+
+        /**
+         * Registers the specified forced-update modal delegate.
+         *
+         * @param forcedUpdateModalDelegate The delegate to
+         *   register.
+         */
+        fun registerForcedUpdateModalDelegate(forcedUpdateModalDelegate: ForcedUpdateModalDelegate) {
+            _forcedUpdateModal.wrappedValue = forcedUpdateModalDelegate
+        }
+
+        /**
+         * Registers the specified HUD delegate.
+         *
+         * @param hudDelegate The delegate to register.
+         */
+        fun registerHUDDelegate(hudDelegate: HUDDelegate) {
+            _hud.wrappedValue = hudDelegate
         }
 
         /**

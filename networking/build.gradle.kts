@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.compose)
 }
 
 android {
@@ -19,10 +20,12 @@ android {
     }
     buildFeatures {
         buildConfig = true
+        compose = true
     }
 }
 
 dependencies {
+    api(project(":design-system"))
     api(project(":subsystem"))
     api(project(":translator"))
     api(platform(libs.firebase.bom))

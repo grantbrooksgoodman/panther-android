@@ -14,6 +14,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction

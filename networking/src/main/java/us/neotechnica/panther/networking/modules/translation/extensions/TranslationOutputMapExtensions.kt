@@ -18,4 +18,4 @@ import us.neotechnica.panther.networking.modules.translation.models.TranslationO
  * The page reducers use this to read their resolved strings.
  */
 fun List<TranslationOutputMap>.value(key: TranslatedLabelStringCollection): String =
-    (firstOrNull { it.key == key }?.value ?: key.key).sanitized
+    (firstOrNull { it.key == key }?.value ?: key.rawValue).sanitized

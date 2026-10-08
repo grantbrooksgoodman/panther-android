@@ -10,8 +10,6 @@ package us.neotechnica.panther.modules.session.entity.extensions
 
 import android.media.MediaMetadataRetriever
 import us.neotechnica.panther.modules.common.constants.CommonConstants
-import us.neotechnica.panther.modules.networking.message.services.AudioMessageService
-import us.neotechnica.panther.modules.networking.message.services.MediaMessageService
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.message.models.AudioMessageReference
 import us.neotechnica.panther.modules.networking.message.models.LocalAudioFilePath
@@ -19,10 +17,12 @@ import us.neotechnica.panther.modules.networking.message.models.LocalMediaFilePa
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.message.models.ReadReceipt
+import us.neotechnica.panther.modules.networking.message.services.AudioMessageService
+import us.neotechnica.panther.modules.networking.message.services.MediaMessageService
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.networking.modules.translation.services.TranslationResolver
+import us.neotechnica.panther.modules.session.state.models.OutboxEntry
+import us.neotechnica.panther.networking.modules.translation.serializable.from
 import us.neotechnica.panther.translator.Translator
 import us.neotechnica.panther.translator.interfaces.TranslationArchiverDelegate
 import us.neotechnica.panther.translator.models.Translation
@@ -154,11 +154,7 @@ suspend fun Message.resolvedTranslation(languageCode: String): Translation? {
     val reference = translationReference(languageCode) ?: return null
     archivedTranslation(reference)?.let { return it }
 
-    val resolved = runCatching { TranslationResolver.resolve(reference) }.getOrNull() ?: return null
-
-    // Idempotent (same-language) references are never written to the archive.
-    if (reference.type is HostedTranslationReference.Type.Archived) translationArchiver.addValue(resolved)
-    return resolved
+    return runCatching { Translation.from(reference) }.getOrNull()
 }
 
 /**
@@ -185,7 +181,7 @@ private fun Message.translationReference(languageCode: String): HostedTranslatio
     val parsed =
         translationReferences
             .orEmpty()
-            .mapNotNull { HostedTranslationReference.fromString(it.hostingKey) }
+            .mapNotNull { HostedTranslationReference.from(it.hostingKey) }
     if (parsed.isEmpty()) return null
 
     return if (isFromCurrentUser) {

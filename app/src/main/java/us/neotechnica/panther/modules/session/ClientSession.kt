@@ -10,6 +10,7 @@ package us.neotechnica.panther.modules.session
 
 import us.neotechnica.panther.bundle.clientSession
 import us.neotechnica.panther.bundle.currentUserID
+import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.modules.session.entity.interfaces.DeliveryProgressIndicator
 import us.neotechnica.panther.modules.session.entity.models.EntitySession
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
@@ -18,6 +19,7 @@ import us.neotechnica.panther.modules.session.sync.models.SyncSession
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.getValues
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.interfaces.DependencyKey
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -90,7 +92,7 @@ object ClientSession {
                 ?: throw Exception("Current user ID has not been set.", metadata = ExceptionMetadata(this))
 
         val languageCode: String =
-            Networking.config.databaseDelegate.getValues(
+            Networking.config.databaseDelegate.getValues<String>(
                 path = listOf(NetworkPath.users.rawValue, currentUserID, LANGUAGE_CODE_KEY).joinToString("/"),
                 cacheStrategy = CacheStrategy.ADAPTIVE,
             )

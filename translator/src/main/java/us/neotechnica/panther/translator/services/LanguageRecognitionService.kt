@@ -2,8 +2,8 @@
 //  LanguageRecognitionService.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.translator.services
@@ -11,7 +11,6 @@ package us.neotechnica.panther.translator.services
 import com.google.android.gms.tasks.Task
 import com.google.mlkit.nl.languageid.IdentifiedLanguage
 import com.google.mlkit.nl.languageid.LanguageIdentification
-import com.google.mlkit.nl.languageid.LanguageIdentificationOptions
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.resume
@@ -21,23 +20,16 @@ import kotlin.coroutines.resumeWithException
  * Estimates how confidently a string belongs to a given language.
  *
  * Combines two identification legs (0.4 each) from ML Kit's language
- * identifier with a constant 0.2 spell leg, so a string both legs
- * agree on scores 1.0, which is what the `> 0.8` "already in the
- * target language" short-circuit checks for.
+ * identifier with a 0.2 spell-validation leg. No synchronous spell
+ * checker is available, so the spell leg never contributes and the
+ * composite confidence tops out at 0.8.
  */
 class LanguageRecognitionService private constructor() {
     // MARK: - Properties
 
     private val cachedResults = ConcurrentHashMap<CacheKey, Float>()
 
-    private val identifier by lazy {
-        LanguageIdentification.getClient(
-            LanguageIdentificationOptions
-                .Builder()
-                .setConfidenceThreshold(HYPOTHESIS_FLOOR)
-                .build(),
-        )
-    }
+    private val identifier by lazy { LanguageIdentification.getClient() }
 
     // MARK: - Match Confidence
 
@@ -76,8 +68,7 @@ class LanguageRecognitionService private constructor() {
             confidence += IDENTIFICATION_LEG
         }
 
-        // Spell leg (deviation): passes through, as noted in the type docs.
-        confidence += SPELL_LEG
+        if (isValidSentence(string, languageCode)) confidence += SPELL_LEG
 
         cachedResults[cacheKey] = confidence
         return confidence
@@ -87,6 +78,14 @@ class LanguageRecognitionService private constructor() {
 
     private val String.sanitized: String
         get() = lowercase().trim()
+
+    // No synchronous spell checker is available, so spell validation
+    // never passes.
+    @Suppress("FunctionOnlyReturningConstant", "UnusedParameter", "UnusedPrivateMember")
+    private fun isValidSentence(
+        string: String,
+        languageCode: String,
+    ): Boolean = false
 
     private suspend fun <T> Task<T>.await(): T =
         suspendCancellableCoroutine { continuation ->
@@ -111,6 +110,5 @@ class LanguageRecognitionService private constructor() {
         private const val IDENTIFICATION_LEG = 0.4f
         private const val SPELL_LEG = 0.2f
         private const val HYPOTHESIS_CONFIDENCE_THRESHOLD = 0.45f
-        private const val HYPOTHESIS_FLOOR = 0.1f
     }
 }

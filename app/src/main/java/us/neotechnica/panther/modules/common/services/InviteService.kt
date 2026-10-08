@@ -20,8 +20,8 @@ import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
+import us.neotechnica.panther.designsystem.modules.alertkit.models.HUDConfig
 import us.neotechnica.panther.designsystem.modules.foundation.extensions.cancelAction
-import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheet
 import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheets
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
@@ -175,16 +175,13 @@ object InviteService {
             return presentShareSheet(appShareLink, promptMessage.sanitized)
         }
 
-        HUD.showProgress(after = Duration.ZERO, isModal = true)
         val translation =
-            try {
-                Networking.config.hostedTranslationDelegate.translate(
-                    TranslationInput(promptMessage),
-                    LanguagePair(from = "en", to = languageCode ?: RuntimeStorage.languageCode),
-                )
-            } finally {
-                HUD.hide()
-            }
+            Networking.config.hostedTranslationDelegate.translate(
+                TranslationInput(promptMessage),
+                LanguagePair(from = "en", to = languageCode ?: RuntimeStorage.languageCode),
+                hudConfig = HUDConfig(appearsAfter = Duration.ZERO, isModal = true),
+            )
+
         presentShareSheet(appShareLink, translation.output.sanitized)
     }
 

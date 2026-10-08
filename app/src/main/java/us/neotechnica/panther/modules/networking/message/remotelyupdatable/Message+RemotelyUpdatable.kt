@@ -2,21 +2,23 @@
 //  Message+RemotelyUpdatable.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.networking.message.remotelyupdatable
 
+import us.neotechnica.panther.bundle.messages
 import us.neotechnica.panther.modules.networking.common.encodeForWrite
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.message.models.ReadReceipt
 import us.neotechnica.panther.modules.networking.message.models.TranslationReference
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.Networking
-import us.neotechnica.panther.networking.modules.common.extensions.typeMismatch
+import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
-import us.neotechnica.panther.networking.modules.common.models.WriteAction
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 
 // MARK: - Types
 
@@ -52,7 +54,13 @@ suspend fun Message.update(
     key: MessageUpdatableKey,
     to: Any,
 ): Message {
-    val newValue = modifyKey(key, to) ?: throw typeMismatch(this, key.rawValue, to)
+    val newValue =
+        modifyKey(key, to) ?: throw Exception.Networking.typeMismatch(
+            key.rawValue,
+            to,
+            ExceptionMetadata(this),
+        )
+
     val valueKeyPath = "${NetworkPath.messages.rawValue}/$id/${key.rawValue}"
 
     Networking.config.databaseDelegate.setValue(encodeForWrite(this, key.rawValue, to), valueKeyPath)

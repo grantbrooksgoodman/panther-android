@@ -2,8 +2,8 @@
 //  GoogleTranslator.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.translator.services
@@ -45,15 +45,20 @@ internal class GoogleTranslator : BaseTranslator(TranslationPlatform.GOOGLE) {
             super.translate(input, languagePair)
         }
 
-    // MARK: - Extraction Override
+    // MARK: - Evaluate JavaScript
 
-    override suspend fun extractOutput(
+    override suspend fun evaluateJavaScript(
         webView: android.webkit.WebView,
-        useAlternate: Boolean,
-    ): String? {
-        val output = super.extractOutput(webView, useAlternate) ?: return null
-        if (output.contains("(feminine)")) return null
-        return output.replace("(masculine)", "")
+        useAlternateString: Boolean,
+    ): EvaluationResult {
+        val evaluationResult = super.evaluateJavaScript(webView, useAlternateString)
+        if (evaluationResult !is EvaluationResult.Success ||
+            evaluationResult.output.contains("(feminine)")
+        ) {
+            return EvaluationResult.Retry(useAlternateString = true)
+        }
+
+        return EvaluationResult.Success(evaluationResult.output.replace("(masculine)", ""))
     }
 
     // MARK: - API Fast Path
@@ -81,7 +86,7 @@ internal class GoogleTranslator : BaseTranslator(TranslationPlatform.GOOGLE) {
                 }
             }
 
-        if (output.lowercasedTrimmingWhitespaceAndNewlines().isEmpty()) {
+        if (output.lowercasedTrimmingWhitespaceAndNewlines.isEmpty()) {
             throw TranslationError.MalformedTranslationResult
         }
 
@@ -91,6 +96,8 @@ internal class GoogleTranslator : BaseTranslator(TranslationPlatform.GOOGLE) {
     // MARK: - Companion
 
     companion object {
+        internal const val API_WARMUP_URL_STRING = "https://translate.googleapis.com"
+
         private const val API_BASE_URL = "https://translate.googleapis.com/translate_a/single"
     }
 }

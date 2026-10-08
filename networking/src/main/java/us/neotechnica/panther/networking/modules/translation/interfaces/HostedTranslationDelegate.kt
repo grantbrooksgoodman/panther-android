@@ -2,12 +2,13 @@
 //  HostedTranslationDelegate.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.networking.modules.translation.interfaces
 
+import us.neotechnica.panther.designsystem.modules.alertkit.models.HUDConfig
 import us.neotechnica.panther.networking.modules.translation.models.ArchiveStrategy
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.translator.models.LanguagePair
@@ -35,10 +36,24 @@ interface HostedTranslationDelegate {
         languagePair: LanguagePair,
     ): Translation
 
-    /** Translates multiple inputs into the target language. */
+    /**
+     * Translates multiple inputs for the specified language pair.
+     *
+     * @param inputs The translation inputs to translate.
+     * @param languagePair The language pair for the translations.
+     * @param hudConfig An optional HUD configuration specifying
+     *   how long to wait before showing the HUD and whether it is
+     *   modal.
+     *
+     * @return A list of translations corresponding to the inputs.
+     *
+     * @throws us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+     *   if the translation fails.
+     */
     suspend fun getTranslations(
         inputs: List<TranslationInput>,
         languagePair: LanguagePair,
+        hudConfig: HUDConfig? = null,
     ): List<Translation>
 
     /** The `(key, value)` hosted-archive entry for a translation, or `null` if ineligible. */
@@ -47,10 +62,27 @@ interface HostedTranslationDelegate {
     /** Resolves a page's label strings for the active language. */
     suspend fun resolve(strings: TranslatedLabelStrings): List<TranslationOutputMap>
 
-    /** Translates a single input, consulting and updating the archives. */
+    /**
+     * Translates a single input, consulting and updating the
+     * archives.
+     *
+     * @param input The translation input to translate.
+     * @param languagePair The language pair for the translation.
+     * @param hudConfig An optional HUD configuration specifying
+     *   how long to wait before showing the HUD and whether it is
+     *   modal.
+     * @param archiveStrategy The strategy that determines when the
+     *   translation is written to the hosted archive.
+     *
+     * @return The completed translation.
+     *
+     * @throws us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+     *   if the translation fails.
+     */
     suspend fun translate(
         input: TranslationInput,
         languagePair: LanguagePair,
+        hudConfig: HUDConfig? = null,
         archiveStrategy: ArchiveStrategy = ArchiveStrategy.IMMEDIATE,
     ): Translation
 }

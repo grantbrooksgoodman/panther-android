@@ -19,6 +19,7 @@ import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.translation.extensions.alphaEncoded
 import us.neotechnica.panther.networking.modules.translation.extensions.decodedTranslationComponents
 import us.neotechnica.panther.networking.modules.translation.extensions.encodedHash
+import us.neotechnica.panther.networking.modules.translation.extensions.translations
 import us.neotechnica.panther.networking.modules.translation.models.TranslationReference
 import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.Translation

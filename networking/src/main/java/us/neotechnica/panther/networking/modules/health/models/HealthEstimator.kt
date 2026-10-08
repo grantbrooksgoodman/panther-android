@@ -2,8 +2,8 @@
 //  HealthEstimator.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.networking.modules.health.models
@@ -211,12 +211,9 @@ internal class HealthEstimator {
                 floor = log2(configuration.latencyFloor),
                 ceiling = log2(configuration.latencyCeiling),
                 inverted = true,
-                jitterPenalty =
-                    jitterPenalty(
-                        state.latencyChannel.standardDeviation / max(state.latencyChannel.mean, MINIMUM_LATENCY_SECONDS),
-                        configuration.latencyJitterCeiling,
-                        configuration.jitterPenaltyWeight,
-                    ),
+                dispersion = state.latencyChannel.standardDeviation / max(state.latencyChannel.mean, MINIMUM_LATENCY_SECONDS),
+                jitterCeiling = configuration.latencyJitterCeiling,
+                jitterPenaltyWeight = configuration.jitterPenaltyWeight,
             )
 
         val throughputScore =
@@ -225,12 +222,9 @@ internal class HealthEstimator {
                 floor = configuration.throughputFloor,
                 ceiling = configuration.throughputCeiling,
                 inverted = false,
-                jitterPenalty =
-                    jitterPenalty(
-                        state.throughputChannel.standardDeviation,
-                        configuration.throughputJitterCeiling,
-                        configuration.jitterPenaltyWeight,
-                    ),
+                dispersion = state.throughputChannel.standardDeviation,
+                jitterCeiling = configuration.throughputJitterCeiling,
+                jitterPenaltyWeight = configuration.jitterPenaltyWeight,
             )
 
         var score =
@@ -270,19 +264,27 @@ internal class HealthEstimator {
 
     /**
      * Maps a channel mean to `[0, 1]` via a piecewise-linear ramp,
-     * then reduces the result by the channel's jitter penalty.
+     * then reduces the result in proportion to the channel's
+     * normalized sample dispersion (jitter).
      */
+    @Suppress("LongParameterList")
     private fun channelScore(
         mean: Double,
         floor: Double,
         ceiling: Double,
         inverted: Boolean,
-        jitterPenalty: Double,
+        dispersion: Double,
+        jitterCeiling: Double,
+        jitterPenaltyWeight: Double,
     ): Double {
         if (ceiling <= floor) return HALF
 
         val clamped = ((mean - floor) / (ceiling - floor)).coerceIn(0.0, 1.0)
         val rampScore = if (inverted) 1.0 - clamped else clamped
+
+        val normalizedDispersion = (dispersion / max(jitterCeiling, MINIMUM_INTERVAL_SECONDS)).coerceAtMost(1.0)
+        val jitterPenalty = (jitterPenaltyWeight * normalizedDispersion).coerceIn(0.0, 1.0)
+
         return rampScore * (1.0 - jitterPenalty)
     }
 
@@ -297,15 +299,6 @@ internal class HealthEstimator {
                 state.failureChannel.mean *
                 decayedWeight.coerceAtMost(1.0)
         return penalty.coerceIn(0.0, 1.0)
-    }
-
-    private fun jitterPenalty(
-        dispersion: Double,
-        jitterCeiling: Double,
-        jitterPenaltyWeight: Double,
-    ): Double {
-        val normalizedDispersion = (dispersion / max(jitterCeiling, MINIMUM_INTERVAL_SECONDS)).coerceAtMost(1.0)
-        return (jitterPenaltyWeight * normalizedDispersion).coerceIn(0.0, 1.0)
     }
 
     private fun stabilityPenalty(

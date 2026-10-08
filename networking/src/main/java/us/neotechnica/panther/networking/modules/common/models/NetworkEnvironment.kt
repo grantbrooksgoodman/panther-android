@@ -35,6 +35,13 @@ enum class NetworkEnvironment(
     // MARK: - Computed Properties
 
     /**
+     * A human-readable description of the environment, such as
+     * `"Development"`.
+     */
+    val description: String
+        get() = rawValue.replaceFirstChar { it.uppercase() }
+
+    /**
      * An abbreviated label for the environment, such as `"dev"`,
      * `"stage"`, or `"prod"`. Database and storage paths are
      * prefixed with this value.

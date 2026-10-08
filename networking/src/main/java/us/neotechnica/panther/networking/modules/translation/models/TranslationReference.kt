@@ -2,8 +2,8 @@
 //  TranslationReference.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.networking.modules.translation.models
@@ -97,7 +97,7 @@ data class TranslationReference(
          * Parses a reference from its string form, or returns `null`
          * if the string is not a valid reference.
          */
-        fun fromString(string: String): TranslationReference? {
+        fun from(string: String): TranslationReference? {
             val isIdempotent = string.contains(TranslationConstants.IDEMPOTENT_PREFIX)
             val components = string.split(" ")
 

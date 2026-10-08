@@ -2,8 +2,8 @@
 //  ErrorReportingService.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.common.services
@@ -25,7 +25,7 @@ import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.navigation.descriptor
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
-import us.neotechnica.panther.networking.modules.storage.models.StorageMetadata
+import us.neotechnica.panther.networking.modules.storage.models.HostedItemMetadata
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.ErrorReportDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHashOf
@@ -201,10 +201,14 @@ object ErrorReportingService : ReportDelegate, ErrorReportDelegate {
         exception: Exception,
     ): Boolean {
         try {
-            Networking.config.storageDelegate.uploadBytes(
+            Networking.config.storageDelegate.upload(
                 recordBytes,
-                filePath,
-                StorageMetadata(filePath = filePath, contentType = "text/plain", customValues = customValues(exception)),
+                metadata =
+                    HostedItemMetadata(
+                        filePath,
+                        contentType = "text/plain",
+                        customValues = customValues(exception),
+                    ),
             )
         } catch (uploadException: Exception) {
             // Reporting the upload failure must not recurse into another automatic report.

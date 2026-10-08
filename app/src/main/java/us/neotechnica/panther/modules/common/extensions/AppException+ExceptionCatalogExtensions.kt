@@ -2,8 +2,8 @@
 //  AppException+ExceptionCatalogExtensions.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.common.extensions
@@ -26,7 +26,6 @@ val AppException.Companion.cannotSendTextMessages: AppException get() = AppExcep
 val AppException.Companion.contactAccessDenied: AppException get() = AppException("C8DC")
 val AppException.Companion.currentUserIDNotSet: AppException get() = AppException("EA90")
 val AppException.Companion.emptyContactList: AppException get() = AppException("A431")
-val AppException.Companion.exhaustedAvailablePlatforms: AppException get() = AppException("C526")
 val AppException.Companion.failedToGenerateMediaFile: AppException get() = AppException("D648")
 val AppException.Companion.failedToInitializeRecognizer: AppException get() = AppException("9E79")
 val AppException.Companion.kAFAssistantError: AppException get() = AppException("F59D")
@@ -40,12 +39,10 @@ val AppException.Companion.noUsersWithPhoneNumber: AppException get() = AppExcep
 val AppException.Companion.observerRegistrationMisuse: AppException get() = AppException("983A")
 val AppException.Companion.penPalResolutionFailed: AppException get() = AppException("AD6B")
 val AppException.Companion.readWriteAccessDisabled: AppException get() = AppException("DF6E")
-val AppException.Companion.sameTranslationInputOutput: AppException get() = AppException("6CEB")
 val AppException.Companion.stalePushToken: AppException get() = AppException("28D1")
 
 /** An exception representing a timed-out operation. */
 val AppException.Companion.timedOut: AppException get() = AppException("801F")
 
-val AppException.Companion.translationDerivationFailed: AppException get() = AppException("43B4")
 val AppException.Companion.translationPlatformNotSupported: AppException get() = AppException("B04E")
 val AppException.Companion.updateRequired: AppException get() = AppException("B455")

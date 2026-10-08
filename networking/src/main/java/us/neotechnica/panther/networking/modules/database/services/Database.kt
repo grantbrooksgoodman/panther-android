@@ -2,36 +2,19 @@
 //  Database.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.networking.modules.database.services
 
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ServerValue
-import com.google.firebase.database.ValueEventListener
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.buffer
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.tasks.await
-import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
-import us.neotechnica.panther.networking.modules.common.models.DataSample
 import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.networking.modules.database.models.DatabaseOperation
 import us.neotechnica.panther.networking.modules.database.models.QueryStrategy
-import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
-import us.neotechnica.panther.subsystem.modules.foundation.models.Coalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
-import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
-import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
-import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import kotlin.time.Duration
 
 /**
@@ -45,31 +28,9 @@ import kotlin.time.Duration
 class Database : DatabaseDelegate {
     // MARK: - Properties
 
-    private val globalCacheStrategy = LockIsolated<CacheStrategy?>(null)
+    private val coreDatabase = CoreDatabase()
 
-    private val reference by lazy { FirebaseDatabase.getInstance().reference }
-
-    // MARK: - Companion
-
-    private companion object {
-        val coalescer = Coalescer<String, Result<Any?>>()
-    }
-
-    // MARK: - DatabaseDelegate Conformance
-
-    override fun generateKey(path: String): String? = reference.child(path).push().key
-
-    override suspend fun <T> getValues(
-        path: String,
-        prependingEnvironment: Boolean,
-        cacheStrategy: CacheStrategy,
-        timeout: Duration,
-    ): T =
-        performOperation(
-            DatabaseOperation.GetValues(path, cacheStrategy),
-            prependingEnvironment = prependingEnvironment,
-            timeout = timeout,
-        ).cast()
+    // MARK: - Atomic Increment
 
     override suspend fun increment(
         path: String,
@@ -77,144 +38,104 @@ class Database : DatabaseDelegate {
         prependingEnvironment: Boolean,
         timeout: Duration,
     ) {
-        val resolvedPath = path.prependingEnvironmentIfNeeded(prependingEnvironment)
-        guardedFirebaseOperation(timeout, this) {
-            reference.child(resolvedPath).setValue(ServerValue.increment(delta.toLong())).await()
-        }
-
-        // The server-side result is unknown locally; invalidate.
-        CoreDatabaseStore.removeValue(resolvedPath)
-    }
-
-    override fun isEncodable(value: Any?): Boolean = isFirebaseEncodable(value)
-
-    override fun <T> observe(
-        path: String,
-        prependingEnvironment: Boolean,
-    ): Flow<T> =
-        callbackFlow {
-            val resolvedPath = path.prependingEnvironmentIfNeeded(prependingEnvironment)
-
-            if (!Networking.isReadWriteEnabled) {
-                close(Exception("Read/write access is currently disabled.", metadata = ExceptionMetadata(this@Database)))
-                return@callbackFlow
-            }
-
-            Networking.config.activityIndicatorDelegate.show()
-            val child = reference.child(resolvedPath)
-            val listener =
-                object : ValueEventListener {
-                    override fun onDataChange(snapshot: DataSnapshot) {
-                        val value = snapshot.value
-                        if (value == null) {
-                            close(noValueException(resolvedPath, this@Database))
-                            return
-                        }
-
-                        CoreDatabaseStore.addValue(
-                            DataSample(value, Networking.cacheExpiryMillis(System.currentTimeMillis())),
-                            resolvedPath,
-                        )
-
-                        @Suppress("UNCHECKED_CAST")
-                        trySend(value as T)
-                    }
-
-                    override fun onCancelled(error: DatabaseError) {
-                        close(Exception.from(error.toException(), ExceptionMetadata(this@Database)))
-                    }
-                }
-
-            child.addValueEventListener(listener)
-            awaitClose {
-                Networking.config.activityIndicatorDelegate.hide()
-                child.removeEventListener(listener)
-            }
-        }.buffer(Channel.UNLIMITED)
-
-    override fun prewarm() {
-        Logger.log(
-            "Prewarming database connection.",
-            domain = LoggerDomain.Networking.database,
-        )
-
-        // Retain a persistent observer on the special .info/connected
-        // location until the realtime socket first reports connected,
-        // then detach. A one-shot read fires on the immediate local
-        // "false" and detaches without holding the connection
-        // establishing; a retained observer forces the SDK to open and
-        // keep the authenticated socket from launch, so it is ready
-        // sooner for the first writes and for the observers that stream
-        // fresh data. Long-lived connection tracking is owned by the
-        // connection-stability observer, so this releases as soon as the
-        // connection is up.
-        val connectedReference = reference.child(".info/connected")
-        val listenerHolder = LockIsolated<ValueEventListener?>(null)
-        val listener =
-            object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    if (snapshot.getValue(Boolean::class.java) != true) return
-
-                    // Atomically take the listener so only the first
-                    // connected event detaches, and re-entrant events
-                    // see null.
-                    val listenerToRemove =
-                        listenerHolder.withValue { holder ->
-                            val current = holder.value
-                            holder.value = null
-                            current
-                        } ?: return
-
-                    connectedReference.removeEventListener(listenerToRemove)
-                }
-
-                override fun onCancelled(error: DatabaseError) = Unit
-            }
-
-        listenerHolder.wrappedValue = listener
-        connectedReference.addValueEventListener(listener)
-    }
-
-    override suspend fun <T> queryValues(
-        path: String,
-        strategy: QueryStrategy,
-        prependingEnvironment: Boolean,
-        cacheStrategy: CacheStrategy,
-        timeout: Duration,
-    ): T =
-        performOperation(
-            DatabaseOperation.QueryValues(path, strategy, cacheStrategy),
+        coreDatabase.increment(
+            path,
+            delta = delta,
             prependingEnvironment = prependingEnvironment,
             timeout = timeout,
-        ).cast()
+        )
+    }
+
+    // MARK: - Data Integrity Validation
+
+    override fun isEncodable(value: Any?): Boolean = coreDatabase.isEncodable(value)
+
+    // MARK: - Global Cache Strategy
+
+    override fun setGlobalCacheStrategy(globalCacheStrategy: CacheStrategy?) {
+        coreDatabase.setGlobalCacheStrategy(globalCacheStrategy)
+    }
+
+    // MARK: - ID Key Generation
+
+    override fun generateKey(path: String): String? = coreDatabase.generateKey(path)
+
+    // MARK: - Observation
+
+    override fun observe(
+        path: String,
+        prependingEnvironment: Boolean,
+    ): Flow<Any> =
+        coreDatabase.observe(
+            path = path,
+            prependingEnvironment = prependingEnvironment,
+        )
+
+    // MARK: - Prewarming
+
+    override suspend fun awaitRealtimeConnection(timeout: Duration): Boolean =
+        coreDatabase.awaitRealtimeConnection(
+            timeout = timeout,
+        )
+
+    override fun prewarm() {
+        coreDatabase.prewarm()
+    }
+
+    // MARK: - Transaction
 
     override suspend fun runTransaction(
         path: String,
         prependingEnvironment: Boolean,
         timeout: Duration,
         block: (Any?) -> Any?,
-    ): Any? {
-        val resolvedPath = path.prependingEnvironmentIfNeeded(prependingEnvironment)
-        val committed =
-            guardedFirebaseOperation(timeout, this) {
-                runFirebaseTransaction(reference, resolvedPath, this, block)
-            }
+    ): Any? =
+        coreDatabase.runTransaction(
+            path,
+            prependingEnvironment = prependingEnvironment,
+            timeout = timeout,
+            block = block,
+        )
 
-        if (committed == null) {
-            CoreDatabaseStore.removeValue(resolvedPath)
-        } else {
-            CoreDatabaseStore.addValue(
-                DataSample(committed, Networking.cacheExpiryMillis(System.currentTimeMillis())),
-                resolvedPath,
-            )
-        }
+    // MARK: - Value Retrieval
 
-        return committed
-    }
+    override suspend fun getValues(
+        path: String,
+        prependingEnvironment: Boolean,
+        cacheStrategy: CacheStrategy,
+        timeout: Duration,
+    ): Any =
+        coreDatabase.performOperation(
+            DatabaseOperation.GetValues(
+                path,
+                cacheStrategy = cacheStrategy,
+            ),
+            prependingEnvironment = prependingEnvironment,
+            timeout = timeout,
+        ) ?: throw Exception(
+            metadata = ExceptionMetadata(this),
+        )
 
-    override fun setGlobalCacheStrategy(globalCacheStrategy: CacheStrategy?) {
-        this.globalCacheStrategy.wrappedValue = globalCacheStrategy
-    }
+    override suspend fun queryValues(
+        path: String,
+        strategy: QueryStrategy,
+        prependingEnvironment: Boolean,
+        cacheStrategy: CacheStrategy,
+        timeout: Duration,
+    ): Any =
+        coreDatabase.performOperation(
+            DatabaseOperation.QueryValues(
+                path,
+                strategy = strategy,
+                cacheStrategy = cacheStrategy,
+            ),
+            prependingEnvironment = prependingEnvironment,
+            timeout = timeout,
+        ) ?: throw Exception(
+            metadata = ExceptionMetadata(this),
+        )
+
+    // MARK: - Value Setting
 
     override suspend fun setValue(
         value: Any?,
@@ -222,8 +143,11 @@ class Database : DatabaseDelegate {
         prependingEnvironment: Boolean,
         timeout: Duration,
     ) {
-        performOperation(
-            DatabaseOperation.SetValue(value, key),
+        coreDatabase.performOperation(
+            DatabaseOperation.SetValue(
+                value,
+                key = key,
+            ),
             prependingEnvironment = prependingEnvironment,
             timeout = timeout,
         )
@@ -235,86 +159,13 @@ class Database : DatabaseDelegate {
         prependingEnvironment: Boolean,
         timeout: Duration,
     ) {
-        performOperation(
-            DatabaseOperation.UpdateChildValues(key, data),
+        coreDatabase.performOperation(
+            DatabaseOperation.UpdateChildValues(
+                key = key,
+                data = data,
+            ),
             prependingEnvironment = prependingEnvironment,
             timeout = timeout,
         )
     }
-
-    // MARK: - Perform Operation
-
-    private suspend fun performOperation(
-        operation: DatabaseOperation,
-        prependingEnvironment: Boolean,
-        timeout: Duration,
-    ): Any? {
-        val resolved = operation.resolvingAdaptiveCacheStrategy()
-        val key =
-            listOf(
-                resolved.encodedHash,
-                globalCacheStrategy.wrappedValue?.resolved?.rawValue ?: "",
-                prependingEnvironment.toString(),
-                timeout.toString(),
-            ).joinToString("|")
-
-        return coalescer
-            .submitUnlessCancelled(key) {
-                runCatching {
-                    engine(
-                        resolved,
-                        prependingEnvironment = prependingEnvironment,
-                        timeout = timeout,
-                    )
-                }
-            }.getOrThrow()
-    }
-
-    private suspend fun engine(
-        operation: DatabaseOperation,
-        prependingEnvironment: Boolean,
-        timeout: Duration,
-    ): Any? =
-        guardedFirebaseOperation(timeout, this) {
-            when (operation) {
-                is DatabaseOperation.GetValues ->
-                    getValuesEngine(
-                        reference,
-                        operation.path.prependingEnvironmentIfNeeded(prependingEnvironment),
-                        (globalCacheStrategy.wrappedValue ?: operation.cacheStrategy).resolved,
-                        this,
-                    )
-
-                is DatabaseOperation.QueryValues ->
-                    queryValuesEngine(
-                        reference,
-                        operation.path.prependingEnvironmentIfNeeded(prependingEnvironment),
-                        operation.strategy,
-                        (globalCacheStrategy.wrappedValue ?: operation.cacheStrategy).resolved,
-                        this,
-                    )
-
-                is DatabaseOperation.SetValue ->
-                    setValueEngine(
-                        reference,
-                        operation.value,
-                        operation.key.prependingEnvironmentIfNeeded(prependingEnvironment),
-                        this,
-                    )
-
-                is DatabaseOperation.UpdateChildValues ->
-                    updateChildValuesEngine(
-                        reference,
-                        operation.key.prependingEnvironmentIfNeeded(prependingEnvironment),
-                        operation.data,
-                        this,
-                    )
-            }
-        }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun <T> Any?.cast(): T = this as T
-
-    private fun String.prependingEnvironmentIfNeeded(prepend: Boolean): String =
-        if (prepend) "${Networking.config.environment.shortString}/${trim('/')}" else this
 }

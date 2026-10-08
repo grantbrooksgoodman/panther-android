@@ -2,8 +2,8 @@
 //  LaraTranslator.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.translator.services
@@ -27,14 +27,21 @@ internal class LaraTranslator : BaseTranslator(TranslationPlatform.LARA) {
         addDocumentStartScript(webView, IFRAME_RELAY_SCRIPT)
     }
 
-    // MARK: - Extraction Override
+    // MARK: - Evaluate JavaScript
 
     // Lara's result is relayed to `window.__translatorResult`; read it
     // directly rather than scraping the DOM.
-    override suspend fun extractOutput(
+    override suspend fun evaluateJavaScript(
         webView: WebView,
-        useAlternate: Boolean,
-    ): String? = webView.evaluateJavascriptAwait(RESULT_SLOT_SCRIPT)
+        useAlternateString: Boolean,
+    ): EvaluationResult {
+        val translationOutput = webView.evaluateJavascriptAwait(RESULT_SLOT_SCRIPT)
+        if (translationOutput.isNullOrEmpty()) {
+            return EvaluationResult.Retry(useAlternateString = !useAlternateString)
+        }
+
+        return EvaluationResult.Success(translationOutput)
+    }
 
     // MARK: - Companion
 

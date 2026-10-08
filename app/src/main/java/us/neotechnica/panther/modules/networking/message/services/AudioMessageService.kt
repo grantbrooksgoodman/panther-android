@@ -2,16 +2,16 @@
 //  AudioMessageService.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.networking.message.services
 
-import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.modules.networking.message.models.AudioFile
 import us.neotechnica.panther.modules.networking.message.models.AudioMessageReference
 import us.neotechnica.panther.modules.networking.message.models.LocalAudioFilePath
+import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.translator.models.Translation
@@ -78,7 +78,7 @@ object AudioMessageService {
                 ?: throw failure("Failed to resolve local audio path.").appending(userInfo = userInfo)
 
         try {
-            storage.download(sourcePathString, sourceFile)
+            storage.downloadItem(sourcePathString, sourceFile)
         } catch (exception: Exception) {
             throw exception.appending(userInfo = userInfo)
         }

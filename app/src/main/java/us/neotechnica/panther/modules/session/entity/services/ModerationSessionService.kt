@@ -12,7 +12,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import us.neotechnica.panther.bundle.reportedUsers
 import us.neotechnica.panther.bundle.traitCollectionChanged
+import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
@@ -39,6 +41,7 @@ import us.neotechnica.panther.networking.modules.common.extensions.bangQualified
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.getValues
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -216,7 +219,7 @@ object ModerationSessionService {
                 ?: throw Exception("Current user ID has not been set.", metadata = ExceptionMetadata(this))
 
         val path = listOf(NetworkPath.users.rawValue, currentUserID, BLOCKED_USER_IDS_KEY).joinToString("/")
-        val rawValue: Map<String, Any?> = database.getValues(path, cacheStrategy = CacheStrategy.ADAPTIVE)
+        val rawValue: Map<String, Any?> = database.getValues<Map<String, Any?>>(path, cacheStrategy = CacheStrategy.ADAPTIVE)
         val blockedUserIDs = rawValue.keys.filter { !it.isBangQualifiedEmpty }
         if (blockedUserIDs.isEmpty()) return emptyList()
         return UserService.getUsers(blockedUserIDs)

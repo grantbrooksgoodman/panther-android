@@ -2,22 +2,23 @@
 //  NetworkHealthProber.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.networking.modules.health.services
 
-import android.app.ActivityManager
 import android.os.PowerManager
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.health.extensions.isNetworkLevelFailure
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealthEvent
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealthProbeConfiguration
 import us.neotechnica.panther.networking.modules.health.models.PathState
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
-import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.math.max
@@ -46,16 +47,16 @@ internal class NetworkHealthProber(
 ) {
     // MARK: - Types
 
-    private data class ProbeState(
+    private data class MutableState(
         val isProbeInFlight: Boolean = false,
         val lastAttemptAt: Long? = null,
         val lastOutcomeDescription: String? = null,
-        val attempts: List<Long> = emptyList(),
+        val probeAttempts: List<Long> = emptyList(),
     )
 
     // MARK: - Properties
 
-    private val state = LockIsolated(ProbeState())
+    private val state = LockIsolated(MutableState())
 
     // MARK: - Computed Properties
 
@@ -66,8 +67,8 @@ internal class NetworkHealthProber(
             val maximumProbesPerHour = probeConfiguration?.maximumProbesPerHour ?: 0
             val now = System.currentTimeMillis()
             return state.withValue { reference ->
-                val recent = reference.value.attempts.filter { now - it < ONE_HOUR_MILLIS }
-                reference.value = reference.value.copy(attempts = recent)
+                val recent = reference.value.probeAttempts.filter { now - it < BUDGET_WINDOW_MILLIS }
+                reference.value = reference.value.copy(probeAttempts = recent)
                 val remainingBudget = max(maximumProbesPerHour - recent.size, 0)
                 val lastAttemptAt = reference.value.lastAttemptAt
                 if (lastAttemptAt == null) {
@@ -105,8 +106,8 @@ internal class NetworkHealthProber(
     private fun claimProbeSlot(configuration: NetworkHealthProbeConfiguration): Boolean =
         state.withValue { reference ->
             val now = System.currentTimeMillis()
-            val recent = reference.value.attempts.filter { timestamp -> now - timestamp < ONE_HOUR_MILLIS }
-            reference.value = reference.value.copy(attempts = recent)
+            val recent = reference.value.probeAttempts.filter { timestamp -> now - timestamp < BUDGET_WINDOW_MILLIS }
+            reference.value = reference.value.copy(probeAttempts = recent)
 
             if (reference.value.isProbeInFlight) return@withValue false
             if (recent.size >= configuration.maximumProbesPerHour) return@withValue false
@@ -117,7 +118,7 @@ internal class NetworkHealthProber(
                 return@withValue false
             }
 
-            reference.value = reference.value.copy(isProbeInFlight = true, lastAttemptAt = now, attempts = recent + now)
+            reference.value = reference.value.copy(isProbeInFlight = true, lastAttemptAt = now, probeAttempts = recent + now)
             true
         }
 
@@ -150,7 +151,7 @@ internal class NetworkHealthProber(
                     "%.3fs".format(elapsed)
                 }
             } catch (throwable: Throwable) {
-                if (isNetworkLevelFailure(throwable)) {
+                if (throwable.isNetworkLevelFailure) {
                     onEvent(NetworkHealthEvent.ProbeFailure(timeoutSeconds = configuration.timeoutSeconds))
                     "network failure"
                 } else {
@@ -168,23 +169,23 @@ internal class NetworkHealthProber(
         Logger.log("Probe completed: $outcomeDescription.", domain = LoggerDomain.Networking.health)
     }
 
-    private fun isBackgrounded(): Boolean {
-        val appProcessInfo = ActivityManager.RunningAppProcessInfo()
-        ActivityManager.getMyMemoryState(appProcessInfo)
-        return appProcessInfo.importance > ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE
-    }
+    private fun isBackgrounded(): Boolean =
+        !ProcessLifecycleOwner
+            .get()
+            .lifecycle
+            .currentState
+            .isAtLeast(Lifecycle.State.STARTED)
 
     private fun isPowerSaveMode(): Boolean =
         runCatching {
             Networking.requireContext().getSystemService(PowerManager::class.java).isPowerSaveMode
         }.getOrDefault(false)
 
-    private fun isNetworkLevelFailure(throwable: Throwable): Boolean = throwable is IOException
-
     // MARK: - Companion
 
     private companion object {
         private const val MILLIS_PER_SECOND = 1000.0
-        private const val ONE_HOUR_MILLIS = 3_600_000L
+        private const val BUDGET_WINDOW_SECONDS = 3600L
+        private const val BUDGET_WINDOW_MILLIS = BUDGET_WINDOW_SECONDS * 1000L
     }
 }

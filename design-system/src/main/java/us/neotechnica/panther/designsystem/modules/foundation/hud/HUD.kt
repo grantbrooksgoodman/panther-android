@@ -8,6 +8,8 @@
 
 package us.neotechnica.panther.designsystem.modules.foundation.hud
 
+import us.neotechnica.panther.subsystem.AppSubsystem
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.HUDDelegate
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -28,6 +30,12 @@ import kotlin.time.Duration.Companion.milliseconds
  * operation finishes to restore interaction.
  */
 object HUD {
+    // MARK: - Init
+
+    init {
+        AppSubsystem.delegates.registerHUDDelegate(HUDDelegateAdapter)
+    }
+
     // MARK: - Types
 
     /** The image displayed inside a HUD flash. */
@@ -97,5 +105,15 @@ object HUD {
      */
     fun showSuccess(text: String? = null) {
         HUDPresenter.showSuccess(text)
+    }
+}
+
+private object HUDDelegateAdapter : HUDDelegate {
+    override fun hide() {
+        HUD.hide()
+    }
+
+    override fun showProgress(isModal: Boolean) {
+        HUD.showProgress(isModal = isModal)
     }
 }

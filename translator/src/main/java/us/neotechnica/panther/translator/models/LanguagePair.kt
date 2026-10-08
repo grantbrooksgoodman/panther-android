@@ -70,7 +70,7 @@ data class LanguagePair(
             val components = string.split("-")
             if (components.isEmpty()) return null
 
-            val fromValue = components[0].lowercasedTrimmingWhitespaceAndNewlines()
+            val fromValue = components[0].lowercasedTrimmingWhitespaceAndNewlines
             if (components.size <= 1) {
                 return LanguagePair(from = fromValue, to = fromValue)
             }
@@ -79,7 +79,7 @@ data class LanguagePair(
                 components
                     .subList(1, components.size)
                     .joinToString("")
-                    .lowercasedTrimmingWhitespaceAndNewlines()
+                    .lowercasedTrimmingWhitespaceAndNewlines
             return LanguagePair(from = fromValue, to = toValue)
         }
     }

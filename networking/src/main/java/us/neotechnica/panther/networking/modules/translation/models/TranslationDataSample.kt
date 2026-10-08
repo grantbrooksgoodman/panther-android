@@ -19,9 +19,9 @@ internal class TranslationDataSample(
     /** The snapshotted archive tree, keyed by language pair. */
     val data: Map<String, Any>,
     /** The duration after which the snapshot expires, in milliseconds. */
-    val expiryThresholdMillis: Long,
+    val expiryThreshold: Long,
     /** The epoch-millisecond timestamp at which the snapshot was captured. */
-    val capturedAtMillis: Long = System.currentTimeMillis(),
+    val date: Long = System.currentTimeMillis(),
 ) {
     // MARK: - Computed Properties
 
@@ -31,7 +31,7 @@ internal class TranslationDataSample(
 
     /** A Boolean value that indicates whether the snapshot has exceeded its expiry threshold. */
     val isExpired: Boolean
-        get() = System.currentTimeMillis() - capturedAtMillis > expiryThresholdMillis
+        get() = System.currentTimeMillis() - date > expiryThreshold
 
     // MARK: - Companion
 

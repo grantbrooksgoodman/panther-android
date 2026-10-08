@@ -39,6 +39,7 @@ import us.neotechnica.panther.modules.session.sync.models.SyncSession
 import us.neotechnica.panther.modules.session.sync.services.ConversationObserverService
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList
+import us.neotechnica.panther.networking.modules.database.interfaces.observe
 import us.neotechnica.panther.subsystem.modules.foundation.models.Coalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -48,6 +49,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.SingleSlotCoal
 import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
 import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+
+// This service exceeds the file-length and type-body-length limits.
 
 /**
  * Resolves and keeps live the signed-in user and their world.
@@ -59,7 +62,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
  * re-resolves them, while a change to their device identifier signs the
  * device out to preserve a single active session.
  */
-// This service exceeds the file-length and type-body-length limits.
 @Suppress("LargeClass")
 object UserSessionService {
     // MARK: - Types

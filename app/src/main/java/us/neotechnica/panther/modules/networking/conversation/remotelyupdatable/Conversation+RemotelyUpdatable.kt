@@ -2,12 +2,16 @@
 //  Conversation+RemotelyUpdatable.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.networking.conversation.remotelyupdatable
 
+import us.neotechnica.panther.bundle.conversations
+import us.neotechnica.panther.bundle.messages
+import us.neotechnica.panther.bundle.users
+import us.neotechnica.panther.modules.networking.common.encodeForWrite
 import us.neotechnica.panther.modules.networking.conversation.models.Activity
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
@@ -15,21 +19,21 @@ import us.neotechnica.panther.modules.networking.conversation.models.Conversatio
 import us.neotechnica.panther.modules.networking.conversation.models.Participant
 import us.neotechnica.panther.modules.networking.conversation.models.ReactionMetadata
 import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserParticipant
 import us.neotechnica.panther.modules.session.entity.extensions.filteringSystemMessages
 import us.neotechnica.panther.modules.session.entity.extensions.uniquedByID
 import us.neotechnica.panther.modules.session.state.services.PendingTranslationArchive
 import us.neotechnica.panther.modules.session.state.services.SelfWriteRegistry
 import us.neotechnica.panther.modules.session.state.services.SessionStore
-import us.neotechnica.panther.modules.networking.common.encodeForWrite
 import us.neotechnica.panther.networking.Networking
-import us.neotechnica.panther.networking.modules.common.extensions.typeMismatch
+import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.common.models.WriteAction
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestampDateFormatter
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import java.util.Date
 
 // MARK: - Types
@@ -109,7 +113,12 @@ suspend fun Conversation.updateValues(data: Map<ConversationUpdatableKey, Any>):
     for ((key, value) in data) {
         val modified =
             updated.modifyKey(key, value)
-                ?: throw typeMismatch(this, key.rawValue, value)
+                ?: throw Exception.Networking.typeMismatch(
+                    key.rawValue,
+                    value,
+                    ExceptionMetadata(this),
+                )
+
         updated = modified
         changedKeys.add(key.rawValue)
     }
@@ -141,7 +150,13 @@ suspend fun Conversation.update(
     key: ConversationUpdatableKey,
     to: Any,
 ): Conversation {
-    val newValue = modifyKey(key, to) ?: throw typeMismatch(this, key.rawValue, to)
+    val newValue =
+        modifyKey(key, to) ?: throw Exception.Networking.typeMismatch(
+            key.rawValue,
+            to,
+            ExceptionMetadata(this),
+        )
+
     val valueKeyPath = "${NetworkPath.conversations.rawValue}/${id.key}/${key.rawValue}"
 
     return when (val action = willWrite(to, key, newValue)) {
@@ -168,18 +183,32 @@ suspend fun Conversation.update(
     val valueKeyPath = "${NetworkPath.conversations.rawValue}/${id.key}/${key.rawValue}"
     val committed =
         Networking.config.databaseDelegate.runTransaction(valueKeyPath, block = applyingRaw)
-            ?: throw typeMismatch(this, key.rawValue, null)
+            ?: throw Exception.Networking.typeMismatch(
+                key.rawValue,
+                null,
+                ExceptionMetadata(this),
+            )
 
     val decoded: Any =
         when (key) {
             ConversationUpdatableKey.REACTION_METADATA ->
                 @Suppress("UNCHECKED_CAST")
                 (committed as? List<Map<String, Any?>>)?.map { ReactionMetadata.decode(it) }
-                    ?: throw typeMismatch(this, key.rawValue, committed)
+                    ?: throw Exception.Networking.typeMismatch(
+                        key.rawValue,
+                        committed,
+                        ExceptionMetadata(this),
+                    )
             else -> committed
         }
 
-    val updated = modifyKey(key, decoded) ?: throw typeMismatch(this, key.rawValue, decoded)
+    val updated =
+        modifyKey(key, decoded) ?: throw Exception.Networking.typeMismatch(
+            key.rawValue,
+            decoded,
+            ExceptionMetadata(this),
+        )
+
     return didWrite(updated, key)
 }
 
@@ -217,9 +246,9 @@ suspend fun Conversation.willWrite(
     val conversationPath = "${NetworkPath.conversations.rawValue}/${updated.id.key}"
     val currentUserParticipant =
         updated.currentUserParticipant
-            ?: throw us.neotechnica.panther.subsystem.modules.foundation.models.Exception(
+            ?: throw Exception(
                 "Failed to resolve current user participant.",
-                metadata = us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata(SessionStore),
+                metadata = ExceptionMetadata(SessionStore),
             )
 
     // Reset typing for current user + un-delete all participants.
@@ -296,7 +325,7 @@ suspend fun Conversation.didWrite(
     }
 
     val updates = mutableMapOf<String, Any?>()
-    updates["${NetworkPath.conversations.rawValue}/${identifier}/${ConversationUpdatableKey.ENCODED_HASH.rawValue}"] =
+    updates["${NetworkPath.conversations.rawValue}/$identifier/${ConversationUpdatableKey.ENCODED_HASH.rawValue}"] =
         updated.id.hash
     updates.putAll(buildParticipantUpdates(updated))
 

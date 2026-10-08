@@ -2,8 +2,8 @@
 //  Auth.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.networking.modules.auth.services
@@ -21,6 +21,7 @@ import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.auth.extensions.FIREBASE_AUTH_ERROR_CODE_KEY
 import us.neotechnica.panther.networking.modules.auth.interfaces.AuthDelegate
 import us.neotechnica.panther.networking.modules.common.extensions.digits
+import us.neotechnica.panther.networking.modules.common.models.GuardedOperation
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import java.util.concurrent.TimeUnit
@@ -41,7 +42,7 @@ class Auth : AuthDelegate {
         authID: String,
         verificationCode: String,
     ): String {
-        assertReadWriteEnabled()
+        GuardedOperation.checkPreconditions(sender = this)
 
         Networking.config.activityIndicatorDelegate.show()
         return try {
@@ -57,7 +58,7 @@ class Auth : AuthDelegate {
     }
 
     override suspend fun signInAnonymously(): String {
-        assertReadWriteEnabled()
+        GuardedOperation.checkPreconditions(sender = this)
 
         firebaseAuth.currentUser?.let { return it.uid }
 
@@ -81,7 +82,7 @@ class Auth : AuthDelegate {
         internationalNumber: String,
         languageCode: String,
     ): String {
-        assertReadWriteEnabled()
+        GuardedOperation.checkPreconditions(sender = this)
 
         firebaseAuth.setLanguageCode(languageCode)
         Networking.config.activityIndicatorDelegate.show()
@@ -97,15 +98,6 @@ class Auth : AuthDelegate {
     }
 
     // MARK: - Auxiliary
-
-    private fun assertReadWriteEnabled() {
-        if (!Networking.isReadWriteEnabled) {
-            throw Exception(
-                "Read/write access is currently disabled.",
-                metadata = ExceptionMetadata(this),
-            )
-        }
-    }
 
     private suspend fun requestVerificationID(
         activity: Activity,

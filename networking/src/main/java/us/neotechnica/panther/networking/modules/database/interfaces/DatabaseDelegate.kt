@@ -2,14 +2,16 @@
 //  DatabaseDelegate.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.networking.modules.database.interfaces
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.database.models.QueryStrategy
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -47,6 +49,21 @@ interface DatabaseDelegate {
     // MARK: - Methods
 
     /**
+     * Suspends until the realtime connection is established, or
+     * the given timeout elapses.
+     *
+     * Callers that must read authoritative server data – and
+     * never act on a possibly-stale local cache – use this to
+     * confirm connectivity before proceeding.
+     *
+     * @param timeout The maximum time to wait for the connection.
+     *
+     * @return `true` if the connection was established within the
+     *   timeout; otherwise, `false`.
+     */
+    suspend fun awaitRealtimeConnection(timeout: Duration): Boolean
+
+    /**
      * Generates a unique key at the specified path.
      *
      * @param path The database path at which to generate a key.
@@ -56,8 +73,7 @@ interface DatabaseDelegate {
     fun generateKey(path: String): String?
 
     /**
-     * Reads the value stored at the specified path as the
-     * inferred type.
+     * Reads the value stored at the specified path.
      *
      * @param path The database path to read from.
      * @param prependingEnvironment Whether the active environment
@@ -67,15 +83,14 @@ interface DatabaseDelegate {
      *
      * @return The value stored at the path.
      *
-     * @throws Exception if the read fails or the value cannot be
-     *   cast to `T`.
+     * @throws Exception if the read fails.
      */
-    suspend fun <T> getValues(
+    suspend fun getValues(
         path: String,
         prependingEnvironment: Boolean = true,
         cacheStrategy: CacheStrategy = CacheStrategy.RETURN_CACHE_FIRST,
-        timeout: Duration = Networking.DEFAULT_OPERATION_TIMEOUT,
-    ): T
+        timeout: Duration = Networking.defaultOperationTimeout,
+    ): Any
 
     /**
      * Atomically increments a numeric value at the specified path
@@ -93,7 +108,7 @@ interface DatabaseDelegate {
         path: String,
         delta: Int,
         prependingEnvironment: Boolean = true,
-        timeout: Duration = Networking.DEFAULT_OPERATION_TIMEOUT,
+        timeout: Duration = Networking.defaultOperationTimeout,
     )
 
     /**
@@ -121,12 +136,12 @@ interface DatabaseDelegate {
      * @param prependingEnvironment Whether the active environment
      *   is prepended to the path.
      *
-     * @return A flow that emits values of type `T` as they change.
+     * @return A flow that emits values as they change.
      */
-    fun <T> observe(
+    fun observe(
         path: String,
         prependingEnvironment: Boolean = true,
-    ): Flow<T>
+    ): Flow<Any>
 
     /**
      * Establishes the underlying connection to the database
@@ -135,8 +150,7 @@ interface DatabaseDelegate {
     fun prewarm()
 
     /**
-     * Queries a limited subset of values at the specified path as
-     * the inferred type.
+     * Queries a limited subset of values at the specified path.
      *
      * @param path The database path to query.
      * @param strategy The query strategy that determines which
@@ -148,16 +162,15 @@ interface DatabaseDelegate {
      *
      * @return The queried values.
      *
-     * @throws Exception if the query fails or the values cannot be
-     *   cast to `T`.
+     * @throws Exception if the query fails.
      */
-    suspend fun <T> queryValues(
+    suspend fun queryValues(
         path: String,
         strategy: QueryStrategy = QueryStrategy.First(DEFAULT_QUERY_LIMIT),
         prependingEnvironment: Boolean = true,
         cacheStrategy: CacheStrategy = CacheStrategy.RETURN_CACHE_FIRST,
-        timeout: Duration = Networking.DEFAULT_OPERATION_TIMEOUT,
-    ): T
+        timeout: Duration = Networking.defaultOperationTimeout,
+    ): Any
 
     /**
      * Executes a transaction at the specified path.
@@ -182,7 +195,7 @@ interface DatabaseDelegate {
     suspend fun runTransaction(
         path: String,
         prependingEnvironment: Boolean = true,
-        timeout: Duration = Networking.DEFAULT_OPERATION_TIMEOUT,
+        timeout: Duration = Networking.defaultOperationTimeout,
         block: (Any?) -> Any?,
     ): Any?
 
@@ -210,7 +223,7 @@ interface DatabaseDelegate {
         value: Any?,
         key: String,
         prependingEnvironment: Boolean = true,
-        timeout: Duration = Networking.DEFAULT_OPERATION_TIMEOUT,
+        timeout: Duration = Networking.defaultOperationTimeout,
     )
 
     /**
@@ -229,7 +242,7 @@ interface DatabaseDelegate {
         key: String,
         data: Map<String, Any?>,
         prependingEnvironment: Boolean = true,
-        timeout: Duration = Networking.DEFAULT_OPERATION_TIMEOUT,
+        timeout: Duration = Networking.defaultOperationTimeout,
     )
 
     /**
@@ -266,4 +279,108 @@ interface DatabaseDelegate {
             prependingEnvironment = false,
         )
     }
+}
+
+/**
+ * Reads the value stored at the specified path as the
+ * specified type.
+ *
+ * @param path The database path to read from.
+ * @param prependingEnvironment Whether the active environment
+ *   is prepended to the path.
+ * @param cacheStrategy The caching behavior for this operation.
+ * @param timeout The maximum time to wait before timing out.
+ *
+ * @return The value stored at the path.
+ *
+ * @throws Exception if the read fails or the value cannot be
+ *   cast to `T`.
+ */
+suspend inline fun <reified T> DatabaseDelegate.getValues(
+    path: String,
+    prependingEnvironment: Boolean = true,
+    cacheStrategy: CacheStrategy = CacheStrategy.RETURN_CACHE_FIRST,
+    timeout: Duration = Networking.defaultOperationTimeout,
+): T {
+    val values =
+        getValues(
+            path,
+            prependingEnvironment = prependingEnvironment,
+            cacheStrategy = cacheStrategy,
+            timeout = timeout,
+        )
+
+    return values as? T ?: throw Exception.Networking.typecastFailed(
+        T::class.simpleName,
+        metadata = ExceptionMetadata(this),
+    )
+}
+
+/**
+ * Returns a flow that emits the value at the specified path, as
+ * the specified type, each time it changes.
+ *
+ * The flow attaches a real-time observer to the database and
+ * removes it when the collector is cancelled. Each emitted
+ * value also updates the in-memory cache used by [getValues].
+ *
+ * @param path The database path to observe.
+ * @param prependingEnvironment Whether the active environment
+ *   is prepended to the path.
+ *
+ * @return A flow that emits values of type `T` as they change.
+ *
+ * @throws Exception if an emitted value cannot be cast to `T`.
+ */
+inline fun <reified T> DatabaseDelegate.observe(
+    path: String,
+    prependingEnvironment: Boolean = true,
+): Flow<T> =
+    observe(
+        path,
+        prependingEnvironment = prependingEnvironment,
+    ).map { value ->
+        value as? T ?: throw Exception.Networking.typecastFailed(
+            T::class.simpleName,
+            metadata = ExceptionMetadata(this),
+        )
+    }
+
+/**
+ * Queries a limited subset of values at the specified path as
+ * the specified type.
+ *
+ * @param path The database path to query.
+ * @param strategy The query strategy that determines which
+ *   results to return.
+ * @param prependingEnvironment Whether the active environment
+ *   is prepended to the path.
+ * @param cacheStrategy The caching behavior for this operation.
+ * @param timeout The maximum time to wait before timing out.
+ *
+ * @return The queried values.
+ *
+ * @throws Exception if the query fails or the values cannot be
+ *   cast to `T`.
+ */
+suspend inline fun <reified T> DatabaseDelegate.queryValues(
+    path: String,
+    strategy: QueryStrategy = QueryStrategy.First(DatabaseDelegate.DEFAULT_QUERY_LIMIT),
+    prependingEnvironment: Boolean = true,
+    cacheStrategy: CacheStrategy = CacheStrategy.RETURN_CACHE_FIRST,
+    timeout: Duration = Networking.defaultOperationTimeout,
+): T {
+    val values =
+        queryValues(
+            path,
+            strategy = strategy,
+            prependingEnvironment = prependingEnvironment,
+            cacheStrategy = cacheStrategy,
+            timeout = timeout,
+        )
+
+    return values as? T ?: throw Exception.Networking.typecastFailed(
+        T::class.simpleName,
+        metadata = ExceptionMetadata(this),
+    )
 }

@@ -2,8 +2,8 @@
 //  StringTranslationExtensions.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.networking.modules.translation.extensions
@@ -11,6 +11,7 @@ package us.neotechnica.panther.networking.modules.translation.extensions
 import android.util.Base64
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHashOf
 import java.io.ByteArrayOutputStream
+import java.util.Locale
 
 // MARK: - Hashing
 
@@ -73,6 +74,21 @@ internal val String.percentDecoded: String?
         return bytes.toByteArray().toString(Charsets.UTF_8)
     }
 
+// MARK: - Language Names
+
+/** The English display name for this language code, or `null`. */
+internal val String.englishLanguageName: String?
+    get() {
+        val displayLanguage = Locale(this).getDisplayLanguage(Locale.ENGLISH)
+        return displayLanguage.takeUnless { it.isBlank() || it.equals(this, ignoreCase = true) }
+    }
+
+// MARK: - Trimming
+
+/** The string with trailing space characters removed. */
+internal val String.trimmingTrailingWhitespace: String
+    get() = trimEnd(' ', ' ')
+
 // MARK: - Sanitization
 
 /** The string with the translation processing sentinels removed. */
@@ -83,15 +99,29 @@ internal val String.sanitized: String
 
 /** The string's UTF-8 bytes, Base64-encoded without line wrapping. */
 internal val String.base64Encoded: String
-    get() = Base64.encodeToString(toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+    get() =
+        runCatching {
+            java.util.Base64
+                .getEncoder()
+                .encodeToString(toByteArray(Charsets.UTF_8))
+        }.getOrElse { Base64.encodeToString(toByteArray(Charsets.UTF_8), Base64.NO_WRAP) }
 
 /** The string decoded from Base64, or itself if it is not valid Base64. */
 internal val String.base64Decoded: String
     get() =
-        try {
-            String(Base64.decode(this, Base64.DEFAULT), Charsets.UTF_8)
-        } catch (_: IllegalArgumentException) {
-            this
+        runCatching {
+            String(
+                java.util.Base64
+                    .getDecoder()
+                    .decode(this),
+                Charsets.UTF_8,
+            )
+        }.getOrElse {
+            try {
+                String(Base64.decode(this, Base64.DEFAULT), Charsets.UTF_8)
+            } catch (_: IllegalArgumentException) {
+                this
+            }
         }
 
 // MARK: - Components

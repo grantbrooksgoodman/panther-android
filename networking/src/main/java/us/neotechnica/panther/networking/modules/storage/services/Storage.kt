@@ -2,186 +2,232 @@
 //  Storage.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.networking.modules.storage.services
 
-import android.net.Uri
-import com.google.firebase.storage.FirebaseStorage
-import com.google.firebase.storage.StorageMetadata as FirebaseStorageMetadata
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
-import us.neotechnica.panther.networking.Networking
-import us.neotechnica.panther.networking.modules.health.models.TransferProgressProbe
+import kotlinx.coroutines.flow.Flow
+import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.storage.interfaces.StorageDelegate
-import us.neotechnica.panther.networking.modules.storage.models.StorageMetadata
-import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
-import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
-import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
-import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.networking.modules.storage.models.DirectoryListing
+import us.neotechnica.panther.networking.modules.storage.models.HostedItemMetadata
+import us.neotechnica.panther.networking.modules.storage.models.HostedItemType
+import us.neotechnica.panther.networking.modules.storage.models.StorageOperation
+import us.neotechnica.panther.networking.modules.storage.models.StorageTransferProgress
 import java.io.File
+import kotlin.time.Duration
 
 /**
  * The Firebase Storage implementation of [StorageDelegate].
+ *
+ * Operations are coalesced by content so that identical
+ * concurrent operations issue a single network request, and
+ * download and existence results are cached per path with a
+ * short time-to-live.
  */
 class Storage : StorageDelegate {
     // MARK: - Properties
 
-    private val reference by lazy { FirebaseStorage.getInstance().reference }
+    private val coreStorage = CoreStorage()
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // MARK: - Global Cache Strategy
 
-    // MARK: - StorageDelegate Conformance
-
-    override suspend fun delete(path: String) {
-        runGuarded { reference.child(environmentPath(path)).delete().await() }
+    override fun setGlobalCacheStrategy(globalCacheStrategy: CacheStrategy?) {
+        coreStorage.setGlobalCacheStrategy(globalCacheStrategy)
     }
 
-    override suspend fun downloadBytes(
-        path: String,
-        maxBytes: Long,
-    ): ByteArray {
-        val start = System.currentTimeMillis()
-        val bytes = runGuarded { reference.child(environmentPath(path)).getBytes(maxBytes).await() }
-        recordThroughput(bytes.size, start)
-        return bytes
+    // MARK: - Prewarming
+
+    override fun prewarm() {
+        coreStorage.prewarm()
     }
 
-    override suspend fun download(
-        path: String,
-        toFile: File,
+    // MARK: - Data Upload
+
+    override suspend fun upload(
+        data: ByteArray,
+        metadata: HostedItemMetadata,
+        prependingEnvironment: Boolean,
+        timeout: Duration,
     ) {
-        val probe = TransferProgressProbe()
-        try {
-            runGuarded {
-                toFile.parentFile?.mkdirs()
-                reference
-                    .child(environmentPath(path))
-                    .getFile(toFile)
-                    .addOnProgressListener { probe.handleProgress(it.bytesTransferred) }
-                    .await()
-            }
-        } catch (exception: Exception) {
-            probe.invalidate()
-            throw exception
-        }
-        probe.finish(toFile.length().toInt())
-    }
-
-    override suspend fun uploadBytes(
-        bytes: ByteArray,
-        path: String,
-        metadata: StorageMetadata?,
-    ) {
-        val probe = TransferProgressProbe()
-        try {
-            runGuarded {
-                val ref = reference.child(environmentPath(path))
-                val firebaseMetadata = metadata?.let(::firebaseMetadata)
-                val task = if (firebaseMetadata != null) ref.putBytes(bytes, firebaseMetadata) else ref.putBytes(bytes)
-                task.addOnProgressListener { probe.handleProgress(it.bytesTransferred) }.await()
-            }
-        } catch (exception: Exception) {
-            probe.invalidate()
-            throw exception
-        }
-        probe.finish(bytes.size)
+        coreStorage.performOperation(
+            StorageOperation.Upload(
+                data,
+                metadata = metadata,
+            ),
+            prependingEnvironment = prependingEnvironment,
+            timeout = timeout,
+        )
     }
 
     override suspend fun upload(
         file: File,
-        path: String,
-        metadata: StorageMetadata?,
+        metadata: HostedItemMetadata,
+        prependingEnvironment: Boolean,
+        timeout: Duration,
     ) {
-        val probe = TransferProgressProbe()
-        try {
-            runGuarded {
-                val ref = reference.child(environmentPath(path))
-                val uri = Uri.fromFile(file)
-                val firebaseMetadata = metadata?.let(::firebaseMetadata)
-                val task = if (firebaseMetadata != null) ref.putFile(uri, firebaseMetadata) else ref.putFile(uri)
-                task.addOnProgressListener { probe.handleProgress(it.bytesTransferred) }.await()
-            }
-        } catch (exception: Exception) {
-            probe.invalidate()
-            throw exception
-        }
-        probe.finish(file.length().toInt())
+        coreStorage.performOperation(
+            StorageOperation.UploadFile(
+                file,
+                metadata = metadata,
+            ),
+            prependingEnvironment = prependingEnvironment,
+            timeout = timeout,
+        )
     }
 
-    override suspend fun itemExists(path: String): Boolean =
-        runCatching {
-            reference.child(environmentPath(path)).metadata.await()
-            true
-        }.getOrDefault(false)
-
-    override fun prewarm() {
-        Logger.log(
-            "Prewarming storage connection.",
-            domain = LoggerDomain.Networking.storage,
+    override fun uploadWithProgress(
+        data: ByteArray,
+        metadata: HostedItemMetadata,
+        prependingEnvironment: Boolean,
+        timeout: Duration,
+    ): Flow<StorageTransferProgress> =
+        coreStorage.uploadWithProgress(
+            data,
+            metadata = metadata,
+            prependingEnvironment = prependingEnvironment,
+            timeout = timeout,
         )
 
-        scope.launch {
-            Networking.config.activityIndicatorDelegate.show()
-            try {
-                runCatching { reference.child(environmentPath("prewarm")).metadata.await() }
-            } finally {
-                Networking.config.activityIndicatorDelegate.hide()
-            }
-        }
-    }
+    // MARK: - Deletion
 
-    // MARK: - Auxiliary
-
-    /**
-     * Prepends the active environment's short string to [path] so
-     * storage is isolated per environment (for example,
-     * `"media/x.jpg"` → `"dev/media/x.jpg"`).
-     */
-    private fun environmentPath(path: String): String = "${Networking.config.environment.shortString}/${path.trim('/')}"
-
-    private fun firebaseMetadata(metadata: StorageMetadata): FirebaseStorageMetadata =
-        FirebaseStorageMetadata
-            .Builder()
-            .apply {
-                metadata.contentType?.let { setContentType(it) }
-                metadata.customValues.forEach { (key, value) -> setCustomMetadata(key, value) }
-            }.build()
-
-    private fun recordThroughput(
-        byteCount: Int,
-        startMillis: Long,
+    override suspend fun deleteAllItems(
+        path: String,
+        includeItemsInSubdirectories: Boolean,
+        prependingEnvironment: Boolean,
+        timeout: Duration,
     ) {
-        val seconds = (System.currentTimeMillis() - startMillis) / MILLIS_PER_SECOND
-        Networking.health.recordThroughputSample(byteCount, seconds)
+        coreStorage.performOperation(
+            StorageOperation.DeleteAllItems(
+                path,
+                includeItemsInSubdirectories = includeItemsInSubdirectories,
+            ),
+            prependingEnvironment = prependingEnvironment,
+            timeout = timeout,
+        )
     }
 
-    private suspend fun <T> runGuarded(operation: suspend () -> T): T {
-        if (!Networking.isReadWriteEnabled) {
-            throw Exception(
-                "Read/write access is currently disabled.",
-                metadata = ExceptionMetadata(this),
-            )
-        }
-
-        Networking.config.activityIndicatorDelegate.show()
-        return try {
-            operation()
-        } catch (throwable: Throwable) {
-            throw (throwable as? Exception) ?: Exception.from(throwable, ExceptionMetadata(this))
-        } finally {
-            Networking.config.activityIndicatorDelegate.hide()
-        }
+    override suspend fun deleteItem(
+        path: String,
+        prependingEnvironment: Boolean,
+        timeout: Duration,
+    ) {
+        coreStorage.performOperation(
+            StorageOperation.DeleteItem(path),
+            prependingEnvironment = prependingEnvironment,
+            timeout = timeout,
+        )
     }
 
-    // MARK: - Companion
+    // MARK: - Download
 
-    private companion object {
-        private const val MILLIS_PER_SECOND = 1000.0
+    override suspend fun downloadAllItems(
+        path: String,
+        toDirectory: File,
+        includeItemsInSubdirectories: Boolean,
+        prependingEnvironment: Boolean,
+        cacheStrategy: CacheStrategy,
+        timeout: Duration,
+    ) {
+        coreStorage.performOperation(
+            StorageOperation.DownloadAllItems(
+                path,
+                toDirectory = toDirectory,
+                includeItemsInSubdirectories = includeItemsInSubdirectories,
+                cacheStrategy = cacheStrategy,
+            ),
+            prependingEnvironment = prependingEnvironment,
+            timeout = timeout,
+        )
+    }
+
+    override suspend fun downloadItem(
+        path: String,
+        toLocalPath: File,
+        prependingEnvironment: Boolean,
+        cacheStrategy: CacheStrategy,
+        timeout: Duration,
+    ) {
+        coreStorage.performOperation(
+            StorageOperation.DownloadItem(
+                path,
+                toLocalPath = toLocalPath,
+                cacheStrategy = cacheStrategy,
+            ),
+            prependingEnvironment = prependingEnvironment,
+            timeout = timeout,
+        )
+    }
+
+    override fun downloadItemWithProgress(
+        path: String,
+        toLocalPath: File,
+        prependingEnvironment: Boolean,
+        cacheStrategy: CacheStrategy,
+        timeout: Duration,
+    ): Flow<StorageTransferProgress> =
+        coreStorage.downloadItemWithProgress(
+            path,
+            toLocalPath = toLocalPath,
+            prependingEnvironment = prependingEnvironment,
+            cacheStrategy = cacheStrategy,
+            timeout = timeout,
+        )
+
+    // MARK: - Enumeration
+
+    override suspend fun enumerateEmptyDirectories(
+        path: String,
+        prependingEnvironment: Boolean,
+        timeout: Duration,
+    ): Set<String> {
+        val result =
+            coreStorage.performOperation(
+                StorageOperation.EnumerateEmptyDirectories(path),
+                prependingEnvironment = prependingEnvironment,
+                timeout = timeout,
+            ) as? Set<*>
+
+        return result?.filterIsInstance<String>()?.toSet() ?: emptySet()
+    }
+
+    override suspend fun getDirectoryListing(
+        path: String,
+        firstResultOnly: Boolean,
+        prependingEnvironment: Boolean,
+        timeout: Duration,
+    ): DirectoryListing =
+        coreStorage.performOperation(
+            StorageOperation.GetDirectoryListing(
+                path,
+                firstResultOnly = firstResultOnly,
+            ),
+            prependingEnvironment = prependingEnvironment,
+            timeout = timeout,
+        ) as DirectoryListing
+
+    override suspend fun itemExists(
+        itemType: HostedItemType,
+        path: String,
+        prependingEnvironment: Boolean,
+        cacheStrategy: CacheStrategy,
+        timeout: Duration,
+    ): Boolean =
+        coreStorage.performOperation(
+            StorageOperation.ItemExists(
+                itemType = itemType,
+                path = path,
+                cacheStrategy = cacheStrategy,
+            ),
+            prependingEnvironment = prependingEnvironment,
+            timeout = timeout,
+        ) as? Boolean ?: false
+
+    // MARK: - Clear Store
+
+    override fun clearStore() {
+        coreStorage.clearStore()
     }
 }

@@ -2,17 +2,19 @@
 //  ReactionMetadata.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.networking.conversation.models
 
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
-import us.neotechnica.panther.networking.modules.common.extensions.decodingFailure
+import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.interfaces.Serializable
 import us.neotechnica.panther.networking.modules.common.interfaces.SerializableDecoder
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.EncodedHashable
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 
 /**
  * The reactions applied to a single message.
@@ -78,7 +80,10 @@ data class ReactionMetadata(
             val encodedReactions = reactionMaps(data)
 
             if (messageID == null || encodedReactions == null) {
-                throw decodingFailure(this, data)
+                throw Exception.Networking.decodingFailed(
+                    data,
+                    ExceptionMetadata(this),
+                )
             }
 
             return ReactionMetadata(

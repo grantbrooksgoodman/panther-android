@@ -2,8 +2,8 @@
 //  ConnectionStabilityObserver.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.networking.modules.health.services
@@ -51,7 +51,7 @@ internal class ConnectionStabilityObserver(
         var foregroundReturnedAt: Long? = null
         var isInBackground: Boolean = false
         var lastReconnectDuration: Double? = null
-        var observerListener: ValueEventListener? = null
+        var observerHandle: ValueEventListener? = null
         var previousConnectedState: Boolean? = null
     }
 
@@ -91,7 +91,7 @@ internal class ConnectionStabilityObserver(
 
     /** Attaches the `.info/connected` observer and begins tracking transitions. */
     fun start() {
-        if (state.wrappedValue.observerListener != null) return
+        if (state.wrappedValue.observerHandle != null) return
 
         Logger.log("Attaching realtime connection stability observer.", domain = LoggerDomain.Networking.health)
 
@@ -109,16 +109,16 @@ internal class ConnectionStabilityObserver(
             }
 
         connectedReference.addValueEventListener(listener)
-        state.withValue { it.value.observerListener = listener }
+        state.withValue { it.value.observerHandle = listener }
     }
 
     /** Removes the `.info/connected` observer and discards transition state. */
     fun stop() {
         val listener =
             state.withValue {
-                val listener = it.value.observerListener
+                val listener = it.value.observerHandle
                 it.value.disconnectedAt = null
-                it.value.observerListener = null
+                it.value.observerHandle = null
                 it.value.previousConnectedState = null
                 listener
             } ?: return

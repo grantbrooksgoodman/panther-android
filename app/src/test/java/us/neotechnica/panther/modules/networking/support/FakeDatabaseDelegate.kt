@@ -2,8 +2,8 @@
 //  FakeDatabaseDelegate.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.networking.support
@@ -73,13 +73,12 @@ class FakeDatabaseDelegate : DatabaseDelegate {
         return result
     }
 
-    @Suppress("UNCHECKED_CAST")
-    override suspend fun <T> getValues(
+    override suspend fun getValues(
         path: String,
         prependingEnvironment: Boolean,
         cacheStrategy: CacheStrategy,
         timeout: Duration,
-    ): T = getValuesResult as T
+    ): Any = checkNotNull(getValuesResult) { "getValuesResult has not been seeded." }
 
     override fun isEncodable(value: Any?): Boolean =
         when (value) {
@@ -91,10 +90,12 @@ class FakeDatabaseDelegate : DatabaseDelegate {
 
     override fun generateKey(path: String): String = "-fakeGeneratedKey"
 
-    override fun <T> observe(
+    override fun observe(
         path: String,
         prependingEnvironment: Boolean,
-    ): Flow<T> = emptyFlow()
+    ): Flow<Any> = emptyFlow()
+
+    override suspend fun awaitRealtimeConnection(timeout: Duration): Boolean = true
 
     override fun prewarm() = Unit
 
@@ -105,13 +106,13 @@ class FakeDatabaseDelegate : DatabaseDelegate {
         timeout: Duration,
     ) = Unit
 
-    override suspend fun <T> queryValues(
+    override suspend fun queryValues(
         path: String,
         strategy: QueryStrategy,
         prependingEnvironment: Boolean,
         cacheStrategy: CacheStrategy,
         timeout: Duration,
-    ): T = error("queryValues is not supported by FakeDatabaseDelegate.")
+    ): Any = error("queryValues is not supported by FakeDatabaseDelegate.")
 
     override fun setGlobalCacheStrategy(globalCacheStrategy: CacheStrategy?) = Unit
 }

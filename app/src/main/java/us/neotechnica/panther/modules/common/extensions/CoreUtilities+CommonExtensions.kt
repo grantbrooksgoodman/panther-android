@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.common.extensions
 
+import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpdatableKey
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.update
@@ -21,6 +22,7 @@ import us.neotechnica.panther.networking.modules.common.extensions.bangQualified
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.getValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
@@ -97,7 +99,12 @@ suspend fun CoreUtilities.deleteConversations(granularity: ConversationDeletionG
  */
 suspend fun CoreUtilities.resetPushTokens() {
     val database = Networking.config.databaseDelegate
-    val userData: Map<String, Any?> = database.getValues(NetworkPath.users.rawValue, cacheStrategy = CacheStrategy.DISREGARD_CACHE)
+    val userData: Map<String, Any?> =
+        database.getValues<Map<String, Any?>>(
+            NetworkPath.users.rawValue,
+            cacheStrategy = CacheStrategy.DISREGARD_CACHE,
+        )
+
     val updates =
         userData.keys.associate { userID ->
             listOf(NetworkPath.users.rawValue, userID, PUSH_TOKENS_KEY).joinToString("/") to null

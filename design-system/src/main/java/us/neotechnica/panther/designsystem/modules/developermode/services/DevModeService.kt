@@ -2,8 +2,8 @@
 //  DevModeService.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.designsystem.modules.developermode.services
@@ -59,35 +59,26 @@ object DevModeService {
 
     // MARK: - Properties
 
-    private val additionalSubsystemActions = LockIsolated(listOf<DevModeAction>())
     private val appActions = LockIsolated(listOf<DevModeAction>())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     // MARK: - Computed Properties
 
     private val subsystemActions: List<DevModeAction>
-        get() = DevModeSubsystemActions.available + additionalSubsystemActions.wrappedValue
+        get() = DevModeSubsystemActions.available
 
     // MARK: - Registration
 
     /**
-     * Registers the delegate that supplies the app-domain actions,
-     * seeding the app-domain list with its actions.
+     * Registers the delegate that supplies the app-domain actions.
      *
-     * @param delegate The delegate to register.
+     * The delegate's actions replace any previously registered
+     * app-domain actions.
+     *
+     * @param delegate The delegate supplying the app-domain actions.
      */
     fun registerAppActionDelegate(delegate: DevModeAppActionDelegate) {
         appActions.wrappedValue = delegate.appActions
-    }
-
-    /**
-     * Registers additional actions to show in the subsystem domain,
-     * alongside the built-in subsystem actions.
-     *
-     * @param actions The actions to add to the subsystem domain.
-     */
-    fun registerAdditionalSubsystemActions(actions: List<DevModeAction>) {
-        additionalSubsystemActions.wrappedValue = actions
     }
 
     // MARK: - Action Addition

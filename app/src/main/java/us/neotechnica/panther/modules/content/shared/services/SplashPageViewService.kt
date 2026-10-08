@@ -2,8 +2,8 @@
 //  SplashPageViewService.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.shared.services
@@ -40,9 +40,7 @@ import us.neotechnica.panther.modules.content.user.extensions.syncIfNeeded
 import us.neotechnica.panther.modules.content.user.extensions.updateDeviceIDIfNeeded
 import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.networking.NetworkServices
 import us.neotechnica.panther.modules.networking.common.populateTemporaryCaches
-import us.neotechnica.panther.modules.networking.networking
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.modules.session.clientSession
@@ -52,7 +50,9 @@ import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.modules.session.entity.extensions.messages
 import us.neotechnica.panther.modules.session.entity.extensions.users
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
-import us.neotechnica.panther.networking.modules.common.extensions.noValueExists
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
+import us.neotechnica.panther.networking.modules.common.extensions.Networking
+import us.neotechnica.panther.networking.modules.common.models.NetworkServices
 import us.neotechnica.panther.networking.modules.health.extensions.networkHealth
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealthTier
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
@@ -74,6 +74,7 @@ import kotlin.time.Duration.Companion.seconds
 
 // This splash orchestration is large; the suppressions below cover
 // its size and complexity.
+
 /**
  * The service that initializes the app's data bundle behind the splash
  * page.
@@ -193,9 +194,10 @@ object SplashPageViewService {
      */
     @Suppress("LongMethod", "CyclomaticComplexMethod")
     suspend fun initializeBundle(fromRetry: Boolean) {
-        /* Service Setup */
+        // Service Setup
 
-        us.neotechnica.panther.designsystem.modules.foundation.toast.Toast.hide()
+        us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
+            .hide()
 
         if (!fromRetry) {
             didSurpassQuickLoadTimeoutDuration = false
@@ -223,18 +225,18 @@ object SplashPageViewService {
             }
         }
 
-        /* AlertKit Delegate Setup */
+        // AlertKit Delegate Setup
 
         DependencyValues.current.alertKitConfig.registerReportDelegate(ErrorReportingService)
         DependencyValues.current.alertKitConfig.registerTranslationDelegate(AlertKitTranslationService)
 
-        /* Breadcrumbs capture: not provided. */
+        // Breadcrumbs capture: not provided.
 
-        /* Store Observation Setup */
+        // Store Observation Setup
 
         UICacheInvalidationService.startObserving()
 
-        /* Offline User Setup */
+        // Offline User Setup
 
         if (!Build.isOnline) {
             val currentUser =
@@ -251,7 +253,7 @@ object SplashPageViewService {
             return
         }
 
-        /* Pre-flight Configuration: enhanced-translation configuration is cut. */
+        // Pre-flight Configuration: enhanced-translation configuration is cut.
 
         Logger.setReportsErrorsAutomatically(
             !Build.isEmulator && Build.milestone == Build.Milestone.GENERAL_RELEASE,
@@ -259,12 +261,12 @@ object SplashPageViewService {
 
         services.review.incrementAppOpenCount()
 
-        /* Anonymous Sign-In */
+        // Anonymous Sign-In
 
         currentCoroutineContext().ensureActive()
         runCatching { networking.auth.signInAnonymously() }
 
-        /* Parallel Initialization */
+        // Parallel Initialization
 
         currentCoroutineContext().ensureActive()
 
@@ -285,7 +287,7 @@ object SplashPageViewService {
 
                 setInitializationProgress(initializationProgress.value + SMALL_PROGRESS_INCREMENT)
 
-                /* UpdateService Setup */
+                // UpdateService Setup
 
                 currentCoroutineContext().ensureActive()
                 services.update.incrementRelaunchCountIfNeeded()
@@ -294,14 +296,14 @@ object SplashPageViewService {
 
                 setInitializationProgress(initializationProgress.value + UPDATE_PROGRESS_INCREMENT)
 
-                /* Cache Setup */
+                // Cache Setup
 
                 if (handleCacheStatus(cacheStatusResult, currentUserID)) {
                     resolveCurrentUserResult.cancel()
                     return@coroutineScope true
                 }
 
-                /* UserSessionService Setup */
+                // UserSessionService Setup
 
                 resolveCurrentUserAndFinish(resolveCurrentUserResult)
                 false
@@ -436,15 +438,13 @@ object SplashPageViewService {
                 }
             }
         } catch (error: Exception) {
-            if (!error.isEqual(to = AppException.noValueExists)) Logger.log(error)
+            if (!error.isEqual(to = AppException.Networking.Database.noValueExists)) Logger.log(error)
         }
 
         return false
     }
 
-    private suspend fun resolveCurrentUserAndFinish(
-        resolveCurrentUserResult: kotlinx.coroutines.Deferred<Exception?>,
-    ) {
+    private suspend fun resolveCurrentUserAndFinish(resolveCurrentUserResult: kotlinx.coroutines.Deferred<Exception?>) {
         // User resolution likely completed during the metadata + update
         // + cache gates above.
         try {
@@ -458,9 +458,9 @@ object SplashPageViewService {
                     metadata = ExceptionMetadata(this),
                 )
 
-            /* UI Setup: enhanced-translation configuration and prevarication mode are cut. */
+            // UI Setup: enhanced-translation configuration and prevarication mode are cut.
 
-            /* Device ID Update */
+            // Device ID Update
 
             // Must complete before the database observer starts
             // (post-splash), otherwise the observer sees the change and
@@ -468,7 +468,7 @@ object SplashPageViewService {
             currentCoroutineContext().ensureActive()
             currentUser.updateDeviceIDIfNeeded()
 
-            /* Contact Pair Archive + Temporary Cache Population */
+            // Contact Pair Archive + Temporary Cache Population
 
             appScope.launch(Dispatchers.Default) {
                 try {
@@ -490,7 +490,7 @@ object SplashPageViewService {
                 }
             }
 
-            /* Conversation Resolution */
+            // Conversation Resolution
 
             currentCoroutineContext().ensureActive()
             clientSession.entity.conversation.setCurrentConversation(null)
@@ -498,7 +498,7 @@ object SplashPageViewService {
 
             setInitializationProgress(1f)
 
-            /* Post-launch Maintenance */
+            // Post-launch Maintenance
 
             schedulePostLaunchMaintenance(currentUser)
         } catch (error: Exception) {

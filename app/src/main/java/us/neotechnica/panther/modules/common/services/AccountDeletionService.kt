@@ -12,6 +12,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import us.neotechnica.panther.bundle.currentUserID
+import us.neotechnica.panther.bundle.deletedUsers
+import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ProgressAlert
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey

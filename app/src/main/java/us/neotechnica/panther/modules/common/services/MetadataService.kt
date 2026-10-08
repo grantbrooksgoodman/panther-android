@@ -9,10 +9,12 @@
 package us.neotechnica.panther.modules.common.services
 
 import us.neotechnica.panther.bundle.metadataService
+import us.neotechnica.panther.bundle.shared
 import us.neotechnica.panther.modules.common.extensions.MetadataServiceStorageKey
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.getValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
@@ -126,7 +128,7 @@ object MetadataService {
         coalescer {
             if (!canRevalidate) return@coalescer
             assignValues(
-                Networking.config.databaseDelegate.getValues(
+                Networking.config.databaseDelegate.getValues<Map<String, Any>>(
                     NetworkPath.shared.rawValue,
                     prependingEnvironment = false,
                     cacheStrategy = CacheStrategy.RETURN_CACHE_ON_FAILURE,
@@ -184,6 +186,5 @@ object MetadataService {
 
     private fun String.isValidURL(): Boolean = runCatching { URI(this).scheme }.getOrNull() != null
 
-    private fun scopedKey(key: MetadataServiceStorageKey): PersistentStorageKey =
-        PersistentStorageKey.metadataService(key)
+    private fun scopedKey(key: MetadataServiceStorageKey): PersistentStorageKey = PersistentStorageKey.metadataService(key)
 }

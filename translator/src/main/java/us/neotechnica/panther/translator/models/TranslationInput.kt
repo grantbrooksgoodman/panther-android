@@ -2,8 +2,8 @@
 //  TranslationInput.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.translator.models
@@ -39,8 +39,9 @@ data class TranslationInput(
     override val isWellFormed: Boolean get() = !value.isBlank()
 
     /**
-     * A copy whose detected links and phone numbers are wrapped in
-     * the processing delimiter, so translation preserves them.
+     * A copy whose detected email addresses, links, and phone
+     * numbers are wrapped in the processing delimiter, so
+     * translation preserves them.
      *
      * **Note:** postal addresses are not tokenized here, as no
      * address detector is available.
@@ -66,7 +67,7 @@ data class TranslationInput(
 
     private fun detectedTaggableSubstrings(string: String): List<String> {
         val results = mutableListOf<String>()
-        for (pattern in listOf(Patterns.WEB_URL, Patterns.PHONE)) {
+        for (pattern in listOf(Patterns.EMAIL_ADDRESS, Patterns.WEB_URL, Patterns.PHONE)) {
             val matcher = pattern.matcher(string)
             while (matcher.find()) {
                 val match = matcher.group()

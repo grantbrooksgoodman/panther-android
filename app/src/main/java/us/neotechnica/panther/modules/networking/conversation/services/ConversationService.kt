@@ -10,11 +10,10 @@ package us.neotechnica.panther.modules.networking.conversation.services
 
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import kotlinx.coroutines.coroutineScope
-import us.neotechnica.panther.networking.Networking
-import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
-import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.bundle.conversations
+import us.neotechnica.panther.bundle.messages
+import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationMetadata
@@ -22,9 +21,14 @@ import us.neotechnica.panther.modules.networking.conversation.models.Participant
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
+import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.modules.session.state.services.PendingTranslationArchive
 import us.neotechnica.panther.modules.session.state.services.SessionStore
-import us.neotechnica.panther.modules.session.entity.services.UserSessionService
+import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
+import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
+import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.getValues
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -110,7 +114,7 @@ object ConversationService {
     /** Returns the conversation with the given key, upserting it into the store. */
     suspend fun getConversation(idKey: String): Conversation {
         val data: Map<String, Any?> =
-            database.getValues(
+            database.getValues<Map<String, Any?>>(
                 "${NetworkPath.conversations.rawValue}/$idKey",
                 cacheStrategy = CacheStrategy.DISREGARD_CACHE,
             )

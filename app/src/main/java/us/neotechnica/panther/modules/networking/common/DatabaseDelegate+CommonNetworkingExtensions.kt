@@ -8,13 +8,16 @@
 
 package us.neotechnica.panther.modules.networking.common
 
+import us.neotechnica.panther.bundle.conversations
 import us.neotechnica.panther.bundle.populatedTemporaryCaches
+import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.DataSample
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
+import us.neotechnica.panther.networking.modules.database.interfaces.getValues
 import us.neotechnica.panther.networking.modules.database.services.CoreDatabaseStore
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.models.StoredItemKey
@@ -29,7 +32,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * [populateTemporaryCaches].
  */
 fun DatabaseDelegate.clearTemporaryCaches() {
-    CoreDatabaseStore.filter { it.value.expiryThresholdMillis != TEMPORARY_CACHE_EXPIRY_MILLIS }
+    CoreDatabaseStore.filter { it.value.expiryThreshold != TEMPORARY_CACHE_EXPIRY_MILLIS }
 }
 
 /**
@@ -45,8 +48,8 @@ fun DatabaseDelegate.clearTemporaryCaches() {
 suspend fun DatabaseDelegate.populateTemporaryCaches() {
     if (RuntimeStorage.populatedTemporaryCaches) return
 
-    val conversationData: Map<String, Any?> = getValues(NetworkPath.conversations.rawValue)
-    val userData: Map<String, Any?> = getValues(NetworkPath.users.rawValue)
+    val conversationData: Map<String, Any?> = getValues<Map<String, Any?>>(NetworkPath.conversations.rawValue)
+    val userData: Map<String, Any?> = getValues<Map<String, Any?>>(NetworkPath.users.rawValue)
     val environment = Networking.config.environment.shortString
 
     conversationData.forEach { (key, value) ->

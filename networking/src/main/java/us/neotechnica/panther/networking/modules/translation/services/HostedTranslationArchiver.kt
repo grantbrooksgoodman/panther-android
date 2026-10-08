@@ -2,38 +2,51 @@
 //  HostedTranslationArchiver.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.networking.modules.translation.services
 
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.networking.Networking
-import us.neotechnica.panther.networking.modules.common.extensions.noValueExists
+import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.models.DataSample
-import us.neotechnica.panther.networking.modules.database.services.CoreDatabaseStore
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.getValues
+import us.neotechnica.panther.networking.modules.database.services.CoreDatabaseStore
 import us.neotechnica.panther.networking.modules.translation.extensions.decodedTranslationComponents
+import us.neotechnica.panther.networking.modules.translation.extensions.reference
+import us.neotechnica.panther.networking.modules.translation.extensions.translations
 import us.neotechnica.panther.networking.modules.translation.models.TranslationConstants
 import us.neotechnica.panther.networking.modules.translation.models.TranslationDataSample
-import us.neotechnica.panther.networking.modules.translation.models.TranslationReference
 import us.neotechnica.panther.networking.modules.translation.models.TranslationValidator
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHashOf
+import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
+import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
+import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.translator.Translator
 import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.Translation
 import us.neotechnica.panther.translator.models.TranslationInput
 import us.neotechnica.panther.translator.services.LocalTranslationArchiver
+import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.coroutines.cancellation.CancellationException
+
+// LargeClass suppressed: the snapshot, derivation, and archive
+// read/write responsibilities are cohesive.
 
 /**
  * Reads and writes translations in the hosted RTDB archive, keyed
@@ -45,13 +58,12 @@ import us.neotechnica.panther.translator.services.LocalTranslationArchiver
  * derivation of a new language pair from two archived ones – and fall
  * back to per-hash network reads only while the snapshot is stale.
  */
-// LargeClass suppressed: the snapshot, derivation, and archive
-// read/write responsibilities are cohesive.
 @Suppress("LargeClass", "TooManyFunctions")
 internal class HostedTranslationArchiver {
     // MARK: - Types
 
     private data class State(
+        val hasEnteredBackground: Boolean = false,
         val isPopulating: Boolean = false,
         val translationDataSample: TranslationDataSample = TranslationDataSample.empty,
     )
@@ -76,6 +88,8 @@ internal class HostedTranslationArchiver {
     // MARK: - Init
 
     init {
+        registerForegroundRefreshObserver()
+
         scope.launch {
             delay(INITIAL_REFRESH_DELAY_MILLIS)
             while (true) {
@@ -88,7 +102,7 @@ internal class HostedTranslationArchiver {
     // MARK: - Add to Hosted Archive
 
     suspend fun addToHostedArchive(translation: Translation) {
-        TranslationValidator.validate(sender = this, translation = translation)
+        TranslationValidator.validate(translation = translation, metadata = ExceptionMetadata(this))
 
         val entry =
             hostedArchiveEntry(translation) ?: throw Exception(
@@ -97,18 +111,28 @@ internal class HostedTranslationArchiver {
             )
 
         database.commit(mapOf(entry.first to entry.second))
+
+        Logger.log(
+            Exception(
+                "Added retrieved translation to hosted archive.",
+                isReportable = false,
+                userInfo = mapOf("ReferenceHostingKey" to translation.reference.hostingKey),
+                metadata = ExceptionMetadata(this),
+            ),
+            domain = LoggerDomain.Networking.hostedTranslation,
+        )
     }
 
     fun hostedArchiveEntry(translation: Translation): Pair<String, Any>? {
         try {
-            TranslationValidator.validate(sender = this, translation = translation)
+            TranslationValidator.validate(translation = translation, metadata = ExceptionMetadata(this))
         } catch (_: Exception) {
             return null
         }
 
         if (translation.languagePair.isIdempotent) return null
 
-        val reference = TranslationReference.from(translation)
+        val reference = translation.reference
         val referenceValue = reference.type.value ?: return null
         val key =
             listOf(
@@ -130,7 +154,7 @@ internal class HostedTranslationArchiver {
 
         // With a fresh snapshot, absence is authoritative; skip the per-hash network read.
         if (hasFreshTranslationDataSnapshot) {
-            TranslationValidator.validate(sender = this, languagePair = languagePair)
+            TranslationValidator.validate(languagePair = languagePair, metadata = ExceptionMetadata(this))
             archivedTranslationFromSnapshot(inputValueEncodedHash, languagePair)?.let { return it }
             return deriveTranslation(input, inputValueEncodedHash, languagePair)
         }
@@ -138,7 +162,7 @@ internal class HostedTranslationArchiver {
         return try {
             findArchivedTranslation(inputValueEncodedHash, languagePair)
         } catch (exception: Exception) {
-            if (!exception.isEqual(to = AppException.noValueExists)) throw exception
+            if (!exception.isEqual(to = AppException.Networking.Database.noValueExists)) throw exception
             deriveTranslation(input, inputValueEncodedHash, languagePair)
         }
     }
@@ -147,25 +171,34 @@ internal class HostedTranslationArchiver {
         inputValueEncodedHash: String,
         languagePair: LanguagePair,
     ): Translation {
-        TranslationValidator.validate(sender = this, languagePair = languagePair)
+        val path = "${NetworkPath.translations.rawValue}/${languagePair.string}/$inputValueEncodedHash"
+        val userInfo = mapOf<String, Any>("Path" to path)
+
+        try {
+            TranslationValidator.validate(languagePair = languagePair, metadata = ExceptionMetadata(this))
+        } catch (exception: Exception) {
+            throw exception.appending(userInfo = userInfo)
+        }
 
         archivedTranslationFromSnapshot(inputValueEncodedHash, languagePair)?.let { return it }
 
-        val path = "${NetworkPath.translations.rawValue}/${languagePair.string}/$inputValueEncodedHash"
         val raw: String =
             try {
-                database.getValues(path)
+                database.getValues<String>(path)
             } catch (exception: Exception) {
-                if (!exception.isEqual(to = AppException.noValueExists)) throw exception
+                if (!exception.isEqual(to = AppException.Networking.Database.noValueExists)) {
+                    throw exception.appending(userInfo = userInfo)
+                }
+
                 return deriveTranslation(null, inputValueEncodedHash, languagePair)
             }
 
         val components =
-            raw.decodedTranslationComponents ?: throw Exception(
-                "Failed to decode archived translation.",
-                userInfo = mapOf("Path" to path),
-                metadata = ExceptionMetadata(this),
-            )
+            raw.decodedTranslationComponents ?: throw Exception.Networking
+                .decodingFailed(
+                    raw,
+                    ExceptionMetadata(this),
+                ).appending(userInfo = userInfo)
 
         return Translation(
             input = TranslationInput(components.first),
@@ -213,6 +246,7 @@ internal class HostedTranslationArchiver {
         )
     }
 
+    @Suppress("LoopWithTooManyJumpStatements")
     private suspend fun deriveTranslation(
         originalInput: TranslationInput?,
         originalInputHash: String,
@@ -221,15 +255,31 @@ internal class HostedTranslationArchiver {
         if (hasFreshTranslationDataSnapshot) {
             val data = state.wrappedValue.translationDataSample.data
             for (archivedLanguagePairKey in data.keys) {
+                val archivedLanguagePair = LanguagePair.fromString(archivedLanguagePairKey) ?: continue
                 val derivedTranslation =
-                    deriveTranslationFromPair(archivedLanguagePairKey, originalInput, originalInputHash, originalLanguagePair, data)
+                    deriveTranslationFromPair(archivedLanguagePair, originalInput, originalInputHash, originalLanguagePair, data)
                         ?: continue
 
                 if (!derivedTranslation.languagePair.isIdempotent) {
-                    runCatching { addToHostedArchive(derivedTranslation) }
+                    addToHostedArchive(derivedTranslation)
                 }
 
-                Logger.log("Successfully derived translation from existing data.")
+                Logger.log(
+                    Exception(
+                        "Successfully derived translation from existing data.",
+                        isReportable = false,
+                        userInfo =
+                            mapOf(
+                                "IntermediateLanguagePair" to archivedLanguagePair.string,
+                                "SynthesisLanguagePair" to "${archivedLanguagePair.to}-${originalLanguagePair.to}",
+                                "TargetLanguagePair" to originalLanguagePair.string,
+                            ),
+                        metadata = ExceptionMetadata(this),
+                    ),
+                    domain = LoggerDomain.Networking.hostedTranslation,
+                    with = AlertType.toastInPrerelease(style = ToastStyle.SUCCESS),
+                )
+
                 return derivedTranslation
             }
         }
@@ -238,14 +288,13 @@ internal class HostedTranslationArchiver {
     }
 
     private fun deriveTranslationFromPair(
-        archivedLanguagePairKey: String,
+        archivedLanguagePair: LanguagePair,
         originalInput: TranslationInput?,
         originalInputHash: String,
         originalLanguagePair: LanguagePair,
         data: Map<String, Any>,
     ): Translation? {
-        val archivedLanguagePair = LanguagePair.fromString(archivedLanguagePairKey) ?: return null
-        val sourceData = data[archivedLanguagePairKey] as? Map<*, *> ?: return null
+        val sourceData = data[archivedLanguagePair.string] as? Map<*, *> ?: return null
         val sourceComponents = (sourceData[originalInputHash] as? String)?.decodedTranslationComponents ?: return null
         val targetData = data["${archivedLanguagePair.to}-${originalLanguagePair.to}"] as? Map<*, *> ?: return null
         val targetEncoded = targetData[encodedHashOf(listOf(sourceComponents.second))] as? String ?: return null
@@ -260,7 +309,7 @@ internal class HostedTranslationArchiver {
 
     private fun nextRefreshDelayMillis(): Long {
         val sample = state.wrappedValue.translationDataSample
-        val elapsed = System.currentTimeMillis() - sample.capturedAtMillis
+        val elapsed = System.currentTimeMillis() - sample.date
         return maxOf(REFRESH_INTERVAL_MILLIS - elapsed, MINIMUM_REFRESH_DELAY_MILLIS)
     }
 
@@ -271,7 +320,7 @@ internal class HostedTranslationArchiver {
                 val isStale =
                     sample.isEmpty ||
                         sample.isExpired ||
-                        (System.currentTimeMillis() - sample.capturedAtMillis) >= REFRESH_INTERVAL_MILLIS
+                        (System.currentTimeMillis() - sample.date) >= REFRESH_INTERVAL_MILLIS
                 if (ref.value.isPopulating || !isStale) {
                     false
                 } else {
@@ -284,7 +333,7 @@ internal class HostedTranslationArchiver {
 
         val translationData: Map<String, Any> =
             try {
-                database.getValues(NetworkPath.translations.rawValue)
+                database.getValues<Map<String, Any>>(NetworkPath.translations.rawValue)
             } catch (exception: Exception) {
                 state.withValue { it.value = it.value.copy(isPopulating = false) }
                 throw exception
@@ -302,7 +351,11 @@ internal class HostedTranslationArchiver {
                 )
         }
 
-        Logger.log("Populated translation data snapshot.")
+        Logger.log(
+            "Populated translation data snapshot.",
+            domain = LoggerDomain.Networking.hostedTranslation,
+        )
+
         warmCachesFromSnapshot(translationData)
     }
 
@@ -323,8 +376,8 @@ internal class HostedTranslationArchiver {
                     dataSamples["$keyPrefix$key"] =
                         DataSample(
                             data = translationValue as Any,
-                            expiryThresholdMillis = DATA_SAMPLE_EXPIRY_MILLIS,
-                            capturedAtMillis = captureDate,
+                            expiryThreshold = DATA_SAMPLE_EXPIRY_MILLIS,
+                            date = captureDate,
                         )
 
                     val components = (translationValue as? String)?.decodedTranslationComponents
@@ -340,8 +393,48 @@ internal class HostedTranslationArchiver {
     }
 
     private suspend fun refreshTranslationDataSnapshot() {
-        runCatching { populateTranslationDataSnapshot() }
-            .onFailure { Logger.log("Failed to refresh translation data snapshot. ${it.message}") }
+        try {
+            populateTranslationDataSnapshot()
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (exception: Exception) {
+            Logger.log(exception, domain = LoggerDomain.Networking.hostedTranslation)
+        }
+    }
+
+    // Lifecycle observation requires a main looper; environments
+    // without one (such as unit tests) skip registration.
+    private fun registerForegroundRefreshObserver() {
+        val mainDispatcher =
+            runCatching {
+                Dispatchers.Main.also { it.isDispatchNeeded(EmptyCoroutineContext) }
+            }.getOrNull() ?: return
+
+        runCatching {
+            scope.launch(mainDispatcher) {
+                ProcessLifecycleOwner.get().lifecycle.addObserver(
+                    object : DefaultLifecycleObserver {
+                        override fun onStart(owner: LifecycleOwner) {
+                            // The foreground callback also fires during cold
+                            // launch, where the snapshot download would
+                            // monopolize the realtime socket and starve the
+                            // launch-critical reads queued behind it; refresh
+                            // only on genuine background-to-foreground returns
+                            // and leave initial population to the delayed
+                            // refresh loop.
+                            val hasEnteredBackground = state.wrappedValue.hasEnteredBackground
+                            if (!hasEnteredBackground) return
+
+                            scope.launch { refreshTranslationDataSnapshot() }
+                        }
+
+                        override fun onStop(owner: LifecycleOwner) {
+                            state.withValue { it.value = it.value.copy(hasEnteredBackground = true) }
+                        }
+                    },
+                )
+            }
+        }
     }
 
     // MARK: - Companion

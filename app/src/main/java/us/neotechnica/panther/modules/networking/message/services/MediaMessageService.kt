@@ -8,19 +8,22 @@
 
 package us.neotechnica.panther.modules.networking.message.services
 
+import android.webkit.MimeTypeMap
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import us.neotechnica.panther.networking.Networking
-import us.neotechnica.panther.networking.modules.common.models.NetworkPath
-import android.webkit.MimeTypeMap
+import us.neotechnica.panther.bundle.media
+import us.neotechnica.panther.bundle.messages
 import us.neotechnica.panther.modules.common.models.DocumentFileExtension
 import us.neotechnica.panther.modules.common.models.MediaFileExtension
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
-import us.neotechnica.panther.networking.modules.storage.models.StorageMetadata
 import us.neotechnica.panther.modules.networking.message.models.LocalMediaFilePath
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
+import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.getValues
 import us.neotechnica.panther.networking.modules.storage.interfaces.StorageDelegate
+import us.neotechnica.panther.networking.modules.storage.models.HostedItemMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -113,7 +116,7 @@ object MediaMessageService {
 
         try {
             val contentTypeValue: String? =
-                database.getValues("${NetworkPath.messages.rawValue}/$messageID/$CONTENT_TYPE_KEY")
+                database.getValues<String>("${NetworkPath.messages.rawValue}/$messageID/$CONTENT_TYPE_KEY")
             val hostedContentType =
                 contentTypeValue?.let { HostedContentType.from(it) }
                     ?: throw Exception("Failed to resolve hosted content type.", metadata = ExceptionMetadata(this))
@@ -125,14 +128,14 @@ object MediaMessageService {
             if (multipleMessagesReference(mediaFilePath)) return
 
             try {
-                storage.delete("${NetworkPath.media.rawValue}/$mediaFilePath")
+                storage.deleteItem("${NetworkPath.media.rawValue}/$mediaFilePath")
             } catch (exception: Exception) {
                 exceptions.add(exception)
             }
 
             // Best-effort; the thumbnail may be absent. The suffix is
             // appended to the extension-qualified path.
-            runCatching { storage.delete("${NetworkPath.media.rawValue}/$mediaFilePath${MediaFile.THUMBNAIL_IMAGE_NAME_SUFFIX}") }
+            runCatching { storage.deleteItem("${NetworkPath.media.rawValue}/$mediaFilePath${MediaFile.THUMBNAIL_IMAGE_NAME_SUFFIX}") }
         } catch (exception: Exception) {
             exceptions.add(exception)
         }
@@ -150,20 +153,26 @@ object MediaMessageService {
         val sourceFile =
             mediaComponent.localPathFile
                 ?: throw Exception("Failed to resolve local media path.", metadata = ExceptionMetadata(this))
-        if (!storage.itemExists(relativePath)) {
+        if (!storage.itemExists(path = relativePath)) {
             if (isPlainTextDocument(mediaComponent.fileExtension)) {
                 // Hosted plain-text payloads are always LZFSE-compressed,
                 // while the local file stays uncompressed.
-                storage.uploadBytes(
+                storage.upload(
                     Lzfse.encode(sourceFile.readBytes()),
-                    relativePath,
-                    StorageMetadata(filePath = relativePath, contentType = "application/octet-stream"),
+                    metadata =
+                        HostedItemMetadata(
+                            relativePath,
+                            contentType = "application/octet-stream",
+                        ),
                 )
             } else {
                 storage.upload(
                     sourceFile,
-                    relativePath,
-                    StorageMetadata(filePath = relativePath, contentType = contentType(mediaComponent)),
+                    metadata =
+                        HostedItemMetadata(
+                            relativePath,
+                            contentType = contentType(mediaComponent),
+                        ),
                 )
             }
         }
@@ -176,11 +185,14 @@ object MediaMessageService {
         thumbnailRelativePath: String,
     ) {
         val thumbnailFile = mediaComponent.thumbnailFile ?: return
-        if (!storage.itemExists(thumbnailRelativePath)) {
+        if (!storage.itemExists(path = thumbnailRelativePath)) {
             storage.upload(
                 thumbnailFile,
-                thumbnailRelativePath,
-                StorageMetadata(filePath = thumbnailRelativePath, contentType = "image/jpeg"),
+                metadata =
+                    HostedItemMetadata(
+                        thumbnailRelativePath,
+                        contentType = "image/jpeg",
+                    ),
             )
         }
         moveIntoPlace(thumbnailFile, thumbnailRelativePath)
@@ -208,7 +220,7 @@ object MediaMessageService {
 
     private suspend fun multipleMessagesReference(mediaFilePath: String): Boolean {
         val database = Networking.config.databaseDelegate
-        val allMessages: Map<String, Any?>? = database.getValues(NetworkPath.messages.rawValue)
+        val allMessages: Map<String, Any?>? = database.getValues<Map<String, Any?>>(NetworkPath.messages.rawValue)
         val referenceCount =
             allMessages
                 ?.values
@@ -231,7 +243,7 @@ object MediaMessageService {
                     metadata = ExceptionMetadata(this),
                 )
 
-        storage.download(localPath.relativePathString, destination)
+        storage.downloadItem(localPath.relativePathString, destination)
 
         // Hosted plain-text payloads are stored LZFSE-compressed; decompress
         // in place so the local file is the plain text. Non-LZFSE legacy
@@ -247,7 +259,7 @@ object MediaMessageService {
         val thumbnailPath = localPath.relativeThumbnailPathString
         val thumbnailFile = localPath.localThumbnailPathFile
         if (thumbnailPath != null && thumbnailFile != null) {
-            runCatching { storage.download(thumbnailPath, thumbnailFile) }
+            runCatching { storage.downloadItem(thumbnailPath, thumbnailFile) }
         }
 
         return MediaFile.from(localPath.relativePathString)

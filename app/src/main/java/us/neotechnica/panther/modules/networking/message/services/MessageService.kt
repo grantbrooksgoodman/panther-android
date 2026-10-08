@@ -11,14 +11,16 @@ package us.neotechnica.panther.modules.networking.message.services
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import us.neotechnica.panther.networking.Networking
-import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
-import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.bundle.messages
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.message.models.TranslationReference
 import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
+import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.getValues
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -48,7 +50,7 @@ object MessageService {
 
     /** Returns the message with the given ID, upserting it into the store. */
     suspend fun getMessage(id: String): Message {
-        val data: Map<String, Any?> = database.getValues("${NetworkPath.messages.rawValue}/$id")
+        val data: Map<String, Any?> = database.getValues<Map<String, Any?>>("${NetworkPath.messages.rawValue}/$id")
         val childData = data.toMutableMap().apply { put(ID_KEY, id) }
 
         if (!Message.canDecode(childData)) {

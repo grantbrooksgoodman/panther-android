@@ -10,6 +10,7 @@ package us.neotechnica.panther.modules.session.state.services
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import us.neotechnica.panther.bundle.messages
 import us.neotechnica.panther.bundle.outbox
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.user.services.UserService
@@ -111,14 +112,22 @@ private suspend fun sendPayload(
 private suspend fun startDeliveryProgressIfCurrent(entry: OutboxEntry) {
     if (ConversationSessionService.currentConversation?.id?.key != entry.conversationIDKey) return
     withContext(Dispatchers.Main) {
-        DependencyValues.current.clientSession.deliveryProgressIndicator?.startAnimatingDeliveryProgress()
+        DependencyValues
+            .current
+            .clientSession
+            .deliveryProgressIndicator
+            ?.startAnimatingDeliveryProgress()
     }
 }
 
 private suspend fun stopDeliveryProgressIfCurrent(entry: OutboxEntry) {
     if (ConversationSessionService.currentConversation?.id?.key != entry.conversationIDKey) return
     withContext(Dispatchers.Main) {
-        DependencyValues.current.clientSession.deliveryProgressIndicator?.stopAnimatingDeliveryProgress()
+        DependencyValues
+            .current
+            .clientSession
+            .deliveryProgressIndicator
+            ?.stopAnimatingDeliveryProgress()
     }
 }
 

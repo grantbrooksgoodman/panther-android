@@ -2,8 +2,8 @@
 //  Networking.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.networking
@@ -12,11 +12,22 @@ import android.content.Context
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
+import com.google.firebase.database.FirebaseDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import us.neotechnica.panther.designsystem.modules.developermode.models.DevModeAction
+import us.neotechnica.panther.designsystem.modules.developermode.services.DevModeService
 import us.neotechnica.panther.networking.modules.auth.interfaces.AuthDelegate
 import us.neotechnica.panther.networking.modules.auth.services.Auth
+import us.neotechnica.panther.networking.modules.common.extensions.NetworkingStorageKey
+import us.neotechnica.panther.networking.modules.common.extensions.networking
+import us.neotechnica.panther.networking.modules.common.extensions.networkingOptionsAction
 import us.neotechnica.panther.networking.modules.common.interfaces.DefaultNetworkActivityIndicatorDelegate
 import us.neotechnica.panther.networking.modules.common.interfaces.NetworkActivityIndicatorDelegate
 import us.neotechnica.panther.networking.modules.common.models.NetworkEnvironment
+import us.neotechnica.panther.networking.modules.common.services.ReadWriteEnablementStatusService
 import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.networking.modules.database.services.Database
 import us.neotechnica.panther.networking.modules.health.interfaces.NetworkHealthDelegate
@@ -27,6 +38,8 @@ import us.neotechnica.panther.networking.modules.storage.services.Storage
 import us.neotechnica.panther.networking.modules.translation.interfaces.HostedTranslationDelegate
 import us.neotechnica.panther.networking.modules.translation.services.HostedTranslationService
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
+import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
+import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import kotlin.math.abs
 import kotlin.time.Duration.Companion.seconds
 
@@ -45,25 +58,26 @@ object Networking {
      * The default timeout applied to database and storage
      * operations when no explicit value is provided.
      */
-    val DEFAULT_OPERATION_TIMEOUT = 10.seconds
+    val defaultOperationTimeout = 10.seconds
 
     /** The shared configuration for the Networking framework. */
     val config = Config
 
     private val applicationContext = LockIsolated<Context?>(null)
     private val readWriteEnabled = LockIsolated(true)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     // MARK: - Computed Properties
 
     /**
      * A Boolean value that indicates whether the app may read from
      * and write to the backend.
-     *
-     * **Note:** The remote read/write enablement service is
-     * not yet wired; this value defaults to `true`.
      */
-    val isReadWriteEnabled: Boolean
+    var isReadWriteEnabled: Boolean
         get() = readWriteEnabled.wrappedValue
+        internal set(newValue) {
+            readWriteEnabled.wrappedValue = newValue
+        }
 
     /** The delegate that estimates network health. */
     val health: NetworkHealthDelegate
@@ -76,9 +90,11 @@ object Networking {
      *
      * Call this method once at app launch. It installs the App
      * Check provider factory – the debug provider for emulator and
-     * debug builds, Play Integrity otherwise – and records the
-     * default environment. Firebase itself is initialized
-     * automatically by the `google-services` plugin.
+     * debug builds, Play Integrity otherwise – records the default
+     * environment, registers the networking Developer Mode
+     * actions, starts network health monitoring, and begins
+     * observing read/write enablement status. Firebase itself is
+     * initialized automatically by the `google-services` plugin.
      *
      * @param context A context used to resolve the application
      *   context for persistent storage.
@@ -97,6 +113,11 @@ object Networking {
         applicationContext.wrappedValue = context.applicationContext
         config.setDefaultEnvironment(defaultEnvironment)
 
+        DevModeService.insertAction(
+            DevModeAction.networkingOptionsAction,
+            at = 0,
+        )
+
         FirebaseAppCheck.getInstance().installAppCheckProviderFactory(
             if (useDebugAppCheckProvider) {
                 DebugAppCheckProviderFactory.getInstance()
@@ -106,15 +127,30 @@ object Networking {
         )
 
         config.healthDelegate.startMonitoring()
+
+        scope.launch {
+            ReadWriteEnablementStatusService.listenForReadWriteEnablementStatusChanges()
+        }
     }
 
     /**
-     * Sets whether the app may read from and write to the backend.
+     * Enables or disables verbose Firebase diagnostic logging.
      *
-     * @param isEnabled Whether read/write access is enabled.
+     * When enabled, the Realtime Database SDK logs its connect,
+     * authenticate, and listen activity.
+     *
+     * **Important:** Realtime Database logging can only be
+     * configured before the first database operation, so call this
+     * immediately after [initialize] and before any read, write,
+     * or prewarm.
+     *
+     * @param enabled A Boolean value that determines whether
+     *   verbose logging is enabled.
      */
-    fun setReadWriteEnabled(isEnabled: Boolean) {
-        readWriteEnabled.wrappedValue = isEnabled
+    fun setVerboseFirebaseLoggingEnabled(enabled: Boolean) {
+        FirebaseDatabase.getInstance().setLogLevel(
+            if (enabled) com.google.firebase.database.Logger.Level.DEBUG else com.google.firebase.database.Logger.Level.INFO,
+        )
     }
 
     // MARK: - Auxiliary
@@ -125,7 +161,7 @@ object Networking {
      * floor of 250 milliseconds: a value is cached for
      * roughly as long as its fetch took.
      */
-    internal fun cacheExpiryMillis(startMillis: Long): Long {
+    internal fun cacheExpiryMilliseconds(startMillis: Long): Long {
         val elapsed = abs(System.currentTimeMillis() - startMillis)
         return if (elapsed < FLOOR_MILLIS) FLOOR_MILLIS + elapsed else elapsed
     }
@@ -148,9 +184,6 @@ object Networking {
      */
     object Config {
         // MARK: - Properties
-
-        private const val ENVIRONMENT_KEY = "networkEnvironment"
-        private const val PREFERENCES_NAME = "networking"
 
         private val activityIndicator =
             LockIsolated<NetworkActivityIndicatorDelegate>(DefaultNetworkActivityIndicatorDelegate())
@@ -204,34 +237,67 @@ object Networking {
 
         // MARK: - Methods
 
+        /**
+         * Registers one or more custom delegates in a single call.
+         *
+         * Each non-`null` argument replaces the corresponding
+         * default delegate. Arguments left as `null` are
+         * unchanged.
+         *
+         * @param activityIndicatorDelegate A custom network
+         *   activity indicator delegate.
+         * @param authDelegate A custom authentication delegate.
+         * @param databaseDelegate A custom database delegate.
+         * @param healthDelegate A custom network health delegate.
+         * @param hostedTranslationDelegate A custom hosted
+         *   translation delegate.
+         * @param storageDelegate A custom storage delegate.
+         */
+        @Suppress("LongParameterList")
+        fun register(
+            activityIndicatorDelegate: NetworkActivityIndicatorDelegate? = null,
+            authDelegate: AuthDelegate? = null,
+            databaseDelegate: DatabaseDelegate? = null,
+            healthDelegate: NetworkHealthDelegate? = null,
+            hostedTranslationDelegate: HostedTranslationDelegate? = null,
+            storageDelegate: StorageDelegate? = null,
+        ) {
+            activityIndicatorDelegate?.let { activityIndicator.wrappedValue = it }
+            authDelegate?.let { auth.wrappedValue = it }
+            databaseDelegate?.let { database.wrappedValue = it }
+            healthDelegate?.let { health.wrappedValue = it }
+            hostedTranslationDelegate?.let { hostedTranslation.wrappedValue = it }
+            storageDelegate?.let { storage.wrappedValue = it }
+        }
+
         /** Registers a custom activity-indicator delegate. */
-        fun registerActivityIndicatorDelegate(delegate: NetworkActivityIndicatorDelegate) {
-            activityIndicator.wrappedValue = delegate
+        fun registerActivityIndicatorDelegate(activityIndicatorDelegate: NetworkActivityIndicatorDelegate) {
+            register(activityIndicatorDelegate = activityIndicatorDelegate)
         }
 
         /** Registers a custom auth delegate. */
-        fun registerAuthDelegate(delegate: AuthDelegate) {
-            auth.wrappedValue = delegate
+        fun registerAuthDelegate(authDelegate: AuthDelegate) {
+            register(authDelegate = authDelegate)
         }
 
         /** Registers a custom database delegate. */
-        fun registerDatabaseDelegate(delegate: DatabaseDelegate) {
-            database.wrappedValue = delegate
+        fun registerDatabaseDelegate(databaseDelegate: DatabaseDelegate) {
+            register(databaseDelegate = databaseDelegate)
         }
 
         /** Registers a custom network-health delegate. */
-        fun registerHealthDelegate(delegate: NetworkHealthDelegate) {
-            health.wrappedValue = delegate
+        fun registerHealthDelegate(healthDelegate: NetworkHealthDelegate) {
+            register(healthDelegate = healthDelegate)
         }
 
         /** Registers a custom hosted-translation delegate. */
-        fun registerHostedTranslationDelegate(delegate: HostedTranslationDelegate) {
-            hostedTranslation.wrappedValue = delegate
+        fun registerHostedTranslationDelegate(hostedTranslationDelegate: HostedTranslationDelegate) {
+            register(hostedTranslationDelegate = hostedTranslationDelegate)
         }
 
         /** Registers a custom storage delegate. */
-        fun registerStorageDelegate(delegate: StorageDelegate) {
-            storage.wrappedValue = delegate
+        fun registerStorageDelegate(storageDelegate: StorageDelegate) {
+            register(storageDelegate = storageDelegate)
         }
 
         /**
@@ -243,7 +309,10 @@ object Networking {
          * @param environment The environment to activate.
          */
         fun setEnvironment(environment: NetworkEnvironment) {
-            preferences().edit().putString(ENVIRONMENT_KEY, environment.rawValue).apply()
+            Persistent.setString(
+                PersistentStorageKey.networking(NetworkingStorageKey.NETWORK_ENVIRONMENT),
+                environment.rawValue,
+            )
         }
 
         /**
@@ -262,12 +331,8 @@ object Networking {
         // MARK: - Auxiliary
 
         private fun persistedEnvironment(): NetworkEnvironment? =
-            preferences().getString(ENVIRONMENT_KEY, null)?.let { NetworkEnvironment.from(it) }
-
-        private fun preferences() =
-            requireContext().getSharedPreferences(
-                PREFERENCES_NAME,
-                Context.MODE_PRIVATE,
-            )
+            Persistent
+                .string(PersistentStorageKey.networking(NetworkingStorageKey.NETWORK_ENVIRONMENT))
+                ?.let { NetworkEnvironment.from(it) }
     }
 }

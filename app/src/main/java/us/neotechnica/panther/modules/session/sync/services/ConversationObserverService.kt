@@ -25,6 +25,7 @@ import us.neotechnica.panther.modules.session.entity.extensions.resolveUsers
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
+import us.neotechnica.panther.networking.modules.database.interfaces.observe
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata

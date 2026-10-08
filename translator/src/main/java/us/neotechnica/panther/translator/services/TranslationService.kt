@@ -2,8 +2,8 @@
 //  TranslationService.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.translator.services
@@ -11,6 +11,8 @@ package us.neotechnica.panther.translator.services
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import us.neotechnica.panther.subsystem.modules.foundation.models.Coalescer
 import us.neotechnica.panther.translator.Translator
 import us.neotechnica.panther.translator.extensions.capitalized
@@ -40,6 +42,29 @@ object TranslationService {
     // MARK: - Properties
 
     private val coalescer = Coalescer<String, Translation>()
+
+    // MARK: - Prewarm
+
+    /**
+     * Warms the underlying network connections to translation
+     * service hosts.
+     *
+     * Call this method early in the app lifecycle (for example, at
+     * launch) to establish DNS resolution and TLS sessions ahead of
+     * the first translation request, reducing latency on the first
+     * call to [translate] without retaining any web views.
+     *
+     * @param platforms The platforms to prewarm connections for.
+     *   Defaults to every platform.
+     */
+    fun prewarm(platforms: List<TranslationPlatform> = TranslationPlatform.entries) {
+        BaseTranslator.prewarm(platforms)
+
+        // Decode and index the local archive ahead of the first lookup.
+        if (Translator.config.archiverDelegate == null) {
+            LocalTranslationArchiver.preload()
+        }
+    }
 
     // MARK: - Translate
 
@@ -119,15 +144,26 @@ object TranslationService {
             throw TranslationError.InvalidArguments
         }
 
-        return coroutineScope {
+        // Pre-allocate result slots to preserve order.
+        val translations = arrayOfNulls<Translation>(inputs.size)
+
+        coroutineScope {
+            val semaphore = Semaphore(minOf(MAX_CONCURRENT_TRANSLATIONS, inputs.size))
             inputs
-                .chunked(MAX_CONCURRENT_TRANSLATIONS)
-                .flatMap { chunk ->
-                    chunk
-                        .map { input -> async { translate(input, languagePair) } }
-                        .awaitAll()
-                }
+                .mapIndexed { index, input ->
+                    async {
+                        semaphore.withPermit {
+                            translations[index] = translate(input, languagePair)
+                        }
+                    }
+                }.awaitAll()
         }
+
+        if (translations.any { it == null }) {
+            throw TranslationError.Unknown("Batch translation results were incomplete.")
+        }
+
+        return translations.filterNotNull()
     }
 
     // MARK: - Auxiliary
@@ -139,8 +175,8 @@ object TranslationService {
         for (platform in FALLBACK_PLATFORMS) {
             val translation = runCatching { translate(input, languagePair, platform) }.getOrNull()
             if (translation != null &&
-                translation.output.lowercasedTrimmingWhitespaceAndNewlines() !=
-                input.value.lowercasedTrimmingWhitespaceAndNewlines()
+                translation.output.lowercasedTrimmingWhitespaceAndNewlines !=
+                input.value.lowercasedTrimmingWhitespaceAndNewlines
             ) {
                 return translation
             }
@@ -158,7 +194,7 @@ object TranslationService {
             inputValueEncodedHash = input.value.encodedHash,
             languagePair = languagePair,
         ) ?: archiver.getValue(
-            inputValueEncodedHash = input.value.trimmingTrailingWhitespaceAndNewlines().encodedHash,
+            inputValueEncodedHash = input.value.trimmingTrailingWhitespaceAndNewlines.encodedHash,
             languagePair = languagePair,
         )
 
@@ -174,7 +210,7 @@ object TranslationService {
         val inputTokens = input.value.tokenized(delimiter)
         val translation =
             platform.instance.translate(
-                TranslationInput(inputTokens.first.trimmingTrailingWhitespaceAndNewlines()),
+                TranslationInput(inputTokens.first.trimmingTrailingWhitespaceAndNewlines),
                 languagePair,
             )
 
@@ -187,7 +223,7 @@ object TranslationService {
                 .replacing(processingToken, with = inputTokens.second)
                 .replace(processingToken, "")
                 .replace(delimiter, "")
-                .trimmingTrailingWhitespaceAndNewlines()
+                .trimmingTrailingWhitespaceAndNewlines
                 .capitalized(relativeTo = input.value)
 
         val processedTranslation =

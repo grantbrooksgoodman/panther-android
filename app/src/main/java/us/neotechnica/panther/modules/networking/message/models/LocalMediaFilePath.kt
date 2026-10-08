@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.networking.message.models
 
+import us.neotechnica.panther.bundle.media
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
 import java.io.File

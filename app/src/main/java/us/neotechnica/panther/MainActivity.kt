@@ -33,12 +33,12 @@ import us.neotechnica.panther.designsystem.modules.foundation.toast.ToastHost
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.designsystem.modules.theming.views.PantherTheme
 import us.neotechnica.panther.modules.common.services.AnalyticsService
-import us.neotechnica.panther.modules.content.shared.components.NetworkActivityIndicatorHost
 import us.neotechnica.panther.modules.content.shared.views.ForcedUpdateView
 import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
 import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.navigation.PendingChatNavigation
 import us.neotechnica.panther.navigation.RootView
+import us.neotechnica.panther.networking.modules.common.modifiers.IndicatesNetworkActivity
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
@@ -61,34 +61,29 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             PantherTheme {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .background(LocalPantherColors.current.background),
-                ) {
-                    RootView()
-                    RootSheetHost()
-                    AlertHost()
-                    ToastHost()
-                    OverlayHost()
-                    HUDHost()
-                    BuildInfoOverlayView(
+                IndicatesNetworkActivity {
+                    Box(
                         modifier =
                             Modifier
-                                .zIndex(1f)
-                                .align(Alignment.BottomEnd)
-                                .padding(end = 20.dp, bottom = 32.dp),
-                    )
-                    NetworkActivityIndicatorHost(
-                        modifier =
-                            Modifier
-                                .zIndex(1f)
-                                .align(Alignment.TopEnd)
-                                .padding(end = 16.dp, top = 48.dp),
-                    )
-                    ForcedUpdateView()
-                    ShakeDetector { if (Build.isDeveloperModeEnabled) DevModeService.presentActionSheet() }
+                                .fillMaxSize()
+                                .background(LocalPantherColors.current.background),
+                    ) {
+                        RootView()
+                        RootSheetHost()
+                        AlertHost()
+                        ToastHost()
+                        OverlayHost()
+                        HUDHost()
+                        BuildInfoOverlayView(
+                            modifier =
+                                Modifier
+                                    .zIndex(1f)
+                                    .align(Alignment.BottomEnd)
+                                    .padding(end = 20.dp, bottom = 32.dp),
+                        )
+                        ForcedUpdateView()
+                        ShakeDetector { if (Build.isDeveloperModeEnabled) DevModeService.presentActionSheet() }
+                    }
                 }
             }
         }

@@ -11,7 +11,6 @@ package us.neotechnica.panther.bundle
 import android.content.Context
 import us.neotechnica.panther.BuildConfig
 import us.neotechnica.panther.bundle.developermode.AppDevModeActions
-import us.neotechnica.panther.bundle.developermode.NetworkingOptions
 import us.neotechnica.panther.designsystem.modules.alertkit.dependencies.alertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.HUDConfig
 import us.neotechnica.panther.designsystem.modules.developermode.services.DevModeService
@@ -253,7 +252,6 @@ object Application {
         AppSubsystem.delegates.registerPermanentPersistentStorageKeyDelegate(PermanentKeyDelegate)
         AppSubsystem.delegates.registerErrorReportDelegate(ErrorReportingService)
         DevModeService.registerAppActionDelegate(AppDevModeActions)
-        DevModeService.registerAdditionalSubsystemActions(listOf(NetworkingOptions.networkingOptionsAction))
         LocalTranslationArchiverDelegate.registerWithDependencies()
 
         DependencyValues.current.alertKitConfig.overrideTranslationHUDConfig(

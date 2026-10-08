@@ -2,16 +2,18 @@
 //  Reaction.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.networking.conversation.models
 
 import androidx.compose.ui.graphics.Color
-import us.neotechnica.panther.networking.modules.common.extensions.decodingFailure
+import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.interfaces.Serializable
 import us.neotechnica.panther.networking.modules.common.interfaces.SerializableDecoder
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 
 /**
  * A reaction applied to a message by a user.
@@ -128,7 +130,12 @@ data class Reaction(
             val style = encodedStyle?.let { Style.from(it) }
             val userID = data[Keys.USER_ID.rawValue] as? String
 
-            if (style == null || userID == null) throw decodingFailure(this, data)
+            if (style == null || userID == null) {
+                throw Exception.Networking.decodingFailed(
+                    data,
+                    ExceptionMetadata(this),
+                )
+            }
 
             return Reaction(
                 style = style,

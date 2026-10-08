@@ -2,12 +2,14 @@
 //  TranslationValidator.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.networking.modules.translation.models
 
+import us.neotechnica.panther.networking.modules.common.extensions.Networking
+import us.neotechnica.panther.networking.modules.translation.extensions.reference
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.translator.models.LanguagePair
@@ -26,19 +28,26 @@ internal object TranslationValidator {
      * @throws Exception if any provided argument is malformed.
      */
     fun validate(
-        sender: Any,
         inputs: List<TranslationInput>? = null,
         languagePair: LanguagePair? = null,
         translation: Translation? = null,
+        metadata: ExceptionMetadata,
     ) {
+        val userInfo = mutableMapOf<String, Any>()
+        inputs?.let { userInfo["InputValues"] = it.joinToString(", ") { input -> input.value } }
+        languagePair?.let { userInfo["LanguagePair"] = it.string }
+        translation?.let { userInfo["TranslationReferenceHostingKey"] = it.reference.hostingKey }
+
         if (inputs != null && !inputs.all { it.isWellFormed }) {
-            throw Exception("Translation inputs failed validation.", metadata = ExceptionMetadata(sender))
+            throw Exception.Networking.inputsFailValidation(userInfo, metadata)
         }
+
         if (languagePair != null && !languagePair.isWellFormed) {
-            throw Exception("Language pair failed validation.", metadata = ExceptionMetadata(sender))
+            throw Exception.Networking.languagePairFailsValidation(userInfo, metadata)
         }
+
         if (translation != null && !translation.isWellFormed) {
-            throw Exception("Translation failed validation.", metadata = ExceptionMetadata(sender))
+            throw Exception.Networking.translationFailsValidation(userInfo, metadata)
         }
     }
 }

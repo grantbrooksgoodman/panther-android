@@ -2,22 +2,25 @@
 //  User+RemotelyUpdatable.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.networking.user.remotelyupdatable
 
+import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.modules.networking.common.encodeForWrite
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.Networking
-import us.neotechnica.panther.networking.modules.common.extensions.typeMismatch
+import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.common.models.WriteAction
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestampDateFormatter
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import java.util.Date
 
 // MARK: - Types
@@ -73,7 +76,13 @@ suspend fun User.update(
     key: UserUpdatableKey,
     to: Any,
 ): User {
-    val newValue = modifyKey(key, to) ?: throw typeMismatch(this, key.rawValue, to)
+    val newValue =
+        modifyKey(key, to) ?: throw Exception.Networking.typeMismatch(
+            key.rawValue,
+            to,
+            ExceptionMetadata(this),
+        )
+
     val valueKeyPath = "${NetworkPath.users.rawValue}/$id/${key.rawValue}"
 
     return when (val action = willWrite(to, key, newValue)) {
@@ -106,7 +115,12 @@ suspend fun User.updateValues(data: Map<UserUpdatableKey, Any>): User {
     val childValues = mutableMapOf<String, Any?>()
 
     for ((key, value) in data) {
-        updated = updated.modifyKey(key, value) ?: throw typeMismatch(this, key.rawValue, value)
+        updated = updated.modifyKey(key, value) ?: throw Exception.Networking.typeMismatch(
+            key.rawValue,
+            value,
+            ExceptionMetadata(this),
+        )
+
         childValues[key.rawValue] =
             (value as? Date)?.let { DependencyValues.current.timestampDateFormatter.format(it) }
                 ?: encodeForWrite(this, key.rawValue, value)

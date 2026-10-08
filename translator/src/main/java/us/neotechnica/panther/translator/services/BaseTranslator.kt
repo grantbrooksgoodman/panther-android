@@ -2,8 +2,8 @@
 //  BaseTranslator.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.translator.services
@@ -19,8 +19,11 @@ import android.webkit.WebViewClient
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -54,6 +57,18 @@ import kotlin.coroutines.resume
 internal open class BaseTranslator(
     override val platform: TranslationPlatform,
 ) : Translatorable {
+    // MARK: - Types
+
+    protected sealed interface EvaluationResult {
+        data class Retry(
+            val useAlternateString: Boolean,
+        ) : EvaluationResult
+
+        data class Success(
+            val output: String,
+        ) : EvaluationResult
+    }
+
     // MARK: - Properties
 
     protected var translationInput: TranslationInput? = null
@@ -65,8 +80,8 @@ internal open class BaseTranslator(
         input: TranslationInput,
         languagePair: LanguagePair,
     ): Translation {
-        val requestUrl =
-            platform.requestUrl(input.value, languagePair)
+        val requestURL =
+            platform.requestURL(input.value, languagePair)
                 ?: throw TranslationError.FailedToGenerateRequestURL
         val activity =
             Translator.config.currentActivityProvider?.invoke()
@@ -76,9 +91,7 @@ internal open class BaseTranslator(
         translationLanguagePair = languagePair
 
         return withContext(Dispatchers.Main.immediate) {
-            withTimeoutOrNull(HARNESS_TIMEOUT_MILLIS) {
-                runHarness(activity, requestUrl)
-            } ?: throw TranslationError.TimedOut
+            runHarness(activity, requestURL)
         }
     }
 
@@ -88,23 +101,29 @@ internal open class BaseTranslator(
     protected open fun configureWebView(webView: WebView) {}
 
     /**
-     * Extracts the rendered translation output, or `null` if it is not
-     * yet available.
+     * Evaluates the platform's extraction script against the rendered
+     * page, producing the translation output or a retry directive.
      *
      * @param webView The harness web view.
-     * @param useAlternate Whether to use the platform's alternate
-     *   selector.
+     * @param useAlternateString Whether to use the platform's
+     *   alternate selector.
      */
-    protected open suspend fun extractOutput(
+    protected open suspend fun evaluateJavaScript(
         webView: WebView,
-        useAlternate: Boolean,
-    ): String? {
-        val script = if (useAlternate) platform.alternateJavaScriptString else platform.javaScriptString
-        return webView.evaluateJavascriptAwait(script)
+        useAlternateString: Boolean,
+    ): EvaluationResult {
+        val javaScriptString = if (useAlternateString) platform.alternateJavaScriptString else platform.javaScriptString
+        val translationOutput = webView.evaluateJavascriptAwait(javaScriptString)
+
+        if (translationOutput == null || translationOutput.lowercasedTrimmingWhitespaceAndNewlines.isEmpty()) {
+            return EvaluationResult.Retry(useAlternateString = !useAlternateString)
+        }
+
+        return EvaluationResult.Success(translationOutput)
     }
 
     /** Adds a document-start script when the feature is supported. */
-    protected fun addDocumentStartScript(
+    internal fun addDocumentStartScript(
         webView: WebView,
         script: String,
     ) {
@@ -117,7 +136,7 @@ internal open class BaseTranslator(
 
     private suspend fun runHarness(
         activity: Activity,
-        requestUrl: String,
+        requestURL: String,
     ): Translation {
         val webView = createWebView(activity)
         val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
@@ -135,43 +154,59 @@ internal open class BaseTranslator(
                 )
 
             rootView?.addView(webView)
-            webView.loadUrl(requestUrl)
+            webView.loadUrl(requestURL)
 
             val navigationError =
-                select {
-                    ready.onAwait { null }
-                    failure.onAwait { it }
-                }
+                withTimeoutOrNull(NAVIGATION_TIMEOUT_MILLIS) {
+                    select<TranslationError?> {
+                        ready.onAwait { null }
+                        failure.onAwait { it }
+                    }
+                } ?: if (ready.isCompleted) null else TranslationError.TimedOut
             if (navigationError != null) throw navigationError
 
-            extractLoop(webView)
+            beginEvaluatingTranslationResult(webView)
         } finally {
             rootView?.removeView(webView)
             webView.destroy()
         }
     }
 
-    private suspend fun extractLoop(webView: WebView): Translation {
-        val input = translationInput ?: throw TranslationError.EvaluateJavaScriptFailed("Missing required parameters.")
-        val languagePair =
-            translationLanguagePair
-                ?: throw TranslationError.EvaluateJavaScriptFailed("Missing required parameters.")
+    // Kicks off result extraction once navigation finishes or the
+    // result observer fires, retrying with a brief backoff until the
+    // evaluation threshold elapses.
+    private suspend fun beginEvaluatingTranslationResult(webView: WebView): Translation {
+        val input = translationInput ?: failForMissingValues()
+        val languagePair = translationLanguagePair ?: failForMissingValues()
 
-        val deadline = SystemClock.elapsedRealtime() + EXTRACTION_THRESHOLD_MILLIS
-        var useAlternate = false
+        val navigationFinishedAt = SystemClock.elapsedRealtime()
+        var useAlternateString = false
 
         while (true) {
-            val output = extractOutput(webView, useAlternate)
-            if (output != null && output.lowercasedTrimmingWhitespaceAndNewlines().isNotEmpty()) {
-                return Translation(input = input, output = output, languagePair = languagePair)
+            when (val evaluationResult = evaluateJavaScript(webView, useAlternateString)) {
+                is EvaluationResult.Success ->
+                    return Translation(
+                        input = input,
+                        output = evaluationResult.output,
+                        languagePair = languagePair,
+                    )
+
+                is EvaluationResult.Retry -> {
+                    if (SystemClock.elapsedRealtime() - navigationFinishedAt >= EVALUATION_THRESHOLD_MILLIS) {
+                        throw TranslationError.EvaluateJavaScriptFailed()
+                    }
+
+                    // Brief backoff between evaluation attempts; the result
+                    // observer script surfaces results as soon as they
+                    // render, so tight polling only wastes main thread time.
+                    useAlternateString = evaluationResult.useAlternateString
+                    delay(EVALUATION_BACKOFF_MILLIS)
+                }
             }
-
-            if (SystemClock.elapsedRealtime() >= deadline) throw TranslationError.EvaluateJavaScriptFailed()
-
-            useAlternate = !useAlternate
-            delay(EXTRACTION_BACKOFF_MILLIS)
         }
     }
+
+    private fun failForMissingValues(): Nothing = throw TranslationError.EvaluateJavaScriptFailed("Missing required parameters.")
 
     // MARK: - Web View Setup
 
@@ -204,9 +239,14 @@ internal open class BaseTranslator(
     }
 
     private fun installScripts(webView: WebView) {
-        for (script in HarnessScripts.hardeningScripts(platform)) {
-            addDocumentStartScript(webView, script)
-        }
+        addBlockContentFocusScript(webView)
+        addContentSecurityPolicyScript(webView)
+        addDenyPermissionsScript(webView)
+        addDisableAnimationsScript(webView)
+        addDisableServiceWorkerScript(webView)
+        addFauxVisibilityScript(webView)
+        addPromoteIdleCallbackScript(webView)
+        if (platform != TranslationPlatform.DEEP_L) addTrimLazyLoadersScript(webView)
         platform.resultObserverScript?.let { addDocumentStartScript(webView, it) }
     }
 
@@ -232,7 +272,11 @@ internal open class BaseTranslator(
                 error: WebResourceError?,
             ) {
                 if (request?.isForMainFrame != true) return
-                onFailure(TranslationError.WebViewNavigationFailed(error?.description?.toString() ?: "Unknown error."))
+                onFailure(
+                    TranslationError.WebViewNavigationFailed(
+                        "${error?.description ?: "An unknown error occurred."} (${error?.errorCode ?: -1})",
+                    ),
+                )
             }
         }
 
@@ -255,11 +299,52 @@ internal open class BaseTranslator(
     // MARK: - Companion
 
     companion object {
-        private const val HARNESS_TIMEOUT_MILLIS = 20_000L
-        private const val EXTRACTION_THRESHOLD_MILLIS = 10_000L
-        private const val EXTRACTION_BACKOFF_MILLIS = 100L
+        private const val EVALUATION_BACKOFF_MILLIS = 100L
+        private const val EVALUATION_THRESHOLD_MILLIS = 10_000L
+        private const val NAVIGATION_TIMEOUT_MILLIS = 10_000L
+        private const val PREWARM_UNLOAD_DELAY_MILLIS = 2_000L
         private const val MOBILE_USER_AGENT =
             "Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 (KHTML, like Gecko) " +
                 "Chrome/131.0.0.0 Mobile Safari/537.36"
+
+        /**
+         * Warms the DNS and TLS sessions for the given platforms'
+         * translation endpoints, briefly loading each platform's page
+         * in a disposable web view.
+         *
+         * @param platforms The platforms to prewarm connections for.
+         */
+        fun prewarm(platforms: List<TranslationPlatform>) {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+            runCatching {
+                scope.launch {
+                    val apiWarmupURLStrings = mutableListOf<String>()
+                    if (platforms.contains(TranslationPlatform.GOOGLE)) {
+                        apiWarmupURLStrings.add(GoogleTranslator.API_WARMUP_URL_STRING)
+                    }
+
+                    if (platforms.contains(TranslationPlatform.REVERSO)) {
+                        apiWarmupURLStrings.add(ReversoTranslator.API_WARMUP_URL_STRING)
+                    }
+
+                    for (apiWarmupURLString in apiWarmupURLStrings) {
+                        launch(Dispatchers.IO) { runCatching { NetworkClient.get(apiWarmupURLString) } }
+                    }
+
+                    val activity = Translator.config.currentActivityProvider?.invoke() ?: return@launch
+                    for (platform in platforms) {
+                        val webView = WebView(activity)
+                        webView.loadUrl(platform.prewarmURL)
+
+                        launch {
+                            delay(PREWARM_UNLOAD_DELAY_MILLIS)
+                            webView.stopLoading()
+                            webView.destroy()
+                        }
+                    }
+                }
+            }
+        }
     }
 }

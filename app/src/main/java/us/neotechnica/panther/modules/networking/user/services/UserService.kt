@@ -11,6 +11,7 @@ package us.neotechnica.panther.modules.networking.user.services
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.networking.common.withGlobalCacheStrategy
 import us.neotechnica.panther.modules.networking.user.models.DeviceID
@@ -21,6 +22,7 @@ import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifi
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.DataSample
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.getValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Coalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -174,7 +176,7 @@ object UserService {
     // MARK: - Auxiliary
 
     private suspend fun fetchAllUsers(): List<User> {
-        val usersNode: Map<String, Any?> = database.getValues(NetworkPath.users.rawValue)
+        val usersNode: Map<String, Any?> = database.getValues<Map<String, Any?>>(NetworkPath.users.rawValue)
 
         // Decode every user from the snapshot already downloaded above,
         // rather than re-fetching each record individually by ID.
@@ -211,9 +213,9 @@ object UserService {
         val path = "${NetworkPath.users.rawValue}/$id"
         val fetched: Map<String, Any?> =
             if (cacheStrategy != null) {
-                database.withGlobalCacheStrategy(cacheStrategy) { database.getValues(path) }
+                database.withGlobalCacheStrategy(cacheStrategy) { database.getValues<Map<String, Any?>>(path) }
             } else {
-                database.getValues(path)
+                database.getValues<Map<String, Any?>>(path)
             }
 
         val data = fetched.toMutableMap().apply { put(ID_KEY, id) }

@@ -2,24 +2,25 @@
 //  NetworkActivityIndicatorService.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.common.services
 
-import kotlinx.coroutines.flow.StateFlow
+import androidx.compose.ui.graphics.Color
 import us.neotechnica.panther.bundle.networkActivityOccurred
 import us.neotechnica.panther.networking.modules.common.interfaces.DefaultNetworkActivityIndicatorDelegate
 import us.neotechnica.panther.networking.modules.common.interfaces.NetworkActivityIndicatorDelegate
 import us.neotechnica.panther.subsystem.modules.shared.models.SharedEvent
 
 /**
- * The delegate that controls the network activity indicator.
+ * The delegate that styles and controls the network activity
+ * indicator.
  *
  * The service forwards presentation to the framework's default
- * indicator behavior and notifies observers whenever network activity
- * occurs.
+ * indicator behavior and notifies observers whenever network
+ * activity occurs.
  */
 object NetworkActivityIndicatorService : NetworkActivityIndicatorDelegate {
     // MARK: - Properties
@@ -29,21 +30,13 @@ object NetworkActivityIndicatorService : NetworkActivityIndicatorDelegate {
 
     // MARK: - Computed Properties
 
-    /** A stream that emits whether any network operation is in flight. */
-    val isActive: StateFlow<Boolean>
-        get() = defaultNetworkActivityIndicatorDelegate.isActive
-
-    /** The ARGB background color reflecting the current network health tier. */
-    override val backgroundColor: Int?
+    /** The background color of the network activity indicator. */
+    override val backgroundColor: Color?
         get() = defaultNetworkActivityIndicatorDelegate.backgroundColor
 
-    /** The ARGB tint color of the progress indicator. */
-    override val progressViewTintColor: Int?
-        get() = defaultNetworkActivityIndicatorDelegate.progressViewTintColor
-
-    /** The action to perform when the indicator is tapped, or `null` for the default summary. */
-    override val tapAction: (() -> Unit)?
-        get() = defaultNetworkActivityIndicatorDelegate.tapAction
+    /** The tint color of the network activity indicator's progress view. */
+    override val progressViewTintColor: Color
+        get() = Color.White
 
     // MARK: - NetworkActivityIndicatorDelegate Conformance
 
@@ -53,8 +46,8 @@ object NetworkActivityIndicatorService : NetworkActivityIndicatorDelegate {
     }
 
     /**
-     * Shows the network activity indicator and notifies observers that
-     * network activity occurred.
+     * Shows the network activity indicator and notifies observers
+     * that network activity occurred.
      */
     override fun show() {
         defaultNetworkActivityIndicatorDelegate.show()

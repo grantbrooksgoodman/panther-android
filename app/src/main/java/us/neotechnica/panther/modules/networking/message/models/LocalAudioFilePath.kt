@@ -8,6 +8,8 @@
 
 package us.neotechnica.panther.modules.networking.message.models
 
+import us.neotechnica.panther.bundle.audioMessageInputs
+import us.neotechnica.panther.bundle.audioTranslations
 import us.neotechnica.panther.modules.common.models.AudioFileExtension
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
@@ -87,7 +89,7 @@ data class LocalAudioFilePath(
             if (message.contentType !is HostedContentType.Audio) return null
             val hostingKey =
                 message.translationReferences
-                    ?.firstOrNull { HostedTranslationReference.fromString(it.hostingKey)?.languagePair == translation.languagePair }
+                    ?.firstOrNull { HostedTranslationReference.from(it.hostingKey)?.languagePair == translation.languagePair }
                     ?.hostingKey
                     ?: return null
             return from(message.id, translation, hostingKey)

@@ -60,7 +60,7 @@ enum class TranslationPlatform {
                 REVERSO -> Translator.Constants.REVERSO_JAVA_SCRIPT_STRING
             }
 
-    internal val prewarmUrl: String
+    internal val prewarmURL: String
         get() =
             when (this) {
                 DEEP_L -> "https://www.deepl.com/en/translator"
@@ -194,7 +194,7 @@ enum class TranslationPlatform {
         }
     }
 
-    internal fun requestUrl(
+    internal fun requestURL(
         text: String,
         languagePair: LanguagePair,
     ): String? {

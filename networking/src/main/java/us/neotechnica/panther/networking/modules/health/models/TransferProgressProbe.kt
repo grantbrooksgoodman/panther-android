@@ -2,8 +2,8 @@
 //  TransferProgressProbe.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.networking.modules.health.models
@@ -16,6 +16,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.storage.models.StorageTransferProgress
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 
 /**
@@ -51,7 +52,7 @@ internal class TransferProgressProbe {
 
     private val state = LockIsolated(MutableState())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val watchdogJob: Job = scope.launch { runWatchdog() }
+    private val watchdogJob: Job = makeWatchdogTask()
 
     // MARK: - Methods
 
@@ -59,9 +60,9 @@ internal class TransferProgressProbe {
      * Incorporates a progress snapshot, recording a throughput sample
      * whenever the accumulated segment reaches the minimum sample size.
      *
-     * @param completedBytes The cumulative number of bytes transferred.
+     * @param progress The transfer's latest progress snapshot.
      */
-    fun handleProgress(completedBytes: Long) {
+    fun handleProgress(progress: StorageTransferProgress) {
         val minimumThroughputSampleBytes = Networking.config.networkHealthConfiguration.minimumThroughputSampleBytes
         val now = System.currentTimeMillis()
 
@@ -70,10 +71,10 @@ internal class TransferProgressProbe {
                 val mutableState = reference.value
                 if (mutableState.isFinished) return@withValue null
 
-                val deltaBytes = completedBytes - mutableState.lastCompletedBytes
+                val deltaBytes = progress.completedBytes - mutableState.lastCompletedBytes
                 if (deltaBytes <= 0) return@withValue null
 
-                mutableState.lastCompletedBytes = completedBytes
+                mutableState.lastCompletedBytes = progress.completedBytes
                 mutableState.lastProgressAt = now
                 mutableState.segmentBytes += deltaBytes.toInt()
 
@@ -137,6 +138,11 @@ internal class TransferProgressProbe {
 
     // MARK: - Auxiliary
 
+    private fun makeWatchdogTask(): Job =
+        scope.launch {
+            runWatchdog()
+        }
+
     private suspend fun runWatchdog() {
         while (scope.isActive) {
             val checkInterval = Networking.config.networkHealthConfiguration.transferStallCheckInterval
@@ -171,7 +177,46 @@ internal class TransferProgressProbe {
 
     // MARK: - Companion
 
-    private companion object {
+    companion object {
         private const val MILLIS_PER_SECOND = 1000.0
+
+        /**
+         * Runs a transfer with an attached probe, composing the
+         * probe's progress sink with the caller's, finishing the
+         * probe on success and invalidating it on failure.
+         *
+         * The `totalBytes` closure is evaluated only after the
+         * transfer succeeds, so it may reference artifacts the
+         * transfer produces – such as a downloaded file on disk.
+         *
+         * @param totalBytes A closure that returns the total
+         *   number of bytes transferred, or `null` when unknown.
+         * @param onProgress The caller's progress sink, invoked
+         *   alongside the probe's for each snapshot.
+         * @param transfer The transfer to run, given the composed
+         *   progress sink.
+         *
+         * @throws Exception if the transfer fails, after
+         *   invalidating the probe.
+         */
+        suspend fun measure(
+            totalBytes: () -> Int?,
+            onProgress: ((StorageTransferProgress) -> Unit)?,
+            transfer: suspend (onProgress: (StorageTransferProgress) -> Unit) -> Unit,
+        ) {
+            val probe = TransferProgressProbe()
+
+            try {
+                transfer { progress ->
+                    probe.handleProgress(progress)
+                    onProgress?.invoke(progress)
+                }
+            } catch (throwable: Throwable) {
+                probe.invalidate()
+                throw throwable
+            }
+
+            probe.finish(totalBytes = totalBytes())
+        }
     }
 }

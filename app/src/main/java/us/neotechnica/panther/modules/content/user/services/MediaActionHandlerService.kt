@@ -35,14 +35,15 @@ import androidx.media3.transformer.Transformer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import us.neotechnica.panther.modules.content.user.constants.MediaActionHandlerFloats
-import us.neotechnica.panther.modules.content.user.constants.MediaActionHandlerStrings
+import us.neotechnica.panther.bundle.media
 import us.neotechnica.panther.modules.common.models.DocumentFileExtension
 import us.neotechnica.panther.modules.common.models.ImageFileExtension
 import us.neotechnica.panther.modules.common.models.MediaFileExtension
-import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.modules.common.models.VideoFileExtension
+import us.neotechnica.panther.modules.content.user.constants.MediaActionHandlerFloats
+import us.neotechnica.panther.modules.content.user.constants.MediaActionHandlerStrings
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
+import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
@@ -278,7 +279,8 @@ object MediaActionHandlerService {
         withContext(Dispatchers.Main) {
             suspendCancellableCoroutine { continuation ->
                 val transformer =
-                    Transformer.Builder(requireContext())
+                    Transformer
+                        .Builder(requireContext())
                         .setVideoMimeType(MimeTypes.VIDEO_H264)
                         .setAudioMimeType(MimeTypes.AUDIO_AAC)
                         .addListener(

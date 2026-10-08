@@ -8,10 +8,12 @@
 
 package us.neotechnica.panther.modules.common.services
 
+import us.neotechnica.panther.bundle.invalidatedCaches
 import us.neotechnica.panther.modules.common.models.RemoteCacheStatus
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.getValues
 
 /**
  * Use [RemoteCacheService] to read and write the remote cache
@@ -37,7 +39,7 @@ object RemoteCacheService {
      */
     suspend fun cacheStatus(userID: String): RemoteCacheStatus {
         val invalidatedCaches: List<String> =
-            Networking.config.databaseDelegate.getValues(
+            Networking.config.databaseDelegate.getValues<List<String>>(
                 NetworkPath.invalidatedCaches.rawValue,
                 cacheStrategy = CacheStrategy.ADAPTIVE,
             )

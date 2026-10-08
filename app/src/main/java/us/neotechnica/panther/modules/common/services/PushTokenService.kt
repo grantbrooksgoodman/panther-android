@@ -8,11 +8,13 @@
 
 package us.neotechnica.panther.modules.common.services
 
+import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpdatableKey
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.update
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.getValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
@@ -62,7 +64,7 @@ object PushTokenService {
      *   update fails.
      */
     suspend fun eraseStalePushToken(pushToken: String) {
-        val userData: Map<String, Any?> = database.getValues(NetworkPath.users.rawValue)
+        val userData: Map<String, Any?> = database.getValues<Map<String, Any?>>(NetworkPath.users.rawValue)
 
         // Build a single fan-out that deletes the stale token from
         // every user that has it.
@@ -130,7 +132,7 @@ object PushTokenService {
         val currentUserPushTokens = currentUser.pushTokens?.toSet() ?: return
         if (currentUserPushTokens.isEmpty()) return
 
-        val userData: Map<String, Any?> = database.getValues(NetworkPath.users.rawValue)
+        val userData: Map<String, Any?> = database.getValues<Map<String, Any?>>(NetworkPath.users.rawValue)
 
         // Build a single fan-out that removes the current user's
         // tokens from all other users.

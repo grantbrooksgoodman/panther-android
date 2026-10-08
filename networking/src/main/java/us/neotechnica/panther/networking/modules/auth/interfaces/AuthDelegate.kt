@@ -9,6 +9,7 @@
 package us.neotechnica.panther.networking.modules.auth.interfaces
 
 import android.app.Activity
+import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 
 /**
  * An interface for managing user authentication.
@@ -84,7 +85,8 @@ interface AuthDelegate {
      * @param internationalNumber The phone number to verify, in
      *   international format (for example, `"15551234567"`).
      * @param languageCode A language code used to localize the
-     *   verification SMS.
+     *   verification SMS. The default is the runtime language
+     *   code.
      *
      * @return The phone-number verification ID.
      *
@@ -94,6 +96,6 @@ interface AuthDelegate {
     suspend fun verifyPhoneNumber(
         activity: Activity,
         internationalNumber: String,
-        languageCode: String,
+        languageCode: String = RuntimeStorage.languageCode,
     ): String
 }

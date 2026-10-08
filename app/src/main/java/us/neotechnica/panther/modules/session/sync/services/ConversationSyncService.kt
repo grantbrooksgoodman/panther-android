@@ -2,13 +2,14 @@
 //  ConversationSyncService.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.session.sync.services
 
 import us.neotechnica.panther.bundle.conversationSync
+import us.neotechnica.panther.bundle.conversations
 import us.neotechnica.panther.modules.networking.conversation.models.Activity
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
@@ -29,10 +30,10 @@ import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.modules.session.sync.models.ConversationSyncData
 import us.neotechnica.panther.modules.session.sync.models.SynchronizationRecord
 import us.neotechnica.panther.networking.Networking
-import us.neotechnica.panther.networking.modules.common.extensions.decodingFailed
-import us.neotechnica.panther.networking.modules.common.extensions.typeMismatch
+import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.getValues
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
 import us.neotechnica.panther.subsystem.modules.foundation.models.Coalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -49,7 +50,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
  * activities, participants, metadata, and reactions – and commits the
  * reconciled conversation to the session store.
  */
-// This service exceeds the type-body-length limit.
 @Suppress("LargeClass")
 class ConversationSyncService {
     // MARK: - Properties
@@ -102,13 +102,20 @@ class ConversationSyncService {
         @Suppress("UNCHECKED_CAST")
         val newActivities =
             syncData?.newData?.get(ConversationUpdatableKey.ACTIVITIES.rawValue) as? List<Map<String, Any?>>
-                ?: throw decodingFailed(this, syncData?.newData ?: emptyMap<String, Any?>())
+                ?: throw Exception.Networking.decodingFailed(
+                    syncData?.newData ?: emptyMap<String, Any?>(),
+                    ExceptionMetadata(this),
+                )
 
         val updatedActivities = newActivities.map { Activity.decode(it) }
 
         val conversation =
             syncData?.conversation?.modifyKey(ConversationUpdatableKey.ACTIVITIES, updatedActivities)
-                ?: throw typeMismatch(this, ConversationUpdatableKey.ACTIVITIES.rawValue, updatedActivities)
+                ?: throw Exception.Networking.typeMismatch(
+                    ConversationUpdatableKey.ACTIVITIES.rawValue,
+                    updatedActivities,
+                    ExceptionMetadata(this),
+                )
 
         syncData = ConversationSyncData(conversation, syncData?.messages ?: emptyList(), syncData?.newData ?: emptyMap())
     }
@@ -122,7 +129,11 @@ class ConversationSyncService {
     }
 
     private fun synchronizeHash() {
-        val data = syncData ?: throw decodingFailed(this, syncData?.newData ?: emptyMap<String, Any?>())
+        val data =
+            syncData ?: throw Exception.Networking.decodingFailed(
+                syncData?.newData ?: emptyMap<String, Any?>(),
+                ExceptionMetadata(this),
+            )
 
         // Use the server hash (from the user's conversationIDs) as the
         // conversation's id.hash so archive lookups match on the server
@@ -174,7 +185,8 @@ class ConversationSyncService {
         @Suppress("UNCHECKED_CAST")
         val serverMessageIDs =
             (syncData?.newData?.get(ConversationUpdatableKey.MESSAGES.rawValue) as? Map<String, Any?>)
-                ?.keys?.sorted() ?: conversation.messageIDs
+                ?.keys
+                ?.sorted() ?: conversation.messageIDs
 
         syncData =
             ConversationSyncData(
@@ -190,13 +202,20 @@ class ConversationSyncService {
         @Suppress("UNCHECKED_CAST")
         val newMetadata =
             syncData?.newData?.get(ConversationUpdatableKey.METADATA.rawValue) as? Map<String, Any?>
-                ?: throw decodingFailed(this, syncData?.newData ?: emptyMap<String, Any?>())
+                ?: throw Exception.Networking.decodingFailed(
+                    syncData?.newData ?: emptyMap<String, Any?>(),
+                    ExceptionMetadata(this),
+                )
 
         val decodedMetadata = ConversationMetadata.decode(newMetadata)
 
         val conversation =
             syncData?.conversation?.modifyKey(ConversationUpdatableKey.METADATA, decodedMetadata)
-                ?: throw typeMismatch(this, ConversationUpdatableKey.METADATA.rawValue, decodedMetadata)
+                ?: throw Exception.Networking.typeMismatch(
+                    ConversationUpdatableKey.METADATA.rawValue,
+                    decodedMetadata,
+                    ExceptionMetadata(this),
+                )
 
         syncData = ConversationSyncData(conversation, syncData?.messages ?: emptyList(), syncData?.newData ?: emptyMap())
     }
@@ -205,13 +224,21 @@ class ConversationSyncService {
         @Suppress("UNCHECKED_CAST")
         val participantMap =
             syncData?.newData?.get(ConversationUpdatableKey.PARTICIPANTS.rawValue) as? Map<String, Map<String, Any?>>
-                ?: throw decodingFailed(this, syncData?.newData ?: emptyMap<String, Any?>())
+                ?: throw Exception.Networking.decodingFailed(
+                    syncData?.newData ?: emptyMap<String, Any?>(),
+                    ExceptionMetadata(this),
+                )
 
         val updatedParticipants = mutableListOf<Participant>()
         for ((userID, values) in participantMap) {
             val hasDeletedConversation = values[KEY_HAS_DELETED] as? Boolean
             val isTyping = values[KEY_IS_TYPING] as? Boolean
-            if (hasDeletedConversation == null || isTyping == null) throw decodingFailed(this, values)
+            if (hasDeletedConversation == null || isTyping == null) {
+                throw Exception.Networking.decodingFailed(
+                    values,
+                    ExceptionMetadata(this),
+                )
+            }
 
             updatedParticipants.add(
                 Participant(userID = userID, hasDeletedConversation = hasDeletedConversation, isTyping = isTyping),
@@ -222,7 +249,11 @@ class ConversationSyncService {
             syncData?.conversation?.modifyKey(
                 ConversationUpdatableKey.PARTICIPANTS,
                 updatedParticipants.sortedBy { it.userID },
-            ) ?: throw typeMismatch(this, ConversationUpdatableKey.PARTICIPANTS.rawValue, updatedParticipants)
+            ) ?: throw Exception.Networking.typeMismatch(
+                ConversationUpdatableKey.PARTICIPANTS.rawValue,
+                updatedParticipants,
+                ExceptionMetadata(this),
+            )
 
         syncData = ConversationSyncData(conversation, syncData?.messages ?: emptyList(), syncData?.newData ?: emptyMap())
     }
@@ -231,13 +262,20 @@ class ConversationSyncService {
         @Suppress("UNCHECKED_CAST")
         val newReactionMetadata =
             syncData?.newData?.get(ConversationUpdatableKey.REACTION_METADATA.rawValue) as? List<Map<String, Any?>>
-                ?: throw decodingFailed(this, syncData?.newData ?: emptyMap<String, Any?>())
+                ?: throw Exception.Networking.decodingFailed(
+                    syncData?.newData ?: emptyMap<String, Any?>(),
+                    ExceptionMetadata(this),
+                )
 
         val updatedReactionMetadata = newReactionMetadata.map { ReactionMetadata.decode(it) }
 
         val conversation =
             syncData?.conversation?.modifyKey(ConversationUpdatableKey.REACTION_METADATA, updatedReactionMetadata)
-                ?: throw typeMismatch(this, ConversationUpdatableKey.REACTION_METADATA.rawValue, updatedReactionMetadata)
+                ?: throw Exception.Networking.typeMismatch(
+                    ConversationUpdatableKey.REACTION_METADATA.rawValue,
+                    updatedReactionMetadata,
+                    ExceptionMetadata(this),
+                )
 
         syncData = ConversationSyncData(conversation, syncData?.messages ?: emptyList(), syncData?.newData ?: emptyMap())
     }
@@ -249,7 +287,7 @@ class ConversationSyncService {
         try {
             val currentMessages = conversation.messages?.uniquedByID ?: emptyList()
             val newData: Map<String, Any?> =
-                Networking.config.databaseDelegate.getValues(
+                Networking.config.databaseDelegate.getValues<Map<String, Any?>>(
                     path = "${NetworkPath.conversations.rawValue}/${conversation.id.key}",
                     cacheStrategy = CacheStrategy.DISREGARD_CACHE,
                 )
@@ -282,7 +320,7 @@ class ConversationSyncService {
     }
 
     // The leading underscore marks this as an internal synchronization helper.
-    @Suppress("FunctionNaming")
+    @Suppress("FunctionNaming", "ktlint:standard:function-naming")
     private suspend fun _synchronizeConversation(
         conversation: Conversation,
         hasResolvedMessages: Boolean = false,

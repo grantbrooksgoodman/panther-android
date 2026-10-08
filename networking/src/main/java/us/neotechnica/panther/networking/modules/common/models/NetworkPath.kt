@@ -19,8 +19,8 @@ package us.neotechnica.panther.networking.modules.common.models
  * val path = NetworkPath("users/profile")
  * ```
  *
- * The app's top-level paths are declared as companion constants
- * on this type.
+ * The app's top-level paths are declared as companion extension
+ * properties on this type.
  */
 @JvmInline
 value class NetworkPath(
@@ -29,17 +29,5 @@ value class NetworkPath(
 ) {
     // MARK: - Companion
 
-    companion object {
-        val audioMessageInputs = NetworkPath("audioMessageInputs")
-        val audioTranslations = NetworkPath("audioTranslations")
-        val conversations = NetworkPath("conversations")
-        val deletedUsers = NetworkPath("deletedUsers")
-        val invalidatedCaches = NetworkPath("invalidatedCaches")
-        val media = NetworkPath("media")
-        val messages = NetworkPath("messages")
-        val reportedUsers = NetworkPath("reportedUsers")
-        val shared = NetworkPath("shared")
-        val translations = NetworkPath("translations")
-        val users = NetworkPath("users")
-    }
+    companion object
 }

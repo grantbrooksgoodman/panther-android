@@ -16,9 +16,9 @@ class DataSample(
     /** The cached value. */
     val data: Any,
     /** The duration after which the sample expires, in milliseconds. */
-    val expiryThresholdMillis: Long,
+    val expiryThreshold: Long,
     /** The epoch-millisecond timestamp at which the sample was captured. */
-    val capturedAtMillis: Long = System.currentTimeMillis(),
+    val date: Long = System.currentTimeMillis(),
 ) {
     // MARK: - Computed Properties
 
@@ -27,5 +27,5 @@ class DataSample(
      * exceeded its expiry threshold.
      */
     val isExpired: Boolean
-        get() = System.currentTimeMillis() - capturedAtMillis > expiryThresholdMillis
+        get() = System.currentTimeMillis() - date > expiryThreshold
 }

@@ -2,8 +2,8 @@
 //  NetworkHealthTest.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman.
-//  Copyright © NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman on 07/10/2026.
+//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.networking.modules.health
@@ -19,7 +19,9 @@ import us.neotechnica.panther.networking.modules.health.models.NetworkHealthConf
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealthEvent
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealthResolver
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealthTier
+import us.neotechnica.panther.networking.modules.health.models.NetworkInterfaceType
 import us.neotechnica.panther.networking.modules.health.models.PathState
+import us.neotechnica.panther.networking.modules.health.models.RadioTechnology
 
 /**
  * Exercises the network health estimator, tier classification, and
@@ -28,6 +30,39 @@ import us.neotechnica.panther.networking.modules.health.models.PathState
 @Suppress("MagicNumber")
 class NetworkHealthTest {
     private val configuration = NetworkHealthConfiguration.default
+
+    @Test
+    fun legacyRadioTechnologyCapsTheCellularScore() {
+        val estimator = HealthEstimator()
+        val legacyContext =
+            EstimatorContext(
+                configuration = configuration,
+                isOnline = true,
+                pathState =
+                    PathState(
+                        interfaceType = NetworkInterfaceType.CELLULAR,
+                        radioTechnology = RadioTechnology.LEGACY,
+                    ),
+            )
+
+        var health: NetworkHealth = NetworkHealth.Unknown
+        repeat(10) { health = estimator.recordLatency(0.05, isCensored = false, context = legacyContext) }
+
+        val legacyScore = (health as NetworkHealth.Measured).score
+        assertTrue(legacyScore <= configuration.legacyRadioScoreCap)
+
+        val modernContext =
+            legacyContext.copy(
+                pathState =
+                    PathState(
+                        interfaceType = NetworkInterfaceType.CELLULAR,
+                        radioTechnology = RadioTechnology.MODERN,
+                    ),
+            )
+
+        val modernHealth = estimator.computeHealth(modernContext)
+        assertTrue((modernHealth as NetworkHealth.Measured).score > legacyScore)
+    }
 
     @Test
     fun adaptiveResolvesToCacheFirstUnderPoorHealth() {
