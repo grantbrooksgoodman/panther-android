@@ -13,9 +13,7 @@ import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
 import java.io.File
 
-/**
- * The local file paths for a media message's content.
- */
+/** The local file paths for a media message's content. */
 data class LocalMediaFilePath(
     /** The media file's path, relative to the documents directory. */
     val relativePathString: String,
@@ -27,12 +25,18 @@ data class LocalMediaFilePath(
 ) {
     // MARK: - Computed Properties
 
-    /** The absolute file of the media file. */
-    val localPathFile: File?
+    /**
+     * The absolute file of the media file, or `null` before the file
+     * store is initialized.
+     */
+    val localPathURL: File?
         get() = FileStore.resolve(relativePathString)
 
-    /** The absolute file of the thumbnail, or `null` if there is no thumbnail. */
-    val localThumbnailPathFile: File?
+    /**
+     * The absolute file of the thumbnail, or `null` if there is no
+     * thumbnail or the file store is not initialized.
+     */
+    val localThumbnailPathURL: File?
         get() = relativeThumbnailPathString?.let { FileStore.resolve(it) }
 
     // MARK: - Companion

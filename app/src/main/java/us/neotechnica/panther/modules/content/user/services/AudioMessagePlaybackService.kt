@@ -24,16 +24,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import us.neotechnica.panther.modules.common.services.HapticsService
 import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.networking.message.models.AudioMessageReference
 import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.modules.session.entity.extensions.isAudioMessage
 import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
-import us.neotechnica.panther.modules.session.entity.extensions.resolvedAudioReference
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 
 /**
  * Manages audio message playback: tap-to-play/pause, playback-progress,
@@ -161,8 +157,7 @@ object AudioMessagePlaybackService {
         next ?: return
         scope.launch {
             delay(PLAY_NEXT_MESSAGE_DELAY_MILLISECONDS)
-            val reference =
-                withContext(Dispatchers.IO) { next.resolvedAudioReference(RuntimeStorage.languageCode) } ?: return@launch
+            val reference = next.audioComponent ?: return@launch
             didTapPlayButton(next, reference)
         }
     }
@@ -171,7 +166,7 @@ object AudioMessagePlaybackService {
         val messages = ConversationSessionService.displayedMessages.value
         val index = messages.indexOfFirst { it.id == afterMessageID }
         if (index < 0) return null
-        return messages.getOrNull(index + 1)?.takeIf { it.isAudioMessage }
+        return messages.getOrNull(index + 1)?.takeIf { it.contentType.isAudio }
     }
 
     private fun startProgressPolling() {

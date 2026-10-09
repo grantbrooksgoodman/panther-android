@@ -32,7 +32,6 @@ import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.session.entity.extensions.isOutboxMessage
 import us.neotechnica.panther.modules.session.entity.extensions.isSystemMessage
-import us.neotechnica.panther.modules.session.entity.extensions.reactions
 import us.neotechnica.panther.modules.session.entity.extensions.users
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
@@ -47,9 +46,8 @@ private const val SCROLL_SETTLE_MAX_FRAMES = 8
  * Keeps the message list pinned to the newest message.
  *
  * The list starts pinned and scrolls to the bottom on initial load, when
- * the user sends a message, or whenever pinned content grows — the first
- * asynchronous resolution of a cold-opened chat, or a reaction landing
- * below the last message. It unpins the moment the user drags the list to
+ * the user sends a message, or whenever pinned content grows – a
+ * reaction landing below the last message. It unpins the moment the user drags the list to
  * read earlier messages and re-pins once the list next rests at the very
  * bottom, so content growth is never mistaken for the user scrolling away.
  */
@@ -77,9 +75,6 @@ private fun StickToBottomEffect(
     val lastMessageReactionCount = messages.lastOrNull()?.reactions?.size ?: 0
     LaunchedEffect(
         messages.size,
-        state.translationsByID.size,
-        state.mediaByID.size,
-        state.audioByID.size,
         lastMessageReactionCount,
     ) {
         if (messages.isEmpty()) {
@@ -101,9 +96,9 @@ private fun StickToBottomEffect(
         }
 
         if (isInitialLoad || newestMessageIsOwn || stickToBottom) {
-            // Re-pin across frames until multi-step content growth (async text,
-            // decoded media, resolved audio, a reaction chip) settles, so the
-            // newest message rests fully at the bottom rather than short of it.
+            // Re-pin across frames until multi-step content growth (decoded
+            // media, a reaction chip) settles, so the newest message rests
+            // fully at the bottom rather than short of it.
             var settleFrames = 0
             do {
                 listState.scrollToItem(messages.lastIndex)
@@ -158,7 +153,7 @@ internal fun MessageList(
                     ChatMessageRowData(
                         message = message,
                         previousMessage = messages.getOrNull(index - 1),
-                        translation = state.translationsByID[message.id] ?: message.translations?.firstOrNull(),
+                        translation = message.translation,
                         showAlternate = message.id in state.alternateTextMessageIDs,
                         isLastConfirmedOwnMessage = index == lastConfirmedOwnIndex,
                         isGroup = isGroup,
@@ -167,8 +162,8 @@ internal fun MessageList(
                         senderInitials = senderDisplayName?.contactInitials() ?: "",
                         showSenderAvatar = showSender && lastOfRun,
                         reactions = message.reactions.orEmpty(),
-                        mediaFile = state.mediaByID[message.id],
-                        audioReference = state.audioByID[message.id],
+                        mediaFile = message.richContent?.mediaComponent,
+                        audioReference = message.audioComponent,
                         isDisplayingAudioTranscription = message.id in state.audioTranscriptionMessageIDs,
                     ),
                 onToggleAlternate = onToggleAlternate,

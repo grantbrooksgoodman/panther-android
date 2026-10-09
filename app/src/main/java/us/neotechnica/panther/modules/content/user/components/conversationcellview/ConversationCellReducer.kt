@@ -28,7 +28,6 @@ import us.neotechnica.panther.subsystem.modules.effect.cancellable
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
-import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
@@ -286,7 +285,6 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
             val cellViewData =
                 ConversationCellViewData.build(
                     state.conversation,
-                    RuntimeStorage.languageCode,
                     state.searchQuery,
                     useCachedValue = useCachedValue,
                 )

@@ -12,11 +12,11 @@ import us.neotechnica.panther.bundle.messages
 import us.neotechnica.panther.modules.networking.common.encodeForWrite
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.message.models.ReadReceipt
-import us.neotechnica.panther.modules.networking.message.models.TranslationReference
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.translation.models.TranslationReference
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 

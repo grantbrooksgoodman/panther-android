@@ -57,7 +57,6 @@ import us.neotechnica.panther.modules.content.user.services.MessageDeliveryServi
 import us.neotechnica.panther.modules.content.user.services.SearchInteractionService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
-import us.neotechnica.panther.modules.session.entity.extensions.isMediaMessage
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
 import us.neotechnica.panther.modules.session.state.services.retry
@@ -132,8 +131,8 @@ fun ChatPageView(
                 }
         }
 
-    val mediaMessages = state.messages.filter { it.isMediaMessage && state.mediaByID[it.id] != null }
-    val previewMediaFiles = mediaMessages.mapNotNull { state.mediaByID[it.id] }
+    val mediaMessages = state.messages.filter { it.richContent?.mediaComponent != null }
+    val previewMediaFiles = mediaMessages.mapNotNull { it.richContent?.mediaComponent }
     val previewStartIndex = mediaMessages.indexOfFirst { it.id == previewMessageID }
 
     StatefulView(state = state.viewState, modifier = modifier) {

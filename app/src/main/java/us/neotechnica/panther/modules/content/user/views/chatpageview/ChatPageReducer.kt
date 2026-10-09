@@ -17,7 +17,6 @@ import us.neotechnica.panther.modules.content.user.services.AudioMessagePlayback
 import us.neotechnica.panther.modules.content.user.services.ContextMenuActionHandlerService
 import us.neotechnica.panther.modules.content.user.services.ReadReceiptService
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
-import us.neotechnica.panther.modules.networking.message.models.AudioMessageReference
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
@@ -35,16 +34,14 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
-import us.neotechnica.panther.translator.models.Translation
 import java.util.UUID
 
 /**
  * The reducer for a single conversation's chat page.
  *
  * Sets the conversation current on appearance, observes its displayed
- * messages, resolves each message's translation for display, sends text
- * through the outbox-backed delivery service, and marks incoming
- * messages read.
+ * messages, sends text through the outbox-backed delivery service,
+ * and marks incoming messages read.
  */
 class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
     // MARK: - Action
@@ -57,18 +54,6 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
 
         data class MessagesUpdated(
             val messages: List<Message>,
-        ) : Action
-
-        data class TranslationsResolved(
-            val translations: Map<String, Translation>,
-        ) : Action
-
-        data class MediaResolved(
-            val media: Map<String, MediaFile>,
-        ) : Action
-
-        data class AudioResolved(
-            val audio: Map<String, AudioMessageReference>,
         ) : Action
 
         data class TitleResolved(
@@ -129,9 +114,6 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
     data class State(
         val conversationIDKey: String = "",
         val messages: List<Message> = emptyList(),
-        val translationsByID: Map<String, Translation> = emptyMap(),
-        val mediaByID: Map<String, MediaFile> = emptyMap(),
-        val audioByID: Map<String, AudioMessageReference> = emptyMap(),
         val pendingAttachment: MediaFile? = null,
         val alternateTextMessageIDs: Set<String> = emptySet(),
         val audioTranscriptionMessageIDs: Set<String> = emptySet(),
@@ -166,17 +148,13 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             }
 
             is Action.MessagesUpdated ->
-                handleMessagesUpdated(state, action.messages)
-
-            is Action.TranslationsResolved ->
-                ReduceResult(state.copy(translationsByID = state.translationsByID + action.translations))
-
-            is Action.AudioResolved ->
-                ReduceResult(state.copy(audioByID = state.audioByID + action.audio, changeToken = UUID.randomUUID()))
-
-            is Action.MediaResolved ->
                 ReduceResult(
-                    state.copy(mediaByID = state.mediaByID + action.media, changeToken = UUID.randomUUID()),
+                    state.copy(
+                        messages = action.messages,
+                        viewState = ViewState.Loaded,
+                        changeToken = UUID.randomUUID(),
+                    ),
+                    markReadEffect(),
                 )
 
             is Action.TitleResolved ->
@@ -298,27 +276,6 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         }
     }
 
-    private fun handleMessagesUpdated(
-        state: State,
-        messages: List<Message>,
-    ): ReduceResult<State, Action> {
-        // Seed already-cached translations and already-downloaded media
-        // synchronously, so a reopened chat presents its history on the
-        // first frame instead of visibly resolving every message again.
-        val translations = state.translationsByID + seedTranslations(messages, state.languageCode, state.translationsByID)
-        val media = state.mediaByID + seedMedia(messages, state.mediaByID)
-        return ReduceResult(
-            state.copy(
-                messages = messages,
-                translationsByID = translations,
-                mediaByID = media,
-                viewState = ViewState.Loaded,
-                changeToken = UUID.randomUUID(),
-            ),
-            resolveEffect(messages, state.languageCode, translations, media, state.audioByID),
-        )
-    }
-
     private fun speakEffect(
         state: State,
         messageID: String,
@@ -326,10 +283,9 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
     ): Effect<Action> =
         Effect.run {
             val message = state.messages.firstOrNull { it.id == messageID } ?: return@run
-            val translation = state.translationsByID[messageID] ?: message.translations?.firstOrNull()
             val isDisplayingAlternateText = messageID in state.alternateTextMessageIDs
             try {
-                ContextMenuActionHandlerService.handleSpeakAction(message, translation, displayText, isDisplayingAlternateText)
+                ContextMenuActionHandlerService.handleSpeakAction(message, message.translation, displayText, isDisplayingAlternateText)
             } catch (exception: Exception) {
                 Logger.log(exception, with = AlertType.toast)
             }
@@ -351,27 +307,9 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             runCatching {
                 val title =
                     conversation.chatPageHeaderLabelText
-                        ?: ConversationCellViewData.build(conversation, RuntimeStorage.languageCode).title
+                        ?: ConversationCellViewData.build(conversation).title
                 send(Action.TitleResolved(title))
             }
-            markCurrentConversationAsRead()
-        }
-
-    @Suppress("LongParameterList")
-    private fun resolveEffect(
-        messages: List<Message>,
-        languageCode: String,
-        existing: Map<String, Translation>,
-        existingMedia: Map<String, MediaFile>,
-        existingAudio: Map<String, AudioMessageReference>,
-    ): Effect<Action> =
-        Effect.run { send ->
-            val resolved = resolveTranslations(messages, languageCode, existing)
-            val resolvedMedia = resolveMedia(messages, existingMedia)
-            val resolvedAudio = resolveAudio(messages, languageCode, existingAudio)
-            if (resolved.isNotEmpty()) send(Action.TranslationsResolved(resolved))
-            if (resolvedMedia.isNotEmpty()) send(Action.MediaResolved(resolvedMedia))
-            if (resolvedAudio.isNotEmpty()) send(Action.AudioResolved(resolvedAudio))
             markCurrentConversationAsRead()
         }
 }

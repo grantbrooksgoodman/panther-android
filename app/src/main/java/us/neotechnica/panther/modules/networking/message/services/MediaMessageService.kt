@@ -8,7 +8,6 @@
 
 package us.neotechnica.panther.modules.networking.message.services
 
-import android.webkit.MimeTypeMap
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import us.neotechnica.panther.bundle.media
@@ -116,7 +115,7 @@ object MediaMessageService {
 
         try {
             val contentTypeValue: String? =
-                database.getValues<String>("${NetworkPath.messages.rawValue}/$messageID/$CONTENT_TYPE_KEY")
+                database.getValues<String>("${NetworkPath.messages.rawValue}/$messageID/${Message.SerializableKey.CONTENT_TYPE.rawValue}")
             val hostedContentType =
                 contentTypeValue?.let { HostedContentType.from(it) }
                     ?: throw Exception("Failed to resolve hosted content type.", metadata = ExceptionMetadata(this))
@@ -171,7 +170,7 @@ object MediaMessageService {
                     metadata =
                         HostedItemMetadata(
                             relativePath,
-                            contentType = contentType(mediaComponent),
+                            contentType = mediaComponent.fileExtension.contentTypeString,
                         ),
                 )
             }
@@ -198,9 +197,6 @@ object MediaMessageService {
         moveIntoPlace(thumbnailFile, thumbnailRelativePath)
     }
 
-    private fun contentType(mediaComponent: MediaFile): String? =
-        MimeTypeMap.getSingleton().getMimeTypeFromExtension(mediaComponent.fileExtension.rawValue.lowercase())
-
     private fun isPlainTextDocument(fileExtension: MediaFileExtension?): Boolean =
         (fileExtension as? MediaFileExtension.Document)?.fileExtension is DocumentFileExtension.PlainText
 
@@ -224,7 +220,7 @@ object MediaMessageService {
         val referenceCount =
             allMessages
                 ?.values
-                ?.mapNotNull { (it as? Map<*, *>)?.get(CONTENT_TYPE_KEY) as? String }
+                ?.mapNotNull { (it as? Map<*, *>)?.get(Message.SerializableKey.CONTENT_TYPE.rawValue) as? String }
                 ?.mapNotNull { HostedContentType.from(it)?.mediaFilePath }
                 ?.count { it == mediaFilePath }
                 ?: 0
@@ -237,7 +233,7 @@ object MediaMessageService {
     ): MediaFile {
         val storage = Networking.config.storageDelegate
         val destination =
-            localPath.localPathFile
+            localPath.localPathURL
                 ?: throw Exception(
                     "Failed to resolve local media path.",
                     metadata = ExceptionMetadata(this),
@@ -257,7 +253,7 @@ object MediaMessageService {
         // The thumbnail is a best-effort companion object; a missing one
         // does not prevent the primary media from resolving.
         val thumbnailPath = localPath.relativeThumbnailPathString
-        val thumbnailFile = localPath.localThumbnailPathFile
+        val thumbnailFile = localPath.localThumbnailPathURL
         if (thumbnailPath != null && thumbnailFile != null) {
             runCatching { storage.downloadItem(thumbnailPath, thumbnailFile) }
         }
@@ -272,5 +268,4 @@ object MediaMessageService {
     // MARK: - Companion
 
     private const val SHORTENED_HASH_LENGTH = 32
-    private const val CONTENT_TYPE_KEY = "contentType"
 }

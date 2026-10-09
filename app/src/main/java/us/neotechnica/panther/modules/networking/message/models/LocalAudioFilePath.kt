@@ -11,15 +11,17 @@ package us.neotechnica.panther.modules.networking.message.models
 import us.neotechnica.panther.bundle.audioMessageInputs
 import us.neotechnica.panther.bundle.audioTranslations
 import us.neotechnica.panther.modules.common.models.AudioFileExtension
+import us.neotechnica.panther.modules.common.models.MediaFileExtension
+import us.neotechnica.panther.modules.common.services.AudioService
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.translation.extensions.reference
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
 import us.neotechnica.panther.translator.models.Translation
 import java.io.File
-import us.neotechnica.panther.networking.modules.translation.models.TranslationReference as HostedTranslationReference
 
 /**
- * The local file paths for an audio message's input recording and its
- * translated output audio.
+ * The local file paths for an audio message's input and translated
+ * output audio.
  */
 data class LocalAudioFilePath(
     /** The input recording's path, relative to the documents directory. */
@@ -31,70 +33,72 @@ data class LocalAudioFilePath(
 ) {
     // MARK: - Computed Properties
 
-    /** The absolute file of the input recording. */
-    val inputFilePathFile: File?
+    /**
+     * The absolute file of the input recording, or `null` before the
+     * file store is initialized.
+     */
+    val inputFilePathURL: File?
         get() = FileStore.resolve(inputFilePathString)
 
-    /** The absolute file of the translated output audio. */
-    val outputFilePathFile: File?
+    /**
+     * The absolute file of the translated output audio, or `null`
+     * before the file store is initialized.
+     */
+    val outputFilePathURL: File?
         get() = FileStore.resolve(outputFilePathString)
 
     // MARK: - Companion
 
     companion object {
         /**
-         * Creates an audio file path for the given message and translation.
+         * Creates an audio file path for the given message and
+         * translation.
          *
-         * For an idempotent translation, the output path matches the input
-         * path.
+         * For an idempotent translation, the output path matches the
+         * input path.
          *
          * @param messageID The identifier of the message.
-         * @param translation The translation to derive the output paths from.
-         * @param hostingKey The translation's hosting key, naming the
-         *   translated-audio directory.
+         * @param translation The translation to derive the output
+         *   paths from.
+         *
+         * @return The audio file path.
          */
         fun from(
             messageID: String,
             translation: Translation,
-            hostingKey: String,
         ): LocalAudioFilePath {
-            val inputFilePathString = "${NetworkPath.audioMessageInputs.rawValue}/$messageID.${AudioFileExtension.M4A.rawValue}"
-            val outputDirectoryPathString = "${NetworkPath.audioTranslations.rawValue}/$hostingKey"
-            val outputFilePathString =
-                if (translation.languagePair.isIdempotent) {
-                    inputFilePathString
-                } else {
-                    "$outputDirectoryPathString/${translation.languagePair.to}-$OUTPUT_M4A"
-                }
+            val inputFileExtension = MediaFileExtension.Audio(AudioFileExtension.M4A).rawValue
+            val inputFilePath = "${NetworkPath.audioMessageInputs.rawValue}/$messageID.$inputFileExtension"
+            val outputDirectoryPath =
+                listOf(
+                    NetworkPath.audioTranslations.rawValue,
+                    translation.reference.hostingKey,
+                ).joinToString("/")
 
-            return LocalAudioFilePath(inputFilePathString, outputDirectoryPathString, outputFilePathString)
+            var outputFilePath = "$outputDirectoryPath/${translation.languagePair.to}-${AudioService.FileNames.OUTPUT_M4A}"
+            if (translation.languagePair.isIdempotent) {
+                outputFilePath = inputFilePath
+            }
+
+            return LocalAudioFilePath(
+                inputFilePathString = inputFilePath,
+                outputDirectoryPathString = outputDirectoryPath,
+                outputFilePathString = outputFilePath,
+            )
         }
 
         /**
-         * Creates an audio file path from the given message and its resolved
-         * translation, or `null` if the message is not an audio message or
-         * carries no matching translation reference.
+         * Creates an audio file path from the given message.
          *
-         * The output audio lives under the hosting key of the *resolved*
-         * translation – the message's reference whose language pair matches
-         * [translation].
-         * A message may carry several references (for example, one per
-         * participant language in a group), so the first reference is not
-         * necessarily the resolved one.
+         * @param message The message to derive the paths from.
+         *
+         * @return An audio file path, or `null` if the message is not
+         *   an audio message or has no translation.
          */
-        fun from(
-            message: Message,
-            translation: Translation,
-        ): LocalAudioFilePath? {
-            if (message.contentType !is HostedContentType.Audio) return null
-            val hostingKey =
-                message.translationReferences
-                    ?.firstOrNull { HostedTranslationReference.from(it.hostingKey)?.languagePair == translation.languagePair }
-                    ?.hostingKey
-                    ?: return null
-            return from(message.id, translation, hostingKey)
+        fun from(message: Message): LocalAudioFilePath? {
+            if (!message.contentType.isAudio) return null
+            val translation = message.translation ?: return null
+            return from(message.id, translation)
         }
-
-        private const val OUTPUT_M4A = "output.m4a"
     }
 }

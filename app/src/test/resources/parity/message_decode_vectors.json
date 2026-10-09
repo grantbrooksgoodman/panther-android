@@ -1,0 +1,60 @@
+{
+  "archive" : [
+    { "hash" : "-HashHelloEnEs", "languagePair" : "en-es", "input" : "Hello", "output" : "Hola" },
+    { "hash" : "-HashHelloEnFr", "languagePair" : "en-fr", "input" : "Hello", "output" : "Bonjour" },
+    { "hash" : "-HashHolaEsEn", "languagePair" : "es-en", "input" : "Hola", "output" : "Hello" },
+    { "hash" : "-HashHolaEsKo", "languagePair" : "es-ko", "input" : "Hola", "output" : "안녕" },
+    { "hash" : "-HashBlankEnEs", "languagePair" : "en-es", "input" : "Hello", "output" : "" }
+  ],
+  "cases" : [
+    {
+      "name" : "received message selects the reference targeting the current user's language",
+      "currentUser" : { "id" : "me", "languageCode" : "es" },
+      "fromAccount" : "them",
+      "translations" : [ "en-fr | -HashHelloEnFr", "en-es | -HashHelloEnEs" ],
+      "expected" : { "languagePair" : "en-es", "input" : "Hello", "output" : "Hola" }
+    },
+    {
+      "name" : "sent message selects the reference sourced from the current user's language",
+      "currentUser" : { "id" : "me", "languageCode" : "es" },
+      "fromAccount" : "me",
+      "translations" : [ "en-es | -HashHelloEnEs", "es-ko | -HashHolaEsKo" ],
+      "expected" : { "languagePair" : "es-ko", "input" : "Hola", "output" : "안녕" }
+    },
+    {
+      "name" : "received message written in the current user's language is rewritten as the identity translation",
+      "currentUser" : { "id" : "me", "languageCode" : "es" },
+      "fromAccount" : "them",
+      "translations" : [ "es-en | -HashHolaEsEn" ],
+      "expected" : { "languagePair" : "es-es", "input" : "Hola", "output" : "Hola" }
+    },
+    {
+      "name" : "received message nearly matches through a previous language code",
+      "currentUser" : { "id" : "me", "languageCode" : "ko", "previousLanguageCodes" : [ "fr" ] },
+      "fromAccount" : "them",
+      "translations" : [ "en-es | -HashHelloEnEs", "en-fr | -HashHelloEnFr" ],
+      "expected" : { "languagePair" : "en-fr", "input" : "Hello", "output" : "Bonjour" }
+    },
+    {
+      "name" : "sent message nearly matches through a previous language code",
+      "currentUser" : { "id" : "me", "languageCode" : "fr", "previousLanguageCodes" : [ "es" ] },
+      "fromAccount" : "me",
+      "translations" : [ "en-es | -HashHelloEnEs", "es-ko | -HashHolaEsKo" ],
+      "expected" : { "languagePair" : "es-ko", "input" : "Hola", "output" : "안녕" }
+    },
+    {
+      "name" : "a translation that fails validation rejects the message",
+      "currentUser" : { "id" : "me", "languageCode" : "es" },
+      "fromAccount" : "them",
+      "translations" : [ "en-es | -HashBlankEnEs" ],
+      "throws" : true
+    },
+    {
+      "name" : "a text message without references rejects the message",
+      "currentUser" : { "id" : "me", "languageCode" : "es" },
+      "fromAccount" : "them",
+      "translations" : [ "!" ],
+      "throws" : true
+    }
+  ]
+}

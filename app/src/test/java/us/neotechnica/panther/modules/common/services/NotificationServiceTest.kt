@@ -105,10 +105,11 @@ class NotificationServiceTest {
             id = "message",
             fromAccountID = "sender",
             contentType = HostedContentType.Text,
+            richContent = null,
             translationReferences = null,
+            translations = translations.toList(),
             readReceipts = null,
             sentDate = Date(0),
-            translations = translations.toList(),
         )
 
     private fun user(languageCode: String): User =

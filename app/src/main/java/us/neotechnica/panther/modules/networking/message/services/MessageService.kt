@@ -11,87 +11,88 @@ package us.neotechnica.panther.modules.networking.message.services
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import us.neotechnica.panther.bundle.media
 import us.neotechnica.panther.bundle.messages
+import us.neotechnica.panther.modules.common.extensions.shortened
+import us.neotechnica.panther.modules.common.models.AudioFileExtension
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.modules.networking.message.models.TranslationReference
-import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.modules.networking.message.models.RichMessageContent
+import us.neotechnica.panther.modules.networking.message.serializable.decode
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.database.interfaces.getValues
+import us.neotechnica.panther.networking.modules.translation.extensions.reference
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
+import us.neotechnica.panther.subsystem.modules.foundation.models.Coalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.translator.models.Translation
 import java.util.Date
-import us.neotechnica.panther.networking.modules.translation.models.TranslationReference as HostedTranslationReference
 
 /**
- * Reads [Message] records from the database, upserting each into the
- * [SessionStore].
+ * The service that creates and retrieves messages.
+ *
+ * [MessageService] builds and writes message nodes and fetches
+ * messages by identifier. It delegates content transfer to its
+ * [audio] and [media] sub-services.
  */
 object MessageService {
     // MARK: - Properties
 
+    /** The service that uploads, downloads, and deletes audio message content. */
+    val audio: AudioMessageService
+        get() = AudioMessageService
+
+    /** The service that uploads, downloads, and deletes media message content. */
+    val media: MediaMessageService
+        get() = MediaMessageService
+
+    private val coalescer = Coalescer<String, Message>()
+
     private val database get() = Networking.config.databaseDelegate
-
-    private const val MEDIA_ID_LENGTH = 32
-
-    // MARK: - Methods
-
-    /** Returns the messages with the given IDs, upserting them into the store. */
-    suspend fun getMessages(ids: List<String>): List<Message> =
-        coroutineScope {
-            // Fail the batch if any message cannot be fetched.
-            ids.map { id -> async { getMessage(id) } }.awaitAll()
-        }
-
-    /** Returns the message with the given ID, upserting it into the store. */
-    suspend fun getMessage(id: String): Message {
-        val data: Map<String, Any?> = database.getValues<Map<String, Any?>>("${NetworkPath.messages.rawValue}/$id")
-        val childData = data.toMutableMap().apply { put(ID_KEY, id) }
-
-        if (!Message.canDecode(childData)) {
-            throw Exception(
-                "Failed to decode message.",
-                userInfo = mapOf("MessageID" to id),
-                metadata = ExceptionMetadata(this),
-            )
-        }
-
-        return Message.decode(childData).also { SessionStore.upsertMessages(setOf(it)) }
-    }
 
     // MARK: - Message Creation
 
     /**
-     * Builds a text message (generating an ID) without writing its node
-     * to the database.
+     * Builds a message (generating an ID, uploading media to
+     * Storage) without writing the message node to the database.
      *
-     * The send path uses this so the message node write joins the atomic
-     * fan-out in [ConversationSessionService][us.neotechnica.panther.modules.session.entity.services.ConversationSessionService].
+     * Callers on the send path use this so the message node write
+     * joins the atomic fan-out in
+     * [ConversationSessionService][us.neotechnica.panther.modules.session.entity.services.ConversationSessionService].
      *
-     * @param fromAccountID The sender's account identifier.
-     * @param presetID A preset message identifier, or `null` to generate one.
-     * @param translations The message's resolved translations.
+     * @param fromAccountID The identifier of the sending account.
+     * @param presetID A preset message identifier, or `null` to
+     *   generate one.
+     * @param richContent The message's rich content, or `null` for a
+     *   text message.
+     * @param sentDate The date the message was sent.
+     * @param translations The message's translations, or `null` for
+     *   a message without text.
      *
-     * @return The built message, carrying its translations inline.
+     * @return The built message.
      *
-     * @throws Exception if the arguments fail validation or an ID cannot
-     *   be generated.
+     * @throws Exception if the arguments fail validation, an ID cannot
+     *   be generated, or an upload fails.
      */
-    suspend fun buildTextMessage(
+    suspend fun buildMessage(
         fromAccountID: String,
-        presetID: String?,
-        translations: List<Translation>,
+        presetID: String? = null,
+        richContent: RichMessageContent?,
+        sentDate: Date = Date(),
+        translations: List<Translation>?,
     ): Message {
         if (fromAccountID.isBangQualifiedEmpty ||
-            translations.isEmpty() ||
-            !translations.all { it.isWellFormed }
+            (richContent == null && translations == null) ||
+            !(translations?.all { it.isWellFormed } ?: true)
         ) {
-            throw Exception("Passed arguments fail validation.", metadata = ExceptionMetadata(this))
+            throw Exception(
+                "Passed arguments fail validation.",
+                metadata = ExceptionMetadata(this),
+            )
         }
 
         val id =
@@ -101,64 +102,183 @@ object MessageService {
                     metadata = ExceptionMetadata(this),
                 )
 
-        return Message(
-            id = id,
-            fromAccountID = fromAccountID,
-            contentType = HostedContentType.Text,
-            translationReferences =
-                translations.map { TranslationReference(HostedTranslationReference.from(it).hostingKey) },
-            readReceipts = null,
-            sentDate = Date(),
-            translations = translations,
-        )
+        var contentType: HostedContentType = HostedContentType.Text
+        val mediaComponent = richContent?.mediaComponent
+        if (richContent?.audioComponents != null) {
+            contentType = HostedContentType.Audio(AudioFileExtension.M4A)
+        } else if (mediaComponent != null) {
+            contentType =
+                HostedContentType.Media(
+                    id = mediaComponent.encodedHash.shortened,
+                    fileExtension = mediaComponent.fileExtension,
+                )
+        }
+
+        val mockMessage =
+            Message(
+                id = id,
+                fromAccountID = fromAccountID,
+                contentType = contentType,
+                richContent = richContent,
+                translationReferences = translations?.map { it.reference },
+                translations = translations,
+                readReceipts = null,
+                sentDate = sentDate,
+            )
+
+        return when (mockMessage.contentType) {
+            is HostedContentType.Audio -> {
+                mockMessage.audioComponents
+                    ?: throw Exception(
+                        "Failed to find audio components for audio message creation.",
+                        metadata = ExceptionMetadata(this),
+                    )
+
+                mockMessage
+            }
+
+            is HostedContentType.Media -> {
+                mediaComponent
+                    ?: throw Exception(
+                        "Failed to find media component for media message creation.",
+                        metadata = ExceptionMetadata(this),
+                    )
+
+                val mediaFileID = mediaComponent.encodedHash.shortened
+                media.uploadMediaComponent(
+                    mediaComponent,
+                    mockMessage,
+                )
+
+                mockMessage.copy(
+                    richContent =
+                        RichMessageContent.Media(
+                            MediaFile(
+                                "${NetworkPath.media.rawValue}/$mediaFileID.${mediaComponent.fileExtension.rawValue}",
+                                name = mediaFileID,
+                                fileExtension = mediaComponent.fileExtension,
+                            ),
+                        ),
+                )
+            }
+
+            HostedContentType.Text -> mockMessage
+        }
     }
 
     /**
-     * Builds a media message for [mediaFile] from the given account.
+     * Builds a message and writes its node to the database.
      *
-     * The message's content type carries the media's content-hash
-     * identifier and file extension; the media itself is uploaded
-     * separately.
+     * Use [buildMessage] on the send path where the message node
+     * write should join the atomic fan-out instead.
      *
      * @param fromAccountID The identifier of the sending account.
-     * @param mediaFile The media file to send.
-     * @param presetID A reserved message identifier to reuse (for retries),
-     *   or `null` to generate a new one.
+     * @param richContent The message's rich content, or `null` for a
+     *   text message.
+     * @param sentDate The date the message was sent.
+     * @param translations The message's translations, or `null` for
+     *   a message without text.
      *
-     * @return The built media message.
+     * @return The created message.
      *
-     * @throws Exception if the account identifier is empty or a message
-     *   key cannot be generated.
+     * @throws Exception if the message cannot be built or written.
      */
-    suspend fun buildMediaMessage(
+    suspend fun createMessage(
         fromAccountID: String,
-        mediaFile: MediaFile,
-        presetID: String? = null,
+        richContent: RichMessageContent?,
+        sentDate: Date = Date(),
+        translations: List<Translation>?,
     ): Message {
-        if (fromAccountID.isBangQualifiedEmpty) {
-            throw Exception("Passed arguments fail validation.", metadata = ExceptionMetadata(this))
-        }
+        val message =
+            buildMessage(
+                fromAccountID = fromAccountID,
+                richContent = richContent,
+                sentDate = sentDate,
+                translations = translations,
+            )
 
-        val id =
-            presetID ?: database.generateKey(NetworkPath.messages.rawValue)
-                ?: throw Exception("Failed to generate key for new message.", metadata = ExceptionMetadata(this))
-
-        return Message(
-            id = id,
-            fromAccountID = fromAccountID,
-            contentType =
-                HostedContentType.Media(
-                    id = mediaFile.encodedHash.take(MEDIA_ID_LENGTH),
-                    fileExtension = mediaFile.fileExtension,
-                ),
-            translationReferences = null,
-            readReceipts = null,
-            sentDate = Date(),
-            translations = null,
+        database.updateChildValues(
+            "${NetworkPath.messages.rawValue}/${message.id}",
+            message.encoded.filterKeys { it != Message.SerializableKey.ID.rawValue },
         )
+
+        return message
     }
 
-    // MARK: - Companion
+    // MARK: - Retrieval by ID
 
-    private const val ID_KEY = "id"
+    /**
+     * Returns the message with the given identifier.
+     *
+     * @param id The identifier of the message to fetch.
+     *
+     * @return The message.
+     *
+     * @throws Exception if no identifier is provided or the message
+     *   cannot be fetched or decoded.
+     */
+    suspend fun getMessage(id: String): Message {
+        val userInfo = mapOf("MessageID" to id)
+
+        if (id.isBangQualifiedEmpty) {
+            throw Exception(
+                "No ID provided.",
+                metadata = ExceptionMetadata(this),
+            ).appending(userInfo)
+        }
+
+        // Coalesce concurrent fetches of the same message so it is
+        // fetched and decoded only once.
+        return coalescer(id) { fetchMessage(id) }
+    }
+
+    /**
+     * Returns the messages with the given identifiers, fetched
+     * concurrently.
+     *
+     * @param ids The identifiers of the messages to fetch.
+     *
+     * @return The messages.
+     *
+     * @throws Exception if no identifiers are provided or any message
+     *   cannot be fetched.
+     */
+    suspend fun getMessages(ids: List<String>): List<Message> {
+        val userInfo = mapOf("MessageIDs" to ids)
+
+        if (ids.isBangQualifiedEmpty) {
+            throw Exception(
+                "No IDs provided.",
+                metadata = ExceptionMetadata(this),
+            ).appending(userInfo)
+        }
+
+        try {
+            return coroutineScope {
+                ids.map { async { getMessage(it) } }.awaitAll()
+            }
+        } catch (exception: Exception) {
+            throw exception.appending(userInfo)
+        }
+    }
+
+    // MARK: - Auxiliary
+
+    private suspend fun fetchMessage(id: String): Message {
+        val userInfo = mapOf("MessageID" to id)
+
+        val data: Map<String, Any?>
+        try {
+            data = database.getValues<Map<String, Any?>>("${NetworkPath.messages.rawValue}/$id")
+        } catch (exception: Exception) {
+            throw exception.appending(userInfo)
+        }
+
+        val childData = data.toMutableMap().apply { put(Message.SerializableKey.ID.rawValue, id) }
+        try {
+            return Message.decode(childData)
+        } catch (exception: Exception) {
+            throw exception.appending(userInfo)
+        }
+    }
 }

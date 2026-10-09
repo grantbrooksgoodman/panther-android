@@ -45,7 +45,6 @@ import us.neotechnica.panther.modules.networking.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.modules.session.entity.extensions.messages
-import us.neotechnica.panther.modules.session.entity.extensions.reactions
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.modules.session.state.services.SessionStore

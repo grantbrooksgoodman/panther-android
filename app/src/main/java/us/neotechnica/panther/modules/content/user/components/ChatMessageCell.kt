@@ -36,7 +36,6 @@ import us.neotechnica.panther.modules.networking.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
-import us.neotechnica.panther.modules.session.entity.extensions.isMediaMessage
 import us.neotechnica.panther.modules.session.entity.extensions.isSystemMessage
 import androidx.compose.material3.Text as Material3Text
 
@@ -167,7 +166,7 @@ private fun MessageContent(
                 modifier = Modifier.align(Alignment.CenterVertically),
             )
         }
-        if (message.isMediaMessage) {
+        if (message.contentType.isMedia) {
             MessageContextMenu(
                 actions = row.mediaFile?.let { mediaActionsFor(message, it, onSaveMedia) } ?: emptyList(),
                 alignment = alignment,

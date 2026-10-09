@@ -21,12 +21,10 @@ import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.conversation.models.ActivityAction
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationMetadata
-import us.neotechnica.panther.modules.networking.message.models.LocalMediaFilePath
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
-import us.neotechnica.panther.modules.session.entity.extensions.isMediaMessage
 import us.neotechnica.panther.modules.session.entity.extensions.messages
 import us.neotechnica.panther.modules.session.entity.extensions.offsetFromCurrentUserAdditionDate
 import us.neotechnica.panther.modules.session.entity.extensions.sortedByDescendingSentDate
@@ -489,11 +487,10 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         return conversation.messages
             .orEmpty()
             .offsetFromCurrentUserAdditionDate(conversation.activities)
-            .filter { it.isMediaMessage }
+            .filter { it.contentType.isMedia }
             .sortedByDescendingSentDate
             .mapNotNull { message ->
-                val relativePath = LocalMediaFilePath.from(message)?.relativePathString ?: return@mapNotNull null
-                val mediaFile = MediaFile.reference(relativePath) ?: return@mapNotNull null
+                val mediaFile = message.richContent?.mediaComponent ?: return@mapNotNull null
                 val user = users.firstOrNull { it.id == message.fromAccountID } ?: SessionStore.users[message.fromAccountID]
                 MediaItemViewData(
                     file = mediaFile,

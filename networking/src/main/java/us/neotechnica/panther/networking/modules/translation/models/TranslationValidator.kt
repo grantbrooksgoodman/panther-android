@@ -21,9 +21,17 @@ import us.neotechnica.panther.translator.models.TranslationInput
  * they are translated or archived, throwing an [Exception] on the
  * first malformed argument.
  */
-internal object TranslationValidator {
+object TranslationValidator {
     /**
-     * Validates any of the provided arguments that are non-null.
+     * Validates the specified inputs, language pair, and translation.
+     *
+     * Each non-null argument is checked for well-formedness.
+     *
+     * @param inputs The translation inputs to validate.
+     * @param languagePair The language pair to validate.
+     * @param translation The translation to validate.
+     * @param metadata The exception metadata to attach if validation
+     *   fails.
      *
      * @throws Exception if any provided argument is malformed.
      */

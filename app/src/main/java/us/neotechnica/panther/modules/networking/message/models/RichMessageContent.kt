@@ -8,18 +8,13 @@
 
 package us.neotechnica.panther.modules.networking.message.models
 
-/**
- * The rich content of a message.
- *
- * **Note:** This viewing-phase port models media content only; audio
- * content lands with the audio-message phase.
- */
+/** The rich content of a message – audio or media. */
 sealed interface RichMessageContent {
     // MARK: - Properties
 
-    /** The media file, or `null` if the content is not media. */
-    val mediaComponent: MediaFile?
-        get() = (this as? Media)?.file
+    /** The audio components, or `null` if the content is not audio. */
+    val audioComponents: List<AudioMessageReference>?
+        get() = (this as? Audio)?.components
 
     /** The document, or `null` if the content is not a document. */
     val documentComponent: MediaFile?
@@ -29,11 +24,20 @@ sealed interface RichMessageContent {
     val imageComponent: MediaFile?
         get() = mediaComponent?.takeIf { it.fileExtension.isImage }
 
+    /** The media file, or `null` if the content is not media. */
+    val mediaComponent: MediaFile?
+        get() = (this as? Media)?.file
+
     /** The video, or `null` if the content is not a video. */
     val videoComponent: MediaFile?
         get() = mediaComponent?.takeIf { it.fileExtension.isVideo }
 
     // MARK: - Cases
+
+    /** Audio content, as one or more audio references. */
+    data class Audio(
+        val components: List<AudioMessageReference>,
+    ) : RichMessageContent
 
     /** Media content – an image, video, or document. */
     data class Media(

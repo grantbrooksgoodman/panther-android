@@ -40,15 +40,15 @@ import androidx.compose.material3.Text as Material3Text
 
 /**
  * A message bubble carrying media: an inline image, a video thumbnail
- * with a play affordance, or a document card. While the media is still
- * downloading ([mediaFile] `null`), a loading placeholder is shown.
+ * with a play affordance, or a document card. When no media file is
+ * available ([mediaFile] `null`), a loading placeholder is shown.
  *
  * The bubble carries no tap handler of its own: the enclosing
  * `MessageContextMenu` owns the tap (to open the preview) alongside the
  * long-press and double-tap, so a single gesture detector arbitrates all
  * three.
  *
- * @param mediaFile The resolved media file, or `null` while downloading.
+ * @param mediaFile The media file, or `null` if none is available.
  * @param isOwn Whether the message is from the current user.
  */
 @Composable

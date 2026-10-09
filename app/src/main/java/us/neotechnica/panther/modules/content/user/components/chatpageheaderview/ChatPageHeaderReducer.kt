@@ -20,7 +20,6 @@ import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.effect.cancellable
-import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
 import java.util.UUID
@@ -117,7 +116,7 @@ class ChatPageHeaderReducer : Reducer<ChatPageHeaderReducer.State, ChatPageHeade
 
     private fun resolveCellViewDataEffect(conversation: Conversation): Effect<Action> =
         Effect.run { send ->
-            send(Action.CellViewDataResolved(ConversationCellViewData.build(conversation, RuntimeStorage.languageCode)))
+            send(Action.CellViewDataResolved(ConversationCellViewData.build(conversation)))
         }
 
     private fun isRelevantChange(

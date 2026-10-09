@@ -34,8 +34,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 
 /**
- * Reads [Conversation] records from the database, upserting each into
- * the [SessionStore].
+ * The service that creates and retrieves conversations.
  */
 object ConversationService {
     // MARK: - Properties
@@ -104,14 +103,14 @@ object ConversationService {
 
     // MARK: - Read Methods
 
-    /** Returns the conversations with the given keys, upserting them into the store. */
+    /** Returns the conversations with the given keys, fetched concurrently. */
     suspend fun getConversations(idKeys: List<String>): List<Conversation> =
         coroutineScope {
             // Fail the batch if any conversation cannot be fetched.
             idKeys.map { idKey -> async { getConversation(idKey) } }.awaitAll()
         }
 
-    /** Returns the conversation with the given key, upserting it into the store. */
+    /** Returns the conversation with the given key. */
     suspend fun getConversation(idKey: String): Conversation {
         val data: Map<String, Any?> =
             database.getValues<Map<String, Any?>>(
@@ -131,7 +130,7 @@ object ConversationService {
             )
         }
 
-        return Conversation.decode(childData).also { SessionStore.upsertConversation(it) }
+        return Conversation.decode(childData)
     }
 
     // MARK: - Auxiliary

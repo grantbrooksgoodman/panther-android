@@ -8,9 +8,6 @@
 
 package us.neotechnica.panther.modules.session.entity.extensions
 
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import us.neotechnica.panther.bundle.conversation
 import us.neotechnica.panther.bundle.conversations
 import us.neotechnica.panther.bundle.users
@@ -36,7 +33,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
-import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import java.util.Date
 
 /**
@@ -236,7 +232,6 @@ private suspend fun Conversation.fetchAndCommitMessages(ids: Set<String>?) {
         // Fetched from network; bypasses RemotelyUpdatable.update.
         val fetched = ids.filter { it in messageIDs }.map { MessageService.getMessage(it) }
         SessionStore.upsertMessages(fetched.toSet())
-        warmTranslations(fetched)
         return
     }
 
@@ -253,24 +248,7 @@ private suspend fun Conversation.fetchAndCommitMessages(ids: Set<String>?) {
         SessionStore.upsertConversation(copy(messageIDs = messageIDs.filter { it !in missingIDs }))
     }
 
-    warmTranslations(fetchedMessages)
     Logger.log("Resolved messages for conversation. (ConversationID: ${id.encoded})", domain = LoggerDomain.conversation)
-}
-
-/**
- * Resolves each message's translation into the persistent archive, so a
- * conversation presents from memory without visibly resolving on entry.
- *
- * The resolved translation lands in the archive that
- * the chat page seeds from synchronously. Failures are swallowed by
- * [resolvedTranslation], so warming never fails message resolution.
- */
-private suspend fun warmTranslations(messages: List<Message>) {
-    if (messages.isEmpty()) return
-    val languageCode = RuntimeStorage.languageCode
-    coroutineScope {
-        messages.map { message -> async { message.resolvedTranslation(languageCode) } }.awaitAll()
-    }
 }
 
 private suspend fun Conversation.fetchAndCommitUsers(forceUpdate: Boolean) {

@@ -10,13 +10,43 @@ package us.neotechnica.panther.parity
 
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Test
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.message.models.LocalAudioFilePath
 import us.neotechnica.panther.modules.networking.message.models.Message
+import us.neotechnica.panther.modules.networking.message.serializable.decode
+import us.neotechnica.panther.modules.networking.support.MessageDecodeEnvironment
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
+import us.neotechnica.panther.translator.models.LanguagePair
+import us.neotechnica.panther.translator.models.Translation
+import us.neotechnica.panther.translator.models.TranslationInput
 
 class SchemaRoundTripTest {
+    // MARK: - Setup
+
+    private val environment = MessageDecodeEnvironment()
+
+    @Before
+    fun setUp() {
+        environment.install("schema-round-trip-test")
+        environment.signIn(MessageDecodeEnvironment.user(id = "androidFixtureUser0002", languageCode = "es"))
+
+        environment.hostedTranslation.seed(
+            inputValueEncodedHash = "-FixtureTranslation01",
+            translation = Translation(TranslationInput("Hello"), "Hola", LanguagePair("en", "es")),
+        )
+
+        val audioTranslation = Translation(TranslationInput("Hola"), "안녕", LanguagePair("es", "ko"))
+        environment.hostedTranslation.seed(inputValueEncodedHash = "-FixtureAudioReference01", translation = audioTranslation)
+        val localAudioFilePath = LocalAudioFilePath.from("-FixtureMessage000003", audioTranslation)
+        environment.writeFile(localAudioFilePath.inputFilePathString)
+        environment.writeFile(localAudioFilePath.outputFilePathString)
+
+        environment.writeFile("media/-FixtureMediaID000001.jpg")
+    }
+
     // MARK: - Round-Trip Tests
 
     @Test

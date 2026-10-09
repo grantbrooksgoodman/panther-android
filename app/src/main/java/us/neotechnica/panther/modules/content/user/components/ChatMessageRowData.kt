@@ -19,7 +19,8 @@ import us.neotechnica.panther.translator.models.Translation
  *
  * @property message The message to render.
  * @property previousMessage The prior row's message, for day-separator gaps.
- * @property translation The resolved translation, or `null` if unresolved.
+ * @property translation The message's translation, or `null` if it has
+ *   none.
  * @property showAlternate Whether to show the alternate (original vs.
  *   translated) text.
  * @property isLastConfirmedOwnMessage Whether this is the last confirmed
@@ -33,10 +34,10 @@ import us.neotechnica.panther.translator.models.Translation
  * @property showSenderAvatar Whether to render the sender's avatar beside
  *   this row (the last message in a run from a group participant).
  * @property reactions The message's reactions, or empty when it has none.
- * @property mediaFile The message's resolved media file, or `null` if the
- *   message is not media or its media has not yet downloaded.
- * @property audioReference The message's resolved audio, or `null` if the
- *   message is not audio or its audio has not yet resolved.
+ * @property mediaFile The message's media file, or `null` if the message
+ *   is not media.
+ * @property audioReference The message's audio, or `null` if the message
+ *   is not audio.
  * @property isDisplayingAudioTranscription Whether an audio message shows
  *   its transcription in place of the audio bubble.
  */

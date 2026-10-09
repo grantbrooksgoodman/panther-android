@@ -15,16 +15,13 @@ import us.neotechnica.panther.modules.networking.conversation.models.Conversatio
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.extensions.cachedTranslation
 import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.session.entity.extensions.isMock
 import us.neotechnica.panther.modules.session.entity.extensions.isReadByCurrentUser
 import us.neotechnica.panther.modules.session.entity.extensions.messages
-import us.neotechnica.panther.modules.session.entity.extensions.resolvedText
 import us.neotechnica.panther.modules.session.entity.extensions.users
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
-import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -65,8 +62,7 @@ data class ConversationCellViewData(
             )
 
         /**
-         * Builds the cell data for [conversation], resolving text into
-         * [languageCode].
+         * Builds the cell data for [conversation].
          *
          * When [searchQuery] is non-blank, the preview and date reflect
          * the most recent message matching the query rather than the
@@ -74,7 +70,6 @@ data class ConversationCellViewData(
          */
         suspend fun build(
             conversation: Conversation,
-            languageCode: String,
             searchQuery: String = "",
             useCachedValue: Boolean = true,
         ): ConversationCellViewData {
@@ -88,7 +83,7 @@ data class ConversationCellViewData(
             val matchingMessage =
                 searchQuery
                     .takeIf { it.isNotBlank() }
-                    ?.let { query -> messages.lastOrNull { it.textContains(query, languageCode) } }
+                    ?.let { query -> messages.lastOrNull { it.textContains(query) } }
             val lastMessage = matchingMessage ?: messages.lastOrNull()
             val users = conversation.users.orEmpty()
             val isGroup = conversation.participants.size > 2
@@ -98,7 +93,7 @@ data class ConversationCellViewData(
             val data =
                 ConversationCellViewData(
                     title = title,
-                    subtitle = subtitle(lastMessage, languageCode),
+                    subtitle = subtitle(lastMessage),
                     dateLabelText =
                         lastMessage?.sentDate?.let { relativeDateString(it) }
                             ?: relativeDateString(conversation.metadata.lastModifiedDate),
@@ -125,11 +120,10 @@ data class ConversationCellViewData(
             query: String,
         ): String? {
             if (query.isBlank()) return null
-            val languageCode = RuntimeStorage.languageCode
             return conversation.messages
                 .orEmpty()
                 .sortedBy { it.sentDate.time }
-                .lastOrNull { it.textContains(query, languageCode) }
+                .lastOrNull { it.textContains(query) }
                 ?.id
         }
 
@@ -144,21 +138,16 @@ data class ConversationCellViewData(
             val trimmed = query.trim()
             if (trimmed.isEmpty()) return true
             if (title(conversation).lowercase().contains(trimmed.lowercase())) return true
-            val languageCode = RuntimeStorage.languageCode
-            return conversation.messages?.any { it.textContains(trimmed, languageCode) } == true
+            return conversation.messages?.any { it.textContains(trimmed) } == true
         }
 
         // MARK: - Auxiliary
 
         // Mirrors the chat bubble: the current user's own message matches on
-        // its input text; a received message matches on its output translated
-        // into [languageCode]. Resolves from local sources only, so a message
-        // whose translation is not yet cached does not match.
-        private fun Message.textContains(
-            searchTerm: String,
-            languageCode: String,
-        ): Boolean {
-            val translation = cachedTranslation(languageCode) ?: return false
+        // its input text; a received message matches on its translated
+        // output.
+        private fun Message.textContains(searchTerm: String): Boolean {
+            val translation = translation ?: return false
             val comparator = if (isFromCurrentUser) translation.input.value else translation.output.sanitized
             return comparator.lowercase().trim().contains(searchTerm.lowercase().trim())
         }
@@ -174,10 +163,7 @@ data class ConversationCellViewData(
             return if (users.size > 1) "$base + ${users.size - 1}" else base
         }
 
-        private suspend fun subtitle(
-            lastMessage: Message?,
-            languageCode: String,
-        ): String {
+        private fun subtitle(lastMessage: Message?): String {
             lastMessage ?: return ""
             return when (val contentType = lastMessage.contentType) {
                 is HostedContentType.Audio -> "🔊 ${LocalizedStringKey.AudioMessage.localized()}"
@@ -188,9 +174,10 @@ data class ConversationCellViewData(
                         contentType.fileExtension.isVideo -> "🎥 ${LocalizedStringKey.Video.localized()}"
                         else -> "📎 ${LocalizedStringKey.Attachment.localized()}"
                     }
-                // A system message's resolved text carries `⌘…⌘` emphasis
-                // sentinels; strip them so the list preview shows clean text.
-                HostedContentType.Text -> lastMessage.resolvedText(languageCode).sanitized
+                HostedContentType.Text -> {
+                    val translation = lastMessage.translation ?: return ""
+                    if (lastMessage.isFromCurrentUser) translation.input.value.sanitized else translation.output.sanitized
+                }
             }
         }
 

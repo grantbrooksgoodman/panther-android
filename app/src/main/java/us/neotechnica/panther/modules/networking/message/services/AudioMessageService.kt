@@ -18,9 +18,6 @@ import us.neotechnica.panther.translator.models.Translation
 
 /**
  * The service that downloads audio message content for playback.
- *
- * **Note:** audio message *sending* is cut, so this provides
- * retrieval only.
  */
 object AudioMessageService {
     // MARK: - Get Audio Component
@@ -71,10 +68,10 @@ object AudioMessageService {
         val sourcePathString =
             if (isFromCurrentUser) localAudioFilePath.inputFilePathString else localAudioFilePath.outputFilePathString
         val sourceFile =
-            (if (isFromCurrentUser) localAudioFilePath.inputFilePathFile else localAudioFilePath.outputFilePathFile)
+            (if (isFromCurrentUser) localAudioFilePath.inputFilePathURL else localAudioFilePath.outputFilePathURL)
                 ?: throw failure("Failed to resolve local audio path.").appending(userInfo = userInfo)
         val destinationFile =
-            (if (isFromCurrentUser) localAudioFilePath.outputFilePathFile else localAudioFilePath.inputFilePathFile)
+            (if (isFromCurrentUser) localAudioFilePath.outputFilePathURL else localAudioFilePath.inputFilePathURL)
                 ?: throw failure("Failed to resolve local audio path.").appending(userInfo = userInfo)
 
         try {

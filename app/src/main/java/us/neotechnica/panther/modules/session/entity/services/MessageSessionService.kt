@@ -15,42 +15,41 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.modules.common.services.AnalyticsService
-import us.neotechnica.panther.modules.networking.conversation.services.ConversationService
-import us.neotechnica.panther.modules.networking.message.services.MediaMessageService
-import us.neotechnica.panther.modules.networking.message.services.MessageService
+import us.neotechnica.panther.modules.common.services.NotificationService
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.Participant
+import us.neotechnica.panther.modules.networking.conversation.services.ConversationService
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
+import us.neotechnica.panther.modules.networking.message.models.RichMessageContent
+import us.neotechnica.panther.modules.networking.message.services.MessageService
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.constants.MessageSessionServiceFloats
 import us.neotechnica.panther.modules.session.clientSession
+import us.neotechnica.panther.modules.session.entity.constants.MessageSessionServiceFloats
+import us.neotechnica.panther.modules.session.state.services.PendingTranslationArchive
+import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.translation.extensions.reference
 import us.neotechnica.panther.networking.modules.translation.models.ArchiveStrategy
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
-import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.Translation
 import us.neotechnica.panther.translator.models.TranslationInput
 import us.neotechnica.panther.translator.services.LanguageRecognitionService
-import us.neotechnica.panther.networking.modules.translation.models.TranslationReference as HostedTranslationReference
-import us.neotechnica.panther.modules.common.services.NotificationService
-import us.neotechnica.panther.modules.session.state.services.PendingTranslationArchive
-import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 
 // MARK: - Constants Accessors
 
 private typealias Floats = MessageSessionServiceFloats
 
 /**
- * Sends text messages, translating them into each recipient's language.
+ * Sends text and media messages, translating text into each
+ * recipient's language.
  *
  * Sends into an existing conversation or creates a new one, then
- * notifies recipients. Audio and media messages arrive with later
- * phases.
+ * notifies recipients.
  */
 object MessageSessionService {
     // MARK: - Properties
@@ -104,7 +103,13 @@ object MessageSessionService {
         }
 
         incrementDeliveryProgress(conversation, Floats.CREATE_MESSAGE_DELIVERY_PROGRESS_INCREMENT)
-        val message = MessageService.buildTextMessage(currentUser.id, presetID, translations)
+        val message =
+            MessageService.buildMessage(
+                fromAccountID = currentUser.id,
+                presetID = presetID,
+                richContent = null,
+                translations = translations,
+            )
         return createMessageAndAddToConversation(
             conversation = conversation,
             initiatingUser = currentUser,
@@ -119,8 +124,8 @@ object MessageSessionService {
     /**
      * Sends [mediaFile] as a media message to the given recipients.
      *
-     * The media and its thumbnail are uploaded
-     * first, then the message is written and recipients are notified.
+     * The media and its thumbnail are uploaded while the message is
+     * built, then the message is written and recipients are notified.
      *
      * @return The updated (or newly created) conversation.
      *
@@ -139,10 +144,14 @@ object MessageSessionService {
                 ?: throw Exception("Current user has not been set.", metadata = ExceptionMetadata(this))
 
         val recipients = users.filter { it.id != currentUser.id }
-        val message = MessageService.buildMediaMessage(currentUser.id, mediaFile, presetID)
-
         incrementDeliveryProgress(conversation, Floats.CREATE_MESSAGE_DELIVERY_PROGRESS_INCREMENT)
-        MediaMessageService.uploadMediaComponent(mediaFile, message)
+        val message =
+            MessageService.buildMessage(
+                fromAccountID = currentUser.id,
+                presetID = presetID,
+                richContent = RichMessageContent.Media(mediaFile),
+                translations = null,
+            )
 
         return createMessageAndAddToConversation(
             conversation = conversation,
@@ -201,7 +210,8 @@ object MessageSessionService {
     ) {
         if (!shouldAnimateDeliveryProgress(conversation)) return
         deliveryProgressScope.launch {
-            DependencyValues.current.clientSession.deliveryProgressIndicator?.incrementDeliveryProgress(by)
+            val clientSession = DependencyValues.current.clientSession
+            clientSession.deliveryProgressIndicator?.incrementDeliveryProgress(by)
         }
     }
 
@@ -221,7 +231,7 @@ object MessageSessionService {
             )
 
         hostedTranslation.hostedArchiveEntry(translation)?.let { entry ->
-            PendingTranslationArchive.record(entry, HostedTranslationReference.from(translation).hostingKey)
+            PendingTranslationArchive.record(entry, translation.reference.hostingKey)
         }
         return translation
     }
@@ -236,9 +246,10 @@ object MessageSessionService {
         recipientLanguageCodes: List<String>,
     ): String {
         val candidates = recipientLanguageCodes.filter { it != currentUserLanguageCode }
-        if (candidates.isEmpty() ||
-            LanguageRecognitionService.shared.matchConfidence(text, currentUserLanguageCode) >= Floats.LANGUAGE_RECOGNITION_SERVICE_MATCH_CONFIDENCE_THRESHOLD
-        ) {
+        val matchesCurrentUserLanguage =
+            LanguageRecognitionService.shared.matchConfidence(text, currentUserLanguageCode) >=
+                Floats.LANGUAGE_RECOGNITION_SERVICE_MATCH_CONFIDENCE_THRESHOLD
+        if (candidates.isEmpty() || matchesCurrentUserLanguage) {
             return currentUserLanguageCode
         }
 

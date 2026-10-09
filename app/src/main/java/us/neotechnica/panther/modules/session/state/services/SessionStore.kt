@@ -21,6 +21,8 @@ import us.neotechnica.panther.modules.session.entity.extensions.filteringSystemM
 import us.neotechnica.panther.modules.session.entity.extensions.isEmpty
 import us.neotechnica.panther.modules.session.entity.extensions.isMock
 import us.neotechnica.panther.modules.session.state.constants.SessionStoreFloats
+import us.neotechnica.panther.modules.session.state.extensions.archived
+import us.neotechnica.panther.modules.session.state.extensions.fromArchive
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
 import us.neotechnica.panther.networking.modules.common.extensions.SessionStoreStorageKey
 import us.neotechnica.panther.networking.modules.common.extensions.sessionStore
@@ -40,6 +42,8 @@ import kotlin.time.Duration.Companion.seconds
 
 private typealias Floats = SessionStoreFloats
 
+// This store exceeds the file-length and type-body-length limits.
+
 /**
  * The in-memory store of the session's conversations, messages, and
  * users.
@@ -48,7 +52,6 @@ private typealias Floats = SessionStoreFloats
  * messages, and users, persists them to disk, and publishes a
  * [SessionStoreChange] whenever its contents change.
  */
-// This store exceeds the file-length and type-body-length limits.
 @Suppress("LargeClass")
 object SessionStore {
     // MARK: - Types
@@ -65,7 +68,9 @@ object SessionStore {
         val users: Map<String, User> = emptyMap(),
     )
 
-    private enum class TaskID(val rawValue: String) {
+    private enum class TaskID(
+        val rawValue: String,
+    ) {
         DEADLINE_FLUSH("deadlineFlush"),
         PERSIST_CONVERSATION_ARCHIVE("persistConversationArchive"),
         PERSIST_MESSAGE_ARCHIVE("persistMessageArchive"),
@@ -101,10 +106,10 @@ object SessionStore {
     private var persistedMessageArchive: Set<Message>?
         get() =
             Persistent.archive(PersistentStorageKey.sessionStore(SessionStoreStorageKey.MESSAGE_ARCHIVE)) { it }?.let { maps ->
-                maps.mapNotNull { runCatching { Message.decode(it) }.getOrNull() }.toSet()
+                maps.mapNotNull { runCatching { Message.fromArchive(it) }.getOrNull() }.toSet()
             }
         set(value) {
-            Persistent.setArchive(PersistentStorageKey.sessionStore(SessionStoreStorageKey.MESSAGE_ARCHIVE), value?.map { it.encoded })
+            Persistent.setArchive(PersistentStorageKey.sessionStore(SessionStoreStorageKey.MESSAGE_ARCHIVE), value?.map { it.archived })
         }
 
     private var persistedUserArchive: Set<User>?
@@ -174,7 +179,8 @@ object SessionStore {
     fun clearConversationArchive() {
         var removedIDKeys = emptySet<String>()
         storeState.withValue { state ->
-            removedIDKeys = state.value.conversations.keys.toSet()
+            val conversations = state.value.conversations
+            removedIDKeys = conversations.keys.toSet()
             state.value = state.value.copy(conversations = emptyMap())
         }
 
@@ -336,7 +342,8 @@ object SessionStore {
     fun clearMessageArchive() {
         var clearedIDs = emptySet<String>()
         storeState.withValue { state ->
-            clearedIDs = state.value.messages.keys.toSet()
+            val messages = state.value.messages
+            clearedIDs = messages.keys.toSet()
             state.value = state.value.copy(messages = emptyMap())
         }
 
@@ -395,7 +402,8 @@ object SessionStore {
     fun clearUserArchive() {
         var clearedIDs = emptySet<String>()
         storeState.withValue { state ->
-            clearedIDs = state.value.users.keys.toSet()
+            val users = state.value.users
+            clearedIDs = users.keys.toSet()
             state.value = state.value.copy(users = emptyMap())
         }
 
@@ -484,7 +492,8 @@ object SessionStore {
             }
 
         if (drained.isConversationArchiveDirty) {
-            val conversationsSnapshot = storeState.wrappedValue.conversations.values.toSet()
+            val conversations = storeState.wrappedValue.conversations
+            val conversationsSnapshot = conversations.values.toSet()
             persistedConversationArchive = conversationsSnapshot.ifEmpty { null }
         }
 
@@ -494,7 +503,8 @@ object SessionStore {
         }
 
         if (drained.isUserArchiveDirty) {
-            val usersSnapshot = storeState.wrappedValue.users.values.toSet()
+            val users = storeState.wrappedValue.users
+            val usersSnapshot = users.values.toSet()
             persistedUserArchive = usersSnapshot.ifEmpty { null }
         }
 
@@ -540,7 +550,8 @@ object SessionStore {
     }
 
     private fun emitChange(change: SessionStoreChange) {
-        DependencyValues.current.sharedEvents.sessionStoreDidChange.send(change)
+        val sharedEvents = DependencyValues.current.sharedEvents
+        sharedEvents.sessionStoreDidChange.send(change)
     }
 
     private fun persistConversationArchive() {
@@ -551,7 +562,8 @@ object SessionStore {
             if (currentEpoch.wrappedValue != capturedEpoch) return@debounced
             archiveState.withValue { it.value = it.value.copy(isConversationArchiveDirty = false) }
 
-            val conversationsSnapshot = storeState.wrappedValue.conversations.values.toSet()
+            val conversations = storeState.wrappedValue.conversations
+            val conversationsSnapshot = conversations.values.toSet()
             persistedConversationArchive = conversationsSnapshot.ifEmpty { null }
         }
 
@@ -581,7 +593,8 @@ object SessionStore {
             if (currentEpoch.wrappedValue != capturedEpoch) return@debounced
             archiveState.withValue { it.value = it.value.copy(isUserArchiveDirty = false) }
 
-            val usersSnapshot = storeState.wrappedValue.users.values.toSet()
+            val users = storeState.wrappedValue.users
+            val usersSnapshot = users.values.toSet()
             persistedUserArchive = usersSnapshot.ifEmpty { null }
         }
 
@@ -609,8 +622,10 @@ object SessionStore {
     private fun sweepOrphanedMessages() {
         var orphanCount = 0
         storeState.withValue { state ->
-            val referencedIDs = state.value.conversations.values.flatMap { it.messageIDs }.toSet()
-            val orphanedIDs = state.value.messages.keys.toSet() - referencedIDs
+            val conversations = state.value.conversations
+            val referencedIDs = conversations.values.flatMap { it.messageIDs }.toSet()
+            val messages = state.value.messages
+            val orphanedIDs = messages.keys.toSet() - referencedIDs
             orphanCount = orphanedIDs.size
             state.value = state.value.copy(messages = state.value.messages - orphanedIDs)
         }

@@ -16,16 +16,15 @@ import us.neotechnica.panther.modules.networking.conversation.models.Activity
 import us.neotechnica.panther.modules.networking.conversation.models.ActivityAction
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
 import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.modules.networking.message.models.TranslationReference
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.networking.modules.translation.extensions.reference
 import us.neotechnica.panther.networking.modules.translation.extensions.system
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
 import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.Translation
 import us.neotechnica.panther.translator.models.TranslationInput
-import us.neotechnica.panther.networking.modules.translation.models.TranslationReference as HostedTranslationReference
 
 /** Whether the action records the current user being added to a conversation. */
 val ActivityAction.isCurrentUserAdded: Boolean
@@ -73,10 +72,11 @@ val Activity.message: Message
             id = encodedHash,
             fromAccountID = CommonConstants.SYSTEM_MESSAGE_ID,
             contentType = HostedContentType.Text,
-            translationReferences = listOf(TranslationReference(HostedTranslationReference.from(translation).hostingKey)),
+            richContent = null,
+            translationReferences = listOf(translation.reference),
+            translations = listOf(translation),
             readReceipts = null,
             sentDate = date,
-            translations = listOf(translation),
         )
     }
 

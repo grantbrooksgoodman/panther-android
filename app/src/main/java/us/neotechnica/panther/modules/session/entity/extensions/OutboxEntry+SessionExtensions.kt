@@ -12,15 +12,15 @@ import us.neotechnica.panther.modules.common.extensions.shortened
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.modules.networking.message.models.TranslationReference
-import us.neotechnica.panther.modules.session.state.models.OutboxEntry
+import us.neotechnica.panther.modules.networking.message.models.RichMessageContent
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
+import us.neotechnica.panther.modules.session.state.models.OutboxEntry
+import us.neotechnica.panther.networking.modules.translation.extensions.reference
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.Translation
 import us.neotechnica.panther.translator.models.TranslationInput
-import us.neotechnica.panther.networking.modules.translation.models.TranslationReference as HostedTranslationReference
 
 /**
  * A display message representing this outbox entry, so staged content
@@ -46,10 +46,11 @@ val OutboxEntry.asDisplayMessage: Message
                     id = id,
                     fromAccountID = fromAccountID,
                     contentType = HostedContentType.Text,
-                    translationReferences = listOf(TranslationReference(HostedTranslationReference.from(translation).hostingKey)),
+                    richContent = null,
+                    translationReferences = listOf(translation.reference),
+                    translations = listOf(translation),
                     readReceipts = null,
                     sentDate = createdDate,
-                    translations = listOf(translation),
                 )
             }
 
@@ -67,10 +68,11 @@ val OutboxEntry.asDisplayMessage: Message
                     id = id,
                     fromAccountID = fromAccountID,
                     contentType = HostedContentType.Media(id = mediaFile.encodedHash.shortened, fileExtension = payload.fileExtension),
+                    richContent = RichMessageContent.Media(mediaFile),
                     translationReferences = null,
+                    translations = null,
                     readReceipts = null,
                     sentDate = createdDate,
-                    translations = null,
                 )
             }
 
@@ -85,10 +87,11 @@ val OutboxEntry.asDisplayMessage: Message
                     id = id,
                     fromAccountID = fromAccountID,
                     contentType = HostedContentType.Text,
-                    translationReferences = listOf(TranslationReference(HostedTranslationReference.from(translation).hostingKey)),
+                    richContent = null,
+                    translationReferences = listOf(translation.reference),
+                    translations = listOf(translation),
                     readReceipts = null,
                     sentDate = createdDate,
-                    translations = listOf(translation),
                 )
             }
         }
