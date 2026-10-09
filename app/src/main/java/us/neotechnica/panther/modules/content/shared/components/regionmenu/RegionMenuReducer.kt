@@ -9,7 +9,9 @@
 package us.neotechnica.panther.modules.content.shared.components.regionmenu
 
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.ui.platform.AndroidUiDispatcher
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.subsystem.modules.effect.Effect
@@ -78,16 +80,15 @@ class RegionMenuReducer : Reducer<RegionMenuReducer.State, RegionMenuReducer.Act
             get() = LocalizedStringKey.NoResults.localized()
 
         val queriedRegionTitles: List<String>?
-            get() {
-                val titles =
-                    RegionDetailService.allRegionCodes
-                        .filter { searchQuery.isBlank() || RegionDetailService.regionTitle(it).contains(searchQuery, ignoreCase = true) }
-                        .map { RegionDetailService.regionTitle(it) }
-                return titles.ifEmpty { null }
-            }
+            get() = RegionDetailService.regionTitles(RegionDetailService.QueryStrategy.SearchTerm(searchQuery))
 
         val selectedRegionTitle: String?
-            get() = if (selectedRegionCode.isBlank()) null else RegionDetailService.regionTitle(selectedRegionCode)
+            get() =
+                RegionDetailService
+                    .regionTitles(
+                        RegionDetailService.QueryStrategy.RegionCode(selectedRegionCode),
+                        titleFormat = RegionDetailService.RegionTitleFormat.REGION_NAME_FIRST,
+                    )?.firstOrNull()
     }
 
     // MARK: - Reduce
@@ -112,7 +113,8 @@ class RegionMenuReducer : Reducer<RegionMenuReducer.State, RegionMenuReducer.Act
                     state,
                     Effect.run {
                         delay(DELAY_MILLISECONDS)
-                        if (index >= 0) listState.animateScrollToItem(index)
+                        // Scroll animations require the UI frame clock.
+                        if (index >= 0) withContext(AndroidUiDispatcher.Main) { listState.animateScrollToItem(index) }
                     },
                 )
             }
@@ -125,9 +127,9 @@ class RegionMenuReducer : Reducer<RegionMenuReducer.State, RegionMenuReducer.Act
 
             is Action.SelectedRegionTitleChanged -> {
                 val selectedRegionCode =
-                    RegionDetailService.allRegionCodes
-                        .firstOrNull { RegionDetailService.regionTitle(it) == action.selectedRegionTitle }
-                        ?: ""
+                    RegionDetailService.regionCode(
+                        RegionDetailService.QueryStrategy.RegionTitle(action.selectedRegionTitle),
+                    ) ?: ""
                 ReduceResult(
                     state.copy(selectedRegionCode = selectedRegionCode),
                     Effect.task<Action>(delay = DELAY_MILLISECONDS.milliseconds) { Action.IsPresentedChanged(false) },

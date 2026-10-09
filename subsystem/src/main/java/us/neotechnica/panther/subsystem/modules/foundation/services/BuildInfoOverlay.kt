@@ -16,15 +16,14 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStor
 /**
  * Controls the visibility of the build-info overlay.
  *
- * The hidden state is published as
- * a [StateFlow] so the overlay view reacts to changes, and it is
- * persisted across launches.
+ * The hidden state is published as a [StateFlow] so the overlay
+ * view reacts to changes. The overlay starts hidden; the app
+ * applies its launch visibility rule shortly after launch.
  */
 object BuildInfoOverlay {
     // MARK: - Properties
 
-    private val internalIsHidden =
-        MutableStateFlow(Persistent.boolean(PersistentStorageKey.hidesBuildInfoOverlay, default = false))
+    private val internalIsHidden = MutableStateFlow(true)
 
     /** Whether the overlay is currently hidden. */
     val isHidden: StateFlow<Boolean> = internalIsHidden.asStateFlow()

@@ -1,9 +1,9 @@
 //
 //  WheelPicker.kt
 //  Panther Android
-//3/08/2026.
-////  Copyright © 2013-2026 NEOTechnica
+//
 //  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.onboarding.components

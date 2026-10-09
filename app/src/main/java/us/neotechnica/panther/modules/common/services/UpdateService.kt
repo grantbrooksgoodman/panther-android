@@ -28,6 +28,8 @@ import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.database.interfaces.observe
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.comparator
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.ForcedUpdateModalDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
@@ -37,8 +39,8 @@ import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.shared.models.SharedState
 import us.neotechnica.panther.subsystem.modules.shared.models.isForcedUpdateRequired
 import us.neotechnica.panther.translator.Translator
-import java.util.Calendar
 import java.util.Date
+import kotlin.math.roundToLong
 
 /**
  * Prompts the user to install app updates.
@@ -47,7 +49,7 @@ import java.util.Date
  * Store build number and presents either a dismissible update alert
  * or the blocking forced-update modal.
  */
-object UpdateService {
+object UpdateService : ForcedUpdateModalDelegate {
     // MARK: - Types
 
     /** The kind of update to prompt for. */
@@ -70,7 +72,7 @@ object UpdateService {
      * The URL the forced-update modal's install button opens, or
      * `null` if it has not been resolved.
      */
-    val installButtonRedirectURL: String?
+    override val installButtonRedirectURL: String?
         get() = MetadataService.playStoreShareLink
 
     private val hasUpdatedSinceLastForced: Boolean
@@ -172,7 +174,7 @@ object UpdateService {
             Persistent.long(PersistentStorageKey.firstPostponedUpdate)
                 ?: return if (isUpdateAvailable) UpdateType.NORMAL else null
 
-        val daysPassed = (startOfDay(Date()) - startOfDay(Date(firstPostponedUpdate))) / MILLIS_PER_DAY
+        val daysPassed = daysPassed(Date(firstPostponedUpdate), Date())
         if (daysPassed < 0) {
             Persistent.setLong(PersistentStorageKey.firstPostponedUpdate, null)
             Persistent.setInt(PersistentStorageKey.relaunchesSinceLastPostponedUpdate, 0)
@@ -228,17 +230,12 @@ object UpdateService {
         activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
     }
 
-    // The start of the calendar day for the given date, so the
-    // postponement interval is counted in whole calendar days.
-    private fun startOfDay(date: Date): Long {
-        val calendar = Calendar.getInstance()
-        calendar.time = date
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-        return calendar.timeInMillis
-    }
+    // The number of calendar days between the given dates, counted
+    // between their noon-anchored comparators.
+    internal fun daysPassed(
+        from: Date,
+        to: Date,
+    ): Long = ((to.comparator.time - from.comparator.time).toDouble() / MILLISECONDS_PER_DAY).roundToLong()
 
     private fun triggerForcedUpdateModal() {
         Persistent.setLong(PersistentStorageKey.firstPostponedUpdate, null)
@@ -249,5 +246,5 @@ object UpdateService {
 }
 
 private const val FORCE_UPDATE_POSTPONE_DAYS = 10L
-private const val MILLIS_PER_DAY = 86_400_000L
+private const val MILLISECONDS_PER_DAY = 86_400_000L
 private const val RELAUNCH_PROMPT_THRESHOLD = 3

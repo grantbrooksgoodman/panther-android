@@ -5,6 +5,7 @@
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
+
 //  Ported from Apple's BSD-licensed LZFSE reference implementation
 //  (`lzfse_decode_base.c`, `lzfse_fse.h`, `lzfse_fse.c`). See `Lzfse.kt`
 //  for the license.

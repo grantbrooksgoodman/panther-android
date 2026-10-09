@@ -20,6 +20,9 @@ object UserInfoBadgeViewFloats {
     val bodyMaxWidth: Dp = 56.dp
     val labelViewHorizontalPadding: Dp = 5.dp
     val labelViewHStackSpacing: Dp = 2.dp
+    val labelViewImageCornerRadius: Dp = 2.dp
+    val labelViewImageFrameHeight: Dp = 10.dp
+    val labelViewImageFrameWidth: Dp = 20.dp
     val labelViewVerticalPadding: Dp = 2.dp
 }
 

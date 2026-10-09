@@ -15,6 +15,9 @@ import androidx.compose.ui.unit.dp
 
 object RegionMenuFloats {
     val buttonCornerRadius: Dp = 6.dp
+    val buttonLabelImageCornerRadius: Dp = 3.dp
+    val buttonLabelImageFrameHeight: Dp = 25.dp
+    val buttonLabelImageFrameWidth: Dp = 40.dp
     val buttonHorizontalPadding: Dp = 8.dp
     val buttonMinHeight: Dp = 80.dp
     val buttonMinWidth: Dp = 45.dp
@@ -23,9 +26,10 @@ object RegionMenuFloats {
     val callingCodeTopPadding: Dp = 2.dp
     val listItemVerticalPadding: Dp = 14.dp
     val listMaxHeight: Dp = 420.dp
+    val listViewCellLabelImageCornerRadius: Dp = 3.dp
+    val listViewCellLabelImageFrameHeight: Dp = 25.dp
+    val listViewCellLabelImageFrameWidth: Dp = 40.dp
     val searchHorizontalPadding: Dp = 20.dp
-
-    const val FLAG_FONT_SIZE = 30f
 }
 
 // MARK: - String

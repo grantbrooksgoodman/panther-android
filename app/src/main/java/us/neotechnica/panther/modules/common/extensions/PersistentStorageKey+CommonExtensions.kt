@@ -50,6 +50,14 @@ enum class MetadataServiceStorageKey(
     STORAGE_REFERENCE_URL("storageReferenceURL"),
 }
 
+/** The persistent storage keys scoped to the permission service. */
+enum class PermissionServiceStorageKey(
+    val rawValue: String,
+) {
+    HAS_REQUESTED_CONTACT_PERMISSION("hasRequestedContactPermission"),
+    HAS_REQUESTED_NOTIFICATION_PERMISSION("hasRequestedNotificationPermission"),
+}
+
 /** The persistent storage keys scoped to the review service. */
 enum class ReviewServiceStorageKey(
     val rawValue: String,

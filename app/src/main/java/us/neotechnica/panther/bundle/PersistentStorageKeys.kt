@@ -2,8 +2,8 @@
 //  PersistentStorageKeys.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman on 06/10/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.bundle
@@ -12,6 +12,7 @@ import us.neotechnica.panther.modules.common.extensions.ApplicationStorageKey
 import us.neotechnica.panther.modules.common.extensions.BreadcrumbsCaptureServiceStorageKey
 import us.neotechnica.panther.modules.common.extensions.ContactPairArchiveServiceStorageKey
 import us.neotechnica.panther.modules.common.extensions.MetadataServiceStorageKey
+import us.neotechnica.panther.modules.common.extensions.PermissionServiceStorageKey
 import us.neotechnica.panther.modules.common.extensions.ReviewServiceStorageKey
 import us.neotechnica.panther.modules.common.extensions.UpdateServiceStorageKey
 import us.neotechnica.panther.modules.session.entity.extensions.UserSessionServiceStorageKey
@@ -37,6 +38,8 @@ object PermanentKeyDelegate : PermanentPersistentStorageKeyDelegate {
             ),
             PersistentStorageKey.networking(NetworkingStorageKey.IS_NETWORK_ACTIVITY_INDICATOR_ENABLED),
             PersistentStorageKey.networking(NetworkingStorageKey.NETWORK_ENVIRONMENT),
+            PersistentStorageKey.permissionService(PermissionServiceStorageKey.HAS_REQUESTED_CONTACT_PERMISSION),
+            PersistentStorageKey.permissionService(PermissionServiceStorageKey.HAS_REQUESTED_NOTIFICATION_PERMISSION),
         )
 }
 
@@ -81,30 +84,29 @@ val PersistentStorageKey.Companion.firstPostponedUpdate: PersistentStorageKey
 // MARK: - Methods
 
 /** Returns the persistent storage key for the specified application key. */
-fun PersistentStorageKey.Companion.application(key: ApplicationStorageKey): PersistentStorageKey =
-    PersistentStorageKey(key.rawValue)
+fun PersistentStorageKey.Companion.application(key: ApplicationStorageKey): PersistentStorageKey = PersistentStorageKey(key.rawValue)
 
 /** Returns the persistent storage key for the specified breadcrumbs capture service key. */
-fun PersistentStorageKey.Companion.breadcrumbsCaptureService(
-    key: BreadcrumbsCaptureServiceStorageKey,
-): PersistentStorageKey = PersistentStorageKey(key.rawValue)
+fun PersistentStorageKey.Companion.breadcrumbsCaptureService(key: BreadcrumbsCaptureServiceStorageKey): PersistentStorageKey =
+    PersistentStorageKey(key.rawValue)
 
 /** Returns the persistent storage key for the specified contact pair archive service key. */
-fun PersistentStorageKey.Companion.contactPairArchiveService(
-    key: ContactPairArchiveServiceStorageKey,
-): PersistentStorageKey = PersistentStorageKey(key.rawValue)
+fun PersistentStorageKey.Companion.contactPairArchiveService(key: ContactPairArchiveServiceStorageKey): PersistentStorageKey =
+    PersistentStorageKey(key.rawValue)
 
 /** Returns the persistent storage key for the specified metadata service key. */
 fun PersistentStorageKey.Companion.metadataService(key: MetadataServiceStorageKey): PersistentStorageKey =
     PersistentStorageKey(key.rawValue)
 
-/** Returns the persistent storage key for the specified review service key. */
-fun PersistentStorageKey.Companion.reviewService(key: ReviewServiceStorageKey): PersistentStorageKey =
+/** Returns the persistent storage key for the specified permission service key. */
+fun PersistentStorageKey.Companion.permissionService(key: PermissionServiceStorageKey): PersistentStorageKey =
     PersistentStorageKey(key.rawValue)
 
+/** Returns the persistent storage key for the specified review service key. */
+fun PersistentStorageKey.Companion.reviewService(key: ReviewServiceStorageKey): PersistentStorageKey = PersistentStorageKey(key.rawValue)
+
 /** Returns the persistent storage key for the specified update service key. */
-fun PersistentStorageKey.Companion.updateService(key: UpdateServiceStorageKey): PersistentStorageKey =
-    PersistentStorageKey(key.rawValue)
+fun PersistentStorageKey.Companion.updateService(key: UpdateServiceStorageKey): PersistentStorageKey = PersistentStorageKey(key.rawValue)
 
 /** Returns the persistent storage key for the specified user session service key. */
 fun PersistentStorageKey.Companion.userSessionService(key: UserSessionServiceStorageKey): PersistentStorageKey =

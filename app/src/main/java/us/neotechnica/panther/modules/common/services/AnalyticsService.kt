@@ -16,23 +16,24 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.analytics
+import us.neotechnica.panther.modules.common.models.SystemInformation
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.navigation.descriptor
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkEnvironment
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestampDateFormatter
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
-import java.text.SimpleDateFormat
+import us.neotechnica.panther.subsystem.modules.foundation.services.TimestampDateFormatter
 import java.util.Date
-import java.util.Locale
-import android.os.Build as AndroidBuild
 
 /**
  * Reports usage events to the analytics backend.
@@ -75,6 +76,10 @@ object AnalyticsService {
 
         VIEW_ALTERNATE("view_alternate"),
     }
+
+    // MARK: - Dependencies
+
+    private val dateFormatter: TimestampDateFormatter by Dependency { it.timestampDateFormatter }
 
     // MARK: - Properties
 
@@ -126,7 +131,7 @@ object AnalyticsService {
         scope.launch {
             if (!shouldEnableDataCollection) return@launch
 
-            val parameters = userInfo().toMutableMap()
+            val parameters = userInfo.toMutableMap()
             additionalUserInfo?.let { parameters.putAll(it) }
 
             for ((key, value) in parameters) {
@@ -153,28 +158,28 @@ object AnalyticsService {
 
     // MARK: - Auxiliary
 
-    private fun userInfo(): Map<String, String> {
-        val parameters =
-            mutableMapOf(
-                "build_sku" to Build.buildSKU,
-                "bundle_revision" to "${Build.bundleRevision} (${Build.revisionBuildNumber})",
-                "bundle_version" to "${Build.bundleVersion} (${Build.buildNumber}${Build.milestone.shortString})",
-                "connection_status" to if (ConnectionStatusService.isOnline) "online" else "offline",
-                "device_model" to "${AndroidBuild.MODEL} (${AndroidBuild.DEVICE.lowercase()})",
-                "language_code" to RuntimeStorage.languageCode,
-                "os_version" to AndroidBuild.VERSION.RELEASE.lowercase(),
-                "project_id" to Build.projectID,
-                "timestamp" to SimpleDateFormat(TIMESTAMP_FORMAT, Locale.US).format(Date()),
-            )
+    private val userInfo: Map<String, String>
+        get() {
+            val parameters =
+                mutableMapOf(
+                    "build_sku" to Build.buildSKU,
+                    "bundle_revision" to "${Build.bundleRevision} (${Build.revisionBuildNumber})",
+                    "bundle_version" to "${Build.bundleVersion} (${Build.buildNumber}${Build.milestone.shortString})",
+                    "connection_status" to if (Build.isOnline) "online" else "offline",
+                    "device_model" to "${SystemInformation.modelName} (${SystemInformation.modelCode.lowercase()})",
+                    "language_code" to RuntimeStorage.languageCode,
+                    "os_version" to SystemInformation.osVersion.lowercase(),
+                    "project_id" to Build.projectID,
+                    "timestamp" to dateFormatter.format(Date()),
+                )
 
-        User.currentUserID?.let { parameters["current_user_id"] = it }
+            User.currentUserID?.let { parameters["current_user_id"] = it }
 
-        val viewID = DependencyValues.current.navigation.state.value.descriptor
-        if (viewID != null) parameters["view_id"] = viewID
+            val viewID = DependencyValues.current.navigation.state.value.descriptor
+            if (viewID != null) parameters["view_id"] = viewID
 
-        return parameters
-    }
+            return parameters
+        }
 }
 
 private const val MAX_PARAMETER_LENGTH = 40
-private const val TIMESTAMP_FORMAT = "H:mm:ss.SSSS"

@@ -12,17 +12,19 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ErrorAlert
+import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.LoggerPresentationDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
-import us.neotechnica.panther.subsystem.modules.localization.models.localized
+import us.neotechnica.panther.subsystem.modules.localization.models.Localized
+import us.neotechnica.panther.subsystem.modules.localization.models.SubsystemStringKey
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -34,9 +36,13 @@ import kotlin.time.Duration.Companion.seconds
  * requests to this delegate. Register the service once at launch
  * with `Logger.setPresentationDelegate(LoggerPresentationService)`.
  *
- * Presents logger output: error alerts and informational
- * alerts route through AlertKit, while lightweight feedback routes
- * through a [Toast].
+ * Error alerts and informational alerts route through AlertKit,
+ * while lightweight feedback routes through a [Toast]. Content is
+ * translated only when the exception carries a user-facing
+ * descriptor other than the generic and timed-out descriptors.
+ * Reportable exceptions invite the user to file a report – unless
+ * the logger reports errors automatically, in which case the
+ * toast states that the error has been reported.
  */
 object LoggerPresentationService : LoggerPresentationDelegate {
     // MARK: - Properties
@@ -50,90 +56,121 @@ object LoggerPresentationService : LoggerPresentationDelegate {
         exception: Exception?,
         text: String?,
     ) {
-        when (alertType) {
-            AlertType.ErrorAlert -> presentErrorAlert(exception, text)
-            AlertType.NormalAlert -> presentNormalAlert(exception, text)
-            is AlertType.Toast -> presentToast(alertType, exception, text)
-        }
+        scope.launch { showAlert(alertType, exception, text) }
     }
 
     // MARK: - Auxiliary
 
-    private fun presentErrorAlert(
-        exception: Exception?,
-        text: String?,
+    private suspend fun showAlert(
+        type: AlertType,
+        exception: Exception? = null,
+        text: String? = null,
     ) {
-        val exception = exception ?: return presentNormalAlert(null, text)
-        scope.launch {
-            val mockGenericException = Exception(metadata = ExceptionMetadata(this@LoggerPresentationService))
-            val mockTimedOutException = Exception("The operation timed out.", metadata = ExceptionMetadata(this@LoggerPresentationService))
+        val userFacingDescriptor = exception?.userFacingDescriptor ?: text ?: return
+        HUD.hide()
 
-            val hasUserFacingDescriptor = exception.descriptor != exception.userFacingDescriptor
-            val notGenericDescriptor = exception.userFacingDescriptor != mockGenericException.userFacingDescriptor
-            val notTimedOutDescriptor = exception.userFacingDescriptor != mockTimedOutException.userFacingDescriptor
-            val shouldTranslate = hasUserFacingDescriptor && notGenericDescriptor && notTimedOutDescriptor
+        val mockGenericException = Exception(metadata = ExceptionMetadata(this))
+        val mockTimedOutException = Exception.timedOut(ExceptionMetadata(this))
+        val notGenericDescriptor = userFacingDescriptor != mockGenericException.userFacingDescriptor
+        val notTimedOutDescriptor = userFacingDescriptor != mockTimedOutException.userFacingDescriptor
+        val hasUserFacingDescriptor = exception?.descriptor != exception?.userFacingDescriptor
 
-            val translationOptionKeys = mutableListOf<ErrorAlert.TranslationOptionKey>()
-            if (shouldTranslate) translationOptionKeys.add(ErrorAlert.TranslationOptionKey.ErrorDescription)
-            if (exception.isReportable && !Logger.reportsErrorsAutomatically) {
-                translationOptionKeys.add(ErrorAlert.TranslationOptionKey.SendErrorReportButtonTitle)
+        val shouldTranslate = hasUserFacingDescriptor && notGenericDescriptor && notTimedOutDescriptor
+
+        when (type) {
+            AlertType.ErrorAlert -> {
+                if (exception == null) return showAlert(AlertType.NormalAlert, text = text)
+                presentErrorAlert(exception, shouldTranslate = shouldTranslate)
             }
 
+            AlertType.NormalAlert -> {
+                val alert = Alert(message = userFacingDescriptor)
+                if (shouldTranslate) return alert.present(translating = listOf(Alert.TranslationOptionKey.Message))
+                alert.present(translating = emptyList())
+            }
+
+            is AlertType.Toast ->
+                Toast.show(
+                    toast(
+                        type,
+                        exception = exception,
+                        userFacingDescriptor = userFacingDescriptor,
+                    ),
+                    translating =
+                        if (shouldTranslate) {
+                            listOf(
+                                Toast.TranslationOptionKey.Message,
+                                Toast.TranslationOptionKey.Title,
+                            )
+                        } else {
+                            emptyList()
+                        },
+                    onTap = reportAction(exception),
+                )
+        }
+    }
+
+    private suspend fun presentErrorAlert(
+        exception: Exception,
+        shouldTranslate: Boolean,
+    ) {
+        val errorAlert =
             ErrorAlert(
-                exception = exception,
-                dismissButtonTitle = LocalizedStringKey.Dismiss.localized(),
-            ).present(translating = translationOptionKeys)
+                exception.hydrated,
+                dismissButtonTitle = Localized(SubsystemStringKey.DISMISS).wrappedValue,
+            )
+
+        val translationOptionKeys = mutableListOf<ErrorAlert.TranslationOptionKey>()
+        if (shouldTranslate) translationOptionKeys.add(ErrorAlert.TranslationOptionKey.ErrorDescription)
+        if (exception.isReportable && !Logger.reportsErrorsAutomatically) {
+            translationOptionKeys.add(ErrorAlert.TranslationOptionKey.SendErrorReportButtonTitle)
         }
+
+        errorAlert.present(translating = translationOptionKeys)
     }
 
-    private fun presentNormalAlert(
+    internal fun toast(
+        type: AlertType.Toast,
         exception: Exception?,
-        text: String?,
-    ) {
-        val message = exception?.userFacingDescriptor ?: text ?: return
-        scope.launch {
-            Alert(message = message).present(
-                translating = listOf(Alert.TranslationOptionKey.Actions(), Alert.TranslationOptionKey.Message),
-            )
+        userFacingDescriptor: String,
+    ): Toast {
+        val style = type.style ?: if (exception == null) ToastStyle.INFO else ToastStyle.ERROR
+
+        var title: String? = null
+        var message: String? = null
+
+        if (exception != null && exception.isReportable) {
+            title = userFacingDescriptor
+            message =
+                if (Logger.reportsErrorsAutomatically) {
+                    Localized(SubsystemStringKey.ERROR_REPORTED).wrappedValue
+                } else {
+                    Localized(SubsystemStringKey.TAP_TO_REPORT).wrappedValue
+                }
         }
+
+        return Toast(
+            if (type.isPersistent) Toast.ToastType.Banner(style) else Toast.ToastType.Capsule(style),
+            title = title,
+            message = message ?: userFacingDescriptor,
+            perpetuation =
+                if (type.isPersistent) {
+                    Toast.PerpetuationStrategy.Persistent
+                } else {
+                    Toast.PerpetuationStrategy.Ephemeral(TOAST_EPHEMERAL_DURATION_SECONDS.seconds)
+                },
+        )
     }
 
-    private fun presentToast(
-        alertType: AlertType.Toast,
-        exception: Exception?,
-        text: String?,
-    ) {
-        val descriptor = exception?.userFacingDescriptor ?: text ?: return
-        val style = alertType.style ?: if (exception == null) ToastStyle.INFO else ToastStyle.ERROR
-
-        val type =
-            if (alertType.isPersistent) {
-                Toast.ToastType.Banner(style)
-            } else {
-                Toast.ToastType.Capsule(style)
-            }
-
-        val perpetuation =
-            if (alertType.isPersistent) {
-                Toast.PerpetuationStrategy.Persistent
-            } else {
-                Toast.PerpetuationStrategy.Ephemeral(TOAST_EPHEMERAL_DURATION_SECONDS.seconds)
-            }
-
-        // Reportable exceptions invite the user to file a report by tapping.
-        val reportableException = exception?.takeIf { it.isReportable }
-        scope.launch {
-            Toast.show(
-                Toast(
-                    type,
-                    title = reportableException?.let { descriptor },
-                    message = if (reportableException != null) "Tap to report" else descriptor,
-                    perpetuation = perpetuation,
-                ),
-                translating = listOf(Toast.TranslationOptionKey.Message, Toast.TranslationOptionKey.Title),
-                onTap = reportableException?.let { ex -> { ErrorReportingService.fileReport(ex) } },
-            )
+    internal fun reportAction(exception: Exception?): (() -> Unit)? {
+        if (exception == null ||
+            !exception.isReportable ||
+            Logger.reportsErrorsAutomatically
+        ) {
+            return null
         }
+
+        return { AlertKitConfig.reportDelegate?.fileReport(exception.hydrated) }
     }
 }
 

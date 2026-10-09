@@ -161,7 +161,7 @@ object ContactPairArchiveService {
         }
 
         Persistent.setString(
-            PersistentStorageKey(NotificationExtensionConstants.CONTACT_NAME_MAP_KEY),
+            PersistentStorageKey(NotificationExtensionConstants.CONTACT_ARCHIVE_DEFAULTS_KEY_NAME),
             json.toString(),
         )
     }

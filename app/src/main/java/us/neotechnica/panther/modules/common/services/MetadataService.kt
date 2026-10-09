@@ -12,6 +12,7 @@ import us.neotechnica.panther.bundle.metadataService
 import us.neotechnica.panther.bundle.shared
 import us.neotechnica.panther.modules.common.extensions.MetadataServiceStorageKey
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.database.interfaces.getValues
@@ -31,11 +32,30 @@ import java.net.URI
  * converge on authoritative data without blocking on the fetch.
  */
 object MetadataService {
-    // MARK: - Properties
+    // MARK: - Types
 
-    /** The shared metadata service instance. */
-    val shared: MetadataService
-        get() = this
+    private enum class MetadataServiceKey(
+        val rawValue: String,
+    ) {
+        APP_SHARE_LINK("appShareLink"),
+        APP_STORE_BUILD_NUMBER("appStoreBuildNumber"),
+        GEMINI_API_KEY("geminiApiKey"),
+        IS_PREVARICATION_MODE_ENABLED("isPrevaricationModeEnabled"),
+        PLAY_STORE_BUILD_NUMBER("playStoreBuildNumber"),
+        PLAY_STORE_SHARE_LINK("playStoreShareLink"),
+        REDIRECTION_KEY("redirectionKey"),
+        SHOULD_FORCE_UPDATE("shouldForceUpdate"),
+        SHOULD_FORCE_UPDATE_ANDROID("shouldForceUpdateAndroid"),
+        STORAGE_REFERENCE_URL("storageReferenceURL"),
+        ;
+
+        // MARK: - Computed Properties
+
+        val path: String
+            get() = "${NetworkPath.shared.rawValue}/$rawValue"
+    }
+
+    // MARK: - Properties
 
     private val coalescer = SingleSlotCoalescer<Unit>()
 
@@ -142,35 +162,44 @@ object MetadataService {
     @Suppress("CyclomaticComplexMethod")
     private fun assignValues(dictionary: Map<String, Any>) {
         val appShareLink =
-            (dictionary[MetadataServiceStorageKey.APP_SHARE_LINK.rawValue] as? String)?.takeIf { it.isValidURL() }
-                ?: throw Exception("Failed to read hosted app share link.", metadata = ExceptionMetadata(this))
-        val appStoreBuildNumber =
-            (dictionary[MetadataServiceStorageKey.APP_STORE_BUILD_NUMBER.rawValue] as? Number)?.toInt()
-                ?: throw Exception("Failed to read hosted App Store build number.", metadata = ExceptionMetadata(this))
-        val geminiAPIKey =
-            dictionary[MetadataServiceStorageKey.GEMINI_API_KEY.rawValue] as? String
-                ?: throw Exception("Failed to read hosted Gemini API key.", metadata = ExceptionMetadata(this))
-        val isPrevaricationModeEnabled =
-            dictionary[MetadataServiceStorageKey.IS_PREVARICATION_MODE_ENABLED.rawValue] as? Boolean
-                ?: throw Exception("Failed to read hosted prevarication mode flag.", metadata = ExceptionMetadata(this))
-        val playStoreBuildNumber =
-            (dictionary[MetadataServiceStorageKey.PLAY_STORE_BUILD_NUMBER.rawValue] as? Number)?.toInt()
-                ?: throw Exception("Failed to read hosted Play Store build number.", metadata = ExceptionMetadata(this))
-        val playStoreShareLink =
-            dictionary[MetadataServiceStorageKey.PLAY_STORE_SHARE_LINK.rawValue] as? String
-                ?: throw Exception("Failed to read hosted Play Store share link.", metadata = ExceptionMetadata(this))
-        val redirectionKey =
-            dictionary[MetadataServiceStorageKey.REDIRECTION_KEY.rawValue] as? String
-                ?: throw Exception("Failed to read hosted redirection key.", metadata = ExceptionMetadata(this))
-        val shouldForceUpdate =
-            dictionary[MetadataServiceStorageKey.SHOULD_FORCE_UPDATE.rawValue] as? Boolean
-                ?: throw Exception("Failed to read hosted force-update flag.", metadata = ExceptionMetadata(this))
-        val shouldForceUpdateAndroid =
-            dictionary[MetadataServiceStorageKey.SHOULD_FORCE_UPDATE_ANDROID.rawValue] as? Boolean
-                ?: throw Exception("Failed to read hosted Android force-update flag.", metadata = ExceptionMetadata(this))
+            (dictionary[MetadataServiceKey.APP_SHARE_LINK.rawValue] as? String)?.takeIf { it.isValidURL() }
+                ?: throw Exception.Networking.typecastFailed("URL", metadata = ExceptionMetadata(this))
+
         val storageReferenceURL =
-            (dictionary[MetadataServiceStorageKey.STORAGE_REFERENCE_URL.rawValue] as? String)?.takeIf { it.isValidURL() }
-                ?: throw Exception("Failed to read hosted storage reference URL.", metadata = ExceptionMetadata(this))
+            (dictionary[MetadataServiceKey.STORAGE_REFERENCE_URL.rawValue] as? String)?.takeIf { it.isValidURL() }
+                ?: throw Exception.Networking.typecastFailed("URL", metadata = ExceptionMetadata(this))
+
+        val playStoreShareLink =
+            (dictionary[MetadataServiceKey.PLAY_STORE_SHARE_LINK.rawValue] as? String)?.takeIf { it.isValidURL() }
+                ?: throw Exception.Networking.typecastFailed("URL", metadata = ExceptionMetadata(this))
+
+        val appStoreBuildNumber =
+            dictionary[MetadataServiceKey.APP_STORE_BUILD_NUMBER.rawValue].intValue
+                ?: throw Exception.Networking.typecastFailed("integer", metadata = ExceptionMetadata(this))
+
+        val playStoreBuildNumber =
+            dictionary[MetadataServiceKey.PLAY_STORE_BUILD_NUMBER.rawValue].intValue
+                ?: throw Exception.Networking.typecastFailed("integer", metadata = ExceptionMetadata(this))
+
+        val geminiAPIKey =
+            dictionary[MetadataServiceKey.GEMINI_API_KEY.rawValue] as? String
+                ?: throw Exception.Networking.typecastFailed("string", metadata = ExceptionMetadata(this))
+
+        val redirectionKey =
+            dictionary[MetadataServiceKey.REDIRECTION_KEY.rawValue] as? String
+                ?: throw Exception.Networking.typecastFailed("string", metadata = ExceptionMetadata(this))
+
+        val isPrevaricationModeEnabled =
+            dictionary[MetadataServiceKey.IS_PREVARICATION_MODE_ENABLED.rawValue] as? Boolean
+                ?: throw Exception.Networking.typecastFailed("Bool", metadata = ExceptionMetadata(this))
+
+        val shouldForceUpdate =
+            dictionary[MetadataServiceKey.SHOULD_FORCE_UPDATE.rawValue] as? Boolean
+                ?: throw Exception.Networking.typecastFailed("Bool", metadata = ExceptionMetadata(this))
+
+        val shouldForceUpdateAndroid =
+            dictionary[MetadataServiceKey.SHOULD_FORCE_UPDATE_ANDROID.rawValue] as? Boolean
+                ?: throw Exception.Networking.typecastFailed("Bool", metadata = ExceptionMetadata(this))
 
         Persistent.setString(scopedKey(MetadataServiceStorageKey.APP_SHARE_LINK), appShareLink)
         Persistent.setInt(scopedKey(MetadataServiceStorageKey.APP_STORE_BUILD_NUMBER), appStoreBuildNumber)
@@ -183,6 +212,15 @@ object MetadataService {
         Persistent.setBoolean(scopedKey(MetadataServiceStorageKey.SHOULD_FORCE_UPDATE_ANDROID), shouldForceUpdateAndroid)
         Persistent.setString(scopedKey(MetadataServiceStorageKey.STORAGE_REFERENCE_URL), storageReferenceURL)
     }
+
+    // An integral hosted number; fractional values do not convert.
+    private val Any?.intValue: Int?
+        get() =
+            when (this) {
+                is Int -> this
+                is Long -> toInt()
+                else -> null
+            }
 
     private fun String.isValidURL(): Boolean = runCatching { URI(this).scheme }.getOrNull() != null
 

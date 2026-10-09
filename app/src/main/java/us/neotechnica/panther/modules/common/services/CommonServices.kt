@@ -18,9 +18,6 @@ import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.Dep
  * Reach a common service through
  * [DependencyValues.commonServices] rather than referencing the
  * service singletons directly.
- *
- * **Note:** the services cut from this port – audio,
- * message-recipient-consent, data-usage, and PenPals – are omitted.
  */
 object CommonServices {
     /** The account deletion service. */
@@ -28,6 +25,9 @@ object CommonServices {
 
     /** The analytics service. */
     val analytics get() = AnalyticsService
+
+    /** The umbrella service for audio functionality. */
+    val audio get() = AudioService
 
     /** The connection status service. */
     val connectionStatus get() = ConnectionStatusService

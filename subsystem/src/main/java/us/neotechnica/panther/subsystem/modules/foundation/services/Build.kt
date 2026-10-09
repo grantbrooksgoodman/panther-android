@@ -134,10 +134,6 @@ object Build {
     val buildSKU: String
         get() = buildSKU()
 
-    /** The one-line build summary shown in the overlay button. */
-    val buildInfoString: String
-        get() = "$codeName $bundleVersion ($buildNumber${milestone.shortString}/${bundleRevision.lowercase()})"
-
     /**
      * The six-digit code required to bypass build expiry.
      *

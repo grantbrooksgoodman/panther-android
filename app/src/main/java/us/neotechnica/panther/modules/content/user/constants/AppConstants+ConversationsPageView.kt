@@ -25,7 +25,6 @@ object ConversationsPageViewFloats {
      */
     val pullToRefreshThreshold: Dp = 120.dp
     val searchBottomSpacing: Dp = 8.dp
-    val searchHorizontalPadding: Dp = 16.dp
     val titleHorizontalPadding: Dp = 20.dp
     val titleVerticalPadding: Dp = 8.dp
 }

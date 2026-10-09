@@ -9,55 +9,126 @@
 package us.neotechnica.panther.modules.common.services
 
 import com.google.i18n.phonenumbers.PhoneNumberUtil
-import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHashOf
+import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 
 /**
- * Answers questions about phone numbers – calling codes, valid
- * lengths, and example numbers – from [CommonPropertyLists] and
- * libphonenumber.
+ * Derives calling codes, hashes, and formatting details from phone
+ * number strings.
+ *
+ * Derivations rely on the app's bundled phone number reference
+ * data; results are cached in memory.
  */
 object PhoneNumberService {
     // MARK: - Properties
 
+    private val cachedPossibleCallingCodesForNumbers = LockIsolated<Map<String, List<String>>?>(null)
+    private val cachedPossibleHashesForNumbers = LockIsolated<Map<String, List<String>>?>(null)
     private val phoneNumberUtil: PhoneNumberUtil by lazy { PhoneNumberUtil.getInstance() }
 
     // MARK: - Computed Properties
 
-    /** The device's calling code, e.g. `"1"`; defaults to `"1"`. */
+    /**
+     * The calling code for the device's current region, or `1` if it
+     * cannot be determined.
+     */
     val deviceCallingCode: String
-        get() = RegionDetailService.callingCode(RegionDetailService.deviceRegionCode) ?: DEFAULT_CALLING_CODE
+        get() = callingCodes[RegionDetailService.deviceRegionCode] ?: DEFAULT_CALLING_CODE
 
-    // MARK: - Methods
+    private val callingCodes: Map<String, String>
+        get() = CommonPropertyLists.callingCodes
+
+    private val lookupTables: Map<String, List<String>>
+        get() = CommonPropertyLists.lookupTables
+
+    // MARK: - Calling Code Determination
 
     /**
-     * Returns the calling codes a number could belong to, matching by
-     * prefix and length, or `null` if none apply.
+     * Returns the calling codes that could plausibly apply to the
+     * given number string.
+     *
+     * A calling code matches if the number begins with it and the
+     * remaining digits form a valid length for that code; otherwise,
+     * candidates are derived from the number's length alone. Results
+     * are cached in memory per number.
+     *
+     * @param number The phone number string to evaluate, containing
+     *   digits only.
+     *
+     * @return The candidate calling codes; otherwise, `null` if none
+     *   could be derived.
      */
     fun possibleCallingCodes(number: String): List<String>? {
-        val matches = matchingCallingCodes(number)
-        if (matches != null) return matches
-        return callingCodes(number.digits.length)
+        cachedPossibleCallingCodesForNumbers.wrappedValue?.get(number)?.let { return it }
+
+        val countryCodes = matchingCountryCodes(number) ?: callingCodes(number.length)
+        if (countryCodes.isNullOrEmpty()) return null
+
+        cachedPossibleCallingCodesForNumbers.withValue {
+            it.value = (it.value ?: emptyMap()) + (number to countryCodes)
+        }
+
+        return countryCodes
     }
+
+    /**
+     * Returns the combined candidate calling codes for the given
+     * number strings.
+     *
+     * Numbers for which no candidates could be derived are skipped.
+     *
+     * @param numbers The phone number strings to evaluate, containing
+     *   digits only.
+     *
+     * @return The concatenated candidate calling codes for each
+     *   number; otherwise, `null` if none could be derived.
+     */
+    fun possibleCallingCodes(numbers: List<String>): List<String>? =
+        numbers
+            .flatMap { possibleCallingCodes(it) ?: emptyList() }
+            .ifEmpty { null }
 
     /**
      * Returns a Boolean value indicating whether a national number of
      * the given length is valid for the calling code.
+     *
+     * @param length The length of the national number.
+     * @param callingCode The calling code to validate against.
+     *
+     * @return `true` if the reference data lists the calling code for
+     *   numbers of the given length; otherwise, `false`.
      */
     fun numberIsValidLength(
         length: Int,
         callingCode: String,
-    ): Boolean = CommonPropertyLists.lookupTables[length.toString()]?.contains(callingCode) == true
+    ): Boolean = lookupTables[length.toString()]?.contains(callingCode) == true
 
-    /** An example national number for the region, for placeholder text. */
+    // MARK: - Example National Number String
+
+    /**
+     * Returns an example national phone number for the given region,
+     * formatted for display.
+     *
+     * If no example exists for the region, a United States example
+     * is returned.
+     *
+     * @param regionCode The region code for which to produce an
+     *   example.
+     *
+     * @return The formatted example number.
+     */
     fun exampleNationalNumberString(regionCode: String): String {
+        if (regionCode == US_REGION_CODE) return US_EXAMPLE_NUMBER
         val example =
             phoneNumberUtil.getExampleNumberForType(
                 regionCode.uppercase(),
                 PhoneNumberUtil.PhoneNumberType.MOBILE,
             ) ?: return US_EXAMPLE_NUMBER
+
         return phoneNumberUtil.format(example, PhoneNumberUtil.PhoneNumberFormat.NATIONAL)
     }
+
+    // MARK: - Hash Generation
 
     /**
      * Returns the encoded hashes under which the given number string
@@ -65,12 +136,25 @@ object PhoneNumberService {
      *
      * The result contains the hash of the full number, plus the hash
      * of the number with each plausible calling code prefix removed.
+     * Results are cached in memory per number.
+     *
+     * @param number The phone number string to evaluate, containing
+     *   digits only.
+     *
+     * @return The candidate hashes.
      */
-    fun possibleHashes(number: String): List<String> {
+    fun possibleHashes(number: String): List<String>? {
+        cachedPossibleHashesForNumbers.wrappedValue?.get(number)?.let { return it }
+
         val hashes = mutableListOf(encodedHashOf(listOf(number)))
-        matchingCallingCodes(number)?.forEach { code ->
+        matchingCountryCodes(number)?.forEach { code ->
             hashes.add(encodedHashOf(listOf(number.drop(code.length))))
         }
+
+        cachedPossibleHashesForNumbers.withValue {
+            it.value = (it.value ?: emptyMap()) + (number to hashes)
+        }
+
         return hashes
     }
 
@@ -79,32 +163,38 @@ object PhoneNumberService {
      * strings.
      *
      * Numbers for which no candidates could be derived are skipped.
+     *
+     * @param numbers The phone number strings to evaluate, containing
+     *   digits only.
+     *
+     * @return The concatenated candidate hashes for each number;
+     *   otherwise, `null` if none could be derived.
      */
-    fun possibleHashes(numbers: List<String>): List<String>? {
-        val hashes = numbers.flatMap { possibleHashes(it) }
-        return hashes.ifEmpty { null }
-    }
+    fun possibleHashes(numbers: List<String>): List<String>? =
+        numbers
+            .flatMap { possibleHashes(it) ?: emptyList() }
+            .ifEmpty { null }
 
     // MARK: - Auxiliary
 
-    private fun callingCodes(numberLength: Int): List<String>? = CommonPropertyLists.lookupTables[numberLength.toString()]
-
-    private fun matchingCallingCodes(number: String): List<String>? {
-        val digits = number.digits
-        val callingCodes = CommonPropertyLists.callingCodes.values.distinct()
-        val matches = mutableListOf<String>()
-        for (code in callingCodes) {
-            if (!digits.startsWith(code)) continue
-            val remainingLength = digits.drop(code.length).length
-            if (CommonPropertyLists.lookupTables[remainingLength.toString()]?.contains(code) == true) {
-                matches.add(code)
-            }
-        }
-        return if (matches.isEmpty()) null else matches.sorted()
+    private fun callingCodes(numberLength: Int): List<String>? {
+        if (lookupTables.isEmpty()) return null
+        return lookupTables[numberLength.toString()]
     }
 
-    // MARK: - Companion
+    private fun matchingCountryCodes(number: String): List<String>? {
+        if (callingCodes.isEmpty() || lookupTables.isEmpty()) return null
 
-    private const val DEFAULT_CALLING_CODE = "1"
-    private const val US_EXAMPLE_NUMBER = "(555) 555-5555"
+        val matches =
+            callingCodes.values.distinct().filter { code ->
+                val rawNumberLengthString = number.drop(code.length).length.toString()
+                number.startsWith(code) && lookupTables[rawNumberLengthString]?.contains(code) == true
+            }
+
+        return if (matches.isEmpty()) null else matches.sorted()
+    }
 }
+
+private const val DEFAULT_CALLING_CODE = "1"
+private const val US_EXAMPLE_NUMBER = "(555) 555-5555"
+private const val US_REGION_CODE = "US"

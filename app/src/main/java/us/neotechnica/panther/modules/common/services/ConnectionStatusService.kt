@@ -14,7 +14,6 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import us.neotechnica.panther.modules.common.models.ConnectionStatusServiceEffectID
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
-import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 
 /**
  * Tracks network reachability and runs registered effects when
@@ -104,14 +103,12 @@ object ConnectionStatusService {
         if (value == wasOnline) return
 
         if (!value) {
-            Logger.log("Connection status changed (online: false); running effects.")
             runEffects()
             awaitingConnectionRestoration.wrappedValue = true
             return
         }
 
         if (!awaitingConnectionRestoration.wrappedValue) return
-        Logger.log("Connection status changed (online: true); running effects.")
         runEffects()
         awaitingConnectionRestoration.wrappedValue = false
     }

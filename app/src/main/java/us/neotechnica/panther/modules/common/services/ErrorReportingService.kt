@@ -2,8 +2,8 @@
 //  ErrorReportingService.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman on 07/10/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.common.services
@@ -19,6 +19,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.designsystem.modules.alertkit.interfaces.ReportDelegate
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
+import us.neotechnica.panther.modules.common.models.SystemInformation
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
@@ -26,7 +27,9 @@ import us.neotechnica.panther.navigation.descriptor
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.storage.models.HostedItemMetadata
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestampDateFormatter
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.ErrorReportDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHashOf
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
@@ -36,13 +39,13 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
+import us.neotechnica.panther.subsystem.modules.foundation.services.TimestampDateFormatter
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.translator.Translator
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.time.Duration.Companion.seconds
-import android.os.Build as AndroidBuild
 
 /**
  * Uploads error reports to remote storage.
@@ -52,6 +55,10 @@ import android.os.Build as AndroidBuild
  * language, current user, and visible view.
  */
 object ErrorReportingService : ReportDelegate, ErrorReportDelegate {
+    // MARK: - Dependencies
+
+    private val timestampDateFormatter: TimestampDateFormatter by Dependency { it.timestampDateFormatter }
+
     // MARK: - Properties
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -67,9 +74,6 @@ object ErrorReportingService : ReportDelegate, ErrorReportDelegate {
     val reportedErrorCodes: List<String>
         get() = _reportedErrorCodes.wrappedValue
 
-    private val bundleVersionString: String
-        get() = "${if (Build.milestone == Build.Milestone.GENERAL_RELEASE) Build.finalName else Build.codeName} (${Build.bundleVersion})"
-
     // MARK: - ReportDelegate Conformance
 
     /**
@@ -79,33 +83,6 @@ object ErrorReportingService : ReportDelegate, ErrorReportDelegate {
      */
     override fun fileReport(exception: Exception) {
         fileReport(exception, showsToastOnSuccess = true)
-    }
-
-    /**
-     * Composes and presents a bug report.
-     *
-     * The message prompts the user to describe the issue and the steps
-     * to reproduce it.
-     */
-    override fun reportBug() {
-        composeMessage(
-            subject = "$bundleVersionString Bug Report",
-            body = "In the appropriate section, please describe the error encountered and the steps to reproduce it.",
-            prompt = "Description/Steps to Reproduce",
-        )
-    }
-
-    /**
-     * Composes and presents a general feedback message.
-     *
-     * The message invites the user to share general feedback.
-     */
-    override fun sendFeedback() {
-        composeMessage(
-            subject = "$bundleVersionString Feedback Report",
-            body = "Any general feedback is appreciated in the appropriate section.",
-            prompt = "General Feedback",
-        )
     }
 
     // MARK: - File Report
@@ -142,7 +119,7 @@ object ErrorReportingService : ReportDelegate, ErrorReportDelegate {
                     "reports",
                     Build.bundleVersion,
                     parentDirectoryName,
-                    "${SimpleDateFormat(FILE_DATE_FORMAT, Locale.US).format(Date())}_${fileNameSuffix()}.txt",
+                    "${SimpleDateFormat(FILE_DATE_FORMAT, Locale.US).format(Date())}_${fileNameSuffix(Date())}.txt",
                 ).joinToString("/")
 
             if (!upload(recordBytes, filePath, exception)) return@launch
@@ -167,33 +144,6 @@ object ErrorReportingService : ReportDelegate, ErrorReportDelegate {
     }
 
     // MARK: - Auxiliary
-
-    private fun composeMessage(
-        subject: String,
-        body: String,
-        prompt: String,
-    ) {
-        val activity = Translator.config.currentActivityProvider?.invoke() ?: return
-        val bodyText =
-            buildString {
-                append(body)
-                append("\n\n")
-                append("$prompt:")
-                append("\n\n")
-                append("---\n")
-                append("Device: ${AndroidBuild.MANUFACTURER} ${AndroidBuild.MODEL} (API ${AndroidBuild.VERSION.SDK_INT})")
-            }
-
-        val mailIntent =
-            Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:")).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                putExtra(Intent.EXTRA_EMAIL, arrayOf(REPORT_RECIPIENT))
-                putExtra(Intent.EXTRA_SUBJECT, subject)
-                putExtra(Intent.EXTRA_TEXT, bodyText)
-            }
-
-        runCatching { activity.startActivity(mailIntent) }
-    }
 
     private suspend fun upload(
         recordBytes: ByteArray,
@@ -224,16 +174,50 @@ object ErrorReportingService : ReportDelegate, ErrorReportDelegate {
         return true
     }
 
-    private fun parentDirectoryName(
+    internal fun parentDirectoryName(
         exception: Exception,
         errorCode: String,
     ): String {
-        val hostedOverrideErrorCode = exception.userInfo?.get(HOSTED_OVERRIDE_ERROR_CODE_KEY) as? String
-        val staticErrorCode = exception.userInfo?.get(Exception.UserInfo.STATIC_ERROR_CODE.rawValue) as? String
+        val exceptionDescriptor = exception.userInfo?.get(Exception.UserInfo.DESCRIPTOR.rawValue) as? String
+        var parentDirectoryName = exception.userInfo?.get(HOSTED_OVERRIDE_ERROR_CODE_KEY) as? String ?: errorCode
+        if (exceptionDescriptor != null &&
+            exception.userInfo?.get(Exception.UserInfo.STATIC_ERROR_CODE.rawValue) == null
+        ) {
+            parentDirectoryName = "${parentDirectoryName}_${exceptionDescriptor.shorthandErrorDescriptor}"
+        }
 
-        val base = hostedOverrideErrorCode ?: errorCode
-        return if (staticErrorCode == null) "${base}_${exception.descriptor.shorthandErrorDescriptor()}" else base
+        return parentDirectoryName
     }
+
+    internal fun fileNameSuffix(date: Date): String {
+        val shortDateHash =
+            encodedHashOf(listOf(timestampDateFormatter.format(date)))
+                .take(SHORT_DATE_HASH_LENGTH)
+
+        return listOf(
+            Build.milestone.shortString,
+            Build.buildNumber.toString(),
+            Build.bundleRevision,
+            "_$shortDateHash",
+        ).joinToString("")
+    }
+
+    internal fun standardUserInfo(date: Date): Map<String, String> =
+        buildMap {
+            put("Build SKU", Build.buildSKU)
+            put("Bundle Revision", "${Build.bundleRevision} (${Build.revisionBuildNumber})")
+            put("Bundle Version", "${Build.bundleVersion} (${Build.buildNumber}${Build.milestone.shortString})")
+            put("Connection Status", if (Build.isOnline) "online" else "offline")
+            put("Device Model", "${SystemInformation.modelName} (${SystemInformation.modelCode.lowercase()})")
+            put("Language Code", RuntimeStorage.languageCode)
+            put("OS Version", SystemInformation.osVersion.lowercase())
+            put("Project ID", Build.projectID)
+            put("Timestamp", timestampDateFormatter.format(date))
+            User.currentUserID?.let { put("Current User ID", it) }
+
+            val viewID = DependencyValues.current.navigation.state.value.descriptor
+            if (viewID != null) put("View ID", viewID)
+        }
 
     private fun customValues(exception: Exception): Map<String, String> {
         val passthrough =
@@ -242,32 +226,10 @@ object ErrorReportingService : ReportDelegate, ErrorReportDelegate {
                 .toMap()
                 .filterKeys { it !in RESERVED_USER_INFO_KEYS }
 
+        val exceptionDescriptor = exception.userInfo?.get(Exception.UserInfo.DESCRIPTOR.rawValue) as? String
         return passthrough +
-            mapOf("Error Description" to exception.descriptor) +
-            standardUserInfo()
-    }
-
-    private fun standardUserInfo(): Map<String, String> =
-        buildMap {
-            put("Build SKU", Build.buildSKU)
-            put("Bundle Revision", "${Build.bundleRevision} (${Build.revisionBuildNumber})")
-            put("Bundle Version", "${Build.bundleVersion} (${Build.buildNumber}${Build.milestone.shortString})")
-            put("Connection Status", if (ConnectionStatusService.isOnline) "online" else "offline")
-            put("Device Model", "${AndroidBuild.MODEL} (${AndroidBuild.DEVICE.lowercase()})")
-            put("Language Code", RuntimeStorage.languageCode)
-            put("OS Version", AndroidBuild.VERSION.RELEASE.lowercase())
-            put("Project ID", Build.projectID)
-            put("Timestamp", SimpleDateFormat(TIMESTAMP_FORMAT, Locale.US).format(Date()))
-            User.currentUserID?.let { put("Current User ID", it) }
-
-            val viewID = DependencyValues.current.navigation.state.value.descriptor
-            if (viewID != null) put("View ID", viewID)
-        }
-
-    private fun fileNameSuffix(): String {
-        val timestamp = SimpleDateFormat(TIMESTAMP_FORMAT, Locale.US).format(Date())
-        val shortDateHash = encodedHashOf(listOf(timestamp)).take(SHORT_DATE_HASH_LENGTH)
-        return "${Build.milestone.shortString}${Build.buildNumber}${Build.bundleRevision}_$shortDateHash"
+            mapOf("Error Description" to (exceptionDescriptor ?: exception.descriptor)) +
+            standardUserInfo(Date())
     }
 
     private fun toastAction(parentDirectoryName: String): (() -> Unit)? {
@@ -289,23 +251,38 @@ object ErrorReportingService : ReportDelegate, ErrorReportDelegate {
         }
     }
 
-    private fun String.shorthandErrorDescriptor(): String =
-        uppercase()
-            .split(Regex("\\s+"))
-            .map { word -> word.filter { it.isLetter() } }
-            .filter { it.isNotBlank() }
-            .filterNot { it in SHORTHAND_EXCLUDED_WORDS }
-            .take(SHORTHAND_WORD_LIMIT)
-            .joinToString("_")
+    private val String.shorthandErrorDescriptor: String
+        get() =
+            trim { it.isPunctuation }
+                .uppercase()
+                .split(" ")
+                .map { word -> word.filter { it.isLetter() }.trim() }
+                .filter { it.isNotBlank() }
+                .filterNot { it in SHORTHAND_EXCLUDED_WORDS }
+                .take(SHORTHAND_WORD_LIMIT)
+                .joinToString("_")
+
+    private val Char.isPunctuation: Boolean
+        get() =
+            when (Character.getType(this).toByte()) {
+                Character.CONNECTOR_PUNCTUATION,
+                Character.DASH_PUNCTUATION,
+                Character.END_PUNCTUATION,
+                Character.FINAL_QUOTE_PUNCTUATION,
+                Character.INITIAL_QUOTE_PUNCTUATION,
+                Character.OTHER_PUNCTUATION,
+                Character.START_PUNCTUATION,
+                -> true
+
+                else -> false
+            }
 }
 
 private const val ERROR_CODE_LENGTH = 4
 private const val FILE_DATE_FORMAT = "yyMMdd"
 private const val HOSTED_OVERRIDE_ERROR_CODE_KEY = "HostedOverrideErrorCode"
-private const val REPORT_RECIPIENT = "me@grantbrooks.io"
 private const val SHORT_DATE_HASH_LENGTH = 5
 private const val SHORTHAND_WORD_LIMIT = 3
 private const val SUCCESS_TOAST_SECONDS = 3L
-private const val TIMESTAMP_FORMAT = "H:mm:ss.SSSS"
 private val RESERVED_USER_INFO_KEYS = setOf("Descriptor", "ErrorCode", "HostedOverrideErrorCode", "StaticErrorCode")
 private val SHORTHAND_EXCLUDED_WORDS = setOf("A", "AN", "BEEN", "HAS", "IS", "THE", "WAS")

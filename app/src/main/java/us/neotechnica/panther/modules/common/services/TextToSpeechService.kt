@@ -19,13 +19,15 @@ import android.speech.tts.Voice
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import java.util.Locale
 
 /**
  * Synthesizes speech from text aloud.
  *
- * **Note:** rendering speech to audio files arrives with audio
- * messages. [highestQualityVoice] selects the best on-device voice.
+ * Voice lookups and language support checks are cached in memory
+ * per language code; clear them through
+ * [TextToSpeechServiceCache.clearCache].
  */
 object TextToSpeechService {
     // MARK: - Properties
@@ -136,7 +138,7 @@ object TextToSpeechService {
         if (!isInitialized || text.isBlank()) return
 
         val locale = Locale.forLanguageTag(languageCode)
-        val voice = highestQualityVoice(engine, languageCode)
+        val voice = highestQualityVoice(languageCode)
         if (voice != null) engine.voice = voice else engine.language = locale
 
         speakingMessageIDState = messageID
@@ -158,22 +160,81 @@ object TextToSpeechService {
     // MARK: - Highest Quality Voice
 
     /**
-     * Returns the highest quality on-device voice available for
-     * [languageCode], or `null` if none is available.
+     * Returns the highest quality voice available for the given
+     * language code.
+     *
+     * A high-quality on-device voice is preferred; otherwise, the
+     * best available on-device voice for the language is returned.
+     * Results are cached in memory per language code.
+     *
+     * **Note:** While the speech engine is still initializing, this
+     * method returns `null` without caching a result.
+     *
+     * @param languageCode The language code of the voice to find.
+     *
+     * @return The highest quality voice for the language code;
+     *   otherwise, `null` if no voice is available.
      */
-    private fun highestQualityVoice(
-        engine: TextToSpeech,
-        languageCode: String,
-    ): Voice? {
+    fun highestQualityVoice(languageCode: String): Voice? {
+        TextToSpeechServiceCache.voice(languageCode)?.let { return it }
+
+        val voices = loadedVoices(languageCode) ?: return null
+        val onDeviceVoices = voices.filter { !it.isNetworkConnectionRequired }
+        val voice =
+            onDeviceVoices
+                .filter { it.quality >= Voice.QUALITY_HIGH }
+                .maxByOrNull { it.quality }
+                ?: onDeviceVoices.maxByOrNull { it.quality }
+                ?: return null
+
+        TextToSpeechServiceCache.setVoice(voice, languageCode)
+        return voice
+    }
+
+    // MARK: - Capabilities
+
+    /**
+     * Returns a Boolean value that indicates whether text to speech
+     * is supported for the given language code.
+     *
+     * Support is determined by whether any installed voice matches
+     * the given code. Results are cached in memory per language
+     * code.
+     *
+     * **Note:** While the speech engine is still initializing, this
+     * method returns `false` without caching a result.
+     *
+     * @param languageCode The language code for which to check
+     *   support.
+     *
+     * @return `true` if text to speech is supported for the given
+     *   language code; otherwise, `false`.
+     */
+    fun isTextToSpeechSupported(languageCode: String): Boolean {
+        TextToSpeechServiceCache.supportValue(languageCode)?.let { return it }
+
+        val voices = loadedVoices(languageCode) ?: return false
+        val isTextToSpeechSupported = voices.isNotEmpty()
+
+        TextToSpeechServiceCache.setSupportValue(isTextToSpeechSupported, languageCode)
+        return isTextToSpeechSupported
+    }
+
+    // MARK: - Auxiliary
+
+    // The installed voices for the given language code, or null while
+    // the speech engine is initializing.
+    private fun loadedVoices(languageCode: String): List<Voice>? {
+        val engine = engine ?: return null
+        if (!isInitialized) return null
+
         val language = Locale.forLanguageTag(languageCode).language
         return runCatching {
             engine.voices
-                ?.filter { it.locale.language.equals(language, ignoreCase = true) && !it.isNetworkConnectionRequired }
-                ?.maxByOrNull { it.quality }
+                ?.filter { it.locale.language.equals(language, ignoreCase = true) }
+                .orEmpty()
         }.getOrNull()
     }
-
-    // MARK: - Audio Focus
 
     private fun endSpeaking() {
         speaking = false
@@ -205,4 +266,41 @@ object TextToSpeechService {
     // MARK: - Companion
 
     private const val UTTERANCE_ID = "us.neotechnica.panther.speak"
+}
+
+/**
+ * A namespace for managing the in-memory text-to-speech voice and
+ * language support caches.
+ */
+object TextToSpeechServiceCache {
+    // MARK: - Properties
+
+    private val cachedSupportValuesForLanguageCodes = LockIsolated(mapOf<String, Boolean>())
+    private val cachedVoicesForLanguageCodes = LockIsolated(mapOf<String, Voice>())
+
+    // MARK: - Methods
+
+    /** Removes every cached voice and language support value. */
+    fun clearCache() {
+        cachedSupportValuesForLanguageCodes.wrappedValue = emptyMap()
+        cachedVoicesForLanguageCodes.wrappedValue = emptyMap()
+    }
+
+    internal fun setSupportValue(
+        isSupported: Boolean,
+        languageCode: String,
+    ) {
+        cachedSupportValuesForLanguageCodes.withValue { it.value = it.value + (languageCode to isSupported) }
+    }
+
+    internal fun setVoice(
+        voice: Voice,
+        languageCode: String,
+    ) {
+        cachedVoicesForLanguageCodes.withValue { it.value = it.value + (languageCode to voice) }
+    }
+
+    internal fun supportValue(languageCode: String): Boolean? = cachedSupportValuesForLanguageCodes.wrappedValue[languageCode]
+
+    internal fun voice(languageCode: String): Voice? = cachedVoicesForLanguageCodes.wrappedValue[languageCode]
 }

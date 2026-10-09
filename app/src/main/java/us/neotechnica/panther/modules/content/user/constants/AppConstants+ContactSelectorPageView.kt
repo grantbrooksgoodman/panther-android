@@ -18,8 +18,6 @@ object ContactSelectorPageViewFloats {
     val emptyStateVerticalPadding: Dp = 24.dp
     val headerHorizontalPadding: Dp = 16.dp
     val headerVerticalPadding: Dp = 12.dp
-    val searchHorizontalPadding: Dp = 16.dp
-    val searchVerticalPadding: Dp = 4.dp
     val sectionHeaderHorizontalPadding: Dp = 20.dp
     val sectionHeaderVerticalPadding: Dp = 6.dp
     const val titleLongCharacterThreshold: Int = 20

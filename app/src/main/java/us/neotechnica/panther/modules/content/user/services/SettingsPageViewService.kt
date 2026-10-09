@@ -32,6 +32,7 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationA
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextFieldAttributes
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAlert
 import us.neotechnica.panther.designsystem.modules.developermode.services.DevModeService
+import us.neotechnica.panther.designsystem.modules.foundation.dependencies.reportDelegate
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.modules.common.extensions.ApplicationStorageKey
 import us.neotechnica.panther.modules.common.models.ContactPair
@@ -306,12 +307,12 @@ object SettingsPageViewService {
      */
     fun sendFeedbackButtonTapped() {
         scope.launch {
-            val reportBugAction = Action(SettingsStrings.REPORT_BUG) { AlertKitConfig.reportDelegate?.reportBug() }
+            val reportBugAction = Action(SettingsStrings.REPORT_BUG) { DependencyValues.current.reportDelegate.reportBug() }
             ActionSheet(
                 title = SettingsStrings.FILE_A_REPORT,
                 actions =
                     listOf(
-                        Action(LocalizedStringKey.SendFeedback.localized()) { AlertKitConfig.reportDelegate?.sendFeedback() },
+                        Action(LocalizedStringKey.SendFeedback.localized()) { DependencyValues.current.reportDelegate.sendFeedback() },
                         reportBugAction,
                     ),
                 cancelButtonTitle = LocalizedStringKey.Cancel.localized(),

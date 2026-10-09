@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.content.shared.components.regionmenu
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -36,9 +38,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
-import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.services.HapticsService
 import us.neotechnica.panther.modules.common.services.RegionDetailService
@@ -91,11 +95,19 @@ fun RegionMenu(
                 .heightIn(min = RegionMenuFloats.buttonMinHeight)
                 .padding(horizontal = RegionMenuFloats.buttonHorizontalPadding, vertical = RegionMenuFloats.buttonVerticalPadding),
     ) {
-        Components.Text(
-            RegionDetailService.emojiFlag(state.selectedRegionCode),
-            foregroundColor = colors.titleText,
-            font = Font.system(FontScale.Custom(RegionMenuFloats.FLAG_FONT_SIZE)),
-        )
+        RegionDetailService.image(RegionDetailService.QueryStrategy.RegionCode(state.selectedRegionCode))?.let {
+            Image(
+                painter = painterResource(it.resourceID),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier =
+                    Modifier
+                        .size(
+                            width = RegionMenuFloats.buttonLabelImageFrameWidth,
+                            height = RegionMenuFloats.buttonLabelImageFrameHeight,
+                        ).clip(RoundedCornerShape(RegionMenuFloats.buttonLabelImageCornerRadius)),
+            )
+        }
         Components.Text(
             "+${RegionDetailService.callingCode(state.selectedRegionCode) ?: RegionMenuStrings.DEFAULT_CALLING_CODE}",
             foregroundColor = colors.titleText,
@@ -165,6 +177,21 @@ private fun RegionPickerView(
                                 .clickable { onRegionTitleSelected(regionTitle) }
                                 .padding(vertical = RegionMenuFloats.listItemVerticalPadding),
                     ) {
+                        RegionDetailService.image(RegionDetailService.QueryStrategy.RegionTitle(regionTitle))?.let {
+                            Image(
+                                painter = painterResource(it.resourceID),
+                                contentDescription = null,
+                                contentScale = ContentScale.Fit,
+                                modifier =
+                                    Modifier
+                                        .padding(end = DEFAULT_STACK_SPACING.dp)
+                                        .size(
+                                            width = RegionMenuFloats.listViewCellLabelImageFrameWidth,
+                                            height = RegionMenuFloats.listViewCellLabelImageFrameHeight,
+                                        ).clip(RoundedCornerShape(RegionMenuFloats.listViewCellLabelImageCornerRadius)),
+                            )
+                        }
+
                         Components.Text(regionTitle, foregroundColor = colors.titleText)
                         if (regionTitle == state.selectedRegionTitle) {
                             Components.Symbol(
@@ -179,3 +206,6 @@ private fun RegionPickerView(
         }
     }
 }
+
+// The default spacing between the items of a horizontal stack.
+private const val DEFAULT_STACK_SPACING = 8

@@ -14,19 +14,24 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import us.neotechnica.panther.bundle.conversationCellViewData
+import us.neotechnica.panther.bundle.readReceipt
 import us.neotechnica.panther.bundle.sessionStoreDidChange
 import us.neotechnica.panther.bundle.uiCacheInvalidation
 import us.neotechnica.panther.modules.common.constants.NotificationExtensionConstants
 import us.neotechnica.panther.modules.content.user.extensions.UserDisplayNameCache
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewDataCache
-import us.neotechnica.panther.modules.networking.message.models.ReadReceiptCache
+import us.neotechnica.panther.modules.session.entity.extensions.users
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
 import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.models.CacheDomain
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
+import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
@@ -113,8 +118,12 @@ object UICacheInvalidationService {
     private fun handleMessagesChange() {
         Task.debounced("$SENDER/${TaskID.MESSAGE_INVALIDATION.rawValue}", INVALIDATION_DELAY) {
             Logger.log("Invalidating caches for message changes.", domain = LoggerDomain.uiCacheInvalidation)
-            ConversationCellViewDataCache.clearCache()
-            ReadReceiptCache.clearCache()
+            CoreUtilities.clearCaches(
+                listOf(
+                    CacheDomain.conversationCellViewData,
+                    CacheDomain.readReceipt,
+                ),
+            )
         }
     }
 
@@ -123,7 +132,7 @@ object UICacheInvalidationService {
         Task.debounced("$SENDER/${TaskID.USER_INVALIDATION.rawValue}", INVALIDATION_DELAY) {
             Logger.log("Invalidating caches for user changes.", domain = LoggerDomain.uiCacheInvalidation)
             val ids = pendingUserIDs.withValue { current -> current.value.also { current.value = emptySet() } }
-            ConversationCellViewDataCache.clearCache()
+            CoreUtilities.clearCaches(listOf(CacheDomain.conversationCellViewData))
             UserDisplayNameCache.removeValues(ids)
         }
     }
@@ -131,11 +140,14 @@ object UICacheInvalidationService {
     private fun persistValuesForNotificationExtension() {
         val json = JSONObject()
         SessionStore.conversations.values
-            .filter { it.participants.size > GROUP_PARTICIPANT_THRESHOLD }
-            .forEach { json.put(it.id.key, ConversationCellViewData.title(it)) }
+            .filter { it.participants.size > GROUP_PARTICIPANT_THRESHOLD && !it.users.isNullOrEmpty() }
+            .forEach { conversation ->
+                val titleLabelText = ConversationCellViewData.title(conversation)
+                if (!titleLabelText.isBangQualifiedEmpty) json.put(conversation.id.key, titleLabelText)
+            }
 
         Persistent.setString(
-            PersistentStorageKey(NotificationExtensionConstants.CONVERSATION_NAME_MAP_KEY),
+            PersistentStorageKey(NotificationExtensionConstants.CONVERSATION_NAME_MAP_DEFAULTS_KEY_NAME),
             json.toString(),
         )
     }

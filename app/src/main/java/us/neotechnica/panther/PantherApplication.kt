@@ -35,7 +35,9 @@ import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.modules.session.entity.extensions.calculateBadgeNumber
 import us.neotechnica.panther.modules.session.state.services.retryAllEligible
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
@@ -136,7 +138,16 @@ class PantherApplication : Application() {
 
         // Re-check for available updates when connectivity is restored.
         ConnectionStatusService.addEffectUponConnectionChanged(ConnectionStatusServiceEffectID.CHECK_FOR_UPDATES) {
-            if (ConnectionStatusService.isOnline) outboxScope.launch { runCatching { UpdateService.promptToUpdateIfNeeded() } }
+            if (ConnectionStatusService.isOnline) {
+                outboxScope.launch {
+                    runCatching { UpdateService.promptToUpdateIfNeeded() }.onFailure {
+                        Logger.log(
+                            it as? Exception ?: Exception.from(it, ExceptionMetadata(this@PantherApplication)),
+                            with = AlertType.toastInPrerelease,
+                        )
+                    }
+                }
+            }
         }
 
         if (!ConnectionStatusService.isOnline) showOfflineModeToast()

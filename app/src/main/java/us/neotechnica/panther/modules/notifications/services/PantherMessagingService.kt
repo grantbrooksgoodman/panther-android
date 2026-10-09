@@ -27,40 +27,54 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import us.neotechnica.panther.MainActivity
 import us.neotechnica.panther.R
-import us.neotechnica.panther.navigation.PendingChatNavigation
-import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
-import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
-import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.bundle.Application
+import us.neotechnica.panther.bundle.notifications
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
+import us.neotechnica.panther.modules.common.constants.NotificationExtensionConstants
 import us.neotechnica.panther.modules.common.services.HapticsService
 import us.neotechnica.panther.modules.common.services.PushTokenService
+import us.neotechnica.panther.modules.content.user.models.ChatPageStateServiceEffectID
+import us.neotechnica.panther.modules.content.user.services.ChatPageStateService
+import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.session.ClientSession
+import us.neotechnica.panther.modules.session.clientSession
+import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.modules.session.entity.extensions.isVisibleForCurrentUser
-import us.neotechnica.panther.modules.session.entity.services.UserSessionService
+import us.neotechnica.panther.navigation.PendingChatNavigation
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentNavigatorState
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
+import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
-import kotlin.time.Duration.Companion.seconds
-import us.neotechnica.panther.modules.common.constants.NotificationExtensionConstants
-import org.json.JSONObject
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
+import kotlin.time.Duration.Companion.seconds
 
 /**
- * Receives FCM messages and token updates.
+ * Receives push messages and push token updates.
  *
- * A new token is registered against the current user's record; an
- * incoming message shows a tap-to-open notification, suppressed while
- * its conversation is already on screen.
+ * A new token is registered against the current user's record. An
+ * incoming message received in the foreground is handled in-app –
+ * with haptic feedback or a tap-to-open toast – and one received in
+ * the background posts a tap-to-open system notification.
  */
 class PantherMessagingService : FirebaseMessagingService() {
+    // MARK: - Dependencies
+
+    private val clientSession: ClientSession by Dependency { it.clientSession }
+
+    // MARK: - Properties
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // MARK: - Token
@@ -70,133 +84,196 @@ class PantherMessagingService : FirebaseMessagingService() {
         if (User.currentUserID == null) return
         scope.launch {
             runCatching { PushTokenService.updatePushTokensForCurrentUser() }
-                .onFailure { Logger.log(Exception.from(it, exceptionMetadata())) }
+                .onFailure { Logger.log(Exception.from(it, ExceptionMetadata(this@PantherMessagingService))) }
         }
     }
 
     // MARK: - Message
 
     override fun onMessageReceived(message: RemoteMessage) {
-        val conversationIDKey = message.data[PendingChatNavigation.CONVERSATION_ID_KEY_EXTRA] ?: return
+        val conversationIDKey =
+            message.data[NotificationExtensionConstants.CONVERSATION_ID_KEY_USER_INFO_KEY] ?: return
 
         scope.launch(Dispatchers.Main) {
             val lifecycleState = ProcessLifecycleOwner.get().lifecycle.currentState
-            // In the foreground, respond in-app (toast + haptic) rather than
-            // posting a system notification.
-            if (lifecycleState.isAtLeast(Lifecycle.State.STARTED)) {
-                respondToInAppNotification(message, conversationIDKey)
-            } else {
-                showSystemNotification(message, conversationIDKey)
+            if (!lifecycleState.isAtLeast(Lifecycle.State.STARTED)) {
+                return@launch showSystemNotification(message, conversationIDKey)
+            }
+
+            try {
+                respondToInAppNotification(message)
+            } catch (exception: Exception) {
+                Logger.log(
+                    exception,
+                    domain = LoggerDomain.notifications,
+                )
             }
         }
     }
 
-    private fun showSystemNotification(
-        message: RemoteMessage,
-        conversationIDKey: String,
-    ) {
-        // Suppress while the conversation is already on screen.
-        if (ConversationSessionService.currentConversation?.id?.key == conversationIDKey) return
+    // MARK: - Respond to In-app Notification
 
+    private fun respondToInAppNotification(message: RemoteMessage) {
         val body = message.notification?.body ?: message.data[BODY_KEY].orEmpty()
+        Logger.log(
+            "Received notification.\n\"$body\"",
+            domain = LoggerDomain.notifications,
+        )
 
-        // Enrich the title with the sender's contact name, and a group conversation's name as
-        // the subtitle.
-        val title = enrichedTitle(message)
-        val subtitle =
-            SessionStore
-                .getConversation(conversationIDKey)
-                ?.metadata
-                ?.name
-                ?.takeUnless { it.isBangQualifiedEmpty || it.isBlank() }
-                ?: persistedConversationName(conversationIDKey)
+        val currentUser =
+            clientSession.entity.user.currentUser
+                ?: throw Exception(
+                    "No current user – will not respond to notification.",
+                    isReportable = false,
+                    metadata = ExceptionMetadata(this),
+                )
 
-        showNotification(this, conversationIDKey, title, body, subtitle)
-    }
+        val conversationIDKey = message.data[NotificationExtensionConstants.CONVERSATION_ID_KEY_USER_INFO_KEY]
+        val reactionMessageID = message.data[NotificationExtensionConstants.REACTION_MESSAGE_ID_USER_INFO_KEY]
+        val recipientUserID = message.data[RECIPIENT_USER_ID_USER_INFO_KEY]
+        if (conversationIDKey == null ||
+            reactionMessageID == null ||
+            recipientUserID == null
+        ) {
+            throw Exception(
+                "Failed to resolve required values.",
+                metadata = ExceptionMetadata(this),
+            )
+        }
 
-    /**
-     * Responds to a foreground message:
-     * verifies the message is for the current user and its conversation is
-     * visible, then either gives haptic feedback for a reaction to the
-     * on-screen conversation or shows a tap-to-navigate in-app toast.
-     */
-    private fun respondToInAppNotification(
-        message: RemoteMessage,
-        conversationIDKey: String,
-    ) {
-        val currentUser = UserSessionService.currentUser ?: return
-        val recipientUserID = message.data[RECIPIENT_USER_ID_KEY] ?: return
-        if (recipientUserID != currentUser.id) return
+        if (recipientUserID != currentUser.id) {
+            throw Exception(
+                "Notification not intended for current user – ignoring.",
+                isReportable = false,
+                metadata = ExceptionMetadata(this),
+            )
+        }
 
-        val conversation = SessionStore.getConversation(conversationIDKey) ?: return
-        if (!conversation.isVisibleForCurrentUser) return
+        val conversation = clientSession.store.getConversation(conversationIDKey)
+        if (conversation == null || !conversation.isVisibleForCurrentUser) {
+            throw Exception(
+                "Conversation associated with this notification is not visible to the current user.",
+                isReportable = false,
+                metadata = ExceptionMetadata(this),
+            )
+        }
 
-        val reactionMessageID = message.data[REACTION_MESSAGE_ID_KEY]
-        val isReaction = reactionMessageID != null && reactionMessageID != NO_REACTION && reactionMessageID.isNotBlank()
+        val currentConversationIDKey =
+            clientSession
+                .entity
+                .conversation
+                .currentConversation
+                ?.id
+                ?.key
 
-        // Already viewing this conversation: a reaction gives haptic feedback; nothing otherwise.
-        if (ConversationSessionService.currentConversation?.id?.key == conversationIDKey) {
-            if (isReaction) HapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
-            return
+        if (ChatPageStateService.isPresented &&
+            currentConversationIDKey == conversationIDKey
+        ) {
+            if (reactionMessageID.isBangQualifiedEmpty) return
+            return HapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
         }
 
         val title = enrichedTitle(message)
-        val body = message.notification?.body ?: message.data[BODY_KEY].orEmpty()
-        val focusedMessageID = if (isReaction) reactionMessageID else null
-
-        Toast.show(
+        val focusedMessageID = if (reactionMessageID.isBangQualifiedEmpty) null else reactionMessageID
+        val toast =
             Toast(
                 Toast.ToastType.Capsule(),
                 title = title.ifBlank { null },
                 message = body,
                 perpetuation = Toast.PerpetuationStrategy.Ephemeral(IN_APP_TOAST_SECONDS.seconds),
-            ),
-            onTap = {
-                DependencyValues.current.navigation.navigate(
-                    Route.UserContent(
-                        UserContentRoute.Push(UserContentNavigatorState.SeguePath.Chat(conversationIDKey, focusedMessageID)),
+            )
+
+        Toast.show(toast) {
+            val navigation = DependencyValues.current.navigation
+            val chatRoute =
+                Route.UserContent(
+                    UserContentRoute.Push(
+                        UserContentNavigatorState.SeguePath.Chat(
+                            conversationIDKey,
+                            focusedMessageID = focusedMessageID,
+                        ),
                     ),
                 )
-            },
+
+            if (!ChatPageStateService.isPresented) return@show navigation.navigate(chatRoute)
+
+            navigation.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
+            ChatPageStateService.addEffectUponIsPresented(
+                state = false,
+                id = ChatPageStateServiceEffectID.deeplinkToOtherChat,
+            ) {
+                Application.dismissSheets()
+                navigation.navigate(chatRoute)
+            }
+        }
+    }
+
+    // MARK: - Auxiliary
+
+    private fun showSystemNotification(
+        message: RemoteMessage,
+        conversationIDKey: String,
+    ) {
+        val body = message.notification?.body ?: message.data[BODY_KEY].orEmpty()
+        val subtitle =
+            clientSession
+                .store
+                .getConversation(conversationIDKey)
+                ?.metadata
+                ?.name
+                ?.takeUnless { it.isBangQualifiedEmpty }
+                ?: persistedConversationName(conversationIDKey)
+
+        showNotification(
+            this,
+            conversationIDKey = conversationIDKey,
+            title = enrichedTitle(message),
+            body = body,
+            subtitle = subtitle,
         )
     }
 
     /**
-     * The notification title enriched with the sender's contact name: the
-     * contact's full name, or "<full name> <reactionSuffix>" for a
-     * reaction, falling back to the payload title when the sender is not a
-     * known contact.
+     * The notification title enriched with the sender's contact name.
+     *
+     * A message's title becomes the contact's full name; a reaction's
+     * becomes "<full name> <reactionSuffix>", or keeps the payload
+     * title when the suffix is empty. The payload title is used when
+     * the sender is not a known contact.
      */
     private fun enrichedTitle(message: RemoteMessage): String {
-        val fallback = message.notification?.title ?: message.data[TITLE_KEY] ?: getString(R.string.app_name)
-        val userNumberHash = message.data[USER_NUMBER_HASH_KEY] ?: return fallback
-        val fullName = contactNameForNumberHash(userNumberHash) ?: return fallback
+        val payloadTitle = message.notification?.title ?: message.data[TITLE_KEY] ?: getString(R.string.app_name)
+        val userNumberHash =
+            message.data[NotificationExtensionConstants.USER_NUMBER_HASH_USER_INFO_KEY] ?: return payloadTitle
+        val fullName = contactNameForNumberHash(userNumberHash) ?: return payloadTitle
 
-        val reactionMessageID = message.data[REACTION_MESSAGE_ID_KEY]
-        val reactionSuffix = message.data[REACTION_SUFFIX_KEY].orEmpty()
-        return if (reactionMessageID != null && reactionMessageID != NO_REACTION && reactionSuffix.isNotEmpty()) {
-            "$fullName $reactionSuffix"
-        } else {
-            fullName
-        }
+        val reactionMessageID = message.data[NotificationExtensionConstants.REACTION_MESSAGE_ID_USER_INFO_KEY]
+        if (reactionMessageID == null || reactionMessageID == BANG_QUALIFIED_EMPTY) return fullName
+
+        val reactionSuffix = message.data[NotificationExtensionConstants.REACTION_SUFFIX_USER_INFO_KEY].orEmpty()
+        return if (reactionSuffix.isEmpty()) payloadTitle else "$fullName $reactionSuffix"
     }
 
-    /**
-     * The contact name persisted for the given number hash, used to
-     * resolve a notification's sender before the session store loads.
-     */
     private fun contactNameForNumberHash(userNumberHash: String): String? {
-        val nameMap = Persistent.string(PersistentStorageKey(NotificationExtensionConstants.CONTACT_NAME_MAP_KEY)) ?: return null
-        return runCatching { JSONObject(nameMap).optString(userNumberHash) }.getOrNull()?.takeUnless { it.isBlank() }
+        val nameMap =
+            Persistent.string(
+                PersistentStorageKey(NotificationExtensionConstants.CONTACT_ARCHIVE_DEFAULTS_KEY_NAME),
+            ) ?: return null
+
+        return runCatching { JSONObject(nameMap).optString(userNumberHash) }
+            .getOrNull()
+            ?.takeUnless { it.isBlank() }
     }
 
-    /**
-     * The persisted group conversation name for cold-start subtitle
-     * resolution, when the session store has not yet loaded.
-     */
     private fun persistedConversationName(conversationIDKey: String): String? {
-        val nameMap = Persistent.string(PersistentStorageKey(NotificationExtensionConstants.CONVERSATION_NAME_MAP_KEY)) ?: return null
-        return runCatching { JSONObject(nameMap).optString(conversationIDKey) }.getOrNull()?.takeUnless { it.isBlank() }
+        val nameMap =
+            Persistent.string(
+                PersistentStorageKey(NotificationExtensionConstants.CONVERSATION_NAME_MAP_DEFAULTS_KEY_NAME),
+            ) ?: return null
+
+        return runCatching { JSONObject(nameMap).optString(conversationIDKey) }
+            .getOrNull()
+            ?.takeUnless { it.isBlank() }
     }
 
     // MARK: - Companion
@@ -249,7 +326,7 @@ class PantherMessagingService : FirebaseMessagingService() {
             val builder =
                 NotificationCompat
                     .Builder(context, MESSAGES_CHANNEL_ID)
-                    .setSmallIcon(android.R.drawable.sym_action_email)
+                    .setSmallIcon(R.drawable.ic_stat_notification)
                     .setContentTitle(title)
                     .setContentText(body)
                     .setAutoCancel(true)
@@ -264,32 +341,11 @@ class PantherMessagingService : FirebaseMessagingService() {
                 .notify(conversationIDKey.hashCode(), builder.build())
         }
 
-        // MARK: - Data Keys
+        // MARK: - Constants
 
-        /** The push payload's message-title field. */
-        private const val TITLE_KEY = "title"
-
-        /** The push payload's message-body field. */
         private const val BODY_KEY = "body"
-
-        /** The push payload's sender-number-hash field. */
-        private const val USER_NUMBER_HASH_KEY = "userNumberHash"
-
-        /** The push payload's reaction-message-identifier field. */
-        private const val RECIPIENT_USER_ID_KEY = "recipientUserID"
         private const val IN_APP_TOAST_SECONDS = 5L
-        private const val REACTION_MESSAGE_ID_KEY = "reactionMessageID"
-
-        /** The push payload's reaction-suffix field. */
-        private const val REACTION_SUFFIX_KEY = "reactionSuffix"
-
-        /** The sentinel `reactionMessageID` for a non-reaction message. */
-        private const val NO_REACTION = "!"
+        private const val RECIPIENT_USER_ID_USER_INFO_KEY = "recipientUserID"
+        private const val TITLE_KEY = "title"
     }
-
-    // MARK: - Auxiliary
-
-    private fun exceptionMetadata() =
-        us.neotechnica.panther.subsystem.modules.foundation.models
-            .ExceptionMetadata(this)
 }

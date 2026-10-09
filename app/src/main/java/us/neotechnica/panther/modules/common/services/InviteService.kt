@@ -2,8 +2,8 @@
 //  InviteService.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman on 06/10/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.common.services
@@ -16,6 +16,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.Application
 import us.neotechnica.panther.bundle.inviteLanguagePicker
+import us.neotechnica.panther.bundle.reviewService
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
@@ -25,6 +26,7 @@ import us.neotechnica.panther.designsystem.modules.foundation.extensions.cancelA
 import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheet
 import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheets
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
+import us.neotechnica.panther.modules.common.extensions.ReviewServiceStorageKey
 import us.neotechnica.panther.modules.common.services.AnalyticsService.AnalyticsEvent
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
 import us.neotechnica.panther.modules.content.user.extensions.hasContactsBesidesCurrentUser
@@ -34,8 +36,10 @@ import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import us.neotechnica.panther.translator.models.LanguagePair
@@ -62,10 +66,12 @@ object InviteService {
 
     // MARK: - Computed Properties
 
+    private val appOpenCount: Int?
+        get() = Persistent.int(PersistentStorageKey.reviewService(ReviewServiceStorageKey.APP_OPEN_COUNT))
+
     private val canSuggestInvitation: Boolean
         get() {
-            val appOpenCount = ReviewService.appOpenCount
-            val sufficientAppOpenCount = appOpenCount == 0 || appOpenCount == 1 || appOpenCount % 2 == 0
+            val sufficientAppOpenCount = (appOpenCount ?: 0) == 0 || appOpenCount == 1 || (appOpenCount ?: 0) % 2 == 0
             val currentUser = UserSessionService.currentUser
 
             if (PermissionService.contactPermissionStatus != PermissionService.PermissionStatus.GRANTED) return false

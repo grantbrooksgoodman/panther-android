@@ -3,4 +3,7 @@
     <files-path
         name="media"
         path="media/" />
+    <cache-path
+        name="reports"
+        path="reports/" />
 </paths>

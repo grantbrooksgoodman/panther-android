@@ -25,13 +25,11 @@ import us.neotechnica.panther.translator.Translator
 object ReviewService {
     // MARK: - Computed Properties
 
-    /** The persisted count of app launches. */
-    val appOpenCount: Int
-        get() = Persistent.int(scopedKey(ReviewServiceStorageKey.APP_OPEN_COUNT)) ?: 0
+    private val appOpenCount: Int?
+        get() = Persistent.int(scopedKey(ReviewServiceStorageKey.APP_OPEN_COUNT))
 
     private val canPromptToReview: Boolean
         get() {
-            val appOpenCount = Persistent.int(scopedKey(ReviewServiceStorageKey.APP_OPEN_COUNT))
             if (lastRequestedReviewForBuildNumber == Build.buildNumber) return false
             return appOpenCount == REVIEW_PROMPT_FIRST_THRESHOLD ||
                 appOpenCount == REVIEW_PROMPT_SECOND_THRESHOLD ||
@@ -59,7 +57,7 @@ object ReviewService {
     fun incrementAppOpenCount() {
         Persistent.setInt(
             scopedKey(ReviewServiceStorageKey.APP_OPEN_COUNT),
-            (Persistent.int(scopedKey(ReviewServiceStorageKey.APP_OPEN_COUNT)) ?: 0) + 1,
+            (appOpenCount ?: 0) + 1,
         )
     }
 
@@ -91,8 +89,7 @@ object ReviewService {
 
     // MARK: - Auxiliary
 
-    private fun scopedKey(key: ReviewServiceStorageKey): PersistentStorageKey =
-        PersistentStorageKey.reviewService(key)
+    private fun scopedKey(key: ReviewServiceStorageKey): PersistentStorageKey = PersistentStorageKey.reviewService(key)
 }
 
 private const val REVIEW_PROMPT_FIRST_THRESHOLD = 10

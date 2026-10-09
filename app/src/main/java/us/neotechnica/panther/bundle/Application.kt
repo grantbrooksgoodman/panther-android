@@ -14,8 +14,10 @@ import us.neotechnica.panther.bundle.developermode.AppDevModeActions
 import us.neotechnica.panther.designsystem.modules.alertkit.dependencies.alertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.HUDConfig
 import us.neotechnica.panther.designsystem.modules.developermode.services.DevModeService
+import us.neotechnica.panther.designsystem.modules.foundation.extensions.registerBuildInfoOverlayDotIndicatorColorDelegate
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheets
+import us.neotechnica.panther.designsystem.modules.foundation.services.ReportDelegate
 import us.neotechnica.panther.designsystem.modules.foundation.services.SoundPlayer
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.ApplicationStorageKey
@@ -27,7 +29,9 @@ import us.neotechnica.panther.modules.common.services.ExceptionMetadataService
 import us.neotechnica.panther.modules.common.services.InviteService
 import us.neotechnica.panther.modules.common.services.LoggerPresentationService
 import us.neotechnica.panther.modules.common.services.NetworkActivityIndicatorService
+import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.common.services.TextToSpeechService
+import us.neotechnica.panther.modules.common.services.UpdateService
 import us.neotechnica.panther.modules.content.user.services.AudioMessagePlaybackService
 import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
 import us.neotechnica.panther.modules.content.user.services.SettingsPageViewService
@@ -47,6 +51,7 @@ import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkEnvironment
+import us.neotechnica.panther.networking.modules.common.services.BuildInfoOverlayDotIndicatorColorDelegate
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealthConfiguration
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealthProbeConfiguration
 import us.neotechnica.panther.subsystem.AppSubsystem
@@ -54,13 +59,16 @@ import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.Dep
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.models.StoredItemKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
+import us.neotechnica.panther.subsystem.modules.foundation.services.BuildInfoOverlay
 import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
+import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import us.neotechnica.panther.subsystem.modules.localization.services.LocalizedStringResolver
 import java.util.Date
+import java.util.Locale
 import java.util.Properties
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -104,6 +112,15 @@ object Application {
 
     private var appContext: Context? = null
 
+    // The two-letter language code of the device, falling back to
+    // "en" when unavailable.
+    private val systemLanguageCode: String
+        get() {
+            val languageCode = Locale.getDefault().language
+            if (languageCode.length < 2) return "en"
+            return languageCode.take(2)
+        }
+
     // MARK: - Initialization
 
     /**
@@ -124,6 +141,7 @@ object Application {
         initializeServices(context)
         registerDelegates()
         configureBuild(context)
+        setUpSubsystem()
 
         Logger.log("Application launched.")
 
@@ -235,6 +253,7 @@ object Application {
         FileStore.initialize(context)
         SoundPlayer.initialize(context)
         CommonPropertyLists.initialize(context)
+        RegionDetailService.initialize(context)
         ContactService.initialize(context)
         DeviceID.initialize(context)
         InviteService.initialize(context)
@@ -246,13 +265,16 @@ object Application {
 
     private fun registerDelegates() {
         Logger.setPresentationDelegate(LoggerPresentationService)
+        AppSubsystem.delegates.registerBuildInfoOverlayDotIndicatorColorDelegate(BuildInfoOverlayDotIndicatorColorDelegate)
         AppSubsystem.delegates.registerCacheDomainListDelegate(CacheDomainList)
         AppSubsystem.delegates.registerExceptionMetadataDelegate(ExceptionMetadataService)
+        AppSubsystem.delegates.registerForcedUpdateModalDelegate(UpdateService)
         AppSubsystem.delegates.registerLoggerDomainSubscriptionDelegate(LoggerDomainSubscription)
         AppSubsystem.delegates.registerPermanentPersistentStorageKeyDelegate(PermanentKeyDelegate)
         AppSubsystem.delegates.registerErrorReportDelegate(ErrorReportingService)
         DevModeService.registerAppActionDelegate(AppDevModeActions)
         LocalTranslationArchiverDelegate.registerWithDependencies()
+        ReportDelegate.registerWithDependencies()
 
         DependencyValues.current.alertKitConfig.overrideTranslationHUDConfig(
             HUDConfig(appearsAfter = 500.milliseconds, isModal = true),
@@ -274,6 +296,21 @@ object Application {
             buildDate = Date(buildDate * MILLIS_PER_SECOND),
             firstCompileDate = Date(firstCompileDate * MILLIS_PER_SECOND),
         )
+    }
+
+    private fun setUpSubsystem() {
+        CoreUtilities.setLanguageCode(systemLanguageCode)
+
+        Task.delayed(by = BUILD_INFO_OVERLAY_SETUP_DELAY_MILLISECONDS.milliseconds) {
+            val hidesBuildInfoOverlay = Persistent.booleanOrNull(PersistentStorageKey.hidesBuildInfoOverlay)
+            if (hidesBuildInfoOverlay != null && Build.isDeveloperModeEnabled) {
+                if (hidesBuildInfoOverlay) BuildInfoOverlay.hide() else BuildInfoOverlay.show()
+            } else if (Build.milestone == Build.Milestone.GENERAL_RELEASE) {
+                BuildInfoOverlay.hide()
+            } else {
+                BuildInfoOverlay.show()
+            }
+        }
     }
 
     private fun resolveBuildMilestone(): Build.Milestone {
@@ -337,6 +374,7 @@ object Application {
     // MARK: - Constants
 
     private const val BUILD_INFO_ASSET = "build_info.properties"
+    private const val BUILD_INFO_OVERLAY_SETUP_DELAY_MILLISECONDS = 50L
     private const val CODE_NAME = "Panther"
     private const val FINAL_NAME = "Hello"
     private const val APP_STORE_BUILD_NUMBER = 0

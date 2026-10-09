@@ -2,8 +2,8 @@
 //  SearchBar.kt
 //  Panther Android
 //
-//  Created by Grant Brooks Goodman on 06/10/2026.
-//  Copyright © 2013-2026 NEOTechnica Corporation. All rights reserved.
+//  Created by Grant Brooks Goodman.
+//  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
 package us.neotechnica.panther.modules.content.shared.components
@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -54,6 +55,8 @@ private typealias Strings = SearchBarStrings
  * @param query The current query text.
  * @param onQueryChange Invoked as the query changes.
  * @param modifier The modifier for this bar (for outer positioning).
+ * @param backgroundColor The colour behind the field, spanning the
+ *   bar's full width. Defaults to the navigation bar background.
  * @param bottomPadding The padding below the field.
  * @param keyboardType The soft-keyboard type for the input field, or
  *   `null` for the system default.
@@ -68,6 +71,7 @@ fun SearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
+    backgroundColor: Color = LocalPantherColors.current.navigationBarBackground,
     bottomPadding: Float = Floats.DEFAULT_BOTTOM_PADDING,
     keyboardType: KeyboardType? = null,
     placeholderText: String = LocalizedStringKey.Search.localized(),
@@ -78,8 +82,12 @@ fun SearchBar(
         modifier =
             modifier
                 .fillMaxWidth()
-                .background(colors.navigationBarBackground)
-                .padding(bottom = bottomPadding.dp),
+                .background(backgroundColor)
+                .padding(
+                    start = Floats.DEFAULT_HORIZONTAL_PADDING.dp,
+                    end = Floats.DEFAULT_HORIZONTAL_PADDING.dp,
+                    bottom = bottomPadding.dp,
+                ),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

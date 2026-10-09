@@ -16,24 +16,20 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import us.neotechnica.panther.bundle.developermode.ShakeDetector
 import us.neotechnica.panther.bundle.openConversationIDKey
 import us.neotechnica.panther.designsystem.modules.alertkit.views.AlertHost
 import us.neotechnica.panther.designsystem.modules.developermode.services.DevModeService
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUDHost
-import us.neotechnica.panther.designsystem.modules.foundation.overlay.BuildInfoOverlayView
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.OverlayHost
 import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheetHost
 import us.neotechnica.panther.designsystem.modules.foundation.toast.ToastHost
+import us.neotechnica.panther.designsystem.modules.foundation.views.root.RootOverlayView
+import us.neotechnica.panther.designsystem.modules.foundation.views.root.RootWindow
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.designsystem.modules.theming.views.PantherTheme
 import us.neotechnica.panther.modules.common.services.AnalyticsService
-import us.neotechnica.panther.modules.content.shared.views.ForcedUpdateView
 import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
 import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.navigation.PendingChatNavigation
@@ -68,20 +64,13 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxSize()
                                 .background(LocalPantherColors.current.background),
                     ) {
-                        RootView()
+                        RootWindow { RootView() }
                         RootSheetHost()
                         AlertHost()
                         ToastHost()
                         OverlayHost()
                         HUDHost()
-                        BuildInfoOverlayView(
-                            modifier =
-                                Modifier
-                                    .zIndex(1f)
-                                    .align(Alignment.BottomEnd)
-                                    .padding(end = 20.dp, bottom = 32.dp),
-                        )
-                        ForcedUpdateView()
+                        RootOverlayView()
                         ShakeDetector { if (Build.isDeveloperModeEnabled) DevModeService.presentActionSheet() }
                     }
                 }

@@ -8,23 +8,31 @@
 
 package us.neotechnica.panther.modules.content.user.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.common.services.RegionDetailService
+import us.neotechnica.panther.modules.common.models.FlagImage
 import us.neotechnica.panther.modules.content.user.constants.UserInfoBadgeViewColors
 import us.neotechnica.panther.modules.content.user.constants.UserInfoBadgeViewFloats
 import us.neotechnica.panther.modules.networking.user.models.User
@@ -49,8 +57,11 @@ fun UserInfoBadgeView(
     val isDark = ThemeService.isDarkModeActive(isSystemInDarkTheme())
     val bodyColor = if (isDark) UserInfoBadgeViewColors.bodyDarkForeground else UserInfoBadgeViewColors.bodyLightForeground
 
-    val flag = RegionDetailService.emojiFlag(user.phoneNumber.regionCode)
-    val labelText = user.languageCode.uppercase() + if (flag.isNotBlank()) " $flag" else ""
+    val context = LocalContext.current
+    val flagImage =
+        remember(user.phoneNumber.regionCode, user.languageCode) {
+            FlagImage.named(user.phoneNumber.regionCode, context) ?: FlagImage.named(user.languageCode, context)
+        }
 
     Box(
         contentAlignment = Alignment.Center,
@@ -65,6 +76,29 @@ fun UserInfoBadgeView(
                     vertical = UserInfoBadgeViewFloats.labelViewVerticalPadding,
                 ),
     ) {
-        Components.Text(labelText, foregroundColor = colors.subtitleText, font = Font.systemSemibold(FontScale.Small))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(UserInfoBadgeViewFloats.labelViewHStackSpacing),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Components.Text(
+                user.languageCode.uppercase(),
+                foregroundColor = colors.subtitleText,
+                font = Font.systemSemibold(FontScale.Small),
+            )
+
+            flagImage?.let {
+                Image(
+                    painter = painterResource(it.resourceID),
+                    contentDescription = null,
+                    contentScale = ContentScale.FillBounds,
+                    modifier =
+                        Modifier
+                            .size(
+                                width = UserInfoBadgeViewFloats.labelViewImageFrameWidth,
+                                height = UserInfoBadgeViewFloats.labelViewImageFrameHeight,
+                            ).clip(RoundedCornerShape(UserInfoBadgeViewFloats.labelViewImageCornerRadius)),
+                )
+            }
+        }
     }
 }

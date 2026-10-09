@@ -12,8 +12,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import us.neotechnica.panther.designsystem.modules.foundation.extensions.presentedViewsCount
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.interfaces.DependencyKey
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.shared.models.SharedState
 
 /**
  * The app's navigation coordinator.
@@ -42,8 +44,25 @@ class Navigation {
      */
     fun navigate(route: Route) {
         mutableState.update { RootNavigationService.reduce(route, it) }
+        SharedState { it.presentedViewsCount }.wrappedValue = mutableState.value.presentedViewsCount
     }
 }
+
+// MARK: - Auxiliary
+
+// The modal, the active modal's stack, and every presented sheet.
+private val RootNavigatorState.presentedViewsCount: Int
+    get() {
+        val modalPath = modal ?: return 0
+        val stackDepth =
+            when (modalPath) {
+                RootNavigatorState.ModalPath.Onboarding -> onboarding.stack.size
+                RootNavigatorState.ModalPath.Splash -> 0
+                RootNavigatorState.ModalPath.UserContent -> userContent.stack.size
+            }
+
+        return 1 + stackDepth + listOfNotNull(sheet, chat.sheet, settings.sheet).size
+    }
 
 private object NavigationDependency : DependencyKey<Navigation> {
     override fun resolve(dependencies: DependencyValues): Navigation = Navigation()

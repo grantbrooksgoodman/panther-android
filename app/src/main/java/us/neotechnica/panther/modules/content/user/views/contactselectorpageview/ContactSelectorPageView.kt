@@ -88,7 +88,6 @@ fun ContactSelectorPageView(
             SearchBar(
                 query = state.searchQuery,
                 onQueryChange = { viewModel.send(ContactSelectorPageReducer.Action.SearchQueryChanged(it)) },
-                modifier = Modifier.padding(horizontal = Floats.searchHorizontalPadding, vertical = Floats.searchVerticalPadding),
                 placeholderText = state.searchBarPlaceholderText,
                 keyboardType =
                     if (entryPoint == ContactSelectorPageReducer.EntryPoint.CHAT_INFO_PAGE_VIEW) {
@@ -137,10 +136,13 @@ private fun Header(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
-            Modifier.fillMaxWidth().padding(
-                horizontal = Floats.headerHorizontalPadding,
-                vertical = Floats.headerVerticalPadding,
-            ),
+            Modifier
+                .fillMaxWidth()
+                .background(colors.navigationBarBackground)
+                .padding(
+                    horizontal = Floats.headerHorizontalPadding,
+                    vertical = Floats.headerVerticalPadding,
+                ),
     ) {
         Box(modifier = Modifier.weight(1f)) {
             if (showInvite) {

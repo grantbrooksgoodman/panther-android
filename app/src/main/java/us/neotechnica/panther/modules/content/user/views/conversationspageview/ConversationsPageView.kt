@@ -114,7 +114,7 @@ fun ConversationsPageView(
                         viewModel.send(ConversationsPageReducer.Action.SearchQueryChanged(it))
                         viewModel.send(ConversationsPageReducer.Action.IsSearchingChanged(it.isNotBlank()))
                     },
-                    modifier = Modifier.padding(horizontal = Floats.searchHorizontalPadding),
+                    backgroundColor = colors.background,
                     placeholderText = state.strings.value(ConversationsPageViewStrings.searchBarPlaceholder),
                 )
 

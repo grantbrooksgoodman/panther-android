@@ -10,35 +10,78 @@ package us.neotechnica.panther.modules.common.services
 
 import android.content.Context
 import org.json.JSONObject
+import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 
 /**
- * Loads the bundled calling-code and number-length lookup tables.
+ * Reads phone number reference data bundled with the app.
  *
- * [initialize] must be called once with the application context before
- * the tables are read. Parsed tables are cached in memory.
+ * Loaded values are cached in memory. Call [initialize] once with
+ * the application context before the values are read.
  */
 object CommonPropertyLists {
     // MARK: - Properties
 
+    private val cachedCallingCodes = LockIsolated<Map<String, String>?>(null)
+    private val cachedLookupTables = LockIsolated<Map<String, List<String>>?>(null)
+
     @Volatile
     private var appContext: Context? = null
 
-    private val cachedCallingCodes: Map<String, String> by lazy { loadCallingCodes() }
-    private val cachedLookupTables: Map<String, List<String>> by lazy { loadLookupTables() }
-
     // MARK: - Computed Properties
 
-    /** A map of region code to calling code, e.g. `"US" -> "1"`. */
-    val callingCodes: Map<String, String> get() = cachedCallingCodes
+    /**
+     * A dictionary that maps region codes to their international
+     * calling codes.
+     *
+     * The dictionary is loaded from the bundled calling-code
+     * resource and cached in memory. If the resource cannot be
+     * loaded, this property is an empty dictionary.
+     */
+    val callingCodes: Map<String, String>
+        get() {
+            cachedCallingCodes.wrappedValue?.takeIf { it.isNotEmpty() }?.let { return it }
+            val dictionary = runCatching { loadCallingCodes() }.getOrNull()?.takeIf { it.isNotEmpty() } ?: return emptyMap()
+            cachedCallingCodes.wrappedValue = dictionary
+            return dictionary
+        }
 
-    /** A map of national-number length to the calling codes of that length. */
-    val lookupTables: Map<String, List<String>> get() = cachedLookupTables
+    /**
+     * A dictionary that maps national phone number lengths, as
+     * strings, to the calling codes whose numbers have that length.
+     *
+     * The dictionary is loaded from the bundled lookup-table
+     * resource and cached in memory. If the resource cannot be
+     * loaded, this property is an empty dictionary.
+     */
+    val lookupTables: Map<String, List<String>>
+        get() {
+            cachedLookupTables.wrappedValue?.takeIf { it.isNotEmpty() }?.let { return it }
+            val dictionary = runCatching { loadLookupTables() }.getOrNull()?.takeIf { it.isNotEmpty() } ?: return emptyMap()
+            cachedLookupTables.wrappedValue = dictionary
+            return dictionary
+        }
 
     // MARK: - Initialization
 
     /** Prepares the property lists for use. */
     fun initialize(context: Context) {
         appContext = context.applicationContext
+    }
+
+    internal fun initializeForTesting(
+        callingCodes: Map<String, String>,
+        lookupTables: Map<String, List<String>>,
+    ) {
+        cachedCallingCodes.wrappedValue = callingCodes
+        cachedLookupTables.wrappedValue = lookupTables
+    }
+
+    // MARK: - Clear Cache
+
+    /** Removes every cached property list value. */
+    fun clearCache() {
+        cachedCallingCodes.wrappedValue = null
+        cachedLookupTables.wrappedValue = null
     }
 
     // MARK: - Auxiliary
