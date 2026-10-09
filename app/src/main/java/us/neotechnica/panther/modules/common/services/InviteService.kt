@@ -30,7 +30,6 @@ import us.neotechnica.panther.modules.common.extensions.ReviewServiceStorageKey
 import us.neotechnica.panther.modules.common.services.AnalyticsService.AnalyticsEvent
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
 import us.neotechnica.panther.modules.content.user.extensions.hasContactsBesidesCurrentUser
-import us.neotechnica.panther.modules.session.entity.extensions.conversations
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType

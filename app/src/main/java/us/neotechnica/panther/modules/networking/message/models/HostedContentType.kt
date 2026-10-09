@@ -10,6 +10,7 @@ package us.neotechnica.panther.modules.networking.message.models
 
 import us.neotechnica.panther.modules.common.models.AudioFileExtension
 import us.neotechnica.panther.modules.common.models.MediaFileExtension
+import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 
 /**
  * The kind of content a message carries.
@@ -112,8 +113,8 @@ sealed interface HostedContentType {
                     val id = components[1]
                     val fileExtensionString = components[2]
                     val fileExtension = MediaFileExtension.from(fileExtensionString)
-                    if (id.isBlank() ||
-                        fileExtensionString.isBlank() ||
+                    if (id.isBangQualifiedEmpty ||
+                        fileExtensionString.isBangQualifiedEmpty ||
                         fileExtension == null ||
                         fileExtension.isAudio ||
                         components[0] != fileExtension.contentTypeString

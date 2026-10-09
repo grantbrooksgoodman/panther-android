@@ -8,16 +8,21 @@
 
 package us.neotechnica.panther.modules.networking.message.services
 
+import us.neotechnica.panther.bundle.audioMessageInputs
+import us.neotechnica.panther.modules.common.models.AudioFileExtension
 import us.neotechnica.panther.modules.networking.message.models.AudioFile
 import us.neotechnica.panther.modules.networking.message.models.AudioMessageReference
 import us.neotechnica.panther.modules.networking.message.models.LocalAudioFilePath
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.extensions.Networking
+import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.translator.models.Translation
 
 /**
- * The service that downloads audio message content for playback.
+ * The service that downloads and deletes audio message content.
  */
 object AudioMessageService {
     // MARK: - Get Audio Component
@@ -44,6 +49,34 @@ object AudioMessageService {
     ): AudioMessageReference =
         cachedAudioMessageReference(localAudioFilePath, translation)
             ?: downloadAudioMessageReference(messageID, isFromCurrentUser, localAudioFilePath, translation)
+
+    // MARK: - Delete Input Audio Component
+
+    /**
+     * Deletes the input recording for the given message from remote
+     * storage.
+     *
+     * A missing recording is not treated as an error.
+     *
+     * @param messageID The identifier of the message.
+     *
+     * @throws Exception if deletion fails.
+     */
+    suspend fun deleteInputAudioComponent(messageID: String) {
+        val storage = Networking.config.storageDelegate
+
+        try {
+            storage.deleteItem(
+                listOf(
+                    NetworkPath.audioMessageInputs.rawValue,
+                    "$messageID.${AudioFileExtension.M4A.rawValue}",
+                ).joinToString("/"),
+            )
+        } catch (exception: Exception) {
+            if (exception.isEqual(to = AppException.Networking.Storage.storageItemDoesNotExist)) return
+            throw exception
+        }
+    }
 
     // MARK: - Auxiliary
 

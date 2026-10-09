@@ -22,7 +22,6 @@ import us.neotechnica.panther.modules.common.constants.NotificationExtensionCons
 import us.neotechnica.panther.modules.content.user.extensions.UserDisplayNameCache
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewDataCache
-import us.neotechnica.panther.modules.session.entity.extensions.users
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty

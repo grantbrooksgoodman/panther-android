@@ -1,0 +1,47 @@
+{
+  "left" : {
+    "imageData" : "!",
+    "isPenPalsConversation" : false,
+    "lastModified" : "2025-08-19 22:30:00 GMT",
+    "messageRecipientConsentAcknowledgementData" : [
+      "androidFixtureUser0001: !",
+      "androidFixtureUser0002: false"
+    ],
+    "name" : "Fixture Group",
+    "penPalsSharingData" : [
+      "androidFixtureUser0001: !",
+      "androidFixtureUser0002: !"
+    ],
+    "requiresConsentFromInitiator" : "!"
+  },
+  "right" : {
+    "requiresConsentFromInitiator" : "!",
+    "penPalsSharingData" : [
+      "androidFixtureUser0001: !",
+      "androidFixtureUser0002: !"
+    ],
+    "name" : "Fixture Group",
+    "messageRecipientConsentAcknowledgementData" : [
+      "androidFixtureUser0001: !",
+      "androidFixtureUser0002: false"
+    ],
+    "lastModified" : "2025-08-19 22:30:00 GMT",
+    "isPenPalsConversation" : false,
+    "imageData" : "!"
+  },
+  "different" : {
+    "imageData" : "!",
+    "isPenPalsConversation" : false,
+    "lastModified" : "2025-08-19 22:30:00 GMT",
+    "messageRecipientConsentAcknowledgementData" : [
+      "androidFixtureUser0001: !",
+      "androidFixtureUser0002: false"
+    ],
+    "name" : "Renamed Group",
+    "penPalsSharingData" : [
+      "androidFixtureUser0001: !",
+      "androidFixtureUser0002: !"
+    ],
+    "requiresConsentFromInitiator" : "!"
+  }
+}

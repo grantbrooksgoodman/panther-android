@@ -22,10 +22,10 @@ import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardS
 import us.neotechnica.panther.modules.common.services.InviteService
 import us.neotechnica.panther.modules.common.services.PushTokenService
 import us.neotechnica.panther.modules.common.services.ReviewService
+import us.neotechnica.panther.modules.content.user.extensions.filteredAndSorted
 import us.neotechnica.panther.modules.content.user.models.ChatPageStateServiceEffectID
 import us.neotechnica.panther.modules.content.user.models.MessageDeliveryServiceEffectID
-import us.neotechnica.panther.modules.session.entity.extensions.conversations
-import us.neotechnica.panther.modules.session.entity.extensions.filteredAndSorted
+import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
@@ -137,8 +137,8 @@ object ConversationsPageViewService {
             try {
                 UserSessionService.resolveCurrentUser(
                     setOf(
-                        UserSessionService.DataType.CONVERSATIONS,
-                        UserSessionService.DataType.MESSAGES,
+                        User.DataType.CONVERSATIONS,
+                        User.DataType.MESSAGES,
                     ),
                 )
                 DangerZone.deleteConversationsAction.perform()
@@ -235,7 +235,7 @@ object ConversationsPageViewService {
         }
 
         try {
-            UserSessionService.resolveCurrentUser(UserSessionService.DataType.entries.toSet())
+            UserSessionService.resolveCurrentUser(User.DataType.entries.toSet())
         } finally {
             currentReloadType = currentReloadType.next
         }

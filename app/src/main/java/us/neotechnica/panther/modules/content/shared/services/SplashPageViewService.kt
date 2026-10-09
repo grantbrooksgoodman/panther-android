@@ -36,6 +36,7 @@ import us.neotechnica.panther.modules.common.services.AlertKitTranslationService
 import us.neotechnica.panther.modules.common.services.CommonServices
 import us.neotechnica.panther.modules.common.services.ErrorReportingService
 import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.syncIfNeeded
 import us.neotechnica.panther.modules.content.user.extensions.updateDeviceIDIfNeeded
 import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
@@ -44,12 +45,6 @@ import us.neotechnica.panther.modules.networking.common.populateTemporaryCaches
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.modules.session.clientSession
-import us.neotechnica.panther.modules.session.entity.extensions.calculateBadgeNumber
-import us.neotechnica.panther.modules.session.entity.extensions.conversations
-import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
-import us.neotechnica.panther.modules.session.entity.extensions.messages
-import us.neotechnica.panther.modules.session.entity.extensions.users
-import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkServices
@@ -494,7 +489,7 @@ object SplashPageViewService {
 
             currentCoroutineContext().ensureActive()
             clientSession.entity.conversation.setCurrentConversation(null)
-            clientSession.entity.user.resolveCurrentUser(UserSessionService.DataType.entries.toSet())
+            clientSession.entity.user.resolveCurrentUser(User.DataType.entries.toSet())
 
             setInitializationProgress(1f)
 
@@ -583,7 +578,7 @@ object SplashPageViewService {
             currentCoroutineContext().ensureActive()
 
             try {
-                clientSession.entity.user.resolveCurrentUser(UserSessionService.DataType.entries.toSet())
+                clientSession.entity.user.resolveCurrentUser(User.DataType.entries.toSet())
                 return Logger.log(
                     "Deferred resolution of current user data was successful.",
                     domain = LoggerDomain.clientSession,

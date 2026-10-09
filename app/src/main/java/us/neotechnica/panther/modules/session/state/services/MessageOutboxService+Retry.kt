@@ -92,10 +92,10 @@ private suspend fun sendPayload(
                 )
             MessageSessionService.sendMediaMessage(
                 mediaFile = mediaFile,
-                users = recipients,
-                conversation = conversation,
-                isPenPalsConversation = entry.isPenPalsConversation,
                 presetID = entry.reservedRemoteID,
+                toUsers = recipients,
+                inConversation = conversation,
+                isPenPalsConversation = entry.isPenPalsConversation,
             )
         }
 
@@ -103,8 +103,9 @@ private suspend fun sendPayload(
             MessageSessionService.sendTextMessage(
                 text = payload.value,
                 presetID = entry.reservedRemoteID,
-                users = recipients,
-                conversation = conversation,
+                toUsers = recipients,
+                inConversation = conversation,
+                isPenPalsConversation = entry.isPenPalsConversation,
             )
     }
 }

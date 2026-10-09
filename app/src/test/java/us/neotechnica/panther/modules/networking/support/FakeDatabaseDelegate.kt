@@ -9,7 +9,7 @@
 package us.neotechnica.panther.modules.networking.support
 
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.networking.modules.database.models.QueryStrategy
@@ -19,8 +19,8 @@ import kotlin.time.Duration
  * A recording [DatabaseDelegate] for tests.
  *
  * Captures every [commit], [setValue], and [updateChildValues] call and
- * lets a test seed the value a [runTransaction] block operates on and
- * the value [getValues] returns.
+ * lets a test seed the value a [runTransaction] block operates on, the
+ * values [getValues] returns, and the snapshots [observe] emits.
  */
 class FakeDatabaseDelegate : DatabaseDelegate {
     // MARK: - Recorded Operations
@@ -35,8 +35,17 @@ class FakeDatabaseDelegate : DatabaseDelegate {
     /** The value returned by the last [runTransaction] block. */
     var lastTransactionResult: Any? = null
 
-    /** The value returned by [getValues]. */
+    /** The value returned by [getValues] for paths absent from [getValuesResults]. */
     var getValuesResult: Any? = null
+
+    /** The values returned by [getValues], keyed by path. */
+    val getValuesResults = mutableMapOf<String, Any?>()
+
+    /** The paths passed to [getValues] so far. */
+    val getValuesPaths = mutableListOf<String>()
+
+    /** The flows served by [observe], keyed by path. */
+    val observedFlows = mutableMapOf<String, MutableSharedFlow<Any>>()
 
     // MARK: - DatabaseDelegate
 
@@ -78,7 +87,14 @@ class FakeDatabaseDelegate : DatabaseDelegate {
         prependingEnvironment: Boolean,
         cacheStrategy: CacheStrategy,
         timeout: Duration,
-    ): Any = checkNotNull(getValuesResult) { "getValuesResult has not been seeded." }
+    ): Any {
+        getValuesPaths.add(path)
+        if (getValuesResults.containsKey(path)) {
+            return checkNotNull(getValuesResults[path]) { "getValuesResults[$path] is null." }
+        }
+
+        return checkNotNull(getValuesResult) { "getValuesResult has not been seeded." }
+    }
 
     override fun isEncodable(value: Any?): Boolean =
         when (value) {
@@ -93,7 +109,7 @@ class FakeDatabaseDelegate : DatabaseDelegate {
     override fun observe(
         path: String,
         prependingEnvironment: Boolean,
-    ): Flow<Any> = emptyFlow()
+    ): Flow<Any> = flow(path)
 
     override suspend fun awaitRealtimeConnection(timeout: Duration): Boolean = true
 
@@ -115,4 +131,19 @@ class FakeDatabaseDelegate : DatabaseDelegate {
     ): Any = error("queryValues is not supported by FakeDatabaseDelegate.")
 
     override fun setGlobalCacheStrategy(globalCacheStrategy: CacheStrategy?) = Unit
+
+    // MARK: - Observation
+
+    /** Emits [value] to the observers of [path]; the latest value replays to late observers. */
+    suspend fun emit(
+        path: String,
+        value: Any,
+    ) {
+        flow(path).emit(value)
+    }
+
+    private fun flow(path: String): MutableSharedFlow<Any> =
+        synchronized(observedFlows) {
+            observedFlows.getOrPut(path) { MutableSharedFlow(replay = 1, extraBufferCapacity = 16) }
+        }
 }

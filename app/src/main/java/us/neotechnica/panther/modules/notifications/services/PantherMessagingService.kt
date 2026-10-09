@@ -36,13 +36,13 @@ import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
 import us.neotechnica.panther.modules.common.constants.NotificationExtensionConstants
 import us.neotechnica.panther.modules.common.services.HapticsService
 import us.neotechnica.panther.modules.common.services.PushTokenService
+import us.neotechnica.panther.modules.content.user.extensions.currentUserID
+import us.neotechnica.panther.modules.content.user.extensions.isVisibleForCurrentUser
 import us.neotechnica.panther.modules.content.user.models.ChatPageStateServiceEffectID
 import us.neotechnica.panther.modules.content.user.services.ChatPageStateService
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.modules.session.clientSession
-import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
-import us.neotechnica.panther.modules.session.entity.extensions.isVisibleForCurrentUser
 import us.neotechnica.panther.navigation.PendingChatNavigation
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentNavigatorState

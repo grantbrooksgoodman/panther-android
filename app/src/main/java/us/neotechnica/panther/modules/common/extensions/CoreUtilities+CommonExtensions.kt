@@ -9,12 +9,12 @@
 package us.neotechnica.panther.modules.common.extensions
 
 import us.neotechnica.panther.bundle.users
+import us.neotechnica.panther.modules.content.user.extensions.filteringSystemMessages
+import us.neotechnica.panther.modules.content.user.extensions.isVisibleForCurrentUser
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpdatableKey
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.update
-import us.neotechnica.panther.modules.session.entity.extensions.conversations
-import us.neotechnica.panther.modules.session.entity.extensions.isVisibleForCurrentUser
-import us.neotechnica.panther.modules.session.entity.extensions.realMessageIDs
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.networking.Networking
@@ -77,8 +77,8 @@ suspend fun CoreUtilities.clearPreviousLanguageCodes() {
 suspend fun CoreUtilities.deleteConversations(granularity: ConversationDeletionGranularity) {
     UserSessionService.resolveCurrentUser(
         setOf(
-            UserSessionService.DataType.CONVERSATIONS,
-            UserSessionService.DataType.MESSAGES,
+            User.DataType.CONVERSATIONS,
+            User.DataType.MESSAGES,
         ),
     )
 
@@ -125,7 +125,7 @@ internal fun Conversation.matches(granularity: ConversationDeletionGranularity):
         ConversationDeletionGranularity.NOT_VISIBLE_FOR_CURRENT_USER -> !isVisibleForCurrentUser
 
         ConversationDeletionGranularity.ONE_TO_ONE_AND_FEWER_THAN_FIVE_MESSAGES ->
-            realMessageIDs.size < ONE_TO_ONE_MINIMUM_MESSAGE_COUNT && participants.size == ONE_TO_ONE_PARTICIPANT_COUNT
+            filteringSystemMessages.messageIDs.size < ONE_TO_ONE_MINIMUM_MESSAGE_COUNT && participants.size == ONE_TO_ONE_PARTICIPANT_COUNT
     }
 
 private const val ONE_TO_ONE_MINIMUM_MESSAGE_COUNT = 5

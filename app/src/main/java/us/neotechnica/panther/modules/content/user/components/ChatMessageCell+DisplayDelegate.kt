@@ -29,7 +29,7 @@ import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellColo
 import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewStrings
-import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
+import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
 import androidx.compose.material3.Text as Material3Text
 
 /**

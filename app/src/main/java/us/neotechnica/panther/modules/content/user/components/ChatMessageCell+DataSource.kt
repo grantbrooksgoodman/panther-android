@@ -18,10 +18,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellStrings
+import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
+import us.neotechnica.panther.modules.content.user.extensions.otherParticipantReadReceipt
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
-import us.neotechnica.panther.modules.session.entity.extensions.otherParticipantReadReceipt
 import us.neotechnica.panther.subsystem.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.localization.services.LocalizedStringResolver

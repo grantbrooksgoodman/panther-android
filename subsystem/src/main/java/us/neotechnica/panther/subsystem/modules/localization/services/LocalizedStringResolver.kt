@@ -55,6 +55,9 @@ object LocalizedStringResolver {
     @Volatile
     private var appContext: Context? = null
 
+    @Volatile
+    private var testTableProvider: ((LocalizationSource) -> Map<String, Map<String, String>>)? = null
+
     // MARK: - Initialization
 
     /**
@@ -64,6 +67,18 @@ object LocalizedStringResolver {
      */
     fun initialize(context: Context) {
         appContext = context.applicationContext
+    }
+
+    /**
+     * Prepares the resolver for tests, loading each table from the
+     * given provider instead of the application's assets.
+     *
+     * @param tableProvider A closure returning the `key → language →
+     *   value` table for a localization source.
+     */
+    fun initializeForTesting(tableProvider: (LocalizationSource) -> Map<String, Map<String, String>>) {
+        testTableProvider = tableProvider
+        tables.clear()
     }
 
     /** Removes every loaded localization table, forcing a reload on next access. */
@@ -124,6 +139,8 @@ object LocalizedStringResolver {
     private fun table(source: LocalizationSource): Map<String, Map<String, String>> = tables.getOrPut(source) { load(source) }
 
     private fun load(source: LocalizationSource): Map<String, Map<String, String>> {
+        testTableProvider?.let { return it(source) }
+
         val context = appContext ?: return emptyMap()
         val json =
             context.assets

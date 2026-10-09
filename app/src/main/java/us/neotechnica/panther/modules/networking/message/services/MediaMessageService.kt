@@ -14,6 +14,7 @@ import us.neotechnica.panther.bundle.media
 import us.neotechnica.panther.bundle.messages
 import us.neotechnica.panther.modules.common.models.DocumentFileExtension
 import us.neotechnica.panther.modules.common.models.MediaFileExtension
+import us.neotechnica.panther.modules.networking.common.transferTimeout
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
 import us.neotechnica.panther.modules.networking.message.models.LocalMediaFilePath
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
@@ -27,9 +28,9 @@ import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHas
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
-import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.lzfse.Lzfse
 import java.io.File
+import kotlin.time.Duration
 
 /**
  * The service that uploads, downloads, and deletes media message content.
@@ -156,6 +157,7 @@ object MediaMessageService {
             if (isPlainTextDocument(mediaComponent.fileExtension)) {
                 // Hosted plain-text payloads are always LZFSE-compressed,
                 // while the local file stays uncompressed.
+                // The timeout is sized to the uncompressed local file.
                 storage.upload(
                     Lzfse.encode(sourceFile.readBytes()),
                     metadata =
@@ -163,6 +165,7 @@ object MediaMessageService {
                             relativePath,
                             contentType = "application/octet-stream",
                         ),
+                    timeout = Duration.transferTimeout(forItemAt = sourceFile),
                 )
             } else {
                 storage.upload(
@@ -172,6 +175,7 @@ object MediaMessageService {
                             relativePath,
                             contentType = mediaComponent.fileExtension.contentTypeString,
                         ),
+                    timeout = Duration.transferTimeout(forItemAt = sourceFile),
                 )
             }
         }
@@ -192,6 +196,7 @@ object MediaMessageService {
                         thumbnailRelativePath,
                         contentType = "image/jpeg",
                     ),
+                timeout = Duration.transferTimeout(forItemAt = thumbnailFile),
             )
         }
         moveIntoPlace(thumbnailFile, thumbnailRelativePath)
@@ -232,37 +237,53 @@ object MediaMessageService {
         localPath: LocalMediaFilePath,
     ): MediaFile {
         val storage = Networking.config.storageDelegate
+        val userInfo = mapOf("MessageID" to messageID)
+
         val destination =
             localPath.localPathURL
                 ?: throw Exception(
                     "Failed to resolve local media path.",
                     metadata = ExceptionMetadata(this),
-                )
+                ).appending(userInfo = userInfo)
 
-        storage.downloadItem(localPath.relativePathString, destination)
-
-        // Hosted plain-text payloads are stored LZFSE-compressed; decompress
-        // in place so the local file is the plain text. Non-LZFSE legacy
-        // uploads are left as downloaded, since the decode falls back to the
-        // raw bytes on failure.
-        if (isPlainTextDocument(MediaFileExtension.from(localPath.relativePathString.substringAfterLast('.', "")))) {
-            runCatching { destination.writeBytes(Lzfse.decode(destination.readBytes())) }
-                .onFailure { Logger.log("Failed to LZFSE-decompress document; leaving as-is. ${it.message}") }
+        try {
+            storage.downloadItem(localPath.relativePathString, destination)
+        } catch (exception: Exception) {
+            throw exception.appending(userInfo = userInfo)
         }
 
-        // The thumbnail is a best-effort companion object; a missing one
-        // does not prevent the primary media from resolving.
-        val thumbnailPath = localPath.relativeThumbnailPathString
-        val thumbnailFile = localPath.localThumbnailPathURL
-        if (thumbnailPath != null && thumbnailFile != null) {
-            runCatching { storage.downloadItem(thumbnailPath, thumbnailFile) }
+        // Hosted plain-text payloads are stored LZFSE-compressed;
+        // decompress in place so the local file is the plain text
+        // the rest of the app expects.
+        if (isPlainTextDocument(MediaFileExtension.from(destination.extension))) {
+            try {
+                destination.writeBytes(Lzfse.decode(destination.readBytes()))
+            } catch (exception: Exception) {
+                throw exception.appending(userInfo = userInfo)
+            } catch (throwable: Throwable) {
+                throw Exception
+                    .from(
+                        throwable,
+                        metadata = ExceptionMetadata(this),
+                    ).appending(userInfo = userInfo)
+            }
+        }
+
+        val thumbnailPathString = localPath.relativeThumbnailPathString
+        val thumbnailPathURL = localPath.localThumbnailPathURL
+        if (thumbnailPathString != null && thumbnailPathURL != null) {
+            try {
+                storage.downloadItem(thumbnailPathString, thumbnailPathURL)
+            } catch (exception: Exception) {
+                throw exception.appending(userInfo = userInfo)
+            }
         }
 
         return MediaFile.from(localPath.relativePathString)
             ?: throw Exception(
                 "Failed to generate media file.",
                 metadata = ExceptionMetadata(this),
-            ).appending(userInfo = mapOf("MessageID" to messageID))
+            ).appending(userInfo = userInfo)
     }
 
     // MARK: - Companion

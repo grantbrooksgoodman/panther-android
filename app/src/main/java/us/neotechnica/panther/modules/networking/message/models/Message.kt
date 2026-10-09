@@ -8,10 +8,10 @@
 
 package us.neotechnica.panther.modules.networking.message.models
 
+import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.clientSession
-import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList
 import us.neotechnica.panther.networking.modules.common.interfaces.Serializable
 import us.neotechnica.panther.networking.modules.translation.models.TranslationReference

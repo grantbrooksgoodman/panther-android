@@ -22,16 +22,15 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationA
 import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardService
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.content.user.extensions.contactPair
+import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.content.user.extensions.withUser
 import us.neotechnica.panther.modules.content.user.models.ChatParticipant
 import us.neotechnica.panther.modules.content.user.models.MessageDeliveryServiceEffectID
-import us.neotechnica.panther.modules.networking.conversation.models.ActivityAction
+import us.neotechnica.panther.modules.networking.conversation.models.Activity
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationMetadata
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
-import us.neotechnica.panther.modules.session.entity.extensions.users
 import us.neotechnica.panther.modules.session.entity.services.ActivitySessionService
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.navigation.ChatRoute
@@ -239,7 +238,7 @@ object ChatInfoPageViewService {
      */
     suspend fun updateMetadata(
         conversation: Conversation,
-        action: ActivityAction,
+        action: Activity.Action,
         newMetadata: ConversationMetadata,
     ) {
         ActivitySessionService.updateMetadata(conversation, action, newMetadata)

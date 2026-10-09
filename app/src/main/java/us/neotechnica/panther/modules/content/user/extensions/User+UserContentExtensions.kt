@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.extensions
 
+import us.neotechnica.panther.bundle.currentUserID
 import us.neotechnica.panther.modules.common.contacts.services.ContactPairArchiveService
 import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.models.ContactPair
@@ -16,11 +17,28 @@ import us.neotechnica.panther.modules.networking.user.models.DeviceID
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpdatableKey
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.update
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
+import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
+import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 
 // MARK: - Properties
+
+/**
+ * The identifier of the signed-in user, from the current session or
+ * persisted storage, or `null` if no user is signed in.
+ */
+val User.Companion.currentUserID: String?
+    get() {
+        val persistedValue = Persistent.string(PersistentStorageKey.currentUserID)
+        val sessionValue =
+            DependencyValues.current.clientSession.entity.user.currentUser
+                ?.id
+        return sessionValue ?: persistedValue
+    }
 
 /** The contact pair matching this user in the contact pair archive, if one exists. */
 val User.contactPair: ContactPair?

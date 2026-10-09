@@ -63,7 +63,7 @@ internal suspend fun ChatInfoPageViewService.presentChangeMetadataActionSheet():
         MetadataChoice.CHANGE_PHOTO -> presentPhotoSourceSheet()
         MetadataChoice.REMOVE_PHOTO ->
             ChatInfoPageViewService.MetadataChangeType.RemovePhoto(
-                conversation.metadata.copyWith(imageData = null, imageHash = null),
+                conversation.metadata.copyWith(nilImageData = true),
             )
         null -> null
     }

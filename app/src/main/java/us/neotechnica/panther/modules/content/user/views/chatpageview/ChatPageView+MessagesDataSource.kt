@@ -26,13 +26,13 @@ import androidx.compose.ui.Modifier
 import us.neotechnica.panther.modules.content.user.components.ChatMessageCell
 import us.neotechnica.panther.modules.content.user.components.ChatMessageRowData
 import us.neotechnica.panther.modules.content.user.extensions.displayName
+import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
+import us.neotechnica.panther.modules.content.user.extensions.isOutboxMessage
+import us.neotechnica.panther.modules.content.user.extensions.isSystemMessage
+import us.neotechnica.panther.modules.content.user.extensions.systemLocalized
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
-import us.neotechnica.panther.modules.session.entity.extensions.isOutboxMessage
-import us.neotechnica.panther.modules.session.entity.extensions.isSystemMessage
-import us.neotechnica.panther.modules.session.entity.extensions.users
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
@@ -132,7 +132,9 @@ internal fun MessageList(
     StickToBottomEffect(listState, state)
 
     LazyColumn(state = listState, modifier = modifier, verticalArrangement = Arrangement.Top) {
-        itemsIndexed(messages, key = { _, message -> message.id }) { index, message ->
+        itemsIndexed(messages, key = { _, message -> message.id }) { index, displayedMessage ->
+            // System rows render the activity's localized description.
+            val message = displayedMessage.systemLocalized
             val isFailed =
                 message.isOutboxMessage &&
                     MessageOutboxService.entry(message.id)?.state == OutboxEntry.State.FAILED

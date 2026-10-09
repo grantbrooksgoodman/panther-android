@@ -11,9 +11,9 @@ package us.neotechnica.panther.modules.content.user.components.conversationcellv
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import us.neotechnica.panther.modules.content.user.extensions.empty
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.Participant
-import us.neotechnica.panther.modules.session.entity.extensions.empty
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
 
 class ConversationCellReducerTest {

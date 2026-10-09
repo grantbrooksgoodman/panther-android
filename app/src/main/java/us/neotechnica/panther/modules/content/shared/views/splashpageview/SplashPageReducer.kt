@@ -17,9 +17,9 @@ import us.neotechnica.panther.modules.common.extensions.failedToGenerateMediaFil
 import us.neotechnica.panther.modules.common.extensions.timedOut
 import us.neotechnica.panther.modules.content.shared.dependencies.splashPageViewService
 import us.neotechnica.panther.modules.content.shared.services.SplashPageViewService
+import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.clientSession
-import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.OnboardingRoute

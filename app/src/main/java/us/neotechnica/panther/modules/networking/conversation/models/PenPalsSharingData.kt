@@ -26,7 +26,7 @@ data class PenPalsSharingData(
     /** The identifier of the sharing user. */
     val userID: String,
     /** The identifiers of the users shared with, or `null` if none. */
-    val sharesDataWithUserIDs: List<String>?,
+    val sharesDataWithUserIDs: List<String>? = null,
 ) : Serializable<String> {
     // MARK: - Computed Properties
 
@@ -44,9 +44,28 @@ data class PenPalsSharingData(
     // MARK: - Companion
 
     companion object : SerializableDecoder<PenPalsSharingData, String> {
-        /** Returns a sharing record for each user, sharing with no one. */
+        /**
+         * Returns a sharing record for each of the given users, each
+         * sharing with no one.
+         *
+         * @param userIDs The identifiers of the users to create
+         *   records for.
+         *
+         * @return The sharing records.
+         */
         fun empty(userIDs: List<String>): List<PenPalsSharingData> =
             userIDs.map { PenPalsSharingData(userID = it, sharesDataWithUserIDs = null) }
+
+        /**
+         * Returns a sharing record for each of the given users, each
+         * sharing with no one.
+         *
+         * @param userIDs The identifiers of the users to create
+         *   records for.
+         *
+         * @return The sharing records.
+         */
+        fun prepopulated(userIDs: List<String>): List<PenPalsSharingData> = empty(userIDs.distinct())
 
         override fun canDecode(data: String): Boolean {
             val components = data.split(": ")

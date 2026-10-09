@@ -17,8 +17,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.analytics
 import us.neotechnica.panther.modules.common.models.SystemInformation
+import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.navigation.descriptor
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking

@@ -24,7 +24,6 @@ import us.neotechnica.panther.modules.common.extensions.clearPreviousLanguageCod
 import us.neotechnica.panther.modules.common.extensions.deleteConversations
 import us.neotechnica.panther.modules.common.extensions.matches
 import us.neotechnica.panther.modules.common.extensions.resetPushTokens
-import us.neotechnica.panther.modules.session.entity.extensions.conversations
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception

@@ -17,8 +17,6 @@ import us.neotechnica.panther.modules.content.user.services.ReadReceiptService
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.modules.session.entity.models.ReactionSessionServiceEffectID
 import us.neotechnica.panther.modules.session.entity.services.ReactionSessionService
 import us.neotechnica.panther.subsystem.modules.effect.Effect
@@ -51,9 +49,9 @@ private suspend fun performReaction(
         return
     }
 
-    val currentUserID = User.currentUserID ?: return
+    val reaction = Reaction.from(style) ?: return
     try {
-        ReactionSessionService.react(Reaction(style, currentUserID), message)
+        ReactionSessionService.react(reaction, message)
     } catch (exception: Exception) {
         Logger.log(exception, with = AlertType.toast)
     }

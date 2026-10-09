@@ -12,8 +12,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
 import us.neotechnica.panther.modules.common.services.NotificationService
+import us.neotechnica.panther.modules.content.user.extensions.currentUserID
+import us.neotechnica.panther.modules.content.user.extensions.isMock
+import us.neotechnica.panther.modules.content.user.extensions.isOutboxMessage
 import us.neotechnica.panther.modules.content.user.models.ContextMenuInteraction
 import us.neotechnica.panther.modules.content.user.services.ChatPageStateService
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
@@ -23,28 +25,29 @@ import us.neotechnica.panther.modules.networking.conversation.remotelyupdatable.
 import us.neotechnica.panther.modules.networking.conversation.remotelyupdatable.update
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
-import us.neotechnica.panther.modules.session.entity.extensions.isMock
-import us.neotechnica.panther.modules.session.entity.extensions.isOutboxMessage
-import us.neotechnica.panther.modules.session.entity.extensions.users
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.models.ReactionSessionServiceEffectID
+import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 
 /**
- * Applies and removes message reactions.
+ * The service that applies and removes message reactions.
  *
- * While a reaction is being applied, [isReactingToMessage] is
- * `true` and context menu interactions are disabled.
+ * [isReactingToMessage] is written only through one internal path,
+ * in the same turn that drains and runs the effects registered for
+ * the new value. A registered effect therefore runs exactly once, for
+ * the assignment it was registered against, and no other writer can
+ * interleave between the write and the drain.
  */
 object ReactionSessionService {
     // MARK: - Properties
 
+    private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val internalIsReactingToMessage = LockIsolated(false)
-
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val uponIsReactingToMessageChangedToFalse =
         LockIsolated(mapOf<ReactionSessionServiceEffectID, () -> Unit>())
@@ -54,8 +57,8 @@ object ReactionSessionService {
     // MARK: - Computed Properties
 
     /**
-     * A Boolean value that indicates whether a reaction is
-     * currently being applied to a message.
+     * A Boolean value that indicates whether a reaction is currently
+     * being applied to a message.
      */
     val isReactingToMessage: Boolean
         get() = internalIsReactingToMessage.wrappedValue
@@ -66,12 +69,12 @@ object ReactionSessionService {
      * Registers an effect to run once, the next time
      * [isReactingToMessage] is set to the given value.
      *
-     * The effect is cleared after it runs. Registering a new
-     * effect with the same identifier and target value replaces
-     * the existing one.
+     * The effect is cleared after it runs. Registering a new effect
+     * with the same identifier and target value replaces the existing
+     * one.
      *
-     * @param state The value of [isReactingToMessage] that
-     *   triggers the effect.
+     * @param state The value of [isReactingToMessage] that triggers
+     *   the effect.
      * @param id The identifier under which to register the effect.
      * @param effect The effect to run.
      */
@@ -87,87 +90,160 @@ object ReactionSessionService {
     // MARK: - React to Message
 
     /**
-     * Applies [reaction] to [message], or removes it when the same
-     * reaction is already applied by the current user.
+     * Applies the given reaction to the given message, or removes it
+     * if the same reaction is already applied.
      *
-     * Reactions to mock or outbox messages are ignored.
+     * Reactions to mock or outbox messages are ignored. The message's
+     * sender is notified of the reaction.
      *
-     * @throws Exception if the required values cannot be resolved or the
-     *   write fails.
+     * @param reaction The reaction to apply.
+     * @param message The message to react to.
+     *
+     * @throws Exception if the required values cannot be resolved or
+     *   the write fails.
      */
     suspend fun react(
         reaction: Reaction,
         message: Message,
     ) {
         if (message.isMock || message.isOutboxMessage) return
-        val conversation =
-            ConversationSessionService.currentConversation
-                ?: throw Exception("Failed to resolve required values.", metadata = ExceptionMetadata(this))
-        val currentUserID =
-            User.currentUserID
-                ?: throw Exception("Failed to resolve required values.", metadata = ExceptionMetadata(this))
 
-        val alreadyApplied =
-            (conversation.reactionMetadata ?: emptyList())
+        val conversationSession = DependencyValues.current.clientSession.entity.conversation
+        val conversation = conversationSession.currentConversation
+        val currentUserID = User.currentUserID
+        val messageIndex = conversationSession.displayedMessages.value.indexOfFirst { it.id == message.id }
+
+        if (conversation == null || currentUserID == null || messageIndex < 0) {
+            throw Exception(
+                "Failed to resolve required values.",
+                metadata = ExceptionMetadata(this),
+            )
+        }
+
+        val reactionMetadata = conversation.reactionMetadata ?: emptyList()
+
+        // Remove reaction if same one is already applied
+
+        val isAlreadyApplied =
+            reactionMetadata
                 .filter { it.messageID == message.id }
                 .flatMap { it.reactions }
                 .filter { it.userID == currentUserID }
                 .any { it.style == reaction.style }
-        if (alreadyApplied) return removeReaction(message)
+
+        if (isAlreadyApplied) return removeReaction(message)
 
         setIsReactingToMessage(true)
 
         // Notify users of reaction to message
-        scope.launch {
+
+        backgroundScope.launch {
             try {
-                notifyUsers(reaction, message)
+                notifyUsers(
+                    ofReaction = reaction,
+                    to = message,
+                )
             } catch (exception: Exception) {
                 Logger.log(exception)
             }
         }
 
-        updateConversation(conversation, message, reaction)
+        // Update conversation with new reaction metadata
+
+        updateConversation(
+            conversation,
+            message = message,
+            newReaction = reaction,
+        )
     }
 
-    // MARK: - Notify Users
+    // MARK: - Auxiliary
 
     private suspend fun notifyUsers(
-        reaction: Reaction,
-        message: Message,
+        ofReaction: Reaction,
+        to: Message,
     ) {
-        if (message.fromAccountID == User.currentUserID) return
+        if (to.fromAccountID == User.currentUserID) return
 
-        val conversation = ConversationSessionService.currentConversation
+        val conversation = DependencyValues.current.clientSession.entity.conversation.currentConversation
         val currentUserID = User.currentUserID
         val user =
             conversation
                 ?.users
                 ?.filter { !(it.blockedUserIDs ?: emptyList()).contains(currentUserID) }
-                ?.firstOrNull { message.fromAccountID == it.id }
-        if (conversation == null || currentUserID == null || user == null || message.isMock || message.isOutboxMessage) {
-            throw Exception("Failed to resolve required values.", metadata = ExceptionMetadata(this))
+                ?.firstOrNull { to.fromAccountID == it.id }
+
+        if (conversation == null || currentUserID == null || user == null || to.isMock || to.isOutboxMessage) {
+            throw Exception(
+                "Failed to resolve required values.",
+                metadata = ExceptionMetadata(this),
+            )
         }
 
         NotificationService.notify(
             users = listOf(user),
-            ofReaction = reaction,
-            message = message,
+            ofReaction = ofReaction,
+            message = to,
             conversationIDKey = conversation.id.key,
         )
     }
 
-    // MARK: - Remove Reaction
+    private suspend fun removeReaction(from: Message) {
+        val conversationSession = DependencyValues.current.clientSession.entity.conversation
+        val conversation = conversationSession.currentConversation
+        val messageIndex = conversationSession.displayedMessages.value.indexOfFirst { it.id == from.id }
 
-    private suspend fun removeReaction(message: Message) {
-        if (message.isMock || message.isOutboxMessage) return
-        val conversation =
-            ConversationSessionService.currentConversation
-                ?: throw Exception("Failed to resolve required values.", metadata = ExceptionMetadata(this))
+        if (conversation == null || messageIndex < 0 || from.isMock || from.isOutboxMessage) {
+            throw Exception(
+                "Failed to resolve required values.",
+                metadata = ExceptionMetadata(this),
+            )
+        }
+
         setIsReactingToMessage(true)
-        updateConversation(conversation, message, null)
+        updateConversation(
+            conversation,
+            message = from,
+            newReaction = null,
+        )
     }
 
-    // MARK: - Auxiliary
+    /**
+     * Writes [isReactingToMessage] and, in the same turn, drains and
+     * runs the effects registered for the new value.
+     *
+     * The registry is drained before the effects run, so an effect
+     * that registers a new effect for the same value keeps it for the
+     * next assignment.
+     */
+    private fun setIsReactingToMessage(isReactingToMessage: Boolean) {
+        internalIsReactingToMessage.wrappedValue = isReactingToMessage
+
+        // The context menu gate flips alongside the state write so a
+        // lift cannot begin while a reaction is in flight.
+        ContextMenuInteraction.setCanBegin(!isReactingToMessage)
+
+        val effects =
+            (if (isReactingToMessage) uponIsReactingToMessageChangedToTrue else uponIsReactingToMessageChangedToFalse)
+                .withValue { reference ->
+                    val drained = reference.value
+                    reference.value = emptyMap()
+                    drained
+                }
+
+        if (effects.isEmpty()) return
+
+        Logger.log(
+            Exception(
+                "Running effects for change of \"isReactingToMessage\" to ${if (isReactingToMessage) "TRUE" else "FALSE"}.",
+                isReportable = false,
+                userInfo = mapOf("EnqueuedEffectIDs" to effects.keys.map { it.rawValue }),
+                metadata = ExceptionMetadata(this),
+            ),
+        )
+
+        effects.values.forEach { it() }
+    }
 
     private suspend fun updateConversation(
         conversation: Conversation,
@@ -176,65 +252,81 @@ object ReactionSessionService {
     ) {
         val currentUserID =
             User.currentUserID
-                ?: throw Exception("Current user ID has not been set.", metadata = ExceptionMetadata(this))
+                ?: throw Exception(
+                    "Current user ID has not been set.",
+                    metadata = ExceptionMetadata(this),
+                )
 
+        val encodedReactionStyle = newReaction?.style?.encodedValue
         val messageID = message.id
+        val reactionUserID = newReaction?.userID
 
-        // Atomically read-modify-write the reactionMetadata node; didWrite
-        // commits the hash and participant token fan-out and upserts to the
-        // session store.
-        try {
-            conversation.update(ConversationUpdatableKey.REACTION_METADATA, applyingRaw = { currentValue ->
-                reactionMetadata(currentValue, messageID, currentUserID, newReaction)
-            })
-        } catch (exception: Exception) {
-            setIsReactingToMessage(false)
-            throw exception
-        }
+        // Atomically read-modify-write the reactionMetadata
+        // node; didWrite commits the hash and participant
+        // token fan-out and upserts to the session store.
+
+        val updatedConversation =
+            try {
+                conversation.update(ConversationUpdatableKey.REACTION_METADATA) { currentValue ->
+                    reactionMetadata(
+                        currentValue = currentValue,
+                        messageID = messageID,
+                        currentUserID = currentUserID,
+                        encodedReactionStyle = encodedReactionStyle,
+                        reactionUserID = reactionUserID,
+                    )
+                }
+            } catch (exception: Exception) {
+                setIsReactingToMessage(false)
+                throw exception
+            }
 
         setIsReactingToMessage(false)
+        updatedConversation.resolveMessages(ids = setOf(message.id))
 
-        // Refresh the on-screen messages so the new reaction renders. The
-        // reaction is already committed to the conversation's reactionMetadata
-        // by didWrite, so recomputing the displayed messages suffices.
-        if (ChatPageStateService.isPresented &&
-            ConversationSessionService.currentConversation?.id?.key == conversation.id.key
+        val conversationSession = DependencyValues.current.clientSession.entity.conversation
+        if (!ChatPageStateService.isPresented ||
+            conversationSession.currentConversation?.id?.key != conversation.id.key
         ) {
-            ConversationSessionService.updateDisplayedMessages()
+            return
         }
+
+        conversationSession.updateDisplayedMessages()
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun reactionMetadata(
         currentValue: Any?,
         messageID: String,
         currentUserID: String,
-        newReaction: Reaction?,
+        encodedReactionStyle: String?,
+        reactionUserID: String?,
     ): Any {
-        @Suppress("UNCHECKED_CAST")
-        val current = (currentValue as? List<Map<String, Any?>>) ?: emptyList()
+        var metadata = (currentValue as? List<Map<String, Any?>>) ?: emptyList()
 
         // Strip sentinel entries.
-        var metadata = current.filter { (it[KEY_MESSAGE_ID] as? String) != BANG_QUALIFIED_EMPTY }
+        metadata = metadata.filter { (it[KEY_MESSAGE_ID] as? String) != BANG_QUALIFIED_EMPTY }
 
-        // Remove the current user's reactions to this message.
+        // Remove current user's reactions to this message.
         metadata =
             metadata.mapNotNull { entry ->
                 if ((entry[KEY_MESSAGE_ID] as? String) != messageID) return@mapNotNull entry
-                @Suppress("UNCHECKED_CAST")
+
                 val reactions =
                     ((entry[KEY_REACTIONS] as? List<Map<String, Any?>>) ?: emptyList())
                         .filter { (it[KEY_USER_ID] as? String) != currentUserID }
+
                 if (reactions.isEmpty()) null else entry + (KEY_REACTIONS to reactions)
             }
 
-        // Add the new reaction, if provided.
-        if (newReaction != null) {
-            val reactionStyle = Reaction.Style.from(newReaction.style.encodedValue) ?: Reaction.Style.LOVE
-            val reaction = Reaction(style = reactionStyle, userID = newReaction.userID)
+        // Add new reaction if provided.
+        if (encodedReactionStyle != null && reactionUserID != null) {
+            val reactionStyle = Reaction.Style.from(encodedReactionStyle) ?: Reaction.Style.LOVE
+            val reaction = Reaction(reactionStyle, userID = reactionUserID)
             val index = metadata.indexOfFirst { (it[KEY_MESSAGE_ID] as? String) == messageID }
+
             metadata =
                 if (index >= 0) {
-                    @Suppress("UNCHECKED_CAST")
                     val reactions =
                         ((metadata[index][KEY_REACTIONS] as? List<Map<String, Any?>>) ?: emptyList()) + reaction.encoded
                     metadata.toMutableList().also { it[index] = it[index] + (KEY_REACTIONS to reactions) }
@@ -243,42 +335,9 @@ object ReactionSessionService {
                 }
         }
 
-        // Return the empty sentinel if no reactions remain.
+        // Return empty sentinel if no reactions remain.
         return if (metadata.isEmpty()) listOf(ReactionMetadata.empty.encoded) else metadata
     }
-
-    private fun setIsReactingToMessage(isReactingToMessage: Boolean) {
-        internalIsReactingToMessage.wrappedValue = isReactingToMessage
-        didSetIsReactingToMessage(isReactingToMessage)
-    }
-
-    private fun didSetIsReactingToMessage(isReactingToMessage: Boolean) {
-        ContextMenuInteraction.setCanBegin(!isReactingToMessage)
-        val effects =
-            drainEffects(
-                if (isReactingToMessage) uponIsReactingToMessageChangedToTrue else uponIsReactingToMessageChangedToFalse,
-            )
-        if (effects.isEmpty()) return
-        Logger.log(
-            Exception(
-                "Running effects for change of \"isReactingToMessage\" to " +
-                    "${if (isReactingToMessage) "TRUE" else "FALSE"}. " +
-                    "[EnqueuedEffectIDs: ${effects.keys.map { it.rawValue }}]",
-                isReportable = false,
-                metadata = ExceptionMetadata(this),
-            ),
-        )
-        effects.values.forEach { it() }
-    }
-
-    private fun drainEffects(
-        effects: LockIsolated<Map<ReactionSessionServiceEffectID, () -> Unit>>,
-    ): Map<ReactionSessionServiceEffectID, () -> Unit> =
-        effects.withValue { ref ->
-            val drained = ref.value
-            if (drained.isNotEmpty()) ref.value = emptyMap()
-            drained
-        }
 
     // MARK: - Companion
 

@@ -11,7 +11,10 @@ package us.neotechnica.panther.modules.networking.conversation.remotelyupdatable
 import us.neotechnica.panther.bundle.conversations
 import us.neotechnica.panther.bundle.messages
 import us.neotechnica.panther.bundle.users
+import us.neotechnica.panther.modules.content.user.extensions.currentUserParticipant
+import us.neotechnica.panther.modules.content.user.extensions.filteringSystemMessages
 import us.neotechnica.panther.modules.networking.common.encodeForWrite
+import us.neotechnica.panther.modules.networking.common.uniquedByID
 import us.neotechnica.panther.modules.networking.conversation.models.Activity
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
@@ -19,9 +22,6 @@ import us.neotechnica.panther.modules.networking.conversation.models.Conversatio
 import us.neotechnica.panther.modules.networking.conversation.models.Participant
 import us.neotechnica.panther.modules.networking.conversation.models.ReactionMetadata
 import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.modules.session.entity.extensions.currentUserParticipant
-import us.neotechnica.panther.modules.session.entity.extensions.filteringSystemMessages
-import us.neotechnica.panther.modules.session.entity.extensions.uniquedByID
 import us.neotechnica.panther.modules.session.state.services.PendingTranslationArchive
 import us.neotechnica.panther.modules.session.state.services.SelfWriteRegistry
 import us.neotechnica.panther.modules.session.state.services.SessionStore

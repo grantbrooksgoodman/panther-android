@@ -11,6 +11,7 @@ package us.neotechnica.panther.modules.session
 import us.neotechnica.panther.bundle.clientSession
 import us.neotechnica.panther.bundle.currentUserID
 import us.neotechnica.panther.bundle.users
+import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.interfaces.DeliveryProgressIndicator
 import us.neotechnica.panther.modules.session.entity.models.EntitySession
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
@@ -93,17 +94,13 @@ object ClientSession {
 
         val languageCode: String =
             Networking.config.databaseDelegate.getValues<String>(
-                path = listOf(NetworkPath.users.rawValue, currentUserID, LANGUAGE_CODE_KEY).joinToString("/"),
+                path = listOf(NetworkPath.users.rawValue, currentUserID, User.SerializableKey.LANGUAGE_CODE.rawValue).joinToString("/"),
                 cacheStrategy = CacheStrategy.ADAPTIVE,
             )
 
         Logger.log("Setting language code to ${languageCode.uppercase()}.", domain = LoggerDomain.clientSession)
         CoreUtilities.setLanguageCode(languageCode)
     }
-
-    // MARK: - Companion
-
-    private const val LANGUAGE_CODE_KEY = "languageCode"
 }
 
 // MARK: - Dependency

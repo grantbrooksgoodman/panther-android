@@ -15,6 +15,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import us.neotechnica.panther.bundle.notifications
 import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.services.NotificationService
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
@@ -34,6 +35,8 @@ import us.neotechnica.panther.networking.modules.translation.models.ArchiveStrat
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
+import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.Translation
@@ -45,195 +48,288 @@ import us.neotechnica.panther.translator.services.LanguageRecognitionService
 private typealias Floats = MessageSessionServiceFloats
 
 /**
- * Sends text and media messages, translating text into each
- * recipient's language.
- *
- * Sends into an existing conversation or creates a new one, then
- * notifies recipients.
+ * The service that sends text and media messages.
  */
 object MessageSessionService {
     // MARK: - Properties
 
-    private val deliveryProgressScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val mainScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private val hostedTranslation get() = Networking.config.hostedTranslationDelegate
 
-    private val notificationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // MARK: - Send Media Message
+
+    /**
+     * Sends a media message to the given users in the given
+     * conversation.
+     *
+     * When no conversation is provided, a new conversation is created
+     * for the message.
+     *
+     * @param mediaFile The media to send.
+     * @param presetID A preset identifier to use for the message, or
+     *   `null` to generate one.
+     * @param toUsers The users to send the message to.
+     * @param inConversation The conversation to send the message in.
+     *   Pass `null` to create a new conversation.
+     * @param isPenPalsConversation A Boolean value that indicates
+     *   whether the conversation is a PenPals conversation.
+     *
+     * @return The conversation the message was sent in.
+     *
+     * @throws Exception if the current user is unavailable or the
+     *   message cannot be sent.
+     */
+    suspend fun sendMediaMessage(
+        mediaFile: MediaFile,
+        presetID: String? = null,
+        toUsers: List<User>,
+        inConversation: Conversation?,
+        isPenPalsConversation: Boolean,
+    ): Conversation {
+        val currentUser =
+            DependencyValues.current.clientSession.entity.user.currentUser
+                ?: throw Exception(
+                    "Current user has not been set.",
+                    metadata = ExceptionMetadata(this),
+                )
+
+        return createMessageAndAddToConversation(
+            conversation = inConversation,
+            isPenPalsConversation = isPenPalsConversation,
+            initiatingUser = currentUser,
+            otherUsers = toUsers,
+            presetID = presetID,
+            richContent = RichMessageContent.Media(mediaFile),
+            translations = null,
+        )
+    }
 
     // MARK: - Send Text Message
 
     /**
-     * Sends a text message to [users], appending it to [conversation]
-     * or creating a new conversation when [conversation] is `null`.
+     * Sends a text message to the given users in the given
+     * conversation.
      *
-     * The text is translated into each recipient's language and archived
-     * atomically with the message commit.
+     * The text is translated into each recipient's language and
+     * delivered. When no conversation is provided, a new conversation
+     * is created for the message.
      *
-     * @return The updated (or newly created) conversation.
+     * @param text The text to send.
+     * @param presetID A preset identifier to use for the message, or
+     *   `null` to generate one.
+     * @param toUsers The users to send the message to.
+     * @param inConversation The conversation to send the message in.
+     *   Pass `null` to create a new conversation.
+     * @param isPenPalsConversation A Boolean value that indicates
+     *   whether the conversation is a PenPals conversation.
+     *
+     * @return The conversation the message was sent in.
      *
      * @throws Exception if the current user is unavailable, translation
      *   fails, or the message cannot be sent.
      */
     suspend fun sendTextMessage(
         text: String,
-        presetID: String?,
-        users: List<User>,
-        conversation: Conversation?,
-        isPenPalsConversation: Boolean = false,
+        presetID: String? = null,
+        toUsers: List<User>,
+        inConversation: Conversation?,
+        isPenPalsConversation: Boolean,
     ): Conversation {
         val currentUser =
-            UserSessionService.currentUser
-                ?: throw Exception("Current user has not been set.", metadata = ExceptionMetadata(this))
+            DependencyValues.current.clientSession.entity.user.currentUser
+                ?: throw Exception(
+                    "Current user has not been set.",
+                    metadata = ExceptionMetadata(this),
+                )
 
-        val recipients = users.filter { it.id != currentUser.id }
-        val uniqueLanguageCodes = recipients.map { it.languageCode }.distinct()
+        var text = text
+        if (Build.isDeveloperModeEnabled &&
+            LanguageRecognitionService.shared.matchConfidence(text, currentUser.languageCode) <
+            Floats.LANGUAGE_RECOGNITION_SERVICE_MATCH_CONFIDENCE_THRESHOLD
+        ) {
+            try {
+                text =
+                    hostedTranslation
+                        .translate(
+                            input = TranslationInput(text),
+                            languagePair = LanguagePair(from = "en", to = currentUser.languageCode),
+                        ).output
+                        .sanitized
+            } catch (exception: Exception) {
+                Logger.log(exception)
+            }
+        }
+
+        val users = toUsers.filter { it != currentUser }
+        val uniqueLanguageCodes = users.map { it.languageCode }.distinct()
+
         val sourceLanguageCode =
-            resolveSourceLanguageCode(text, currentUser.languageCode, uniqueLanguageCodes)
+            resolveSourceLanguageCode(
+                forText = text,
+                currentUserLanguageCode = currentUser.languageCode,
+                recipientLanguageCodes = uniqueLanguageCodes,
+            )
 
         val translations =
             coroutineScope {
                 uniqueLanguageCodes
                     .map { languageCode ->
-                        async { translate(text, sourceLanguageCode, languageCode) }
+                        async {
+                            val translation =
+                                hostedTranslation.translate(
+                                    input = TranslationInput(text),
+                                    languagePair =
+                                        LanguagePair(
+                                            from = sourceLanguageCode,
+                                            to = languageCode,
+                                        ),
+                                    archiveStrategy = ArchiveStrategy.DEFERRED,
+                                )
+
+                            recordPendingArchiveEntry(translation)
+                            translation
+                        }
                     }.awaitAll()
             }
 
         if (translations.isEmpty() || !translations.all { it.isWellFormed }) {
-            throw Exception("Translations fail validation.", metadata = ExceptionMetadata(this))
+            throw Exception(
+                "Translations fail validation.",
+                metadata = ExceptionMetadata(this),
+            )
         }
 
-        incrementDeliveryProgress(conversation, Floats.CREATE_MESSAGE_DELIVERY_PROGRESS_INCREMENT)
-        val message =
-            MessageService.buildMessage(
-                fromAccountID = currentUser.id,
-                presetID = presetID,
-                richContent = null,
-                translations = translations,
-            )
         return createMessageAndAddToConversation(
-            conversation = conversation,
-            initiatingUser = currentUser,
-            otherUsers = recipients,
-            message = message,
+            conversation = inConversation,
             isPenPalsConversation = isPenPalsConversation,
-        )
-    }
-
-    // MARK: - Send Media Message
-
-    /**
-     * Sends [mediaFile] as a media message to the given recipients.
-     *
-     * The media and its thumbnail are uploaded while the message is
-     * built, then the message is written and recipients are notified.
-     *
-     * @return The updated (or newly created) conversation.
-     *
-     * @throws Exception if the current user is unavailable, the upload
-     *   fails, or the message cannot be sent.
-     */
-    suspend fun sendMediaMessage(
-        mediaFile: MediaFile,
-        users: List<User>,
-        conversation: Conversation?,
-        isPenPalsConversation: Boolean = false,
-        presetID: String? = null,
-    ): Conversation {
-        val currentUser =
-            UserSessionService.currentUser
-                ?: throw Exception("Current user has not been set.", metadata = ExceptionMetadata(this))
-
-        val recipients = users.filter { it.id != currentUser.id }
-        incrementDeliveryProgress(conversation, Floats.CREATE_MESSAGE_DELIVERY_PROGRESS_INCREMENT)
-        val message =
-            MessageService.buildMessage(
-                fromAccountID = currentUser.id,
-                presetID = presetID,
-                richContent = RichMessageContent.Media(mediaFile),
-                translations = null,
-            )
-
-        return createMessageAndAddToConversation(
-            conversation = conversation,
             initiatingUser = currentUser,
-            otherUsers = recipients,
-            message = message,
-            isPenPalsConversation = isPenPalsConversation,
+            otherUsers = users,
+            presetID = presetID,
+            richContent = null,
+            translations = translations,
         )
     }
 
     // MARK: - Auxiliary
 
+    @Suppress("LongParameterList")
     private suspend fun createMessageAndAddToConversation(
         conversation: Conversation?,
+        isPenPalsConversation: Boolean,
         initiatingUser: User,
         otherUsers: List<User>,
-        message: Message,
-        isPenPalsConversation: Boolean,
+        presetID: String? = null,
+        richContent: RichMessageContent?,
+        translations: List<Translation>?,
     ): Conversation {
-        val resolvedConversation =
-            if (conversation != null) {
-                incrementDeliveryProgress(conversation, Floats.ADD_MESSAGE_DELIVERY_PROGRESS_INCREMENT)
-                ConversationSessionService.addMessages(listOf(message), conversation)
-            } else {
-                val participants = (listOf(initiatingUser) + otherUsers).map { Participant(userID = it.id) }
-                AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.CREATE_NEW_CONVERSATION)
-                incrementDeliveryProgress(null, Floats.CREATE_CONVERSATION_DELIVERY_PROGRESS_INCREMENT)
-                ConversationService.createConversation(
-                    firstMessage = message,
-                    isPenPalsConversation = isPenPalsConversation,
-                    participants = participants,
-                )
-            }
+        suspend fun addMessage(
+            message: Message,
+            to: Conversation,
+        ): Conversation {
+            incrementDeliveryProgress(
+                inConversation = to,
+                by = Floats.ADD_MESSAGE_DELIVERY_PROGRESS_INCREMENT,
+            )
 
-        // Push is fire-and-forget and best-effort: a slow or failed push
-        // must never block the send or strand the outbox entry, which would
-        // otherwise leave a mock lingering beside the committed message.
-        notificationScope.launch {
-            runCatching {
-                NotificationService.notify(
-                    users = otherUsers.filter { !(it.blockedUserIDs ?: emptyList()).contains(initiatingUser.id) },
-                    message = message,
-                    conversationIDKey = resolvedConversation.id.key,
-                )
-            }.onFailure { Logger.log("Push notification failed: $it") }
-
-            incrementDeliveryProgress(conversation, Floats.NOTIFY_DELIVERY_PROGRESS_INCREMENT)
+            return ConversationSessionService.addMessages(listOf(message), to)
         }
 
-        return resolvedConversation
+        fun notifyUsers(
+            ofMessage: Message,
+            conversationIDKey: String,
+        ) {
+            backgroundScope.launch {
+                try {
+                    NotificationService.notify(
+                        users = otherUsers.filter { !(it.blockedUserIDs ?: emptyList()).contains(initiatingUser.id) },
+                        message = ofMessage,
+                        conversationIDKey = conversationIDKey,
+                    )
+                } catch (exception: Exception) {
+                    Logger.log(
+                        exception,
+                        domain = LoggerDomain.notifications,
+                    )
+                }
+
+                incrementDeliveryProgress(
+                    inConversation = conversation,
+                    by = Floats.NOTIFY_DELIVERY_PROGRESS_INCREMENT,
+                )
+            }
+        }
+
+        incrementDeliveryProgress(
+            inConversation = conversation,
+            by = Floats.CREATE_MESSAGE_DELIVERY_PROGRESS_INCREMENT,
+        )
+
+        val message =
+            MessageService.buildMessage(
+                fromAccountID = initiatingUser.id,
+                presetID = presetID,
+                richContent = richContent,
+                translations = translations,
+            )
+
+        if (conversation != null) {
+            notifyUsers(
+                ofMessage = message,
+                conversationIDKey = conversation.id.key,
+            )
+
+            // Participant un-delete is merged into the
+            // willWrite(.messages) atomic fan-out.
+            return addMessage(
+                message,
+                to = conversation,
+            )
+        }
+
+        val participantUsers = listOf(initiatingUser) + otherUsers
+
+        AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.CREATE_NEW_CONVERSATION)
+        incrementDeliveryProgress(
+            inConversation = conversation,
+            by = Floats.CREATE_CONVERSATION_DELIVERY_PROGRESS_INCREMENT,
+        )
+
+        val createdConversation =
+            ConversationService.createConversation(
+                firstMessage = message,
+                isPenPalsConversation = isPenPalsConversation,
+                participants = participantUsers.map { Participant(userID = it.id) },
+            )
+
+        notifyUsers(
+            ofMessage = message,
+            conversationIDKey = createdConversation.id.key,
+        )
+
+        return createdConversation
     }
 
     private fun incrementDeliveryProgress(
-        conversation: Conversation?,
+        inConversation: Conversation?,
         by: Float,
     ) {
-        if (!shouldAnimateDeliveryProgress(conversation)) return
-        deliveryProgressScope.launch {
-            val clientSession = DependencyValues.current.clientSession
-            clientSession.deliveryProgressIndicator?.incrementDeliveryProgress(by)
+        if (!shouldAnimateDeliveryProgress(inConversation)) return
+        mainScope.launch {
+            DependencyValues.current.clientSession.deliveryProgressIndicator
+                ?.incrementDeliveryProgress(by)
         }
     }
 
-    private fun shouldAnimateDeliveryProgress(conversation: Conversation?): Boolean =
-        ConversationSessionService.currentConversation?.id?.key == conversation?.id?.key
-
-    private suspend fun translate(
-        text: String,
-        sourceLanguageCode: String,
-        languageCode: String,
-    ): Translation {
-        val translation =
-            hostedTranslation.translate(
-                input = TranslationInput(text),
-                languagePair = LanguagePair(from = sourceLanguageCode, to = languageCode),
-                archiveStrategy = ArchiveStrategy.DEFERRED,
-            )
-
-        hostedTranslation.hostedArchiveEntry(translation)?.let { entry ->
-            PendingTranslationArchive.record(entry, translation.reference.hostingKey)
-        }
-        return translation
+    /**
+     * Deferred-archival translations archive atomically with the
+     * message commit; the entry waits in [PendingTranslationArchive]
+     * until the commit drains it into its fan-out payload.
+     */
+    private fun recordPendingArchiveEntry(translation: Translation) {
+        val archiveEntry = hostedTranslation.hostedArchiveEntry(translation) ?: return
+        PendingTranslationArchive.record(archiveEntry, translation.reference.hostingKey)
     }
 
     /**
@@ -241,25 +337,40 @@ object MessageSessionService {
      * translation source for every recipient.
      */
     private suspend fun resolveSourceLanguageCode(
-        text: String,
+        forText: String,
         currentUserLanguageCode: String,
         recipientLanguageCodes: List<String>,
     ): String {
-        val candidates = recipientLanguageCodes.filter { it != currentUserLanguageCode }
-        val matchesCurrentUserLanguage =
-            LanguageRecognitionService.shared.matchConfidence(text, currentUserLanguageCode) >=
-                Floats.LANGUAGE_RECOGNITION_SERVICE_MATCH_CONFIDENCE_THRESHOLD
-        if (candidates.isEmpty() || matchesCurrentUserLanguage) {
+        val candidateLanguageCodes = recipientLanguageCodes.filter { it != currentUserLanguageCode }
+        if (candidateLanguageCodes.isEmpty() ||
+            LanguageRecognitionService.shared.matchConfidence(forText, currentUserLanguageCode) >=
+            Floats.LANGUAGE_RECOGNITION_SERVICE_MATCH_CONFIDENCE_THRESHOLD
+        ) {
             return currentUserLanguageCode
         }
 
-        var best: Pair<String, Float>? = null
-        for (languageCode in candidates) {
-            val confidence = LanguageRecognitionService.shared.matchConfidence(text, languageCode)
-            if (confidence >= Floats.LANGUAGE_RECOGNITION_SERVICE_MATCH_CONFIDENCE_THRESHOLD && confidence > (best?.second ?: 0f)) {
-                best = languageCode to confidence
+        var bestMatch: Pair<String, Float>? = null
+        for (languageCode in candidateLanguageCodes) {
+            val confidence = LanguageRecognitionService.shared.matchConfidence(forText, languageCode)
+
+            if (confidence < Floats.LANGUAGE_RECOGNITION_SERVICE_MATCH_CONFIDENCE_THRESHOLD ||
+                confidence <= (bestMatch?.second ?: 0f)
+            ) {
+                continue
             }
+
+            bestMatch = languageCode to confidence
         }
-        return best?.first ?: currentUserLanguageCode
+
+        return bestMatch?.first ?: currentUserLanguageCode
     }
+
+    private fun shouldAnimateDeliveryProgress(inConversation: Conversation?): Boolean =
+        DependencyValues.current.clientSession.entity.conversation.currentConversation
+            ?.id
+            ?.key == inConversation?.id?.key
+
+    /** The string with the translation processing sentinels removed. */
+    private val String.sanitized: String
+        get() = replace("⁂", "").replace("⌘", "").replace("※", "")
 }

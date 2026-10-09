@@ -15,7 +15,6 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.google.firebase.analytics.FirebaseAnalytics
-import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -30,9 +29,9 @@ import us.neotechnica.panther.modules.common.services.PushTokenService
 import us.neotechnica.panther.modules.common.services.UpdateService
 import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.networking.common.dependencies.firebaseMessaging
 import us.neotechnica.panther.modules.notifications.services.PantherMessagingService
 import us.neotechnica.panther.modules.session.ClientSession
-import us.neotechnica.panther.modules.session.entity.extensions.calculateBadgeNumber
 import us.neotechnica.panther.modules.session.state.services.retryAllEligible
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
@@ -116,7 +115,7 @@ class PantherApplication : Application() {
 
     private fun setUpPushNotifications() {
         PantherMessagingService.createChannel(this)
-        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+        DependencyValues.current.firebaseMessaging.token.addOnSuccessListener { token ->
             PushTokenService.setCurrentToken(token)
         }
     }

@@ -31,12 +31,12 @@ import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellColors
 import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellStrings
+import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
+import us.neotechnica.panther.modules.content.user.extensions.isSystemMessage
 import us.neotechnica.panther.modules.content.user.services.AudioMessagePlaybackService
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
-import us.neotechnica.panther.modules.session.entity.extensions.isSystemMessage
 import androidx.compose.material3.Text as Material3Text
 
 /**

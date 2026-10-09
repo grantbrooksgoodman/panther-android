@@ -16,16 +16,14 @@ import us.neotechnica.panther.bundle.deletedUsers
 import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ProgressAlert
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
+import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpdatableKey
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.update
 import us.neotechnica.panther.modules.session.clientSession
-import us.neotechnica.panther.modules.session.entity.extensions.conversations
-import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.modules.session.entity.models.EntitySession
-import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
@@ -113,7 +111,7 @@ object AccountDeletionService {
                     async { runCatchingException { addToDeletedUsers(currentUserID) } },
                     async {
                         runCatchingException {
-                            entitySession.user.resolveCurrentUser(setOf(UserSessionService.DataType.CONVERSATIONS))
+                            entitySession.user.resolveCurrentUser(setOf(User.DataType.CONVERSATIONS))
                         }
                     },
                 ).awaitAll().forEach { exception -> exception?.let(exceptions::add) }

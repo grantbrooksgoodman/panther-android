@@ -24,7 +24,8 @@ import us.neotechnica.panther.translator.models.TranslationInput
  * translations from a seeded table.
  *
  * Seed [archivedTranslations] with the hash and language pair a
- * reference resolves through; every other operation is unsupported.
+ * reference resolves through. [translate] echoes its input unless
+ * [translateOutput] is replaced; every other operation is unsupported.
  */
 class FakeHostedTranslationDelegate : HostedTranslationDelegate {
     // MARK: - Properties
@@ -34,6 +35,12 @@ class FakeHostedTranslationDelegate : HostedTranslationDelegate {
 
     /** The hashes and language pairs looked up so far. */
     val lookups = mutableListOf<Pair<String, String>>()
+
+    /** The inputs and language pairs passed to [translate] so far. */
+    val translateRequests = mutableListOf<Pair<TranslationInput, LanguagePair>>()
+
+    /** Produces the output [translate] returns; echoes the input by default. */
+    var translateOutput: (TranslationInput, LanguagePair) -> String = { input, _ -> input.value }
 
     // MARK: - HostedTranslationDelegate
 
@@ -66,7 +73,10 @@ class FakeHostedTranslationDelegate : HostedTranslationDelegate {
         languagePair: LanguagePair,
         hudConfig: HUDConfig?,
         archiveStrategy: ArchiveStrategy,
-    ): Translation = error("translate is not supported by FakeHostedTranslationDelegate.")
+    ): Translation {
+        translateRequests.add(input to languagePair)
+        return Translation(input, output = translateOutput(input, languagePair), languagePair = languagePair)
+    }
 
     // MARK: - Seeding
 

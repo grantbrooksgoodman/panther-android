@@ -19,6 +19,8 @@ import us.neotechnica.panther.modules.content.user.models.QueriedContactPairCach
 import us.neotechnica.panther.modules.content.user.models.QueriedConversationCache
 import us.neotechnica.panther.modules.content.user.services.ChatInfoPageViewService
 import us.neotechnica.panther.modules.content.user.services.SettingsPageViewService
+import us.neotechnica.panther.modules.networking.conversation.models.ActivityDescriptionCache
+import us.neotechnica.panther.modules.networking.message.models.AudioFileDurationCache
 import us.neotechnica.panther.modules.networking.message.models.ReadReceiptCache
 import us.neotechnica.panther.modules.networking.user.services.UserService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
@@ -37,6 +39,8 @@ object CacheDomainList : CacheDomainListDelegate {
     override val appCacheDomains: List<CacheDomain>
         get() =
             listOf(
+                CacheDomain.activityDescription,
+                CacheDomain.audioFileDuration,
                 CacheDomain.chatInfoPageViewService,
                 CacheDomain.commonPropertyLists,
                 CacheDomain.contactPairArchive,
@@ -59,6 +63,14 @@ object CacheDomainList : CacheDomainListDelegate {
 }
 
 // MARK: - Properties
+
+/** The cache domain for the `activityDescription` cache. */
+val CacheDomain.Companion.activityDescription: CacheDomain
+    get() = CacheDomain("activityDescription") { ActivityDescriptionCache.clearCache() }
+
+/** The cache domain for the `audioFileDuration` cache. */
+val CacheDomain.Companion.audioFileDuration: CacheDomain
+    get() = CacheDomain("audioFileDuration") { AudioFileDurationCache.clearCache() }
 
 /** The cache domain for the `chatInfoPageViewService` cache. */
 val CacheDomain.Companion.chatInfoPageViewService: CacheDomain

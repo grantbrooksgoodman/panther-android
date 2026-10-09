@@ -11,34 +11,49 @@ package us.neotechnica.panther.modules.networking.message.services
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.supervisorScope
+import us.neotechnica.panther.bundle.conversations
 import us.neotechnica.panther.bundle.media
 import us.neotechnica.panther.bundle.messages
+import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.modules.common.extensions.shortened
 import us.neotechnica.panther.modules.common.models.AudioFileExtension
+import us.neotechnica.panther.modules.networking.common.BatchFailureStrategy
+import us.neotechnica.panther.modules.networking.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.conversation.models.ConversationMetadata
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.message.models.RichMessageContent
 import us.neotechnica.panther.modules.networking.message.serializable.decode
+import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.database.interfaces.getValues
 import us.neotechnica.panther.networking.modules.translation.extensions.reference
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestampDateFormatter
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.compiledException
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
+import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Coalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.translator.models.Translation
 import java.util.Date
 
+// This service exceeds the file-length and type-body-length limits.
+
 /**
- * The service that creates and retrieves messages.
+ * The service that creates, retrieves, and deletes messages.
  *
  * [MessageService] builds and writes message nodes and fetches
  * messages by identifier. It delegates content transfer to its
  * [audio] and [media] sub-services.
  */
+@Suppress("LargeClass")
 object MessageService {
     // MARK: - Properties
 
@@ -262,7 +277,166 @@ object MessageService {
         }
     }
 
+    // MARK: - Deletion
+
+    /**
+     * Deletes the message with the given identifier, including its
+     * audio or media content.
+     *
+     * When a conversation is given, the message is also removed from
+     * the conversation's message index, and – unless suppressed – the
+     * conversation's hash and each participant's conversation token
+     * are updated, all in a single atomic operation.
+     *
+     * @param id The identifier of the message to delete.
+     * @param inConversation The conversation the message belongs to,
+     *   or `null` to delete only the message node.
+     * @param updateConversationHash A Boolean value that determines
+     *   whether to update the conversation's hash and tokens.
+     *
+     * @throws Exception if deletion fails.
+     */
+    suspend fun deleteMessage(
+        id: String,
+        inConversation: Conversation? = null,
+        updateConversationHash: Boolean = true,
+    ) {
+        val conversation = inConversation ?: return deleteMessageNode(id)
+        deleteMessageNode(id)
+
+        // Atomic removal from the conversation's message
+        // index + hash/token update in one fan-out.
+        val conversationPath = listOf(NetworkPath.conversations.rawValue, conversation.id.key).joinToString("/")
+
+        val updates =
+            mutableMapOf<String, Any?>(
+                "$conversationPath/${Conversation.SerializableKey.MESSAGES.rawValue}/$id" to null,
+            )
+
+        if (updateConversationHash) {
+            val timestampDateFormatter = DependencyValues.current.timestampDateFormatter
+            val now = Date()
+
+            val updated =
+                conversation
+                    .copy(messageIDs = conversation.messageIDs.filter { it != id })
+                    .copy(metadata = conversation.metadata.copyWith(lastModifiedDate = now))
+
+            val newHash = updated.encodedHash
+            updates["$conversationPath/${Conversation.SerializableKey.ENCODED_HASH.rawValue}"] = newHash
+            updates[
+                listOf(
+                    conversationPath,
+                    Conversation.SerializableKey.METADATA.rawValue,
+                    ConversationMetadata.SerializableKey.LAST_MODIFIED_DATE.rawValue,
+                ).joinToString("/"),
+            ] = timestampDateFormatter.format(now)
+
+            for (participant in conversation.participants) {
+                val tokenPath =
+                    listOf(
+                        NetworkPath.users.rawValue,
+                        participant.userID,
+                        User.SerializableKey.CONVERSATION_IDS.rawValue,
+                        conversation.id.key,
+                    ).joinToString("/")
+
+                updates[tokenPath] = newHash
+            }
+        }
+
+        database.commit(updates)
+    }
+
+    /**
+     * Deletes the messages with the given identifiers concurrently.
+     *
+     * @param ids The identifiers of the messages to delete.
+     * @param inConversation The conversation the messages belong to,
+     *   or `null` to delete only the message nodes.
+     * @param updateConversationHash A Boolean value that determines
+     *   whether to update the conversation's hash and tokens.
+     * @param failureStrategy The strategy for how the batch responds
+     *   to a failure.
+     *
+     * @throws Exception if deletion fails.
+     */
+    suspend fun deleteMessages(
+        ids: List<String>,
+        inConversation: Conversation? = null,
+        updateConversationHash: Boolean = true,
+        failureStrategy: BatchFailureStrategy = BatchFailureStrategy.RETURN_ON_FAILURE,
+    ) {
+        when (failureStrategy) {
+            BatchFailureStrategy.RETURN_ON_FAILURE ->
+                coroutineScope {
+                    ids
+                        .map { id ->
+                            async {
+                                deleteMessage(
+                                    id = id,
+                                    inConversation = inConversation,
+                                    updateConversationHash = updateConversationHash,
+                                )
+                            }
+                        }.awaitAll()
+                }
+
+            BatchFailureStrategy.CONTINUE_ON_FAILURE -> {
+                val exceptions =
+                    supervisorScope {
+                        ids
+                            .map { id ->
+                                async {
+                                    try {
+                                        deleteMessage(
+                                            id = id,
+                                            inConversation = inConversation,
+                                            updateConversationHash = updateConversationHash,
+                                        )
+                                        null
+                                    } catch (exception: Exception) {
+                                        exception
+                                    }
+                                }
+                            }.awaitAll()
+                    }.filterNotNull()
+
+                exceptions.compiledException?.let { throw it }
+            }
+        }
+    }
+
     // MARK: - Auxiliary
+
+    private suspend fun deleteMessageNode(messageID: String) {
+        val exceptions = mutableListOf<Exception>()
+
+        try {
+            audio.deleteInputAudioComponent(messageID)
+        } catch (exception: Exception) {
+            exceptions.add(exception)
+        }
+
+        try {
+            media.deleteMediaComponent(messageID)
+        } catch (exception: Exception) {
+            if (!exception.isEqual(to = AppException.Networking.Storage.storageItemDoesNotExist)) {
+                exceptions.add(exception)
+            }
+        }
+
+        try {
+            database.setValue(
+                value = null,
+                key = "${NetworkPath.messages.rawValue}/$messageID",
+            )
+        } catch (exception: Exception) {
+            exceptions.add(exception)
+        }
+
+        exceptions.compiledException?.let { throw it }
+    }
 
     private suspend fun fetchMessage(id: String): Message {
         val userInfo = mapOf("MessageID" to id)

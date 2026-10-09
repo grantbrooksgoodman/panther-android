@@ -13,13 +13,12 @@ import us.neotechnica.panther.bundle.conversationsPageReappeared
 import us.neotechnica.panther.bundle.conversationsSearchQuery
 import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardService
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
+import us.neotechnica.panther.modules.content.user.extensions.filteredAndSorted
+import us.neotechnica.panther.modules.content.user.extensions.isMock
+import us.neotechnica.panther.modules.content.user.extensions.isVisibleForCurrentUser
+import us.neotechnica.panther.modules.content.user.extensions.queried
 import us.neotechnica.panther.modules.content.user.services.ConversationsPageViewService
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.session.entity.extensions.conversations
-import us.neotechnica.panther.modules.session.entity.extensions.filteredAndSorted
-import us.neotechnica.panther.modules.session.entity.extensions.isMock
-import us.neotechnica.panther.modules.session.entity.extensions.isVisibleForCurrentUser
-import us.neotechnica.panther.modules.session.entity.extensions.queried
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.navigation.Route

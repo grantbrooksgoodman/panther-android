@@ -8,6 +8,8 @@
 
 package us.neotechnica.panther.modules.networking.common
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import us.neotechnica.panther.bundle.conversations
 import us.neotechnica.panther.bundle.populatedTemporaryCaches
 import us.neotechnica.panther.bundle.users
@@ -48,8 +50,13 @@ fun DatabaseDelegate.clearTemporaryCaches() {
 suspend fun DatabaseDelegate.populateTemporaryCaches() {
     if (RuntimeStorage.populatedTemporaryCaches) return
 
-    val conversationData: Map<String, Any?> = getValues<Map<String, Any?>>(NetworkPath.conversations.rawValue)
-    val userData: Map<String, Any?> = getValues<Map<String, Any?>>(NetworkPath.users.rawValue)
+    val (conversationData, userData) =
+        coroutineScope {
+            val getConversationValues = async { getValues<Map<String, Any?>>(NetworkPath.conversations.rawValue) }
+            val getUserValues = async { getValues<Map<String, Any?>>(NetworkPath.users.rawValue) }
+            getConversationValues.await() to getUserValues.await()
+        }
+
     val environment = Networking.config.environment.shortString
 
     conversationData.forEach { (key, value) ->

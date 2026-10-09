@@ -15,26 +15,25 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.services.HapticsService
+import us.neotechnica.panther.modules.content.user.extensions.isMock
 import us.neotechnica.panther.modules.content.user.models.ContextMenuInteraction
 import us.neotechnica.panther.modules.content.user.models.MessageDeliveryServiceEffectID
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.extensions.isMock
-import us.neotechnica.panther.modules.session.entity.extensions.users
+import us.neotechnica.panther.modules.session.clientSession
+import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
+import us.neotechnica.panther.modules.session.entity.services.MessageSessionService
+import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
+import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import java.util.Date
 import java.util.UUID
-import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.modules.session.entity.services.MessageSessionService
-import us.neotechnica.panther.modules.session.entity.services.UserSessionService
-import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
-import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
-import us.neotechnica.panther.modules.session.clientSession
 
 /**
  * Sends messages from the chat page, staging each in the outbox so
@@ -154,9 +153,9 @@ object MessageDeliveryService {
             val updated =
                 MessageSessionService.sendTextMessage(
                     text = text.trimEnd(),
-                    presetID = null,
-                    users = recipients,
-                    conversation = currentConversation?.takeUnless { it.isMock },
+                    toUsers = recipients,
+                    inConversation = currentConversation?.takeUnless { it.isMock },
+                    isPenPalsConversation = currentConversation?.metadata?.isPenPalsConversation ?: false,
                 )
             outboxEntryID?.let { MessageOutboxService.remove(it) }
             AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.SEND_TEXT_MESSAGE)
@@ -221,8 +220,8 @@ object MessageDeliveryService {
             val updated =
                 MessageSessionService.sendMediaMessage(
                     mediaFile = mediaFile,
-                    users = recipients,
-                    conversation = targetConversation,
+                    toUsers = recipients,
+                    inConversation = targetConversation,
                     isPenPalsConversation = isPenPalsConversation,
                 )
             outboxEntryID?.let { MessageOutboxService.remove(it) }

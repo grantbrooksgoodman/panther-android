@@ -10,6 +10,10 @@ package us.neotechnica.panther.modules.session.sync.services
 
 import us.neotechnica.panther.bundle.conversationSync
 import us.neotechnica.panther.bundle.conversations
+import us.neotechnica.panther.modules.content.user.extensions.currentUserParticipant
+import us.neotechnica.panther.modules.content.user.extensions.filteringSystemMessages
+import us.neotechnica.panther.modules.content.user.extensions.sortedByAscendingSentDate
+import us.neotechnica.panther.modules.networking.common.uniquedByID
 import us.neotechnica.panther.modules.networking.conversation.models.Activity
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
@@ -19,12 +23,6 @@ import us.neotechnica.panther.modules.networking.conversation.models.ReactionMet
 import us.neotechnica.panther.modules.networking.conversation.remotelyupdatable.ConversationUpdatableKey
 import us.neotechnica.panther.modules.networking.conversation.remotelyupdatable.modifyKey
 import us.neotechnica.panther.modules.networking.message.services.MessageService
-import us.neotechnica.panther.modules.session.entity.extensions.currentUserParticipant
-import us.neotechnica.panther.modules.session.entity.extensions.filteringSystemMessages
-import us.neotechnica.panther.modules.session.entity.extensions.messages
-import us.neotechnica.panther.modules.session.entity.extensions.resolveMessages
-import us.neotechnica.panther.modules.session.entity.extensions.sortedByAscendingSentDate
-import us.neotechnica.panther.modules.session.entity.extensions.uniquedByID
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.modules.session.sync.models.ConversationSyncData

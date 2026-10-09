@@ -8,10 +8,12 @@
 
 package us.neotechnica.panther.modules.networking.conversation.models
 
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.common.interfaces.Serializable
 import us.neotechnica.panther.networking.modules.common.interfaces.SerializableDecoder
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 
@@ -38,14 +40,40 @@ data class MessageRecipientConsentAcknowledgementData(
 
     companion object : SerializableDecoder<MessageRecipientConsentAcknowledgementData, String> {
         /**
-         * Returns an acknowledgement record for each of the given users,
-         * all seeded to [consentAcknowledged].
+         * Returns a consent acknowledgement record for each of the
+         * given users, each marked as acknowledged.
+         *
+         * @param userIDs The identifiers of the users to create
+         *   records for.
+         *
+         * @return The consent acknowledgement records.
          */
-        fun prepopulated(
-            userIDs: List<String>,
-            consentAcknowledged: Boolean,
-        ): List<MessageRecipientConsentAcknowledgementData> =
-            userIDs.map { MessageRecipientConsentAcknowledgementData(userID = it, consentAcknowledged = consentAcknowledged) }
+        fun empty(userIDs: List<String>): List<MessageRecipientConsentAcknowledgementData> =
+            userIDs.map { MessageRecipientConsentAcknowledgementData(userID = it, consentAcknowledged = true) }
+
+        /**
+         * Returns a consent acknowledgement record for each of the
+         * given users, seeding each record's acknowledgement from the
+         * current user's consent requirement.
+         *
+         * Each record is marked as acknowledged unless the current
+         * user requires message-receipt consent, in which case each
+         * record is marked as not acknowledged.
+         *
+         * @param userIDs The identifiers of the users to create
+         *   records for.
+         *
+         * @return The consent acknowledgement records.
+         */
+        fun prepopulated(userIDs: List<String>): List<MessageRecipientConsentAcknowledgementData> {
+            val messageRecipientConsentRequired =
+                DependencyValues.current.clientSession.entity.user.currentUser
+                    ?.messageRecipientConsentRequired
+            val initialConsentAcknowledgedValue = !(messageRecipientConsentRequired ?: false)
+            return userIDs.map {
+                MessageRecipientConsentAcknowledgementData(userID = it, consentAcknowledged = initialConsentAcknowledgedValue)
+            }
+        }
 
         override fun canDecode(data: String): Boolean {
             val components = data.split(": ")

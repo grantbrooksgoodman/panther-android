@@ -20,9 +20,9 @@ import kotlinx.coroutines.launch
 import us.neotechnica.panther.designsystem.modules.alertkit.interfaces.ReportDelegate
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
 import us.neotechnica.panther.modules.common.models.SystemInformation
+import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.navigation.descriptor
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking

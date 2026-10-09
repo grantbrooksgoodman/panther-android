@@ -8,7 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.extensions
 
-import us.neotechnica.panther.modules.session.entity.extensions.isVisibleForCurrentUser
+import us.neotechnica.panther.modules.content.user.extensions.isVisibleForCurrentUser
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 
 /** ID keys of archived conversations hidden from the current user. */

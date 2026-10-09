@@ -11,6 +11,7 @@ package us.neotechnica.panther.modules.networking.message.serializable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.networking.common.messageService
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
 import us.neotechnica.panther.modules.networking.message.models.LocalAudioFilePath
@@ -20,7 +21,6 @@ import us.neotechnica.panther.modules.networking.message.models.ReadReceipt
 import us.neotechnica.panther.modules.networking.message.models.RichMessageContent
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.clientSession
-import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty

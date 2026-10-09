@@ -9,6 +9,8 @@
 package us.neotechnica.panther.modules.networking.conversation.models
 
 import androidx.compose.ui.graphics.Color
+import us.neotechnica.panther.modules.content.user.extensions.currentUserID
+import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.interfaces.Serializable
 import us.neotechnica.panther.networking.modules.common.interfaces.SerializableDecoder
@@ -87,14 +89,31 @@ data class Reaction(
             /** The reaction styles, sorted by display order. */
             val orderedCases: List<Style> = entries.sortedBy { it.orderValue }
 
+            private val emojiCaseMap: Map<String, Style> = entries.associateBy { it.emojiValue }
+
             /**
-             * Creates a style from its serialized representation,
-             * or `null` if no style matches.
+             * Creates a style from its serialized representation.
+             *
+             * @param encodedValue The serialized representation of the
+             *   style.
+             *
+             * @return The matching style, or `null` if the value does
+             *   not represent a known style.
              */
             fun from(encodedValue: String): Style? =
                 entries.firstOrNull {
                     it.encodedValue == encodedValue
                 }
+
+            /**
+             * Creates a style from the given emoji.
+             *
+             * @param emojiValue The emoji that represents the style.
+             *
+             * @return The matching style, or `null` if no style uses
+             *   the emoji.
+             */
+            fun fromEmojiValue(emojiValue: String): Style? = emojiCaseMap[emojiValue]
         }
     }
 
@@ -120,6 +139,20 @@ data class Reaction(
     // MARK: - Companion
 
     companion object : SerializableDecoder<Reaction, Map<String, Any?>> {
+        /**
+         * Creates a reaction with the given style, applied by the
+         * current user.
+         *
+         * @param style The reaction's style.
+         *
+         * @return The reaction, or `null` if the current user
+         *   identifier has not been set.
+         */
+        fun from(style: Style): Reaction? {
+            val currentUserID = User.currentUserID ?: return null
+            return Reaction(style, userID = currentUserID)
+        }
+
         override fun canDecode(data: Map<String, Any?>): Boolean {
             val encodedStyle = data[Keys.STYLE.rawValue] as? String ?: return false
             return Style.from(encodedStyle) != null && data[Keys.USER_ID.rawValue] is String

@@ -15,10 +15,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import us.neotechnica.panther.modules.common.models.Contact
 import us.neotechnica.panther.modules.common.models.ContactPair
+import us.neotechnica.panther.modules.content.user.extensions.empty
 import us.neotechnica.panther.modules.content.user.models.ChatParticipant
 import us.neotechnica.panther.modules.content.user.services.ChatInfoPageViewService
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.session.entity.extensions.empty
 
 class ChatInfoPageReducerTest {
     // MARK: - Setup

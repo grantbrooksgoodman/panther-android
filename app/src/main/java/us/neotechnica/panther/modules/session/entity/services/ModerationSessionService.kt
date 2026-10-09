@@ -23,6 +23,7 @@ import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.content.user.extensions.contactPair
+import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.syncIfNeeded
 import us.neotechnica.panther.modules.content.user.extensions.userIDs
 import us.neotechnica.panther.modules.content.user.extensions.withUser
@@ -32,8 +33,6 @@ import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpdatableKey
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.update
 import us.neotechnica.panther.modules.networking.user.services.UserService
-import us.neotechnica.panther.modules.session.entity.extensions.currentUserID
-import us.neotechnica.panther.modules.session.entity.extensions.users
 import us.neotechnica.panther.modules.session.entity.models.ModerationType
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
@@ -241,7 +240,7 @@ object ModerationSessionService {
         }
     }
 
-    internal suspend fun blockUsers(userIDs: List<String>) {
+    private suspend fun blockUsers(userIDs: List<String>) {
         val currentUser =
             UserSessionService.currentUser
                 ?: throw Exception("Current user has not been set.", metadata = ExceptionMetadata(this))
@@ -257,7 +256,7 @@ object ModerationSessionService {
         )
     }
 
-    internal suspend fun reportUsers(userIDs: List<String>) {
+    private suspend fun reportUsers(userIDs: List<String>) {
         database.runTransaction(NetworkPath.reportedUsers.rawValue) { current ->
             @Suppress("UNCHECKED_CAST")
             val reportedUserIDs = (current as? Map<String, Any?>).orEmpty().toMutableMap()
@@ -268,7 +267,7 @@ object ModerationSessionService {
         }
     }
 
-    internal suspend fun unblockUsers(userIDs: List<String>) {
+    private suspend fun unblockUsers(userIDs: List<String>) {
         val currentUser =
             UserSessionService.currentUser
                 ?: throw Exception("Current user has not been set.", metadata = ExceptionMetadata(this))

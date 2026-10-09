@@ -18,14 +18,12 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.foundation.extensions.cancelAction
+import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
+import us.neotechnica.panther.modules.networking.common.visibleForCurrentUser
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpdatableKey
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.updateValues
-import us.neotechnica.panther.modules.session.entity.extensions.conversations
-import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
-import us.neotechnica.panther.modules.session.entity.extensions.messages
-import us.neotechnica.panther.modules.session.entity.extensions.users
-import us.neotechnica.panther.modules.session.entity.extensions.visibleForCurrentUser
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
@@ -110,7 +108,7 @@ object ChangeLanguagePageViewService {
             UserSessionService.currentUser
                 ?: throw Exception("Current user has not been set.", metadata = ExceptionMetadata(this))
 
-        UserSessionService.resolveCurrentUser(UserSessionService.DataType.entries.toSet())
+        UserSessionService.resolveCurrentUser(User.DataType.entries.toSet())
 
         val conversations = (UserSessionService.currentUser?.conversations ?: emptyList()).visibleForCurrentUser
         val outgoingLanguageCode = RuntimeStorage.languageCode

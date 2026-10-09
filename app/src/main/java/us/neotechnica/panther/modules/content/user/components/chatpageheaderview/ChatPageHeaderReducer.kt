@@ -8,9 +8,9 @@
 
 package us.neotechnica.panther.modules.content.user.components.chatpageheaderview
 
+import us.neotechnica.panther.modules.content.user.extensions.empty
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.session.entity.extensions.empty
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.navigation.Route

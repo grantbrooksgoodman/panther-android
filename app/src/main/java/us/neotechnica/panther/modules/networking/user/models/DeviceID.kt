@@ -10,53 +10,47 @@ package us.neotechnica.panther.modules.networking.user.models
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.provider.Settings
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import java.util.UUID
 
 /**
- * A stable, per-install device identifier.
- *
- * The identifier is a random UUID persisted in
- * [EncryptedSharedPreferences], mirrored to a plain-preferences
- * backup and cached in process so the value stays stable for the
- * lifetime of an install even when the encrypted store is
- * unavailable. The value survives app restarts but resets on
- * reinstall.
+ * A namespace for the current device's persistent identifier.
  */
 object DeviceID {
-    // MARK: - Constants
-
-    private const val PREFERENCES_NAME = "device_id"
-    private const val BACKUP_PREFERENCES_NAME = "device_id_backup"
-    private const val KEY = "us.neotechnica.deviceID"
-
     // MARK: - Properties
 
-    private var appContext: Context? = null
+    private const val ACCOUNT = "us.neotechnica.deviceID"
+    private const val BACKUP_PREFERENCES_NAME = "device_id_backup"
+    private const val PREFERENCES_NAME = "device_id"
+
     private val cachedID = LockIsolated<String?>(null)
+    private var appContext: Context? = null
 
     // MARK: - Computed Properties
 
-    /** The current device identifier, generating and persisting one if needed. */
+    /**
+     * The current device's identifier.
+     *
+     * The identifier is generated on first access – from the device's
+     * Android ID, or a new UUID when unavailable – and persisted to
+     * encrypted preferences, mirrored to a plain-preferences backup,
+     * and cached in process so the value stays stable for the lifetime
+     * of an install.
+     */
     val current: String
         get() =
             cachedID.withValue { reference ->
                 reference.value?.let { return@withValue it }
 
-                val encrypted = encryptedPreferences()
-                val backup = backupPreferences()
+                val existingID = read()
+                val resolvedID = existingID ?: (androidID() ?: UUID.randomUUID().toString())
+                if (existingID == null) save(resolvedID)
 
-                val resolved =
-                    encrypted?.getString(KEY, null)
-                        ?: backup?.getString(KEY, null)
-                        ?: UUID.randomUUID().toString()
-
-                encrypted?.edit()?.putString(KEY, resolved)?.apply()
-                backup?.edit()?.putString(KEY, resolved)?.apply()
-                reference.value = resolved
-                resolved
+                reference.value = resolvedID
+                resolvedID
             }
 
     // MARK: - Methods
@@ -67,6 +61,13 @@ object DeviceID {
     }
 
     // MARK: - Auxiliary
+
+    private fun androidID(): String? {
+        val context = appContext ?: return null
+        return runCatching { Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) }
+            .getOrNull()
+            ?.takeIf { it.isNotBlank() }
+    }
 
     private fun backupPreferences(): SharedPreferences? = appContext?.getSharedPreferences(BACKUP_PREFERENCES_NAME, Context.MODE_PRIVATE)
 
@@ -89,5 +90,12 @@ object DeviceID {
         } catch (_: Exception) {
             null
         }
+    }
+
+    private fun read(): String? = encryptedPreferences()?.getString(ACCOUNT, null) ?: backupPreferences()?.getString(ACCOUNT, null)
+
+    private fun save(value: String) {
+        encryptedPreferences()?.edit()?.putString(ACCOUNT, value)?.apply()
+        backupPreferences()?.edit()?.putString(ACCOUNT, value)?.apply()
     }
 }

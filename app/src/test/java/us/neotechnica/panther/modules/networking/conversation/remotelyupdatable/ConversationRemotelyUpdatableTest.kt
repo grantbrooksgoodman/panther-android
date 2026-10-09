@@ -107,6 +107,9 @@ class ConversationRemotelyUpdatableTest {
             SessionStore.upsertMessages(setOf(message))
             ConversationSessionService.setCurrentConversation(conversation)
 
+            // The reaction write re-resolves the message from the network.
+            database.getValuesResults["messages/${message.id}"] = FixtureJson.loadObject("message.json")
+
             // Seed the raw node: a sentinel entry (to strip) plus another
             // user's reaction on the same message (to preserve).
             database.transactionSeed =

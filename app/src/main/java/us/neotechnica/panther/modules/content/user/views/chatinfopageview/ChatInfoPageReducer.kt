@@ -11,6 +11,9 @@ package us.neotechnica.panther.modules.content.user.views.chatinfopageview
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewConstants
 import us.neotechnica.panther.modules.content.user.extensions.displayName
+import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
+import us.neotechnica.panther.modules.content.user.extensions.offsetFromCurrentUserAdditionDate
+import us.neotechnica.panther.modules.content.user.extensions.sortedByDescendingSentDate
 import us.neotechnica.panther.modules.content.user.models.ChatParticipant
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.content.user.models.MediaItemViewData
@@ -18,17 +21,12 @@ import us.neotechnica.panther.modules.content.user.services.ChatInfoPageViewServ
 import us.neotechnica.panther.modules.content.user.services.ConversationCellViewService
 import us.neotechnica.panther.modules.content.user.services.presentChangeMetadataActionSheet
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.networking.conversation.models.ActivityAction
+import us.neotechnica.panther.modules.networking.conversation.models.Activity
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationMetadata
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.extensions.isFromCurrentUser
-import us.neotechnica.panther.modules.session.entity.extensions.messages
-import us.neotechnica.panther.modules.session.entity.extensions.offsetFromCurrentUserAdditionDate
-import us.neotechnica.panther.modules.session.entity.extensions.sortedByDescendingSentDate
-import us.neotechnica.panther.modules.session.entity.extensions.users
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.navigation.ChatNavigatorState
 import us.neotechnica.panther.navigation.ChatRoute
@@ -404,16 +402,16 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
                 if (conversation == null) return ReduceResult(state.copy(isChangeMetadataButtonEnabled = true))
                 val activityAction =
                     if (change.metadata.name.isBangQualifiedEmpty) {
-                        ActivityAction.RemovedName
+                        Activity.Action.RemovedName
                     } else {
-                        ActivityAction.RenamedConversation(change.metadata.name)
+                        Activity.Action.RenamedConversation(change.metadata.name)
                     }
                 ReduceResult(state, updateMetadataEffect(conversation, activityAction, change.metadata))
             }
 
             is ChatInfoPageViewService.MetadataChangeType.RemovePhoto -> {
                 if (conversation == null) return ReduceResult(state.copy(isChangeMetadataButtonEnabled = true))
-                ReduceResult(state, updateMetadataEffect(conversation, ActivityAction.RemovedGroupPhoto, change.metadata))
+                ReduceResult(state, updateMetadataEffect(conversation, Activity.Action.RemovedGroupPhoto, change.metadata))
             }
 
             ChatInfoPageViewService.MetadataChangeType.SelectPhotoFromCamera ->
@@ -432,16 +430,13 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
     ): ReduceResult<State, Action> {
         val conversation = state.conversation ?: return ReduceResult(state.copy(isChangeMetadataButtonEnabled = true))
         val newMetadata =
-            conversation.metadata.copyWith(
-                imageData = imageData,
-                imageHash = ConversationMetadata.computeImageHash(imageData),
-            )
-        return ReduceResult(state, updateMetadataEffect(conversation, ActivityAction.ChangedGroupPhoto, newMetadata))
+            conversation.metadata.copyWith(imageData = imageData)
+        return ReduceResult(state, updateMetadataEffect(conversation, Activity.Action.ChangedGroupPhoto, newMetadata))
     }
 
     private fun updateMetadataEffect(
         conversation: Conversation,
-        action: ActivityAction,
+        action: Activity.Action,
         newMetadata: ConversationMetadata,
     ): Effect<Action> =
         Effect.run { send ->

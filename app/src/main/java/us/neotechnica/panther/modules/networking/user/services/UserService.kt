@@ -16,44 +16,56 @@ import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.networking.common.withGlobalCacheStrategy
 import us.neotechnica.panther.modules.networking.user.models.DeviceID
 import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.networking.user.models.UserDataSnapshot
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
-import us.neotechnica.panther.networking.modules.common.models.DataSample
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.database.interfaces.getValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Coalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
+import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
+import us.neotechnica.panther.subsystem.modules.foundation.models.SingleSlotCoalescer
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Creates and retrieves [User] records in the database.
+ * The service that creates and retrieves users.
  *
- * Creates new user records, fetches users by identifier or phone
- * number, and caches recently-fetched user data in short-lived
- * snapshots. Every user it returns is upserted into the session
- * store.
+ * `UserService` creates new user records, fetches users by identifier
+ * or phone number, and caches recently-fetched user data in
+ * short-lived snapshots. Every user it returns is upserted into the
+ * session store.
  */
 object UserService {
     // MARK: - Properties
 
-    private val allUsersCoalescer = Coalescer<String, List<User>>()
-    private val cachedUserDataSnapshots = LockIsolated<List<DataSample>?>(null)
-    private val userCoalescer = Coalescer<String, User>()
+    private val keyedCoalescer = Coalescer<String, User>()
+    private val singleSlotCoalescer = SingleSlotCoalescer<List<User>>()
+
+    private val cachedUserDataSnapshots = LockIsolated<List<UserDataSnapshot>?>(null)
 
     private val database get() = Networking.config.databaseDelegate
 
-    // MARK: - Create User
+    // MARK: - User Creation
 
     /**
-     * Creates a user record from the onboarding values, writing it to
-     * `users/<id>`.
+     * Creates a new user with the given properties and writes it to
+     * the database.
+     *
+     * @param id The identifier for the new user.
+     * @param languageCode The user's language code.
+     * @param phoneNumber The user's phone number.
+     * @param pushTokens The user's push notification tokens, or `null`
+     *   if none.
+     *
+     * @return The created user.
      *
      * @throws Exception if an account already exists for the phone
-     *   number, or the write fails.
+     *   number, or if writing the user fails.
      */
     suspend fun createUser(
         id: String,
@@ -69,7 +81,7 @@ object UserService {
             )
         }
 
-        val user =
+        val mockUser =
             User(
                 id = id,
                 aiEnhancedTranslationsEnabled = false,
@@ -84,23 +96,28 @@ object UserService {
                 pushTokens = pushTokens,
             )
 
-        val data =
-            user.encoded
-                .filterKeys { it != ID_KEY }
-                .toMutableMap()
-        data[BADGE_NUMBER_KEY] = 0
+        val data = mockUser.encoded.filterKeys { it != User.SerializableKey.ID.rawValue }.toMutableMap()
+        data[User.SerializableKey.BADGE_NUMBER.rawValue] = 0
 
         database.setValue(
             value = data,
             key = "${NetworkPath.users.rawValue}/$id",
         )
 
-        return user
+        return mockUser
     }
 
     // MARK: - Collision Detection
 
-    /** Returns whether an account is registered for the phone number. */
+    /**
+     * Returns a Boolean value that indicates whether an account is
+     * registered with the given phone number.
+     *
+     * @param phoneNumber The phone number to check.
+     *
+     * @return `true` if an account exists for the phone number;
+     *   otherwise, `false`.
+     */
     suspend fun accountExists(phoneNumber: PhoneNumber): Boolean =
         try {
             getUser(phoneNumber)
@@ -109,61 +126,232 @@ object UserService {
             false
         }
 
-    // MARK: - Retrieval
-
-    /** Returns every user in the database. Concurrent calls coalesce. */
-    suspend fun getAllUsers(): List<User> = allUsersCoalescer(ALL_USERS_KEY) { fetchAllUsers() }
+    // MARK: - Get All Users
 
     /**
-     * Returns the user with the given ID, upserting it into the
-     * [SessionStore]. Concurrent fetches of the same ID coalesce.
+     * Returns every user in the database.
      *
-     * Unless bypassed, an unexpired cached snapshot is returned
-     * instead of re-fetching.
+     * Concurrent calls coalesce onto a single in-flight fetch.
+     *
+     * @return Every user.
+     *
+     * @throws Exception if the users cannot be fetched.
+     */
+    suspend fun getAllUsers(): List<User> = singleSlotCoalescer { fetchAllUsers() }
+
+    private suspend fun fetchAllUsers(): List<User> {
+        val userData: Map<String, Any?> = database.getValues<Map<String, Any?>>(NetworkPath.users.rawValue)
+
+        // Decode every user from the snapshot already downloaded above,
+        // rather than re-fetching each record individually by ID.
+        val userDataByID =
+            userData.mapNotNull { (id, value) ->
+                @Suppress("UNCHECKED_CAST")
+                (value as? Map<String, Any?>)?.toMutableMap()?.apply { put(User.SerializableKey.ID.rawValue, id) }
+            }
+
+        cachedUserDataSnapshots.wrappedValue =
+            userDataByID.map {
+                UserDataSnapshot(
+                    data = it,
+                    expiryThreshold = SNAPSHOT_EXPIRY_MILLIS.milliseconds,
+                )
+            }
+
+        if (userDataByID.isEmpty()) {
+            throw Exception(
+                "No users to decode.",
+                metadata = ExceptionMetadata(this),
+            )
+        }
+
+        return coroutineScope {
+            userDataByID.map { data -> async { user(data) } }.awaitAll()
+        }
+    }
+
+    // MARK: - Retrieval by ID
+
+    /**
+     * Returns the user with the given identifier.
+     *
+     * Unless bypassed, an unexpired cached snapshot is returned instead
+     * of re-fetching.
+     *
+     * @param id The identifier of the user to fetch.
+     * @param bypassSnapshotCache A Boolean value that determines whether
+     *   to ignore the snapshot cache and always fetch.
+     * @param cacheStrategy The database cache strategy to apply for the
+     *   fetch, or `null` to use the default.
+     *
+     * @return The user.
+     *
+     * @throws Exception if no identifier is provided or the user cannot
+     *   be fetched or decoded.
      */
     suspend fun getUser(
         id: String,
         bypassSnapshotCache: Boolean = false,
         cacheStrategy: CacheStrategy? = null,
     ): User {
+        val userInfo = mapOf<String, Any>("UserID" to id)
+
         if (id.isBangQualifiedEmpty) {
-            throw Exception("No ID provided.", userInfo = mapOf("UserID" to id), metadata = ExceptionMetadata(this))
+            throw Exception(
+                "No ID provided.",
+                metadata = ExceptionMetadata(this),
+            ).appending(userInfo)
         }
 
         // Coalesce concurrent fetches of the same user so participants
         // shared across conversations resolve – and upsert – only once.
-        return userCoalescer("$id|$bypassSnapshotCache|$cacheStrategy") {
-            fetchUser(id, bypassSnapshotCache, cacheStrategy)
+        return keyedCoalescer("$id|$bypassSnapshotCache|$cacheStrategy") {
+            fetchUser(
+                id = id,
+                bypassSnapshotCache = bypassSnapshotCache,
+                cacheStrategy = cacheStrategy,
+            )
         }
     }
 
-    /** Returns the users with the given IDs, upserting them into the store. */
+    private suspend fun fetchUser(
+        id: String,
+        bypassSnapshotCache: Boolean,
+        cacheStrategy: CacheStrategy?,
+    ): User {
+        val userInfo = mapOf<String, Any>("UserID" to id)
+
+        if (!bypassSnapshotCache) {
+            val match =
+                cachedUserDataSnapshots.wrappedValue?.firstOrNull {
+                    (it.data[User.SerializableKey.ID.rawValue] as? String) == id
+                }
+
+            if (match != null && !match.isExpired) {
+                Logger.log(
+                    Exception(
+                        "Returning cached user data snapshot.",
+                        isReportable = false,
+                        userInfo = mapOf("UserID" to id),
+                        metadata = ExceptionMetadata(this),
+                    ),
+                    domain = LoggerDomain.caches,
+                )
+
+                try {
+                    return user(match.data)
+                } catch (exception: Exception) {
+                    throw exception.appending(userInfo)
+                }
+            }
+        }
+
+        val path = "${NetworkPath.users.rawValue}/$id"
+        val fetched: Map<String, Any?> =
+            try {
+                if (cacheStrategy != null) {
+                    database.withGlobalCacheStrategy(cacheStrategy) { database.getValues<Map<String, Any?>>(path) }
+                } else {
+                    database.getValues<Map<String, Any?>>(path)
+                }
+            } catch (exception: Exception) {
+                throw exception.appending(userInfo)
+            }
+
+        val data = fetched.toMutableMap().apply { put(User.SerializableKey.ID.rawValue, id) }
+
+        cachedUserDataSnapshots.withValue {
+            it.value =
+                (it.value ?: emptyList()) +
+                UserDataSnapshot(
+                    data = data,
+                    expiryThreshold = SNAPSHOT_EXPIRY_MILLIS.milliseconds,
+                )
+        }
+
+        try {
+            return user(data)
+        } catch (exception: Exception) {
+            throw exception.appending(userInfo)
+        }
+    }
+
+    /**
+     * Returns the users with the given identifiers, fetched
+     * concurrently.
+     *
+     * @param ids The identifiers of the users to fetch.
+     * @param bypassSnapshotCache A Boolean value that determines whether
+     *   to ignore the snapshot cache and always fetch.
+     * @param cacheStrategy The database cache strategy to apply for the
+     *   fetches, or `null` to use the default.
+     *
+     * @return The users.
+     *
+     * @throws Exception if no identifiers are provided or any user
+     *   cannot be fetched.
+     */
     suspend fun getUsers(
         ids: List<String>,
         bypassSnapshotCache: Boolean = false,
         cacheStrategy: CacheStrategy? = null,
     ): List<User> {
+        val userInfo = mapOf<String, Any>("UserIDs" to ids)
+
         if (ids.isBangQualifiedEmpty) {
-            throw Exception("No ID keys provided.", userInfo = mapOf("UserIDs" to ids.toString()), metadata = ExceptionMetadata(this))
+            throw Exception(
+                "No ID keys provided.",
+                metadata = ExceptionMetadata(this),
+            ).appending(userInfo)
         }
 
-        // Fail the batch if any user cannot be fetched.
-        return coroutineScope {
-            ids.map { id -> async { getUser(id, bypassSnapshotCache, cacheStrategy) } }.awaitAll()
+        try {
+            return coroutineScope {
+                ids
+                    .map { id ->
+                        async {
+                            getUser(
+                                id = id,
+                                bypassSnapshotCache = bypassSnapshotCache,
+                                cacheStrategy = cacheStrategy,
+                            )
+                        }
+                    }.awaitAll()
+            }
+        } catch (exception: Exception) {
+            throw exception.appending(userInfo)
         }
     }
 
-    /** Returns the user registered with the given phone number. */
+    // MARK: - Retrieval by Phone Number
+
+    /**
+     * Returns the user registered with the given phone number.
+     *
+     * @param phoneNumber The phone number to match.
+     *
+     * @return The matching user.
+     *
+     * @throws Exception if no user is registered with the phone number,
+     *   or if the users cannot be fetched.
+     */
     suspend fun getUser(phoneNumber: PhoneNumber): User {
-        val users = getAllUsers()
+        val userInfo = mapOf<String, Any>("PhoneNumber" to phoneNumber.encoded)
+
+        val users =
+            try {
+                getAllUsers()
+            } catch (exception: Exception) {
+                throw exception.appending(userInfo)
+            }
+
         return users.firstOrNull {
             it.phoneNumber.compiledNumberString == phoneNumber.compiledNumberString
         } ?: throw Exception(
             "No users with the provided phone number.",
             isReportable = false,
-            userInfo = mapOf("PhoneNumber" to phoneNumber.encoded),
             metadata = ExceptionMetadata(this),
-        )
+        ).appending(userInfo)
     }
 
     // MARK: - Clear Cache
@@ -175,65 +363,18 @@ object UserService {
 
     // MARK: - Auxiliary
 
-    private suspend fun fetchAllUsers(): List<User> {
-        val usersNode: Map<String, Any?> = database.getValues<Map<String, Any?>>(NetworkPath.users.rawValue)
+    private fun user(data: Map<String, Any?>): User {
+        val user = User.decode(data)
 
-        // Decode every user from the snapshot already downloaded above,
-        // rather than re-fetching each record individually by ID.
-        val userDataByID =
-            usersNode.mapNotNull { (id, value) ->
-                @Suppress("UNCHECKED_CAST")
-                (value as? Map<String, Any?>)?.toMutableMap()?.apply { put(ID_KEY, id) }
-            }
-
-        cachedUserDataSnapshots.wrappedValue = userDataByID.map { DataSample(it, SNAPSHOT_EXPIRY_MILLIS) }
-
-        return coroutineScope {
-            userDataByID.map { data -> async { userFrom(data) } }.awaitAll()
-        }
-    }
-
-    private suspend fun fetchUser(
-        id: String,
-        bypassSnapshotCache: Boolean,
-        cacheStrategy: CacheStrategy?,
-    ): User {
-        if (!bypassSnapshotCache) {
-            val match =
-                cachedUserDataSnapshots.wrappedValue?.firstOrNull {
-                    (it.data as? Map<*, *>)?.get(ID_KEY) == id
-                }
-            if (match != null && !match.isExpired) {
-                Logger.log("Returning cached user data snapshot.")
-                @Suppress("UNCHECKED_CAST")
-                return userFrom(match.data as Map<String, Any?>)
-            }
-        }
-
-        val path = "${NetworkPath.users.rawValue}/$id"
-        val fetched: Map<String, Any?> =
-            if (cacheStrategy != null) {
-                database.withGlobalCacheStrategy(cacheStrategy) { database.getValues<Map<String, Any?>>(path) }
-            } else {
-                database.getValues<Map<String, Any?>>(path)
-            }
-
-        val data = fetched.toMutableMap().apply { put(ID_KEY, id) }
-        cachedUserDataSnapshots.withValue { it.value = (it.value ?: emptyList()) + DataSample(data, SNAPSHOT_EXPIRY_MILLIS) }
-        return userFrom(data)
-    }
-
-    private suspend fun userFrom(data: Map<String, Any?>): User {
-        if (!User.canDecode(data)) {
-            throw Exception("Failed to decode user.", metadata = ExceptionMetadata(this))
-        }
-        return User.decode(data).also { SessionStore.upsertUser(it) }
+        /* Single source of upsert for fetched users – guarantees any user
+         this service returns is resolvable from the session store
+         (e.g. NumberPair.users). Bypasses RemotelyUpdatable.update.
+         */
+        SessionStore.upsertUser(user)
+        return user
     }
 
     // MARK: - Companion
 
-    private const val ALL_USERS_KEY = "allUsers"
-    private const val BADGE_NUMBER_KEY = "badgeNumber"
-    private const val ID_KEY = "id"
     private const val SNAPSHOT_EXPIRY_MILLIS = 500L
 }

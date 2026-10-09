@@ -13,6 +13,7 @@ import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.content.user.extensions.contactPair
+import us.neotechnica.panther.modules.content.user.extensions.empty
 import us.neotechnica.panther.modules.content.user.extensions.isMock
 import us.neotechnica.panther.modules.content.user.extensions.isSelected
 import us.neotechnica.panther.modules.content.user.extensions.mock
@@ -24,14 +25,10 @@ import us.neotechnica.panther.modules.content.user.extensions.withUser
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.content.user.services.RecipientBarContactSelectionUIService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.networking.common.sortedByLatestMessageSentDate
+import us.neotechnica.panther.modules.networking.common.visibleForCurrentUser
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.user.services.UserService
-import us.neotechnica.panther.modules.session.entity.extensions.conversations
-import us.neotechnica.panther.modules.session.entity.extensions.empty
-import us.neotechnica.panther.modules.session.entity.extensions.mock
-import us.neotechnica.panther.modules.session.entity.extensions.sortedByLatestMessageSentDate
-import us.neotechnica.panther.modules.session.entity.extensions.users
-import us.neotechnica.panther.modules.session.entity.extensions.visibleForCurrentUser
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.navigation.Route
