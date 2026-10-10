@@ -8,9 +8,11 @@
 
 package us.neotechnica.panther.modules.content.shared.constants
 
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 
 // MARK: - Float
 
@@ -30,6 +32,9 @@ object SplashPageViewFloats {
 
 object SplashPageViewColors {
     val imageDarkForeground = Color(0xFFF8F8F8)
+
+    val progressBarTint: Color
+        @Composable get() = LocalPantherColors.current.titleText
 }
 
 // MARK: - String

@@ -15,26 +15,35 @@ import androidx.compose.ui.unit.dp
 // MARK: - Float
 
 object StatusIndicatorButtonFloats {
-    val circleSize: Dp = 30.dp
-    val glyphSize: Dp = 18.dp
+    val imageFrameHeight: Dp = 30.dp
+    val imageFrameWidth: Dp = 30.dp
+
+    val imageTrailingPadding: Dp = 3.dp
+
     val horizontalPadding: Dp = 16.dp
-    val iconTrailingPadding: Dp = 3.dp
     val verticalPadding: Dp = 10.dp
 
+    const val DISABLED_ALPHA = 0.5f
     const val LABEL_FONT_SIZE = 15f
 }
 
 // MARK: - Color
 
 object StatusIndicatorButtonColors {
-    val deniedStatusForeground = Color(0xFFFF3B30)
-    val foreground = Color(0xFF007AFF)
-    val grantedStatusForeground = Color(0xFF34C759)
-    val undeterminedStatusForeground = Color(0xFFFF9500)
+    val deniedStatusImageSecondaryForeground = Color.Red
+    val grantedStatusImageSecondaryForeground = Color.Green
+    val undeterminedStatusImageSecondaryForeground = Color(0xFFFF9500)
+
+    val determinedStatusLabelForeground = Color.Gray
+    val undeterminedStatusLabelForeground = Color.White
+
+    val foreground = Color.Blue
 }
 
 // MARK: - String
 
 object StatusIndicatorButtonStrings {
-    const val UNDETERMINED_GLYPH = "?"
+    const val DENIED_STATUS_IMAGE_SYSTEM_NAME = "x.circle.fill"
+    const val GRANTED_STATUS_IMAGE_SYSTEM_NAME = "checkmark.circle.fill"
+    const val UNDETERMINED_STATUS_IMAGE_SYSTEM_NAME = "questionmark.circle.fill"
 }

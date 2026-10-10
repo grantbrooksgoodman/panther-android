@@ -28,10 +28,11 @@ import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootShee
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.ReviewServiceStorageKey
 import us.neotechnica.panther.modules.common.services.AnalyticsService.AnalyticsEvent
-import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
+import us.neotechnica.panther.modules.content.onboarding.dependencies.onboardingService
 import us.neotechnica.panther.modules.content.user.extensions.hasContactsBesidesCurrentUser
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -77,7 +78,7 @@ object InviteService {
             if (hasContactsBesidesCurrentUser()) return false
             if (!(currentUser?.conversations).isNullOrEmpty()) return false
             if (!(currentUser?.conversationIDs).isNullOrEmpty()) return false
-            if (!(OnboardingService.createdUserInCurrentAppSession || sufficientAppOpenCount)) return false
+            if (!(DependencyValues.current.onboardingService.createdUserInCurrentAppSession || sufficientAppOpenCount)) return false
 
             return true
         }

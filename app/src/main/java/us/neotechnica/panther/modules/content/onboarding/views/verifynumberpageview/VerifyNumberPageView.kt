@@ -30,15 +30,16 @@ import us.neotechnica.panther.designsystem.modules.foundation.modifiers.onSwipe
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.onboarding.components.InstructionView
+import us.neotechnica.panther.modules.content.onboarding.constants.VerifyNumberPageViewColors
 import us.neotechnica.panther.modules.content.onboarding.constants.VerifyNumberPageViewFloats
 import us.neotechnica.panther.modules.content.shared.components.PhoneNumberTextField
 import us.neotechnica.panther.modules.content.shared.components.regionmenu.RegionMenu
-import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 
 // MARK: - Constants Accessors
 
+private typealias Colors = VerifyNumberPageViewColors
 private typealias Floats = VerifyNumberPageViewFloats
 
 /**
@@ -55,12 +56,10 @@ fun VerifyNumberPageView(modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
 
-    StatefulView(
-        state = state.viewState,
-        modifier = modifier,
-        exceptionRetryHandler = { viewModel.send(VerifyNumberPageReducer.Action.ViewAppeared) },
-    ) {
-        Column(modifier = Modifier.fillMaxSize().onSwipe(Swipe.DOWN) { viewModel.send(VerifyNumberPageReducer.Action.DidSwipeDown) }) {
+    StatefulView(state = state.viewState, modifier = modifier) {
+        Column(
+            modifier = Modifier.fillMaxSize().onSwipe(Swipe.DOWN) { viewModel.send(VerifyNumberPageReducer.Action.DidSwipeDown) },
+        ) {
             InstructionView(state.instructionViewStrings)
 
             Spacer(Modifier.weight(1f))
@@ -71,7 +70,7 @@ fun VerifyNumberPageView(modifier: Modifier = Modifier) {
             ) {
                 Components.Text(
                     state.strings.value(VerifyNumberPageViewStrings.instructionLabelText),
-                    foregroundColor = colors.subtitleText,
+                    foregroundColor = Colors.instructionLabelForeground,
                     font = Font.systemSemibold(),
                     modifier = Modifier.padding(vertical = Floats.instructionLabelVerticalPadding),
                 )
@@ -79,7 +78,9 @@ fun VerifyNumberPageView(modifier: Modifier = Modifier) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     RegionMenu(
                         selectedRegionCode = state.selectedRegionCode,
-                        onRegionCodeSelected = { viewModel.send(VerifyNumberPageReducer.Action.SelectedRegionCodeChanged(it)) },
+                        onSelectedRegionCodeChange = {
+                            viewModel.send(VerifyNumberPageReducer.Action.SelectedRegionCodeChanged(it))
+                        },
                         modifier =
                             Modifier.padding(
                                 start = Floats.regionMenuLeadingPadding,
@@ -88,30 +89,28 @@ fun VerifyNumberPageView(modifier: Modifier = Modifier) {
                     )
 
                     PhoneNumberTextField(
-                        value = state.phoneNumberString.digits,
-                        onValueChange = { viewModel.send(VerifyNumberPageReducer.Action.PhoneNumberStringChanged(it)) },
+                        text = state.phoneNumberString,
+                        onTextChange = { viewModel.send(VerifyNumberPageReducer.Action.PhoneNumberStringChanged(it)) },
                         regionCode = state.selectedRegionCode,
                         modifier =
                             Modifier
                                 .weight(1f)
-                                .padding(
-                                    end = Floats.phoneNumberTextFieldTrailingPadding,
-                                    top = Floats.phoneNumberTextFieldVerticalPadding,
-                                    bottom = Floats.phoneNumberTextFieldVerticalPadding,
-                                ),
+                                .padding(end = Floats.phoneNumberTextFieldTrailingPadding)
+                                .padding(vertical = Floats.phoneNumberTextFieldVerticalPadding),
                     )
                 }
 
                 Components.CapsuleButton(
                     text = state.strings.value(VerifyNumberPageViewStrings.continueButtonText),
-                    action = { viewModel.send(VerifyNumberPageReducer.Action.ContinueButtonTapped) },
+                    foregroundColor = if (state.isContinueButtonEnabled) colors.background else colors.disabled,
                     isEnabled = state.isContinueButtonEnabled,
-                    modifier = Modifier.padding(vertical = Floats.continueButtonVerticalPadding),
+                    action = { viewModel.send(VerifyNumberPageReducer.Action.ContinueButtonTapped) },
+                    modifier = Modifier.padding(top = Floats.continueButtonTopPadding),
                 )
 
                 Components.Button(
                     text = state.strings.value(VerifyNumberPageViewStrings.backButtonText),
-                    foregroundColor = if (state.isBackButtonEnabled) colors.titleText else colors.disabled,
+                    foregroundColor = if (state.isBackButtonEnabled) colors.accent else colors.disabled,
                     onClick = { if (state.isBackButtonEnabled) viewModel.send(VerifyNumberPageReducer.Action.BackButtonTapped) },
                     font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),
                     modifier = Modifier.padding(top = Floats.backButtonTopPadding),

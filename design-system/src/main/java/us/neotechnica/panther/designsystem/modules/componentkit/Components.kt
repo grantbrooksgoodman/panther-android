@@ -11,7 +11,9 @@ package us.neotechnica.panther.designsystem.modules.componentkit
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Icon
@@ -19,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -194,7 +197,8 @@ object Components {
      *   the theme's background color.
      * @param usesShadow Whether the capsule casts a shadow. The
      *   default is `true`.
-     * @param isEnabled Whether the button responds to taps.
+     * @param isEnabled Whether the button responds to taps. A
+     *   disabled button is dimmed.
      * @param modifier The modifier for this component.
      * @param action The action to perform when tapped.
      */
@@ -210,12 +214,11 @@ object Components {
         modifier: Modifier = Modifier,
         action: () -> Unit,
     ) {
-        val colors = LocalPantherColors.current
-        val fillColor = if (isEnabled) backgroundColor else colors.disabled
         Box(
             contentAlignment = Alignment.Center,
             modifier =
                 modifier
+                    .alpha(if (isEnabled) 1f else CAPSULE_DISABLED_ALPHA)
                     .then(
                         if (usesShadow) {
                             Modifier.shadow(CAPSULE_SHADOW_ELEVATION, RoundedCornerShape(CAPSULE_CORNER_RADIUS))
@@ -223,7 +226,7 @@ object Components {
                             Modifier
                         },
                     ).clip(RoundedCornerShape(CAPSULE_CORNER_RADIUS))
-                    .background(fillColor)
+                    .background(backgroundColor)
                     .clickable(enabled = isEnabled, onClick = action)
                     .padding(
                         horizontal = CAPSULE_HORIZONTAL_PADDING,
@@ -243,6 +246,9 @@ object Components {
      *   warning symbol.
      * @param foregroundColor The tint of the symbol.
      * @param modifier The modifier for this component.
+     * @param secondaryForegroundColor The fill of the circle behind
+     *   a `.circle.fill` symbol's glyph, or `null` for a single-tone
+     *   symbol.
      * @param weight The stroke weight to request. Accepted for
      *   signature compatibility; vector symbols carry no weight
      *   axis.
@@ -250,15 +256,34 @@ object Components {
      *   intrinsic size rather than scaling to its bounds. The
      *   default is `true`.
      */
-    @Suppress("UnusedParameter")
+    @Suppress("UnusedParameter", "LongParameterList")
     @Composable
     fun Symbol(
         systemName: String,
         foregroundColor: Color,
         modifier: Modifier = Modifier,
+        secondaryForegroundColor: Color? = null,
         weight: FontWeight? = null,
         usesIntrinsicSize: Boolean = true,
     ) {
+        if (secondaryForegroundColor != null && systemName.endsWith(CIRCLE_FILL_SUFFIX)) {
+            // A two-tone circle symbol: the glyph in the foreground color
+            // over a circle in the secondary color.
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = modifier.clip(CircleShape).background(secondaryForegroundColor),
+            ) {
+                Icon(
+                    imageVector = SFSymbol.imageVector(systemName.removeSuffix(CIRCLE_FILL_SUFFIX).glyphSystemName),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(TWO_TONE_GLYPH_FRACTION),
+                    tint = foregroundColor,
+                )
+            }
+
+            return
+        }
+
         Icon(
             imageVector = SFSymbol.imageVector(systemName),
             contentDescription = null,
@@ -266,8 +291,17 @@ object Components {
             tint = foregroundColor,
         )
     }
+
+    // MARK: - Auxiliary
+
+    private val String.glyphSystemName: String
+        get() = if (this == "x") "xmark" else this
 }
 
+private const val CIRCLE_FILL_SUFFIX = ".circle.fill"
+private const val TWO_TONE_GLYPH_FRACTION = 0.6f
+
+private const val CAPSULE_DISABLED_ALPHA = 0.5f
 private val CAPSULE_CORNER_RADIUS = 24.dp
 private val CAPSULE_HORIZONTAL_PADDING = 18.dp
 private val CAPSULE_VERTICAL_PADDING = 8.dp

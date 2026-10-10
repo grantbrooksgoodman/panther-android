@@ -29,16 +29,16 @@ import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.onboarding.components.InstructionView
 import us.neotechnica.panther.modules.content.onboarding.components.StatusIndicatorButton
-import us.neotechnica.panther.modules.content.onboarding.constants.PermissionPageViewFloats
+import us.neotechnica.panther.modules.content.onboarding.constants.PermissionsViewFloats
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 
 // MARK: - Constants Accessors
 
-private typealias Floats = PermissionPageViewFloats
+private typealias Floats = PermissionsViewFloats
 
 /**
- * The final onboarding page: granting notification and contact
+ * The final onboarding page: granting the contact and notification
  * permissions, then finishing to create the account.
  *
  * @param modifier The modifier for this view.
@@ -52,11 +52,7 @@ fun PermissionPageView(modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
 
-    StatefulView(
-        state = state.viewState,
-        modifier = modifier,
-        exceptionRetryHandler = { viewModel.send(PermissionPageReducer.Action.ViewAppeared) },
-    ) {
+    StatefulView(state = state.viewState, modifier = modifier) {
         Column(modifier = Modifier.fillMaxSize()) {
             InstructionView(state.instructionViewStrings)
 
@@ -68,32 +64,35 @@ fun PermissionPageView(modifier: Modifier = Modifier) {
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(Floats.buttonSpacing),
+                    verticalArrangement = Arrangement.spacedBy(Floats.buttonVStackSpacing),
                     modifier = Modifier.padding(bottom = Floats.buttonVStackBottomPadding),
                 ) {
                     StatusIndicatorButton(
-                        label = state.strings.value(PermissionPageViewStrings.contactPermissionCapsuleButtonText),
-                        isGranted = state.isContactPermissionGranted,
-                        onClick = { viewModel.send(PermissionPageReducer.Action.ContactPermissionCapsuleButtonTapped) },
-                    )
+                        text = state.strings.value(PermissionPageViewStrings.contactPermissionCapsuleButtonText),
+                        isCompleted = state.isContactPermissionGranted,
+                    ) {
+                        viewModel.send(PermissionPageReducer.Action.ContactPermissionCapsuleButtonTapped)
+                    }
 
                     StatusIndicatorButton(
-                        label = state.strings.value(PermissionPageViewStrings.notificationPermissionCapsuleButtonText),
-                        isGranted = state.isNotificationPermissionGranted,
-                        onClick = { viewModel.send(PermissionPageReducer.Action.NotificationPermissionCapsuleButtonTapped) },
-                    )
+                        text = state.strings.value(PermissionPageViewStrings.notificationPermissionCapsuleButtonText),
+                        isCompleted = state.isNotificationPermissionGranted,
+                    ) {
+                        viewModel.send(PermissionPageReducer.Action.NotificationPermissionCapsuleButtonTapped)
+                    }
                 }
 
                 Components.CapsuleButton(
                     text = state.strings.value(PermissionPageViewStrings.finishButtonText),
-                    action = { viewModel.send(PermissionPageReducer.Action.FinishButtonTapped) },
+                    foregroundColor = if (state.isFinishButtonEnabled) colors.background else colors.disabled,
                     isEnabled = state.isFinishButtonEnabled,
-                    modifier = Modifier.padding(vertical = Floats.finishButtonVerticalPadding),
+                    action = { viewModel.send(PermissionPageReducer.Action.FinishButtonTapped) },
+                    modifier = Modifier.padding(top = Floats.finishButtonTopPadding),
                 )
 
                 Components.Button(
                     text = state.strings.value(PermissionPageViewStrings.backButtonText),
-                    foregroundColor = if (state.isBackButtonEnabled) colors.titleText else colors.disabled,
+                    foregroundColor = if (state.isBackButtonEnabled) colors.accent else colors.disabled,
                     onClick = { if (state.isBackButtonEnabled) viewModel.send(PermissionPageReducer.Action.BackButtonTapped) },
                     font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),
                     modifier = Modifier.padding(top = Floats.backButtonTopPadding),

@@ -9,90 +9,66 @@
 package us.neotechnica.panther.modules.content.shared.components
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.OffsetMapping
-import androidx.compose.ui.text.input.TransformedText
-import androidx.compose.ui.text.input.VisualTransformation
-import com.google.i18n.phonenumbers.PhoneNumberUtil
+import us.neotechnica.panther.modules.common.extensions.partiallyFormatted
+import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.common.services.PhoneNumberService
+import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.networking.modules.common.extensions.digits
 
 /**
  * A text field that formats an entered phone number as the user types.
  *
- * Use [PhoneNumberTextField] to accept phone number input for a specific
- * region. The field displays an example number for [regionCode] as its
- * placeholder and reformats the entered digits into a partially
- * formatted national number whenever the text or region changes. The
- * underlying edit buffer stays plain digits; [onValueChange] reports
- * those digits.
+ * Use `PhoneNumberTextField` to accept phone number input for a
+ * specific region. The field displays an example number for the given
+ * region as its placeholder and reformats the entered digits into a
+ * partially formatted national number whenever the text or region
+ * changes.
  *
- * @param value The entered national number, as raw digits.
- * @param onValueChange Called with the edited number's raw digits.
- * @param regionCode The region whose formatting and placeholder to use.
+ * **Note:** Formatting rewrites the text through [onTextChange] after
+ * a change, so the value observed immediately after an edit may not
+ * yet be formatted.
+ *
+ * @param text The phone number string the field displays and edits.
+ * @param onTextChange Called with the edited, then formatted, text.
+ * @param regionCode The code of the region used for formatting and the
+ *   placeholder.
  * @param modifier The modifier for this field.
  */
 @Composable
 fun PhoneNumberTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
+    text: String,
+    onTextChange: (String) -> Unit,
     regionCode: String,
     modifier: Modifier = Modifier,
 ) {
+    LaunchedEffect(text, regionCode) {
+        if (text.isBlank()) return@LaunchedEffect
+        val partiallyFormatted = partiallyFormatted(text, regionCode)
+        if (partiallyFormatted != text) onTextChange(partiallyFormatted)
+    }
+
     GenericTextField(
-        value = value,
-        placeholder = PhoneNumberService.exampleNationalNumberString(regionCode),
-        onValueChange = { onValueChange(it.digits) },
+        text = text,
+        onTextChange = onTextChange,
         keyboardType = KeyboardType.Phone,
-        visualTransformation = remember(regionCode) { PhoneNumberVisualTransformation(regionCode) },
+        placeholderText = PhoneNumberService.exampleNationalNumberString(regionCode),
         modifier = modifier,
     )
 }
 
-/**
- * A [VisualTransformation] that displays a raw-digit phone number
- * formatted for [regionCode] while keeping the underlying edit buffer as
- * plain digits.
- *
- * Because the buffer never contains the inserted separators, the caret
- * advances one step per digit and is never displaced when formatting
- * adds a `-`, `)`, or space; the [OffsetMapping] translates between the
- * raw-digit offsets and the formatted display offsets by counting
- * digits.
- *
- * @param regionCode The region whose formatting conventions to apply.
- */
-class PhoneNumberVisualTransformation(
-    private val regionCode: String,
-) : VisualTransformation {
-    override fun filter(text: AnnotatedString): TransformedText {
-        val digits = text.text
-        if (digits.isEmpty()) return TransformedText(text, OffsetMapping.Identity)
+// MARK: - Auxiliary
 
-        val formatter = PhoneNumberUtil.getInstance().getAsYouTypeFormatter(regionCode.uppercase())
-        var formatted = ""
-        for (character in digits) if (character.isDigit()) formatted = formatter.inputDigit(character)
-
-        // The display index of each raw digit, so offsets can map both ways.
-        val digitDisplayOffsets = formatted.indices.filter { formatted[it].isDigit() }
-
-        val offsetMapping =
-            object : OffsetMapping {
-                override fun originalToTransformed(offset: Int): Int {
-                    if (offset <= 0) return 0
-                    if (offset > digitDisplayOffsets.size) return formatted.length
-                    return digitDisplayOffsets[offset - 1] + 1
-                }
-
-                override fun transformedToOriginal(offset: Int): Int {
-                    val clamped = offset.coerceIn(0, formatted.length)
-                    return (0 until clamped).count { formatted[it].isDigit() }
-                }
-            }
-
-        return TransformedText(AnnotatedString(formatted), offsetMapping)
-    }
-}
+private fun partiallyFormatted(
+    text: String,
+    regionCode: String,
+): String =
+    PhoneNumber(
+        callingCode = RegionDetailService.callingCode(regionCode) ?: PhoneNumberService.deviceCallingCode,
+        nationalNumberString = text.digits,
+        regionCode = regionCode,
+        label = null,
+        internalFormattedString = null,
+    ).partiallyFormatted(regionCode)

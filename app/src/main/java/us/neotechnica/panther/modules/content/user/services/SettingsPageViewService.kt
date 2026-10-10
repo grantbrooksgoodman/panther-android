@@ -53,6 +53,7 @@ import us.neotechnica.panther.modules.content.user.models.SquareIconViewConfigur
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.session.entity.services.ModerationSessionService
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
+import us.neotechnica.panther.navigation.OnboardingRoute
 import us.neotechnica.panther.navigation.RootNavigatorState
 import us.neotechnica.panther.navigation.RootRoute
 import us.neotechnica.panther.navigation.Route
@@ -578,6 +579,7 @@ object SettingsPageViewService {
     private fun returnToOnboarding() {
         val navigation = DependencyValues.current.navigation
         navigation.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
+        navigation.navigate(Route.Onboarding(OnboardingRoute.Stack(emptyList())))
         navigation.navigate(Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.Onboarding)))
     }
 

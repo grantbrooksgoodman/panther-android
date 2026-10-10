@@ -8,17 +8,27 @@
 
 package us.neotechnica.panther.modules.content.onboarding.constants
 
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 // MARK: - Float
 
 object SelectLanguagePageViewFloats {
-    val backButtonTopPadding: Dp = 8.dp
-    val continueButtonVerticalPadding: Dp = 5.dp
+    val backButtonTopPadding: Dp = 2.dp
+
+    val continueButtonTopPadding: Dp = 5.dp
+
     val innerVStackBottomPadding: Dp = 50.dp
     val instructionLabelVerticalPadding: Dp = 5.dp
+
     val pickerHorizontalPadding: Dp = 30.dp
 
     const val BACK_BUTTON_LABEL_FONT_SIZE = 15f
+}
+
+// MARK: - Color
+
+object SelectLanguagePageViewColors {
+    val instructionLabelForeground = Color.Gray
 }

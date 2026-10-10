@@ -41,7 +41,7 @@ object PermissionPageViewStrings : TranslatedLabelStrings {
             TranslationInputMap(
                 instructionViewSubtitleLabelText,
                 TranslationInput(
-                    "Finally, grant Hello the necessary permissions to work with your device.\n\n" +
+                    "Finally, grant ⌘Hello⌘ the necessary permissions to work with your device.\n\n" +
                         "These options can be changed later in Settings.",
                 ),
             ),

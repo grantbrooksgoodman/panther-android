@@ -9,6 +9,7 @@
 package us.neotechnica.panther.navigation
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.EaseIn
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -64,7 +65,7 @@ fun RootView(modifier: Modifier = Modifier) {
         modifier = modifier.fillMaxSize(),
         targetState = state.modal,
         transitionSpec = {
-            fadeIn(tween(TRANSITION_MILLIS)) togetherWith fadeOut(tween(TRANSITION_MILLIS))
+            fadeIn(tween(TRANSITION_MILLIS, easing = EaseIn)) togetherWith fadeOut(tween(TRANSITION_MILLIS, easing = EaseIn))
         },
     ) { modal ->
         when (modal) {
@@ -80,4 +81,4 @@ fun RootView(modifier: Modifier = Modifier) {
     }
 }
 
-private const val TRANSITION_MILLIS = 250
+private const val TRANSITION_MILLIS = 200

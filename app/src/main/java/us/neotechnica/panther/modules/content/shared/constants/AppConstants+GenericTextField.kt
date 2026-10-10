@@ -14,6 +14,8 @@ import androidx.compose.ui.unit.dp
 // MARK: - Float
 
 object GenericTextFieldFloats {
+    val defaultDividerXOffset: Dp = 0.dp
+    val defaultDividerYOffset: Dp = 18.dp
     val fieldMinHeight: Dp = 40.dp
 
     const val DIVIDER_ALPHA = 0.3f

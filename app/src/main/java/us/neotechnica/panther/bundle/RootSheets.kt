@@ -20,7 +20,7 @@ import us.neotechnica.panther.modules.content.user.views.reactiondetailspageview
  * [RootSheets.present][us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheets.present].
  */
 val RootSheet.Companion.inviteLanguagePicker: RootSheet
-    get() = RootSheet { InviteLanguagePickerView() }
+    get() = RootSheet(interactiveDismissDisabled = true) { InviteLanguagePickerView() }
 
 /**
  * The reaction details sheet for the message with the given

@@ -18,7 +18,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
@@ -28,12 +30,14 @@ import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.onboarding.components.InstructionView
 import us.neotechnica.panther.modules.content.onboarding.components.WheelPicker
+import us.neotechnica.panther.modules.content.onboarding.constants.SelectLanguagePageViewColors
 import us.neotechnica.panther.modules.content.onboarding.constants.SelectLanguagePageViewFloats
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 
 // MARK: - Constants Accessors
 
+private typealias Colors = SelectLanguagePageViewColors
 private typealias Floats = SelectLanguagePageViewFloats
 
 /**
@@ -45,16 +49,25 @@ private typealias Floats = SelectLanguagePageViewFloats
 fun SelectLanguagePageView(modifier: Modifier = Modifier) {
     val viewModel = remember { ViewModel(SelectLanguagePageReducer.State(), SelectLanguagePageReducer()) }
     DisposableEffect(Unit) { onDispose { viewModel.close() } }
-    LaunchedEffect(Unit) { viewModel.send(SelectLanguagePageReducer.Action.ViewAppeared) }
+
+    // The wheel's selection survives a pop and push of this page.
+    val savedSelectedLanguageName = rememberSaveable { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        viewModel.send(SelectLanguagePageReducer.Action.ViewAppeared)
+        savedSelectedLanguageName.value?.let {
+            viewModel.send(SelectLanguagePageReducer.Action.SelectedLanguageNameChanged(it))
+        }
+    }
 
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
 
-    StatefulView(
-        state = state.viewState,
-        modifier = modifier,
-        exceptionRetryHandler = { viewModel.send(SelectLanguagePageReducer.Action.ViewAppeared) },
-    ) {
+    LaunchedEffect(state.selectedLanguageName) {
+        if (state.selectedLanguageName.isNotEmpty()) savedSelectedLanguageName.value = state.selectedLanguageName
+    }
+
+    StatefulView(state = state.viewState, modifier = modifier) {
         Column(modifier = Modifier.fillMaxSize()) {
             InstructionView(state.instructionViewStrings)
 
@@ -66,7 +79,7 @@ fun SelectLanguagePageView(modifier: Modifier = Modifier) {
             ) {
                 Components.Text(
                     state.strings.value(SelectLanguagePageViewStrings.instructionLabelText),
-                    foregroundColor = colors.subtitleText,
+                    foregroundColor = Colors.instructionLabelForeground,
                     font = Font.systemSemibold(),
                     modifier = Modifier.padding(vertical = Floats.instructionLabelVerticalPadding),
                 )
@@ -85,12 +98,12 @@ fun SelectLanguagePageView(modifier: Modifier = Modifier) {
                 Components.CapsuleButton(
                     text = state.strings.value(SelectLanguagePageViewStrings.continueButtonText),
                     action = { viewModel.send(SelectLanguagePageReducer.Action.ContinueButtonTapped) },
-                    modifier = Modifier.padding(vertical = Floats.continueButtonVerticalPadding),
+                    modifier = Modifier.padding(top = Floats.continueButtonTopPadding),
                 )
 
                 Components.Button(
                     text = state.strings.value(SelectLanguagePageViewStrings.backButtonText),
-                    foregroundColor = colors.titleText,
+                    foregroundColor = colors.accent,
                     onClick = { viewModel.send(SelectLanguagePageReducer.Action.BackButtonTapped) },
                     font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),
                     modifier = Modifier.padding(top = Floats.backButtonTopPadding),

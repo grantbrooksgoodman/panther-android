@@ -11,9 +11,12 @@ package us.neotechnica.panther.modules.content.shared.components.regionmenu
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -26,7 +29,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -37,37 +40,47 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
-import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
+import us.neotechnica.panther.designsystem.modules.foundation.components.HeaderView
+import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.designsystem.modules.theming.views.ThemedView
 import us.neotechnica.panther.modules.common.services.HapticsService
 import us.neotechnica.panther.modules.common.services.RegionDetailService
+import us.neotechnica.panther.modules.content.shared.components.SearchBarInView
+import us.neotechnica.panther.modules.content.shared.constants.RegionMenuColors
 import us.neotechnica.panther.modules.content.shared.constants.RegionMenuFloats
 import us.neotechnica.panther.modules.content.shared.constants.RegionMenuStrings
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
-import androidx.compose.material3.Text as Material3Text
+
+// MARK: - Constants Accessors
+
+private typealias Colors = RegionMenuColors
+private typealias Floats = RegionMenuFloats
+private typealias Strings = RegionMenuStrings
 
 /**
- * A region picker.
+ * A button that displays the selected region's flag and calling code,
+ * and presents a region picker when tapped.
  *
- * The button is a white, rounded, shadowed pill stacking the selected
- * region's emoji flag over its calling code. Tapping it opens a
- * searchable bottom sheet listing every region; selecting one reports
- * its region code.
+ * Use `RegionMenu` alongside a phone number field to let the user
+ * choose the region their phone number belongs to. Tapping the button
+ * presents a searchable list of regions in a sheet; selecting one
+ * reports the region's code through [onSelectedRegionCodeChange] and
+ * dismisses the picker.
  *
- * @param selectedRegionCode The currently selected region code.
- * @param onRegionCodeSelected Called with the newly selected region code.
+ * @param selectedRegionCode The code of the selected region.
+ * @param onSelectedRegionCodeChange Called with the code of the newly
+ *   selected region.
  * @param modifier The modifier for this component.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegionMenu(
     selectedRegionCode: String,
-    onRegionCodeSelected: (String) -> Unit,
+    onSelectedRegionCodeChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val viewModel = remember { ViewModel(RegionMenuReducer.State(selectedRegionCode = selectedRegionCode), RegionMenuReducer()) }
@@ -75,49 +88,54 @@ fun RegionMenu(
 
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
+    val isDarkModeActive = ThemeService.isDarkModeActive(isSystemInDarkTheme())
 
     LaunchedEffect(state.selectedRegionCode) {
         if (state.selectedRegionCode.isNotBlank() && state.selectedRegionCode != selectedRegionCode) {
-            onRegionCodeSelected(state.selectedRegionCode)
+            onSelectedRegionCodeChange(state.selectedRegionCode)
         }
     }
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier =
-            modifier
-                .shadow(RegionMenuFloats.buttonShadowElevation, RoundedCornerShape(RegionMenuFloats.buttonCornerRadius))
-                .clip(RoundedCornerShape(RegionMenuFloats.buttonCornerRadius))
-                .background(colors.background)
-                .clickable { viewModel.send(RegionMenuReducer.Action.RunIsPresentedEffect(true)) }
-                .widthIn(min = RegionMenuFloats.buttonMinWidth)
-                .heightIn(min = RegionMenuFloats.buttonMinHeight)
-                .padding(horizontal = RegionMenuFloats.buttonHorizontalPadding, vertical = RegionMenuFloats.buttonVerticalPadding),
-    ) {
-        RegionDetailService.image(RegionDetailService.QueryStrategy.RegionCode(state.selectedRegionCode))?.let {
-            Image(
-                painter = painterResource(it.resourceID),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier =
-                    Modifier
-                        .size(
-                            width = RegionMenuFloats.buttonLabelImageFrameWidth,
-                            height = RegionMenuFloats.buttonLabelImageFrameHeight,
-                        ).clip(RoundedCornerShape(RegionMenuFloats.buttonLabelImageCornerRadius)),
+    ThemedView {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier =
+                modifier
+                    .shadow(
+                        Floats.buttonLabelVStackShadowRadius,
+                        RoundedCornerShape(Floats.buttonLabelVStackBackgroundRectangleCornerRadius),
+                    ).clip(RoundedCornerShape(Floats.buttonLabelVStackBackgroundRectangleCornerRadius))
+                    .background(if (isDarkModeActive) Colors.buttonLabelDarkForeground else Colors.buttonLabelLightForeground)
+                    .clickable { viewModel.send(RegionMenuReducer.Action.RunIsPresentedEffect(true)) }
+                    .widthIn(min = Floats.buttonLabelVStackFrameMinWidth)
+                    .heightIn(min = Floats.buttonLabelVStackFrameMinHeight),
+        ) {
+            RegionDetailService.image(RegionDetailService.QueryStrategy.RegionCode(state.selectedRegionCode))?.let {
+                Image(
+                    painter = painterResource(it.resourceID),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier =
+                        Modifier
+                            .size(width = Floats.buttonLabelImageFrameWidth, height = Floats.buttonLabelImageFrameHeight)
+                            .clip(RoundedCornerShape(Floats.buttonLabelImageCornerRadius)),
+                )
+            }
+
+            Components.Text(
+                "+${RegionDetailService.callingCode(state.selectedRegionCode) ?: Strings.DEFAULT_CALLING_CODE}",
+                foregroundColor = Colors.buttonLabelTextForeground,
             )
         }
-        Components.Text(
-            "+${RegionDetailService.callingCode(state.selectedRegionCode) ?: RegionMenuStrings.DEFAULT_CALLING_CODE}",
-            foregroundColor = colors.titleText,
-            font = Font.system,
-            modifier = Modifier.padding(top = RegionMenuFloats.callingCodeTopPadding),
-        )
     }
 
     if (state.isPresented) {
-        ModalBottomSheet(onDismissRequest = { viewModel.send(RegionMenuReducer.Action.RunIsPresentedEffect(false)) }) {
+        ModalBottomSheet(
+            onDismissRequest = { viewModel.send(RegionMenuReducer.Action.RunIsPresentedEffect(false)) },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = colors.navigationBarBackground,
+        ) {
             RegionPickerView(
                 state = state,
                 onSearchQueryChange = { viewModel.send(RegionMenuReducer.Action.SearchQueryChanged(it)) },
@@ -138,74 +156,86 @@ private fun RegionPickerView(
     onListAppeared: (LazyListState) -> Unit,
 ) {
     val colors = LocalPantherColors.current
-    val listState = rememberLazyListState()
 
     LaunchedEffect(Unit) { HapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM) }
 
-    Column(modifier = Modifier.padding(horizontal = RegionMenuFloats.searchHorizontalPadding)) {
-        Components.Text(
-            state.headerLabelText,
-            foregroundColor = colors.titleText,
-            font = Font.systemBold(),
-            modifier = Modifier.fillMaxWidth().padding(vertical = RegionMenuFloats.listItemVerticalPadding),
-        )
-
-        OutlinedTextField(
-            value = state.searchQuery,
-            onValueChange = onSearchQueryChange,
-            label = { Material3Text(RegionMenuStrings.SEARCH_REGIONS) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-        )
-
-        val regionTitles = state.queriedRegionTitles
-        if (regionTitles == null) {
-            Components.Text(
-                state.noResultsLabelText,
-                foregroundColor = colors.subtitleText,
-                modifier = Modifier.fillMaxWidth().padding(vertical = RegionMenuFloats.listItemVerticalPadding),
-            )
-        } else {
-            LaunchedEffect(Unit) { onListAppeared(listState) }
-            LazyColumn(state = listState, modifier = Modifier.heightIn(max = RegionMenuFloats.listMaxHeight)) {
-                items(regionTitles) { regionTitle ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable { onRegionTitleSelected(regionTitle) }
-                                .padding(vertical = RegionMenuFloats.listItemVerticalPadding),
-                    ) {
-                        RegionDetailService.image(RegionDetailService.QueryStrategy.RegionTitle(regionTitle))?.let {
-                            Image(
-                                painter = painterResource(it.resourceID),
-                                contentDescription = null,
-                                contentScale = ContentScale.Fit,
-                                modifier =
-                                    Modifier
-                                        .padding(end = DEFAULT_STACK_SPACING.dp)
-                                        .size(
-                                            width = RegionMenuFloats.listViewCellLabelImageFrameWidth,
-                                            height = RegionMenuFloats.listViewCellLabelImageFrameHeight,
-                                        ).clip(RoundedCornerShape(RegionMenuFloats.listViewCellLabelImageCornerRadius)),
-                            )
-                        }
-
-                        Components.Text(regionTitle, foregroundColor = colors.titleText)
-                        if (regionTitle == state.selectedRegionTitle) {
-                            Components.Symbol(
-                                systemName = "checkmark.circle.fill",
-                                foregroundColor = Color.Green,
-                                modifier = Modifier.padding(start = RegionMenuFloats.callingCodeTopPadding),
-                            )
-                        }
-                    }
+    HeaderView(
+        centerItem = HeaderView.CenterItemType.Text(HeaderView.TextAttributes(state.headerLabelText)),
+        attributes = HeaderView.Attributes(showsDivider = false, sizeClass = HeaderView.SizeClass.Sheet),
+    ) {
+        SearchBarInView(query = state.searchQuery, onQueryChange = onSearchQueryChange) {
+            Box(modifier = Modifier.fillMaxSize().background(colors.groupedContentBackground)) {
+                val regionTitles = state.queriedRegionTitles
+                if (regionTitles == null) {
+                    Components.Text(
+                        state.noResultsLabelText,
+                        foregroundColor = colors.subtitleText,
+                        modifier = Modifier.align(Alignment.Center),
+                    )
+                } else {
+                    ListView(
+                        regionTitles = regionTitles,
+                        selectedRegionTitle = state.selectedRegionTitle,
+                        onRegionTitleSelected = onRegionTitleSelected,
+                        onListAppeared = onListAppeared,
+                    )
                 }
             }
         }
     }
 }
 
-// The default spacing between the items of a horizontal stack.
-private const val DEFAULT_STACK_SPACING = 8
+@Composable
+private fun ListView(
+    regionTitles: List<String>,
+    selectedRegionTitle: String?,
+    onRegionTitleSelected: (String) -> Unit,
+    onListAppeared: (LazyListState) -> Unit,
+) {
+    val colors = LocalPantherColors.current
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(Unit) { onListAppeared(listState) }
+
+    LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+        items(regionTitles) { regionTitle ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(colors.groupedRowBackground)
+                        .clickable { onRegionTitleSelected(regionTitle) }
+                        .padding(
+                            horizontal = Floats.listViewCellHorizontalPadding,
+                            vertical = Floats.listViewCellVerticalPadding,
+                        ),
+            ) {
+                RegionDetailService.image(RegionDetailService.QueryStrategy.RegionTitle(regionTitle))?.let {
+                    Image(
+                        painter = painterResource(it.resourceID),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier =
+                            Modifier
+                                .padding(end = Floats.listViewCellHorizontalPadding / 2)
+                                .size(
+                                    width = Floats.listViewCellLabelImageFrameWidth,
+                                    height = Floats.listViewCellLabelImageFrameHeight,
+                                ).clip(RoundedCornerShape(Floats.listViewCellLabelImageCornerRadius)),
+                    )
+                }
+
+                Components.Text(regionTitle, foregroundColor = colors.titleText)
+
+                if (regionTitle == selectedRegionTitle) {
+                    Components.Symbol(
+                        Strings.SELECTED_CELL_IMAGE_SYSTEM_NAME,
+                        foregroundColor = Colors.selectedCellImageForeground,
+                        modifier = Modifier.padding(start = Floats.selectedCellImageLeadingPadding),
+                    )
+                }
+            }
+        }
+    }
+}

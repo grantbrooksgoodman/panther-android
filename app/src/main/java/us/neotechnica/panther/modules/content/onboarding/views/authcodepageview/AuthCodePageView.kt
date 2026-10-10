@@ -30,15 +30,17 @@ import us.neotechnica.panther.designsystem.modules.foundation.modifiers.onSwipe
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.onboarding.components.InstructionView
+import us.neotechnica.panther.modules.content.onboarding.constants.AuthCodePageViewColors
 import us.neotechnica.panther.modules.content.onboarding.constants.AuthCodePageViewFloats
 import us.neotechnica.panther.modules.content.shared.components.GenericTextField
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
+import us.neotechnica.panther.modules.content.onboarding.constants.AuthCodePageViewStrings as Strings
 
 // MARK: - Constants Accessors
 
+private typealias Colors = AuthCodePageViewColors
 private typealias Floats = AuthCodePageViewFloats
-private typealias Strings = us.neotechnica.panther.modules.content.onboarding.constants.AuthCodePageViewConstants
 
 /**
  * The onboarding page for entering the verification code during
@@ -55,11 +57,7 @@ fun AuthCodePageView(modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
 
-    StatefulView(
-        state = state.viewState,
-        modifier = modifier,
-        exceptionRetryHandler = { viewModel.send(AuthCodePageReducer.Action.ViewAppeared) },
-    ) {
+    StatefulView(state = state.viewState, modifier = modifier) {
         Column(modifier = Modifier.fillMaxSize().onSwipe(Swipe.DOWN) { viewModel.send(AuthCodePageReducer.Action.DidSwipeDown) }) {
             InstructionView(state.instructionViewStrings)
 
@@ -71,34 +69,34 @@ fun AuthCodePageView(modifier: Modifier = Modifier) {
             ) {
                 Components.Text(
                     state.strings.value(AuthCodePageViewStrings.instructionLabelText),
-                    foregroundColor = colors.subtitleText,
+                    foregroundColor = Colors.instructionLabelForeground,
                     font = Font.systemSemibold(),
                     modifier = Modifier.padding(vertical = Floats.instructionLabelVerticalPadding),
                 )
 
                 GenericTextField(
-                    value = state.verificationCode,
-                    placeholder = Strings.TEXT_FIELD_PLACEHOLDER,
-                    onValueChange = { viewModel.send(AuthCodePageReducer.Action.VerificationCodeChanged(it)) },
+                    text = state.verificationCode,
+                    onTextChange = { viewModel.send(AuthCodePageReducer.Action.VerificationCodeChanged(it)) },
                     keyboardType = KeyboardType.Number,
+                    placeholderText = Strings.TEXT_FIELD_PLACEHOLDER,
                     modifier =
                         Modifier
                             .fillMaxWidth()
                             .padding(horizontal = Floats.textFieldHorizontalPadding)
-                            .padding(top = Floats.textFieldTopPadding)
-                            .padding(bottom = Floats.textFieldBottomPadding),
+                            .padding(vertical = Floats.textFieldVerticalPadding),
                 )
 
                 Components.CapsuleButton(
                     text = state.strings.value(AuthCodePageViewStrings.continueButtonText),
-                    action = { viewModel.send(AuthCodePageReducer.Action.ContinueButtonTapped) },
+                    foregroundColor = if (state.isContinueButtonEnabled) colors.background else colors.disabled,
                     isEnabled = state.isContinueButtonEnabled,
-                    modifier = Modifier.padding(vertical = Floats.continueButtonVerticalPadding),
+                    action = { viewModel.send(AuthCodePageReducer.Action.ContinueButtonTapped) },
+                    modifier = Modifier.padding(top = Floats.continueButtonTopPadding),
                 )
 
                 Components.Button(
                     text = state.strings.value(AuthCodePageViewStrings.backButtonText),
-                    foregroundColor = if (state.isBackButtonEnabled) colors.titleText else colors.disabled,
+                    foregroundColor = if (state.isBackButtonEnabled) colors.accent else colors.disabled,
                     onClick = { if (state.isBackButtonEnabled) viewModel.send(AuthCodePageReducer.Action.BackButtonTapped) },
                     font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),
                     modifier = Modifier.padding(top = Floats.backButtonTopPadding),

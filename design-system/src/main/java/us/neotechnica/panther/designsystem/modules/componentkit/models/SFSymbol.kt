@@ -9,6 +9,7 @@
 package us.neotechnica.panther.designsystem.modules.componentkit.models
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Message
@@ -44,6 +45,7 @@ import androidx.compose.material.icons.filled.PanTool
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.QuestionMark
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Search
@@ -160,7 +162,8 @@ object SFSymbol {
             "exclamationmark.octagon.fill" to Icons.Filled.Error,
             "info.circle.fill" to Icons.Filled.Info,
             "x.circle.fill" to Icons.Filled.Cancel,
-            "questionmark.circle.fill" to Icons.Filled.Info,
+            "questionmark" to Icons.Filled.QuestionMark,
+            "questionmark.circle.fill" to Icons.AutoMirrored.Filled.Help,
             "questionmark.square.dashed" to Icons.Filled.Warning,
         )
 }

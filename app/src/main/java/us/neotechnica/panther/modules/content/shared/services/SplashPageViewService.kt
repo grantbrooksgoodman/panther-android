@@ -45,8 +45,10 @@ import us.neotechnica.panther.modules.networking.common.populateTemporaryCaches
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.modules.session.clientSession
+import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
+import us.neotechnica.panther.networking.modules.common.models.NetworkEnvironment
 import us.neotechnica.panther.networking.modules.common.models.NetworkServices
 import us.neotechnica.panther.networking.modules.health.extensions.networkHealth
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealthTier
@@ -345,7 +347,7 @@ object SplashPageViewService {
      */
     suspend fun presentErrorAlert(exception: Exception) {
         val mockGenericException = Exception(metadata = ExceptionMetadata(this))
-        val mockTimedOutException = Exception("The operation timed out.", metadata = ExceptionMetadata(this))
+        val mockTimedOutException = Exception.timedOut(metadata = ExceptionMetadata(this))
 
         val notGenericDescriptor = exception.userFacingDescriptor != mockGenericException.userFacingDescriptor
         val notTimedOutDescriptor = exception.userFacingDescriptor != mockTimedOutException.userFacingDescriptor
@@ -508,7 +510,7 @@ object SplashPageViewService {
 
     private fun schedulePostLaunchMaintenance(currentUser: User) {
         appScope.launch {
-            if (Build.environment != STAGING_ENVIRONMENT) {
+            if (Networking.config.environment != NetworkEnvironment.STAGING) {
                 try {
                     services.pushToken.prunePushTokensForCurrentUser()
                 } catch (exception: Exception) {
@@ -616,7 +618,6 @@ object SplashPageViewService {
     private const val MAXIMUM_DEFERRED_RESOLUTION_ATTEMPTS = 15
     private const val QUICK_LOAD_TIMEOUT_PROGRESS_THRESHOLD = 0.6f
     private const val SMALL_PROGRESS_INCREMENT = 0.02f
-    private const val STAGING_ENVIRONMENT = "staging"
     private const val UPDATE_PROGRESS_INCREMENT = 0.01f
     private const val USER_RESOLUTION_PROGRESS_INCREMENT = 0.2f
 

@@ -35,7 +35,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -45,7 +44,8 @@ import us.neotechnica.panther.bundle.Application
 import us.neotechnica.panther.bundle.networkActivityOccurred
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.content.shared.components.GIFImageView
+import us.neotechnica.panther.designsystem.modules.theming.views.ThemedView
+import us.neotechnica.panther.modules.content.shared.components.GIFImage
 import us.neotechnica.panther.modules.content.shared.constants.SplashPageViewColors
 import us.neotechnica.panther.modules.content.shared.constants.SplashPageViewFloats
 import us.neotechnica.panther.modules.content.shared.constants.SplashPageViewStrings
@@ -85,7 +85,6 @@ fun SplashPageView(
         }
 
     val colors = LocalPantherColors.current
-    val isDarkMode = ThemeService.isDarkModeActive(isSystemInDarkTheme())
     val loadingIndicatorStyle by SplashPageViewService.loadingIndicatorStyle.collectAsState()
     val initializationProgress by SplashPageViewService.initializationProgress.collectAsState()
 
@@ -110,7 +109,7 @@ fun SplashPageView(
             contentAlignment = Alignment.Center,
             modifier = Modifier.padding(bottom = Floats.padding),
         ) {
-            GIFImageView(
+            GIFImage(
                 name = Strings.GIF_IMAGE_NAME,
                 isActive = loadingIndicatorStyle == LoadingIndicatorStyle.BAR,
                 modifier =
@@ -120,23 +119,27 @@ fun SplashPageView(
                         .alpha(if (loadingIndicatorStyle == LoadingIndicatorStyle.BAR) 1f else 0f),
             )
 
-            Image(
-                painter = painterResource(R.drawable.hello_wordmark),
-                contentDescription = null,
-                colorFilter = if (isDarkMode) ColorFilter.tint(Colors.imageDarkForeground) else null,
-                contentScale = ContentScale.FillBounds,
-                modifier =
-                    Modifier
-                        .width(Floats.imageFrameWidth)
-                        .height(Floats.imageFrameHeight)
-                        .alpha(if (loadingIndicatorStyle == LoadingIndicatorStyle.BAR) 0f else 1f),
-            )
+            ThemedView {
+                val usesTemplateRendering =
+                    ThemeService.isDarkModeActive(isSystemInDarkTheme()) || !ThemeService.isAppDefaultThemeApplied
+
+                Image(
+                    painter = painterResource(R.drawable.hello_wordmark),
+                    contentDescription = null,
+                    colorFilter = if (usesTemplateRendering) ColorFilter.tint(Colors.imageDarkForeground) else null,
+                    contentScale = ContentScale.FillBounds,
+                    modifier =
+                        Modifier
+                            .width(Floats.imageFrameWidth)
+                            .height(Floats.imageFrameHeight)
+                            .alpha(if (loadingIndicatorStyle == LoadingIndicatorStyle.BAR) 0f else 1f),
+                )
+            }
         }
 
         ProgressBar(
             initializationProgress = initializationProgress,
             loadingIndicatorStyle = loadingIndicatorStyle,
-            tint = colors.titleText,
         )
 
         if (loadingIndicatorStyle == LoadingIndicatorStyle.SPINNER) {
@@ -156,7 +159,6 @@ fun SplashPageView(
 private fun ProgressBar(
     initializationProgress: Float,
     loadingIndicatorStyle: LoadingIndicatorStyle,
-    tint: Color,
 ) {
     val animatedProgress by animateFloatAsState(
         targetValue = initializationProgress,
@@ -170,13 +172,15 @@ private fun ProgressBar(
         fadeIn.animateTo(1f)
     }
 
-    LinearProgressIndicator(
-        progress = { animatedProgress },
-        color = tint,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Floats.progressBarHorizontalPadding)
-                .alpha(fadeIn.value * if (loadingIndicatorStyle == LoadingIndicatorStyle.BAR) 1f else 0f),
-    )
+    ThemedView {
+        LinearProgressIndicator(
+            progress = { animatedProgress },
+            color = Colors.progressBarTint,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Floats.progressBarHorizontalPadding)
+                    .alpha(fadeIn.value * if (loadingIndicatorStyle == LoadingIndicatorStyle.BAR) 1f else 0f),
+        )
+    }
 }

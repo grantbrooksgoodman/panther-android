@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.AndroidUiDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import us.neotechnica.panther.modules.common.services.RegionDetailService
+import us.neotechnica.panther.modules.content.shared.constants.RegionMenuFloats
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
@@ -25,8 +26,8 @@ import kotlin.time.Duration.Companion.milliseconds
  * The reducer that drives the region picker presented by [RegionMenu].
  *
  * The picker displays a searchable list of regions and reports its
- * results back to the presenting view through the selection it holds in
- * its state.
+ * results back to the presenting view through the presentation and
+ * selection values it holds in its state.
  *
  * The picker's behavior contract:
  *
@@ -34,29 +35,43 @@ import kotlin.time.Duration.Companion.milliseconds
  *   after a brief delay.
  * - The list displays the regions whose titles match the search query,
  *   or a no results message when none match.
- * - Selecting a region records its code, then dismisses the picker after
- *   a brief delay.
+ * - Selecting a region records its code, then dismisses the picker
+ *   after a brief delay.
  */
 class RegionMenuReducer : Reducer<RegionMenuReducer.State, RegionMenuReducer.Action> {
-    // MARK: - Action
+    // MARK: - Actions
 
+    /** The actions the region picker can process. */
     sealed interface Action {
+        /**
+         * An action that requests a presentation change, carrying whether
+         * the picker should be presented. Triggers [RunIsPresentedEffect]
+         * after a brief delay.
+         */
         data class IsPresentedChanged(
             val isPresented: Boolean,
         ) : Action
 
+        /** An action that indicates the region list appeared, carrying the list state used to scroll to the current selection. */
         data class ListViewAppeared(
             val listState: LazyListState,
         ) : Action
 
+        /** An action that applies the given presentation state. */
         data class RunIsPresentedEffect(
             val isPresented: Boolean,
         ) : Action
 
+        /** An action that indicates the search query changed, carrying the new value. */
         data class SearchQueryChanged(
             val searchQuery: String,
         ) : Action
 
+        /**
+         * An action that indicates the user selected a region, carrying its
+         * display title. Records the region's code and dismisses the picker
+         * after a brief delay.
+         */
         data class SelectedRegionTitleChanged(
             val selectedRegionTitle: String,
         ) : Action
@@ -64,11 +79,16 @@ class RegionMenuReducer : Reducer<RegionMenuReducer.State, RegionMenuReducer.Act
 
     // MARK: - State
 
+    /** The state of the region picker. */
     data class State(
+        /** A Boolean value that indicates whether the picker is presented. */
         val isPresented: Boolean = false,
+        /** The search query the user has entered. */
         val searchQuery: String = "",
+        /** The code of the selected region. */
         val selectedRegionCode: String = "",
     ) {
+        /** The localized text the picker's header displays. */
         val headerLabelText: String
             get() {
                 val localizedString = LocalizedStringKey.SelectCallingCode.localized()
@@ -76,12 +96,15 @@ class RegionMenuReducer : Reducer<RegionMenuReducer.State, RegionMenuReducer.Act
                 return localizedString.split(" ").joinToString(" ") { word -> word.replaceFirstChar { it.uppercaseChar() } }
             }
 
+        /** The localized text the no results label displays. */
         val noResultsLabelText: String
             get() = LocalizedStringKey.NoResults.localized()
 
+        /** The display titles of the regions matching the search query, or `null` if none match. */
         val queriedRegionTitles: List<String>?
             get() = RegionDetailService.regionTitles(RegionDetailService.QueryStrategy.SearchTerm(searchQuery))
 
+        /** The display title of the selected region, or `null` if it cannot be determined. */
         val selectedRegionTitle: String?
             get() =
                 RegionDetailService
@@ -102,7 +125,9 @@ class RegionMenuReducer : Reducer<RegionMenuReducer.State, RegionMenuReducer.Act
                 val isPresented = action.isPresented
                 ReduceResult(
                     state,
-                    Effect.task<Action>(delay = DELAY_MILLISECONDS.milliseconds) { Action.RunIsPresentedEffect(isPresented) },
+                    Effect.task<Action>(delay = RegionMenuFloats.DELAY_MILLISECONDS.milliseconds) {
+                        Action.RunIsPresentedEffect(isPresented)
+                    },
                 )
             }
 
@@ -112,7 +137,7 @@ class RegionMenuReducer : Reducer<RegionMenuReducer.State, RegionMenuReducer.Act
                 ReduceResult(
                     state,
                     Effect.run {
-                        delay(DELAY_MILLISECONDS)
+                        delay(RegionMenuFloats.DELAY_MILLISECONDS)
                         // Scroll animations require the UI frame clock.
                         if (index >= 0) withContext(AndroidUiDispatcher.Main) { listState.animateScrollToItem(index) }
                     },
@@ -132,14 +157,8 @@ class RegionMenuReducer : Reducer<RegionMenuReducer.State, RegionMenuReducer.Act
                     ) ?: ""
                 ReduceResult(
                     state.copy(selectedRegionCode = selectedRegionCode),
-                    Effect.task<Action>(delay = DELAY_MILLISECONDS.milliseconds) { Action.IsPresentedChanged(false) },
+                    Effect.task<Action>(delay = RegionMenuFloats.DELAY_MILLISECONDS.milliseconds) { Action.IsPresentedChanged(false) },
                 )
             }
         }
-
-    // MARK: - Companion
-
-    private companion object {
-        const val DELAY_MILLISECONDS = 500L
-    }
 }
