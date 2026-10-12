@@ -148,7 +148,7 @@ class SelectLanguagePageReducer : Reducer<SelectLanguagePageReducer.State, Selec
                 val selectedLanguageCode = state.selectedLanguageCode
                 CoreUtilities.setLanguageCode(selectedLanguageCode)
 
-                navigation.navigate(Route.Onboarding(OnboardingRoute.Push(OnboardingNavigatorState.SeguePath.VerifyNumber)))
+                navigation.navigate(Route.Onboarding(OnboardingRoute.Push(OnboardingNavigatorState.SeguePaths.VerifyNumber)))
                 onboardingService.setLanguageCode(selectedLanguageCode)
                 ReduceResult(state)
             }

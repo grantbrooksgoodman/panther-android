@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.ImeAction
@@ -64,6 +65,8 @@ private typealias Strings = SearchBarStrings
  *   empty. Defaults to the localized search prompt.
  * @param onSubmit The handler to run with the current query when the
  *   user submits, if any.
+ * @param onFocusChanged The handler to run when the field gains or
+ *   loses focus, if any.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -76,6 +79,7 @@ fun SearchBar(
     keyboardType: KeyboardType? = null,
     placeholderText: String = LocalizedStringKey.Search.localized(),
     onSubmit: ((String) -> Unit)? = null,
+    onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     val colors = LocalPantherColors.current
     Row(
@@ -141,7 +145,7 @@ fun SearchBar(
                         ),
                     textStyle = Font.system.textStyle.copy(color = colors.titleText),
                     cursorBrush = SolidColor(colors.accent),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().onFocusChanged { onFocusChanged?.invoke(it.isFocused) },
                 )
             }
 

@@ -12,15 +12,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import us.neotechnica.panther.bundle.conversation
 import us.neotechnica.panther.modules.common.services.NotificationService
-import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 
 /**
@@ -39,16 +39,15 @@ object ReadReceiptService {
 
     /**
      * Marks the displayed conversation's unread incoming messages as
-     * read.
+     * read, updating the app badge.
      *
-     * Has no effect when the most recent incoming message has already
-     * been read, or when there are no unread incoming messages.
-     *
+     * @return `true` if there were unread incoming messages to mark;
+     *   otherwise, `false`.
      * @throws Exception if updating the read dates fails.
      */
-    suspend fun updateReadDateForUnreadMessages() {
-        val conversation = ConversationSessionService.currentConversation ?: return
-        updateReadDateForUnreadMessages(conversation)
+    suspend fun updateReadDateForUnreadMessages(): Boolean {
+        val conversation = ConversationSessionService.currentConversation ?: return false
+        return updateReadDateForUnreadMessages(conversation)
     }
 
     /**
@@ -76,19 +75,20 @@ object ReadReceiptService {
 
     // MARK: - Auxiliary
 
-    private suspend fun updateReadDateForUnreadMessages(conversation: Conversation) {
-        val currentUserID = User.currentUserID ?: return
-        val messages = conversation.messages?.filter { !it.isFromCurrentUser } ?: return
-
-        val last = messages.lastOrNull() ?: return
-        if (last.readReceipts?.any { it.userID == currentUserID } == true) return
-
-        val unreadMessages = messages.filter { message -> message.readReceipts?.any { it.userID == currentUserID } != true }
-        if (unreadMessages.isEmpty()) return
+    private suspend fun updateReadDateForUnreadMessages(conversation: Conversation): Boolean {
+        val unreadMessages =
+            conversation.messages?.filter { !it.isFromCurrentUser && it.currentUserReadReceipt == null } ?: return false
+        if (unreadMessages.isEmpty()) return false
 
         conversation.updateReadDate(unreadMessages)
 
-        val currentUser = UserSessionService.currentUser ?: return
-        NotificationService.setBadgeNumber(currentUser.calculateBadgeNumber())
+        val currentUser = UserSessionService.currentUser ?: return true
+        try {
+            NotificationService.setBadgeNumber(currentUser.calculateBadgeNumber())
+        } catch (exception: Exception) {
+            Logger.log(exception, domain = LoggerDomain.conversation)
+        }
+
+        return true
     }
 }

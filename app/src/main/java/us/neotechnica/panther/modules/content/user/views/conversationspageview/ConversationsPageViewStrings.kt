@@ -16,13 +16,9 @@ import us.neotechnica.panther.translator.models.TranslationInput
 /** The translated label strings for the conversations page. */
 object ConversationsPageViewStrings : TranslatedLabelStrings {
     val navigationTitle = TranslatedLabelStringCollection("conversationsPageView.navigationTitle")
-    val noConversationsLabelText = TranslatedLabelStringCollection("conversationsPageView.noConversationsLabelText")
-    val searchBarPlaceholder = TranslatedLabelStringCollection("conversationsPageView.searchBarPlaceholder")
 
     override val keyPairs: List<TranslationInputMap> =
         listOf(
             TranslationInputMap(navigationTitle, TranslationInput("Messages")),
-            TranslationInputMap(noConversationsLabelText, TranslationInput("No conversations yet.")),
-            TranslationInputMap(searchBarPlaceholder, TranslationInput("Search")),
         )
 }

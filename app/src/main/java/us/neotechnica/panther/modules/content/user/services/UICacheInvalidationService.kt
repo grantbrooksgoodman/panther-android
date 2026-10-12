@@ -106,7 +106,7 @@ object UICacheInvalidationService {
         Task.debounced("$SENDER/${TaskID.CONVERSATION_INVALIDATION.rawValue}", INVALIDATION_DELAY) {
             Logger.log("Invalidating caches for conversation changes.", domain = LoggerDomain.uiCacheInvalidation)
             val idKeys = pendingConversationIDKeys.withValue { current -> current.value.also { current.value = emptySet() } }
-            ConversationCellViewDataCache.removeValues(idKeys)
+            idKeys.forEach { ConversationCellViewDataCache.removeValues(forConversationIDKey = it) }
         }
 
         Task.debounced("$SENDER/${TaskID.NOTIFICATION_EXTENSION_NAME_MAP.rawValue}", NAME_MAP_DELAY) {
@@ -139,9 +139,9 @@ object UICacheInvalidationService {
     private fun persistValuesForNotificationExtension() {
         val json = JSONObject()
         SessionStore.conversations.values
-            .filter { it.participants.size > GROUP_PARTICIPANT_THRESHOLD && !it.users.isNullOrEmpty() }
+            .filter { it.participants.size > GROUP_PARTICIPANT_THRESHOLD }
             .forEach { conversation ->
-                val titleLabelText = ConversationCellViewData.title(conversation)
+                val titleLabelText = ConversationCellViewData(conversation)?.titleLabelText ?: return@forEach
                 if (!titleLabelText.isBangQualifiedEmpty) json.put(conversation.id.key, titleLabelText)
             }
 

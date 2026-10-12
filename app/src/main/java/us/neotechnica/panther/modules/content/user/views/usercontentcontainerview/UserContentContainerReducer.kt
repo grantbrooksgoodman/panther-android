@@ -58,7 +58,7 @@ class UserContentContainerReducer : Reducer<UserContentContainerReducer.State, U
                 if (conversationIDKey != null) {
                     DependencyValues.current.navigation.navigate(
                         Route.UserContent(
-                            UserContentRoute.Push(UserContentNavigatorState.SeguePath.ChatInfo(conversationIDKey)),
+                            UserContentRoute.Push(UserContentNavigatorState.SeguePaths.ChatInfo(conversationIDKey)),
                         ),
                     )
                 }

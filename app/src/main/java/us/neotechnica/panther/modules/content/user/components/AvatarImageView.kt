@@ -54,6 +54,8 @@ private typealias AvatarStrings = AvatarImageViewStrings
  * @param size The avatar's size, or `null` for the 50-point default.
  * @param modifier The modifier for this avatar (for outer
  *   positioning).
+ * @param isRedacted Whether the view is redacted, showing the
+ *   placeholder glyph regardless of [image].
  */
 @Composable
 fun AvatarImageView(
@@ -61,6 +63,7 @@ fun AvatarImageView(
     badgeCount: Int = 0,
     size: DpSize? = null,
     modifier: Modifier = Modifier,
+    isRedacted: Boolean = false,
 ) {
     val resolvedSize = size ?: DpSize(AvatarFloats.FRAME_WIDTH.dp, AvatarFloats.FRAME_HEIGHT.dp)
     Box(
@@ -69,7 +72,14 @@ fun AvatarImageView(
                 .size(resolvedSize)
                 .clip(RoundedCornerShape(AvatarFloats.CORNER_RADIUS.dp)),
     ) {
-        if (image != null) {
+        if (isRedacted) {
+            Components.Symbol(
+                AvatarStrings.DEFAULT_IMAGE_SYSTEM_NAME,
+                foregroundColor = AvatarColors.IMAGE_FOREGROUND,
+                usesIntrinsicSize = false,
+                modifier = Modifier.fillMaxSize().clip(CircleShape),
+            )
+        } else if (image != null) {
             Image(
                 bitmap = image,
                 contentDescription = null,

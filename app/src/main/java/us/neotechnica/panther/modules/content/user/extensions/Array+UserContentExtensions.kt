@@ -120,7 +120,9 @@ fun List<Conversation>.queried(searchTerm: String): List<Conversation> {
     val normalizedSearchTerm = searchTerm.lowercase().trim()
     if (normalizedSearchTerm.isBlank()) return this
 
-    QueriedConversationCache.cachedValue(normalizedSearchTerm)?.let { return it.visibleForCurrentUser }
+    QueriedConversationCache.cachedConversationsForSearchTerms?.get(normalizedSearchTerm)?.let {
+        return it.visibleForCurrentUser
+    }
 
     fun satisfiesConstraints(conversation: Conversation): Boolean {
         val metadataContainsSearchTerm =
@@ -130,11 +132,11 @@ fun List<Conversation>.queried(searchTerm: String): List<Conversation> {
                 .contains(normalizedSearchTerm)
 
         val cellViewDataTitleLabelTextContainsSearchTerm =
-            ConversationCellViewData
-                .title(conversation)
-                .lowercase()
-                .trim()
-                .contains(normalizedSearchTerm)
+            ConversationCellViewData(conversation)
+                ?.titleLabelText
+                ?.lowercase()
+                ?.trim()
+                ?.contains(normalizedSearchTerm) == true
 
         val messages =
             conversation.withMessagesOffsetFromCurrentUserAdditionDate.messages
@@ -146,7 +148,10 @@ fun List<Conversation>.queried(searchTerm: String): List<Conversation> {
     }
 
     val queriedConversations = filter { satisfiesConstraints(it) }
-    QueriedConversationCache.cache(normalizedSearchTerm, queriedConversations)
+
+    val cachedConversationsForSearchTerms = (QueriedConversationCache.cachedConversationsForSearchTerms ?: emptyMap()).toMutableMap()
+    cachedConversationsForSearchTerms[normalizedSearchTerm] = queriedConversations
+    QueriedConversationCache.cachedConversationsForSearchTerms = cachedConversationsForSearchTerms
     return queriedConversations
 }
 

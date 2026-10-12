@@ -176,7 +176,7 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
             }
         }
 
-        if (navState.chat.sheet == ChatNavigatorState.SheetPath.ContactSelector) {
+        if (navState.chat.sheet == ChatNavigatorState.SheetPaths.ContactSelector) {
             ModalBottomSheet(
                 onDismissRequest = { navigation.navigate(Route.Chat(ChatRoute.Sheet(null))) },
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),

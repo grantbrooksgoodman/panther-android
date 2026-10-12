@@ -110,7 +110,7 @@ fun AddContactButton(
 fun ChatInfoContactSelectorHost() {
     val navigation = remember { DependencyValues.current.navigation }
     val navState by navigation.state.collectAsState()
-    if (navState.chat.sheet == ChatNavigatorState.SheetPath.ContactSelector) {
+    if (navState.chat.sheet == ChatNavigatorState.SheetPaths.ContactSelector) {
         ModalBottomSheet(
             onDismissRequest = { navigation.navigate(Route.Chat(ChatRoute.Sheet(null))) },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),

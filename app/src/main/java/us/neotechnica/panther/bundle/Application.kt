@@ -56,6 +56,8 @@ import us.neotechnica.panther.networking.modules.health.models.NetworkHealthConf
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealthProbeConfiguration
 import us.neotechnica.panther.subsystem.AppSubsystem
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.models.StoredItemKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
@@ -208,7 +210,7 @@ object Application {
 
         if (!preserveCurrentUserID) {
             runCatching { Networking.config.authDelegate.signOut() }
-                .onFailure { Logger.log("Failed to sign out during reset. ${it.message}") }
+                .onFailure { Logger.log(it as? Exception ?: Exception.from(it, ExceptionMetadata(this))) }
         }
 
         val procedure = onCompletion ?: return
@@ -220,7 +222,7 @@ object Application {
             ResetCompletionProcedure.NAVIGATE_TO_SPLASH -> {
                 DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
                 DependencyValues.current.navigation.navigate(
-                    Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.Splash)),
+                    Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.Splash)),
                 )
             }
         }
@@ -238,7 +240,7 @@ object Application {
     fun beginGracefulExit() {
         Overlay.addOverlay(activityIndicator = Overlay.OverlayActivityIndicatorConfiguration.largeWhite)
         DependencyValues.current.navigation.navigate(
-            Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.Splash)),
+            Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.Splash)),
         )
         CoreUtilities.exitGracefully()
     }

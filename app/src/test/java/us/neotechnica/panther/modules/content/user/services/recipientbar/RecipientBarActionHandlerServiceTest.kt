@@ -161,7 +161,7 @@ class RecipientBarActionHandlerServiceTest {
             granting.selectContactButtonTapped()
 
             assertEquals(1, syncCount)
-            assertEquals(listOf<Route>(Route.Chat(ChatRoute.Sheet(ChatNavigatorState.SheetPath.ContactSelector))), routes)
+            assertEquals(listOf<Route>(Route.Chat(ChatRoute.Sheet(ChatNavigatorState.SheetPaths.ContactSelector))), routes)
         }
 
     @Test
@@ -202,7 +202,7 @@ class RecipientBarActionHandlerServiceTest {
             handler.selectContactButtonTapped()
 
             assertEquals(0, syncCount)
-            assertEquals(listOf<Route>(Route.Chat(ChatRoute.Sheet(ChatNavigatorState.SheetPath.ContactSelector))), routes)
+            assertEquals(listOf<Route>(Route.Chat(ChatRoute.Sheet(ChatNavigatorState.SheetPaths.ContactSelector))), routes)
         }
 
     // MARK: - Text Field Should Return

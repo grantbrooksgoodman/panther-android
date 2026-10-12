@@ -11,16 +11,17 @@ package us.neotechnica.panther.modules.content.user.views.conversationspageview
 import us.neotechnica.panther.bundle.Application
 import us.neotechnica.panther.bundle.conversationsPageReappeared
 import us.neotechnica.panther.bundle.conversationsSearchQuery
-import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardService
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
+import us.neotechnica.panther.modules.content.user.constants.ConversationsPageViewFloats
+import us.neotechnica.panther.modules.content.user.dependencies.conversationsPageViewService
 import us.neotechnica.panther.modules.content.user.extensions.filteredAndSorted
 import us.neotechnica.panther.modules.content.user.extensions.isMock
 import us.neotechnica.panther.modules.content.user.extensions.isVisibleForCurrentUser
 import us.neotechnica.panther.modules.content.user.extensions.queried
-import us.neotechnica.panther.modules.content.user.services.ConversationsPageViewService
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
+import us.neotechnica.panther.navigation.RootNavigatorState
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentNavigatorState
 import us.neotechnica.panther.navigation.UserContentRoute
@@ -33,6 +34,7 @@ import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.effect.cancellable
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
@@ -41,13 +43,15 @@ import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedStates
 import java.util.UUID
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 /**
- * The reducer for the conversations list – the app's home.
+ * The reducer that drives the conversations page.
  *
- * Lists the current user's conversations sorted by their most recent
- * message and filtered by the search query, and provides the entry
- * points for composing a new conversation and opening Settings.
+ * This page is the app's home, listing the user's conversations. It
+ * presents the conversations sorted by their most recent message and
+ * filtered by the search query, and provides the entry points for
+ * composing a new conversation and opening Settings.
  *
  * The page's behavior contract:
  *
@@ -64,49 +68,122 @@ import kotlin.time.Duration.Companion.milliseconds
 class ConversationsPageReducer : Reducer<ConversationsPageReducer.State, ConversationsPageReducer.Action> {
     // MARK: - Dependencies
 
-    private val viewService = ConversationsPageViewService
+    private val viewService get() = DependencyValues.current.conversationsPageViewService
 
     // MARK: - Action
 
+    /** The actions the conversations page can process. */
     sealed interface Action {
+        /**
+         * An action that indicates the view appeared. On each
+         * appearance after the first, notifies observers so the
+         * conversation cells refresh.
+         */
         data object ViewAppeared : Action
 
+        /** An action that indicates the view disappeared. */
         data object ViewDisappeared : Action
 
+        /**
+         * An action that indicates the view appeared for the first
+         * time. Begins display string resolution and resets the shared
+         * search query.
+         */
         data object ViewFirstAppeared : Action
 
+        /** An action that advances the compose button's pulsing animation. */
+        data object AnimatedComposeToolbarButtonAppeared : Action
+
+        /**
+         * An action that indicates the user tapped the compose button.
+         * Opens the new chat page.
+         */
         data object ComposeToolbarButtonTapped : Action
 
-        data object DeleteConversationsToolbarButtonTapped : Action
-
-        data object HandleChatPageStoreChange : Action
-
-        data object PulledToRefresh : Action
-
-        data object SessionStoreDidChange : Action
-
+        /**
+         * An action that indicates the user tapped the settings button.
+         * Opens Settings.
+         */
         data object SettingsToolbarButtonTapped : Action
 
+        /**
+         * An action that indicates the user tapped the
+         * delete-conversations developer button. Deletes the user's
+         * conversations.
+         */
+        data object DeleteConversationsToolbarButtonTapped : Action
+
+        /**
+         * An action that reconciles the list with a pending change
+         * originating from the chat page.
+         */
+        data object HandleChatPageStoreChange : Action
+
+        /**
+         * An action that indicates the user pulled to refresh. Reloads
+         * the conversation data, unless a search is active.
+         */
+        data object PulledToRefresh : Action
+
+        /**
+         * An action that indicates the session store changed.
+         * Refreshes the list and schedules handling of the change.
+         */
+        data object SessionStoreDidChange : Action
+
+        /**
+         * An action that indicates the trait collection changed.
+         * Rebuilds the compose button.
+         */
         data object TraitCollectionChanged : Action
 
+        /**
+         * An action that indicates whether the user is searching
+         * changed, carrying the new value.
+         */
         data class IsSearchingChanged(
             val isSearching: Boolean,
         ) : Action
 
+        /**
+         * An action that indicates the search query changed, carrying
+         * the new value.
+         */
         data class SearchQueryChanged(
-            val query: String,
+            val searchQuery: String,
         ) : Action
 
+        /**
+         * An action that sets the compose button's animation amount,
+         * carrying the new value.
+         */
+        data class ComposeToolbarButtonAnimationAmountSet(
+            val animationAmount: Float,
+        ) : Action
+
+        /**
+         * An action that indicates a data reload failed, carrying the
+         * resulting [Exception].
+         */
         data class ReloadDataFailed(
             val exception: Exception,
         ) : Action
 
+        /** An action that indicates a data reload finished. */
         data object ReloadDataReturned : Action
 
+        /**
+         * An action that indicates display string resolution failed,
+         * carrying the resulting [Exception].
+         */
         data class ResolveFailed(
             val exception: Exception,
         ) : Action
 
+        /**
+         * An action that indicates display string resolution
+         * succeeded, carrying the resolved strings.
+         */
         data class ResolveReturned(
             val strings: List<TranslationOutputMap>,
         ) : Action
@@ -114,14 +191,37 @@ class ConversationsPageReducer : Reducer<ConversationsPageReducer.State, Convers
 
     // MARK: - State
 
+    /**
+     * The state of the conversations page.
+     *
+     * @property animationAmount The current scale of the compose
+     *   button's pulsing animation.
+     * @property composeToolbarButtonViewID The identity of the compose
+     *   button. Regenerated to rebuild it when the trait collection
+     *   changes.
+     * @property conversationsChangeToken A token that changes to
+     *   signal the conversation list to refresh.
+     * @property isRefreshing A Boolean value that indicates whether a
+     *   pull-to-refresh reload is in progress.
+     * @property isSearching A Boolean value that indicates whether the
+     *   user is currently searching.
+     * @property searchQuery The search query the user has entered.
+     * @property strings The page's translated display strings.
+     *   Contains the default, untranslated strings until resolution
+     *   completes.
+     * @property viewState The page's loading state. Remains loading
+     *   until display string resolution completes.
+     */
     data class State(
+        val animationAmount: Float = 1f,
+        val composeToolbarButtonViewID: UUID = UUID.randomUUID(),
         val conversationsChangeToken: UUID = UUID.randomUUID(),
         val isRefreshing: Boolean = false,
         val isSearching: Boolean = false,
         val searchQuery: String = "",
         val strings: List<TranslationOutputMap> = ConversationsPageViewStrings.defaultOutputMap,
         val viewState: ViewState = ViewState.Loading,
-        val didAppear: Boolean = false,
+        internal val didAppear: Boolean = false,
     ) {
         /**
          * The current user's conversations, filtered for visibility,
@@ -131,8 +231,21 @@ class ConversationsPageReducer : Reducer<ConversationsPageReducer.State, Convers
          * Falls back to the current chat session's conversation during
          * the brief window between local conversation creation and
          * server-side conversation-ID sync.
+         *
+         * Memoized against [conversationsChangeToken] and the search
+         * query, so its expensive resolution runs once per change
+         * rather than on every view body evaluation.
          */
         val conversations: List<Conversation>
+            get() {
+                ConversationsListMemo.value(conversationsChangeToken, searchQuery)?.let { return it }
+
+                val value = resolvedConversations
+                ConversationsListMemo.store(value, conversationsChangeToken, searchQuery)
+                return value
+            }
+
+        private val resolvedConversations: List<Conversation>
             get() {
                 val allConversations = (UserSessionService.currentUser?.conversations ?: emptyList()).filteredAndSorted
 
@@ -148,7 +261,7 @@ class ConversationsPageReducer : Reducer<ConversationsPageReducer.State, Convers
                     }
                 }
 
-                if (searchQuery.isBlank()) return allConversations
+                if (searchQuery.isEmpty()) return allConversations
                 return allConversations.queried(searchQuery).filteredAndSorted
             }
 
@@ -182,32 +295,17 @@ class ConversationsPageReducer : Reducer<ConversationsPageReducer.State, Convers
                 ReduceResult(state.copy(viewState = ViewState.Loading), resolveEffect())
             }
 
-            Action.ViewAppeared ->
-                if (!state.didAppear) {
-                    ReduceResult(state.copy(didAppear = true))
-                } else {
-                    // Session store changes are skipped while a pushed page covers
-                    // the list, so refresh the memo and the cells on return.
-                    val sharedEvents = DependencyValues.current.sharedEvents
-                    sharedEvents.conversationsPageReappeared.send(Unit)
-                    ReduceResult(state.copy(conversationsChangeToken = UUID.randomUUID()))
-                }
+            Action.ViewAppeared -> reduceViewAppeared(state)
 
-            Action.ViewDisappeared -> {
-                viewService.viewDisappeared()
-                ReduceResult(state)
-            }
+            Action.AnimatedComposeToolbarButtonAppeared ->
+                ReduceResult(state, animationAmountEffect(state.animationAmount))
+
+            is Action.ComposeToolbarButtonAnimationAmountSet ->
+                ReduceResult(state.copy(animationAmount = action.animationAmount))
 
             Action.ComposeToolbarButtonTapped -> {
                 DependencyValues.current.navigation.navigate(
-                    Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePath.NewChat)),
-                )
-                ReduceResult(state)
-            }
-
-            Action.SettingsToolbarButtonTapped -> {
-                DependencyValues.current.navigation.navigate(
-                    Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePath.Settings)),
+                    Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePaths.NewChat)),
                 )
                 ReduceResult(state)
             }
@@ -220,28 +318,11 @@ class ConversationsPageReducer : Reducer<ConversationsPageReducer.State, Convers
             Action.HandleChatPageStoreChange ->
                 ReduceResult(state, Effect.fireAndForget { viewService.handleChatPageStoreChange() })
 
-            is Action.IsSearchingChanged -> {
-                // Dismiss the keyboard when search is cleared.
-                if (state.isSearching && !action.isSearching) KeyboardService.resignFirstResponders()
+            is Action.IsSearchingChanged ->
                 ReduceResult(state.copy(isSearching = action.isSearching))
-            }
 
             Action.PulledToRefresh ->
-                if (state.isSearching) {
-                    ReduceResult(state)
-                } else {
-                    ReduceResult(
-                        state.copy(isRefreshing = true),
-                        Effect.run { send ->
-                            try {
-                                viewService.reloadData()
-                                send(Action.ReloadDataReturned)
-                            } catch (exception: Exception) {
-                                send(Action.ReloadDataFailed(exception))
-                            }
-                        },
-                    )
-                }
+                if (state.isSearching) ReduceResult(state) else ReduceResult(state.copy(isRefreshing = true), reloadDataEffect())
 
             is Action.ReloadDataFailed -> {
                 Logger.log(action.exception, with = AlertType.toast)
@@ -250,24 +331,6 @@ class ConversationsPageReducer : Reducer<ConversationsPageReducer.State, Convers
 
             Action.ReloadDataReturned ->
                 ReduceResult(state.copy(isRefreshing = false, conversationsChangeToken = UUID.randomUUID()))
-
-            is Action.SearchQueryChanged ->
-                if (state.searchQuery == action.query) {
-                    ReduceResult(state)
-                } else {
-                    DependencyValues.current.sharedStates.conversationsSearchQuery.value = action.query
-                    ReduceResult(state.copy(searchQuery = action.query))
-                }
-
-            Action.SessionStoreDidChange -> {
-                viewService.showSecondsToLoadToastIfNeeded()
-                ReduceResult(state.copy(conversationsChangeToken = UUID.randomUUID()), handleChatPageStoreChangeTask())
-            }
-
-            Action.TraitCollectionChanged -> {
-                viewService.traitCollectionChanged()
-                ReduceResult(state)
-            }
 
             is Action.ResolveFailed -> {
                 Logger.log(action.exception)
@@ -279,9 +342,77 @@ class ConversationsPageReducer : Reducer<ConversationsPageReducer.State, Convers
                 viewService.viewLoaded()
                 ReduceResult(state.copy(strings = action.strings, viewState = ViewState.Loaded))
             }
+
+            is Action.SearchQueryChanged ->
+                if (state.searchQuery == action.searchQuery) {
+                    ReduceResult(state)
+                } else {
+                    DependencyValues.current.sharedStates.conversationsSearchQuery.value = action.searchQuery
+                    ReduceResult(state.copy(searchQuery = action.searchQuery))
+                }
+
+            Action.SessionStoreDidChange ->
+                if (DependencyValues.current.navigation.state.value.modal != RootNavigatorState.ModalPaths.UserContent) {
+                    ReduceResult(state, handleChatPageStoreChangeTask())
+                } else {
+                    viewService.showSecondsToLoadToastIfNeeded()
+                    ReduceResult(state.copy(conversationsChangeToken = UUID.randomUUID()), handleChatPageStoreChangeTask())
+                }
+
+            Action.SettingsToolbarButtonTapped -> {
+                DependencyValues.current.navigation.navigate(
+                    Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePaths.Settings)),
+                )
+                ReduceResult(state)
+            }
+
+            Action.TraitCollectionChanged -> {
+                viewService.traitCollectionChanged()
+                ReduceResult(state.copy(composeToolbarButtonViewID = UUID.randomUUID()))
+            }
+
+            Action.ViewDisappeared -> {
+                viewService.viewDisappeared()
+                ReduceResult(state)
+            }
         }
 
     // MARK: - Auxiliary
+
+    private fun reduceViewAppeared(state: State): ReduceResult<State, Action> {
+        if (!state.didAppear) return ReduceResult(state.copy(didAppear = true))
+
+        // Session store changes are skipped while a pushed page covers
+        // the list, so refresh the memo on return.
+        //
+        // Backstop for cell reloads lost while the list was covered by
+        // a pushed page; cells re-derive their view data upon
+        // reappearance.
+        val sharedEvents = DependencyValues.current.sharedEvents
+        sharedEvents.conversationsPageReappeared.send(Unit)
+        return ReduceResult(state.copy(conversationsChangeToken = UUID.randomUUID()))
+    }
+
+    private fun animationAmountEffect(currentAnimationAmount: Float): Effect<Action> =
+        Effect.task(delay = ANIMATION_AMOUNT_DELAY) {
+            Action.ComposeToolbarButtonAnimationAmountSet(
+                if (currentAnimationAmount == ConversationsPageViewFloats.COMPOSE_TOOLBAR_BUTTON_ANIMATION_AMOUNT) {
+                    1f
+                } else {
+                    ConversationsPageViewFloats.COMPOSE_TOOLBAR_BUTTON_ANIMATION_AMOUNT
+                },
+            )
+        }
+
+    private fun reloadDataEffect(): Effect<Action> =
+        Effect.run { send ->
+            try {
+                viewService.reloadData()
+                send(Action.ReloadDataReturned)
+            } catch (exception: Exception) {
+                send(Action.ReloadDataFailed(exception))
+            }
+        }
 
     private fun handleChatPageStoreChangeTask(): Effect<Action> =
         Effect
@@ -300,7 +431,40 @@ class ConversationsPageReducer : Reducer<ConversationsPageReducer.State, Convers
     // MARK: - Companion
 
     companion object {
+        private val ANIMATION_AMOUNT_DELAY = 1.seconds
         private val HANDLE_CHAT_PAGE_STORE_CHANGE_DELAY = 250.milliseconds
         private const val TASK_ID_HANDLE_CHAT_PAGE_STORE_CHANGE = "ConversationsPageReducer/handleChatPageStoreChange"
+    }
+}
+
+/**
+ * In-memory memo for the resolved conversation list, keyed by the
+ * page's change token and search query. One entry suffices: the home
+ * page is the sole resolver at any time.
+ */
+private object ConversationsListMemo {
+    private data class Entry(
+        val token: UUID,
+        val searchQuery: String,
+        val value: List<Conversation>,
+    )
+
+    private val entry = LockIsolated<Entry?>(null)
+
+    fun value(
+        token: UUID,
+        searchQuery: String,
+    ): List<Conversation>? {
+        val current = entry.wrappedValue ?: return null
+        if (current.token != token || current.searchQuery != searchQuery) return null
+        return current.value
+    }
+
+    fun store(
+        value: List<Conversation>,
+        token: UUID,
+        searchQuery: String,
+    ) {
+        entry.wrappedValue = Entry(token, searchQuery, value)
     }
 }

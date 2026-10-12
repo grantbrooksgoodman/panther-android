@@ -14,6 +14,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -21,15 +22,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import us.neotechnica.panther.bundle.traitCollectionChanged
 import us.neotechnica.panther.designsystem.modules.foundation.extensions.resignFirstResponders
 import us.neotechnica.panther.modules.content.onboarding.views.OnboardingContainerView
 import us.neotechnica.panther.modules.content.shared.views.splashpageview.SplashPageReducer
 import us.neotechnica.panther.modules.content.shared.views.splashpageview.SplashPageView
-import us.neotechnica.panther.modules.content.user.views.UserContentContainer
+import us.neotechnica.panther.modules.content.user.views.UserContentContainerView
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
@@ -59,6 +63,16 @@ fun RootView(modifier: Modifier = Modifier) {
         }
     }
 
+    // Announces interface style changes as the scene delegate does on
+    // a trait collection change.
+    val isSystemInDarkTheme = isSystemInDarkTheme()
+    var didObserveInitialTheme by remember { mutableStateOf(false) }
+    LaunchedEffect(isSystemInDarkTheme) {
+        val sharedEvents = DependencyValues.current.sharedEvents
+        if (didObserveInitialTheme) sharedEvents.traitCollectionChanged.send(Unit)
+        didObserveInitialTheme = true
+    }
+
     AnimatedContent(
         contentKey = { it?.let { path -> path::class } },
         label = "RootView",
@@ -69,13 +83,13 @@ fun RootView(modifier: Modifier = Modifier) {
         },
     ) { modal ->
         when (modal) {
-            RootNavigatorState.ModalPath.Onboarding -> OnboardingContainerView(Modifier.fillMaxSize().systemBarsPadding())
-            RootNavigatorState.ModalPath.Splash ->
+            RootNavigatorState.ModalPaths.Onboarding -> OnboardingContainerView(Modifier.fillMaxSize().systemBarsPadding())
+            RootNavigatorState.ModalPaths.Splash ->
                 SplashPageView(
                     viewModel = remember { ViewModel(SplashPageReducer.State(), SplashPageReducer()) },
                     modifier = Modifier.fillMaxSize().systemBarsPadding(),
                 )
-            RootNavigatorState.ModalPath.UserContent -> UserContentContainer(Modifier.fillMaxSize())
+            RootNavigatorState.ModalPaths.UserContent -> UserContentContainerView(Modifier.fillMaxSize())
             null -> Box(Modifier.fillMaxSize())
         }
     }

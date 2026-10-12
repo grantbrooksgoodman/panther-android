@@ -152,7 +152,7 @@ class WelcomePageReducerTest {
         reducer.reduce(WelcomePageReducer.State(), WelcomePageReducer.Action.SignInButtonTapped)
 
         assertEquals(
-            listOf(OnboardingNavigatorState.SeguePath.SignIn),
+            listOf(OnboardingNavigatorState.SeguePaths.SignIn),
             DependencyValues.current.navigation.state.value.onboarding.stack,
         )
     }

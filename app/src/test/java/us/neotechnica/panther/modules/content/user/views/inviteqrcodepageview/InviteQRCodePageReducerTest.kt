@@ -33,7 +33,7 @@ class InviteQRCodePageReducerTest {
 
     @Before
     fun setUp() {
-        DependencyValues.current.navigation.navigate(Route.Settings(SettingsRoute.Sheet(SettingsNavigatorState.SheetPath.InviteQRCode)))
+        DependencyValues.current.navigation.navigate(Route.Settings(SettingsRoute.Sheet(SettingsNavigatorState.SheetPaths.InviteQRCode)))
     }
 
     @After

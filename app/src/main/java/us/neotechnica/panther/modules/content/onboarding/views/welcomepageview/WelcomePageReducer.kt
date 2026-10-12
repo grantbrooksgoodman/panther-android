@@ -188,7 +188,7 @@ class WelcomePageReducer : Reducer<WelcomePageReducer.State, WelcomePageReducer.
             }
 
             Action.ContinueButtonTapped -> {
-                navigation.navigate(Route.Onboarding(OnboardingRoute.Push(OnboardingNavigatorState.SeguePath.SelectLanguage)))
+                navigation.navigate(Route.Onboarding(OnboardingRoute.Push(OnboardingNavigatorState.SeguePaths.SelectLanguage)))
                 ReduceResult(state)
             }
 
@@ -203,7 +203,7 @@ class WelcomePageReducer : Reducer<WelcomePageReducer.State, WelcomePageReducer.
                 ReduceResult(state.copy(strings = action.strings, viewState = ViewState.Loaded))
 
             Action.SignInButtonTapped -> {
-                navigation.navigate(Route.Onboarding(OnboardingRoute.Push(OnboardingNavigatorState.SeguePath.SignIn)))
+                navigation.navigate(Route.Onboarding(OnboardingRoute.Push(OnboardingNavigatorState.SeguePaths.SignIn)))
                 ReduceResult(state)
             }
 

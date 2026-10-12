@@ -16,7 +16,7 @@ package us.neotechnica.panther.navigation
  * [Navigation.navigate][us.neotechnica.panther.navigation.Navigation.navigate]:
  *
  * ```kotlin
- * navigation.navigate(Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.UserContent)))
+ * navigation.navigate(Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.UserContent)))
  * ```
  */
 sealed interface Route {
@@ -44,8 +44,8 @@ sealed interface Route {
 /** Routes handled by the root navigator. */
 sealed interface RootRoute {
     /** Presents the given full-screen modal, or dismisses it when `null`. */
-    data class SetModal(
-        val path: RootNavigatorState.ModalPath?,
+    data class Modal(
+        val path: RootNavigatorState.ModalPaths?,
     ) : RootRoute
 }
 
@@ -54,11 +54,11 @@ sealed interface OnboardingRoute {
     data object Pop : OnboardingRoute
 
     data class Push(
-        val path: OnboardingNavigatorState.SeguePath,
+        val path: OnboardingNavigatorState.SeguePaths,
     ) : OnboardingRoute
 
     data class Stack(
-        val paths: List<OnboardingNavigatorState.SeguePath>,
+        val paths: List<OnboardingNavigatorState.SeguePaths>,
     ) : OnboardingRoute
 }
 
@@ -67,11 +67,11 @@ sealed interface UserContentRoute {
     data object Pop : UserContentRoute
 
     data class Push(
-        val path: UserContentNavigatorState.SeguePath,
+        val path: UserContentNavigatorState.SeguePaths,
     ) : UserContentRoute
 
     data class Stack(
-        val paths: List<UserContentNavigatorState.SeguePath>,
+        val paths: List<UserContentNavigatorState.SeguePaths>,
     ) : UserContentRoute
 }
 
@@ -79,7 +79,7 @@ sealed interface UserContentRoute {
 sealed interface SettingsRoute {
     /** Presents the given sheet over the settings flow, or dismisses it when `null`. */
     data class Sheet(
-        val path: SettingsNavigatorState.SheetPath?,
+        val path: SettingsNavigatorState.SheetPaths?,
     ) : SettingsRoute
 }
 
@@ -87,6 +87,6 @@ sealed interface SettingsRoute {
 sealed interface ChatRoute {
     /** Presents the given sheet over the chat flow, or dismisses it when `null`. */
     data class Sheet(
-        val path: ChatNavigatorState.SheetPath?,
+        val path: ChatNavigatorState.SheetPaths?,
     ) : ChatRoute
 }

@@ -210,7 +210,7 @@ object SettingsPageViewService {
             val showQRCodeAction =
                 Action(SettingsStrings.SHOW_QR_CODE) {
                     DependencyValues.current.navigation.navigate(
-                        Route.Settings(SettingsRoute.Sheet(SettingsNavigatorState.SheetPath.InviteQRCode)),
+                        Route.Settings(SettingsRoute.Sheet(SettingsNavigatorState.SheetPaths.InviteQRCode)),
                     )
                 }
 
@@ -573,14 +573,14 @@ object SettingsPageViewService {
     private fun reload() {
         val navigation = DependencyValues.current.navigation
         navigation.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
-        navigation.navigate(Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.Splash)))
+        navigation.navigate(Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.Splash)))
     }
 
     private fun returnToOnboarding() {
         val navigation = DependencyValues.current.navigation
         navigation.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
         navigation.navigate(Route.Onboarding(OnboardingRoute.Stack(emptyList())))
-        navigation.navigate(Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.Onboarding)))
+        navigation.navigate(Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.Onboarding)))
     }
 
     private fun openURL(url: String) {

@@ -271,7 +271,7 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             DependencyValues.current.navigation.state.value.userContent.stack
                 .lastOrNull()
         return when (topPath) {
-            is UserContentNavigatorState.SeguePath.ChatInfo -> topPath.conversationIDKey == conversationIDKey
+            is UserContentNavigatorState.SeguePaths.ChatInfo -> topPath.conversationIDKey == conversationIDKey
             else -> false
         }
     }
@@ -304,12 +304,8 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
 
             ConversationSessionService.setCurrentConversation(conversation)
             focusedMessageID?.let { ConversationSessionService.incrementMessageOffset(it) }
-            runCatching {
-                val title =
-                    conversation.chatPageHeaderLabelText
-                        ?: ConversationCellViewData.build(conversation).title
-                send(Action.TitleResolved(title))
-            }
+            val title = conversation.chatPageHeaderLabelText ?: ConversationCellViewData(conversation)?.titleLabelText
+            title?.let { send(Action.TitleResolved(it)) }
             markCurrentConversationAsRead()
         }
 }

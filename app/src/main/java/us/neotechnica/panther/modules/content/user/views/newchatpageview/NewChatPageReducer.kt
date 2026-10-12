@@ -167,7 +167,7 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
             is Action.SendReturned -> {
                 DependencyValues.current.navigation.navigate(
                     Route.UserContent(
-                        UserContentRoute.Stack(listOf(UserContentNavigatorState.SeguePath.Chat(action.conversationIDKey))),
+                        UserContentRoute.Stack(listOf(UserContentNavigatorState.SeguePaths.Chat(action.conversationIDKey))),
                     ),
                 )
                 ReduceResult(state.copy(hasSentFirstMessage = true))
@@ -185,7 +185,7 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
 
     private fun reduceFirstMessageSent(state: State): ReduceResult<State, Action> {
         val currentConversation = ConversationSessionService.currentConversation ?: return ReduceResult(state)
-        val titleLabelText = ConversationCellViewData.title(currentConversation)
+        val titleLabelText = ConversationCellViewData(currentConversation)?.titleLabelText ?: return ReduceResult(state)
 
         return ReduceResult(
             state.copy(

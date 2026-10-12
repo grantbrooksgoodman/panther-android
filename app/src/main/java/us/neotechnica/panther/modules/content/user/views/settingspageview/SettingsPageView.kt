@@ -129,7 +129,7 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
             }
         }
 
-        if (navState.settings.sheet == SettingsNavigatorState.SheetPath.InviteQRCode) {
+        if (navState.settings.sheet == SettingsNavigatorState.SheetPaths.InviteQRCode) {
             ModalBottomSheet(
                 onDismissRequest = { navigation.navigate(Route.Settings(SettingsRoute.Sheet(null))) },
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -240,7 +240,7 @@ private fun SettingsActionCards(
         SettingsRowDivider()
         ChangeLanguageListItem(state.strings.value(SettingsPageViewStrings.changeLanguage)) {
             navigation.navigate(
-                Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePath.ChangeLanguage)),
+                Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePaths.ChangeLanguage)),
             )
         }
     }

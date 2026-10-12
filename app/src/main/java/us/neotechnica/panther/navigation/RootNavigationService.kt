@@ -9,80 +9,77 @@
 package us.neotechnica.panther.navigation
 
 /**
- * The app's top-level navigation reducer.
+ * The app's top-level navigation service.
  *
  * Applies a [Route] to the current [RootNavigatorState] by delegating
- * to the responsible navigator, returning the new state.
+ * to the responsible navigator, returning the new state. Dispatch
+ * routes through the coordinator rather than calling this service
+ * directly.
  */
-object RootNavigationService {
-    fun reduce(
-        route: Route,
-        state: RootNavigatorState,
+object RootNavigationService : Navigating<Route, RootNavigatorState> {
+    override fun navigate(
+        to: Route,
+        on: RootNavigatorState,
     ): RootNavigatorState =
-        when (route) {
-            is Route.Chat -> state.copy(chat = ChatNavigator.reduce(route.route, state.chat))
-            is Route.Onboarding ->
-                state.copy(onboarding = OnboardingNavigator.reduce(route.route, state.onboarding))
-
-            is Route.Root -> RootNavigator.reduce(route.route, state)
-            is Route.Settings ->
-                state.copy(settings = SettingsNavigator.reduce(route.route, state.settings))
-
-            is Route.UserContent ->
-                state.copy(userContent = UserContentNavigator.reduce(route.route, state.userContent))
+        when (to) {
+            is Route.Chat -> on.copy(chat = ChatNavigator.navigate(to.route, on.chat))
+            is Route.Onboarding -> on.copy(onboarding = OnboardingNavigator.navigate(to.route, on.onboarding))
+            is Route.Root -> RootNavigator.navigate(to.route, on)
+            is Route.Settings -> on.copy(settings = SettingsNavigator.navigate(to.route, on.settings))
+            is Route.UserContent -> on.copy(userContent = UserContentNavigator.navigate(to.route, on.userContent))
         }
 }
 
 private object RootNavigator {
-    fun reduce(
-        route: RootRoute,
-        state: RootNavigatorState,
+    fun navigate(
+        to: RootRoute,
+        on: RootNavigatorState,
     ): RootNavigatorState =
-        when (route) {
-            is RootRoute.SetModal -> state.copy(modal = route.path)
+        when (to) {
+            is RootRoute.Modal -> on.copy(modal = to.path)
         }
 }
 
 private object OnboardingNavigator {
-    fun reduce(
-        route: OnboardingRoute,
-        state: OnboardingNavigatorState,
+    fun navigate(
+        to: OnboardingRoute,
+        on: OnboardingNavigatorState,
     ): OnboardingNavigatorState =
-        when (route) {
-            OnboardingRoute.Pop -> state.copy(stack = state.stack.dropLast(1))
-            is OnboardingRoute.Push -> state.copy(stack = state.stack + route.path)
-            is OnboardingRoute.Stack -> state.copy(stack = route.paths)
+        when (to) {
+            OnboardingRoute.Pop -> on.copy(stack = on.stack.dropLast(1))
+            is OnboardingRoute.Push -> on.copy(stack = on.stack + to.path)
+            is OnboardingRoute.Stack -> on.copy(stack = to.paths)
         }
 }
 
 private object UserContentNavigator {
-    fun reduce(
-        route: UserContentRoute,
-        state: UserContentNavigatorState,
+    fun navigate(
+        to: UserContentRoute,
+        on: UserContentNavigatorState,
     ): UserContentNavigatorState =
-        when (route) {
-            UserContentRoute.Pop -> state.copy(stack = state.stack.dropLast(1))
-            is UserContentRoute.Push -> state.copy(stack = state.stack + route.path)
-            is UserContentRoute.Stack -> state.copy(stack = route.paths)
+        when (to) {
+            UserContentRoute.Pop -> on.copy(stack = on.stack.dropLast(1))
+            is UserContentRoute.Push -> on.copy(stack = on.stack + to.path)
+            is UserContentRoute.Stack -> on.copy(stack = to.paths)
         }
 }
 
 private object SettingsNavigator {
-    fun reduce(
-        route: SettingsRoute,
-        state: SettingsNavigatorState,
+    fun navigate(
+        to: SettingsRoute,
+        on: SettingsNavigatorState,
     ): SettingsNavigatorState =
-        when (route) {
-            is SettingsRoute.Sheet -> state.copy(sheet = route.path)
+        when (to) {
+            is SettingsRoute.Sheet -> on.copy(sheet = to.path)
         }
 }
 
 private object ChatNavigator {
-    fun reduce(
-        route: ChatRoute,
-        state: ChatNavigatorState,
+    fun navigate(
+        to: ChatRoute,
+        on: ChatNavigatorState,
     ): ChatNavigatorState =
-        when (route) {
-            is ChatRoute.Sheet -> state.copy(sheet = route.path)
+        when (to) {
+            is ChatRoute.Sheet -> on.copy(sheet = to.path)
         }
 }

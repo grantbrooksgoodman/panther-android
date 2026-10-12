@@ -20,23 +20,19 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 object QueriedConversationCache {
     // MARK: - Properties
 
-    private val cachedConversationsForSearchTerms = LockIsolated<Map<String, List<Conversation>>?>(null)
+    private val mutableCachedConversationsForSearchTerms = LockIsolated<Map<String, List<Conversation>>?>(null)
 
-    // MARK: - Methods
+    /** The conversations matching each search term. */
+    var cachedConversationsForSearchTerms: Map<String, List<Conversation>>?
+        get() = mutableCachedConversationsForSearchTerms.wrappedValue
+        set(value) {
+            mutableCachedConversationsForSearchTerms.wrappedValue = value
+        }
+
+    // MARK: - Clear Cache
 
     /** Removes every cached conversation. */
     fun clearCache() {
-        cachedConversationsForSearchTerms.wrappedValue = null
-    }
-
-    internal fun cachedValue(searchTerm: String): List<Conversation>? = cachedConversationsForSearchTerms.wrappedValue?.get(searchTerm)
-
-    internal fun cache(
-        searchTerm: String,
-        conversations: List<Conversation>,
-    ) {
-        val cache = (cachedConversationsForSearchTerms.wrappedValue ?: emptyMap()).toMutableMap()
-        cache[searchTerm] = conversations
-        cachedConversationsForSearchTerms.wrappedValue = cache
+        cachedConversationsForSearchTerms = null
     }
 }

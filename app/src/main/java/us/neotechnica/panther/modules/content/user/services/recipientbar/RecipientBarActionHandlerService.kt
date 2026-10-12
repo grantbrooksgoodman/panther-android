@@ -160,7 +160,7 @@ class RecipientBarActionHandlerService(
                 }
             }
 
-            dependencies.navigate(Route.Chat(ChatRoute.Sheet(ChatNavigatorState.SheetPath.ContactSelector)))
+            dependencies.navigate(Route.Chat(ChatRoute.Sheet(ChatNavigatorState.SheetPaths.ContactSelector)))
         } finally {
             dependencies.hideHUD()
         }

@@ -110,7 +110,7 @@ class SplashPageReducerTest {
         )
 
         assertEquals(
-            RootNavigatorState.ModalPath.Onboarding,
+            RootNavigatorState.ModalPaths.Onboarding,
             DependencyValues.current.navigation.state.value.modal,
         )
     }

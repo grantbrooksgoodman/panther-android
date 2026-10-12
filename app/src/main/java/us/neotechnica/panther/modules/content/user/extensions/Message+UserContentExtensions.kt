@@ -10,6 +10,7 @@ package us.neotechnica.panther.modules.content.user.extensions
 
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
 import us.neotechnica.panther.modules.common.constants.CommonConstants
+import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.message.models.ReadReceipt
@@ -20,6 +21,8 @@ import us.neotechnica.panther.networking.modules.translation.extensions.system
 import us.neotechnica.panther.networking.modules.translation.models.TranslationReference
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
+import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
+import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.Translation
 import us.neotechnica.panther.translator.models.TranslationInput
@@ -60,11 +63,73 @@ val Message.isReadByCurrentUser: Boolean
     get() = readReceipts?.any { it.userID == User.currentUserID } == true
 
 /**
+ * A Boolean value that indicates whether this message acknowledges a
+ * message receipt consent request.
+ */
+val Message.isConsentAcknowledgementMessage: Boolean
+    get() {
+        val translation = translation ?: return false
+        return translation.input.value ==
+            LocalizedStringKey.MessageRecipientConsentAcknowledgementMessage.localized(
+                languageCode = translation.languagePair.from,
+            )
+    }
+
+/**
+ * A Boolean value that indicates whether this message is a message
+ * receipt consent request or acknowledgement.
+ */
+val Message.isConsentMessage: Boolean
+    get() = isConsentAcknowledgementMessage || isConsentRequestMessage
+
+/**
+ * A Boolean value that indicates whether this message requests
+ * message receipt consent.
+ */
+val Message.isConsentRequestMessage: Boolean
+    get() {
+        Message.consentRequestMessageID?.let { return id == it }
+        val currentConversation = DependencyValues.current.clientSession.entity.conversation.currentConversation
+
+        val translation = translation ?: return false
+        val inputMatches =
+            translation.input.value ==
+                LocalizedStringKey.MessageRecipientConsentRequestMessage.localized(
+                    languageCode = translation.languagePair.from,
+                )
+
+        // A non-matching message can never be a consent request, so
+        // short-circuit before resolving the current conversation's
+        // messages – an expensive lookup to run per message.
+        if (!inputMatches) return false
+        currentConversation ?: return inputMatches
+        val firstMessageID =
+            currentConversation.messages?.firstOrNull()?.id
+                ?: currentConversation.messageIDs.firstOrNull()
+        val isConsentMessage = inputMatches && (id == CommonConstants.NEW_MESSAGE_ID || id == firstMessageID)
+        if (isConsentMessage && id != CommonConstants.NEW_MESSAGE_ID) Message.consentRequestMessageID = id
+
+        return isConsentMessage
+    }
+
+/**
  * A Boolean value that indicates whether the message is a system
  * message, such as a conversation activity notice.
  */
 val Message.isSystemMessage: Boolean
     get() = fromAccountID == CommonConstants.SYSTEM_MESSAGE_ID
+
+/**
+ * The identifier of the conversation's message receipt consent
+ * request message, if known.
+ */
+var Message.Companion.consentRequestMessageID: String?
+    get() = ConsentRequestMessageIDCache.wrappedValue
+    set(value) {
+        ConsentRequestMessageIDCache.wrappedValue = value
+    }
+
+private val ConsentRequestMessageIDCache = LockIsolated<String?>(null)
 
 /** The other participant's read receipt, if any (for delivery status). */
 val Message.otherParticipantReadReceipt: ReadReceipt?

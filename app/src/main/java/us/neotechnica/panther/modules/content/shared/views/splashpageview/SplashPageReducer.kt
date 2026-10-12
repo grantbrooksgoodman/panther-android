@@ -201,17 +201,17 @@ class SplashPageReducer : Reducer<SplashPageReducer.State, SplashPageReducer.Act
 
     private fun navigateAfterInitialization() {
         if (User.currentUserID != null && userSession.currentUser != null) {
-            navigation.navigate(Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.UserContent)))
+            navigation.navigate(Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.UserContent)))
 
             // Open a conversation deep-linked from a tapped push notification.
             PendingChatNavigation.consume()?.let { conversationIDKey ->
                 navigation.navigate(
-                    Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePath.Chat(conversationIDKey))),
+                    Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePaths.Chat(conversationIDKey))),
                 )
             }
         } else {
             navigation.navigate(Route.Onboarding(OnboardingRoute.Stack(emptyList())))
-            navigation.navigate(Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.Onboarding)))
+            navigation.navigate(Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.Onboarding)))
         }
     }
 

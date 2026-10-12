@@ -188,7 +188,7 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
 
         /** The conversation's title. */
         val chatTitleLabelText: String
-            get() = conversation?.let { ConversationCellViewData.title(it) }.orEmpty()
+            get() = conversation?.let { ConversationCellViewData(it)?.titleLabelText }.orEmpty()
 
         /**
          * A Boolean value that indicates whether the add-contact button
@@ -470,7 +470,7 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
 
     private fun navigateToContactSelector() {
         DependencyValues.current.navigation.navigate(
-            Route.Chat(ChatRoute.Sheet(ChatNavigatorState.SheetPath.ContactSelector)),
+            Route.Chat(ChatRoute.Sheet(ChatNavigatorState.SheetPaths.ContactSelector)),
         )
     }
 

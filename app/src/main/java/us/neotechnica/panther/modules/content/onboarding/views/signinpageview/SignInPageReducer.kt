@@ -307,7 +307,7 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
 
                 Persistent.setString(PersistentStorageKey.currentUserID, action.userID)
                 AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.LOG_IN)
-                navigation.navigate(Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.Splash)))
+                navigation.navigate(Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.Splash)))
                 ReduceResult(state)
             }
 
@@ -408,7 +408,7 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
         onboardingService.setPhoneNumber(state.phoneNumber)
         onboardingService.setRegionCode(state.selectedRegionCode)
         navigation.navigate(
-            Route.Onboarding(OnboardingRoute.Stack(listOf(OnboardingNavigatorState.SeguePath.SelectLanguage))),
+            Route.Onboarding(OnboardingRoute.Stack(listOf(OnboardingNavigatorState.SeguePaths.SelectLanguage))),
         )
 
         return ReduceResult(state)

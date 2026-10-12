@@ -1,5 +1,5 @@
 //
-//  UserContentContainer.kt
+//  UserContentContainerView.kt
 //  Panther Android
 //
 //  Created by Grant Brooks Goodman.
@@ -29,9 +29,10 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import us.neotechnica.panther.bundle.currentConversationMetadataChanged
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.content.user.constants.UserContentContainerFloats
-import us.neotechnica.panther.modules.content.user.constants.UserContentContainerStrings
+import us.neotechnica.panther.modules.content.user.constants.UserContentContainerViewFloats
+import us.neotechnica.panther.modules.content.user.constants.UserContentContainerViewStrings
 import us.neotechnica.panther.modules.content.user.views.changelanguagepageview.ChangeLanguagePageView
 import us.neotechnica.panther.modules.content.user.views.chatinfopageview.ChatInfoPageView
 import us.neotechnica.panther.modules.content.user.views.chatpageview.ChatPageView
@@ -40,35 +41,44 @@ import us.neotechnica.panther.modules.content.user.views.conversationspageview.C
 import us.neotechnica.panther.modules.content.user.views.conversationspageview.buildConversationsPageViewModel
 import us.neotechnica.panther.modules.content.user.views.newchatpageview.NewChatPageView
 import us.neotechnica.panther.modules.content.user.views.settingspageview.SettingsPageView
+import us.neotechnica.panther.modules.content.user.views.usercontentcontainerview.UserContentContainerReducer
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentNavigatorState
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
+import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 
 // MARK: - Constants Accessors
 
-private typealias Floats = UserContentContainerFloats
-private typealias Strings = UserContentContainerStrings
+private typealias Floats = UserContentContainerViewFloats
+private typealias Strings = UserContentContainerViewStrings
 
 /**
- * Hosts the signed-in content stack: the conversations list at the root,
- * pushing to the chat page. The system back gesture pops.
+ * Hosts the signed-in user's content: the conversations list at the
+ * root, pushing to the chat page and its siblings. The system back
+ * gesture pops. The container rebuilds its content when the current
+ * conversation's metadata changes.
  *
  * @param modifier The modifier for this container.
  */
 @Composable
-fun UserContentContainer(modifier: Modifier = Modifier) {
+fun UserContentContainerView(modifier: Modifier = Modifier) {
     val navigation = remember { DependencyValues.current.navigation }
-    val state by navigation.state.collectAsState()
-    val topPath = state.userContent.stack.lastOrNull()
+    val navigationState by navigation.state.collectAsState()
+    val topPath = navigationState.userContent.stack.lastOrNull()
     val colors = LocalPantherColors.current
+
+    val viewModel = remember { buildUserContentContainerViewModel() }
+    DisposableEffect(viewModel) { onDispose { viewModel.close() } }
+    val state by viewModel.state.collectAsState()
 
     BackHandler(enabled = topPath != null) {
         navigation.navigate(Route.UserContent(UserContentRoute.Pop))
     }
 
-    val stackDepth = state.userContent.stack.size
+    val stackDepth = navigationState.userContent.stack.size
     val previousStackDepth = remember { mutableIntStateOf(stackDepth) }
     val isPush = stackDepth >= previousStackDepth.intValue
     SideEffect { previousStackDepth.intValue = stackDepth }
@@ -96,6 +106,10 @@ fun UserContentContainer(modifier: Modifier = Modifier) {
             },
         )
     }
+
+    // Reading the identity rebuilds the content from the latest values
+    // after a metadata change.
+    state.objectID
 
     Box(modifier = modifier.fillMaxSize()) {
         // The conversations list is the always-composed root layer, so it is
@@ -153,34 +167,40 @@ fun UserContentContainer(modifier: Modifier = Modifier) {
                                 }
                             },
                 ) {
-                    when (path) {
-                        // Drawn edge-to-edge so the context-menu scrim covers the system bars; the page
-                        // insets its own content.
-                        is UserContentNavigatorState.SeguePath.Chat ->
-                            ChatPageView(path.conversationIDKey, path.focusedMessageID, Modifier.fillMaxSize())
-
-                        // Drawn edge-to-edge so its grouped background bleeds past the system bars;
-                        // the page insets its own content.
-                        is UserContentNavigatorState.SeguePath.ChatInfo ->
-                            ChatInfoPageView(path.conversationIDKey, Modifier.fillMaxSize())
-
-                        // Drawn edge-to-edge so its grouped background bleeds past the system bars;
-                        // the page insets its own content.
-                        UserContentNavigatorState.SeguePath.NewChat ->
-                            NewChatPageView(Modifier.fillMaxSize())
-
-                        // Drawn edge-to-edge so its grouped background bleeds past the system bars;
-                        // the page insets its own content.
-                        UserContentNavigatorState.SeguePath.Settings ->
-                            SettingsPageView(Modifier.fillMaxSize())
-
-                        // Drawn edge-to-edge so its grouped background bleeds past the system bars;
-                        // the page insets its own content.
-                        UserContentNavigatorState.SeguePath.ChangeLanguage ->
-                            ChangeLanguagePageView(Modifier.fillMaxSize())
-                    }
+                    DestinationView(path)
                 }
             }
         }
     }
 }
+
+// MARK: - Auxiliary
+
+@Composable
+private fun DestinationView(path: UserContentNavigatorState.SeguePaths) {
+    // Every destination is drawn edge-to-edge so its background bleeds past
+    // the system bars (and the context-menu scrim covers them); each page
+    // insets its own content.
+    when (path) {
+        is UserContentNavigatorState.SeguePaths.Chat ->
+            ChatPageView(path.conversationIDKey, path.focusedMessageID, Modifier.fillMaxSize())
+
+        is UserContentNavigatorState.SeguePaths.ChatInfo ->
+            ChatInfoPageView(path.conversationIDKey, Modifier.fillMaxSize())
+
+        UserContentNavigatorState.SeguePaths.NewChat ->
+            NewChatPageView(Modifier.fillMaxSize())
+
+        UserContentNavigatorState.SeguePaths.Settings ->
+            SettingsPageView(Modifier.fillMaxSize())
+
+        UserContentNavigatorState.SeguePaths.ChangeLanguage ->
+            ChangeLanguagePageView(Modifier.fillMaxSize())
+    }
+}
+
+private fun buildUserContentContainerViewModel(): ViewModel<UserContentContainerReducer.State, UserContentContainerReducer.Action> =
+    ViewModel(UserContentContainerReducer.State(), UserContentContainerReducer())
+        .observing(DependencyValues.current.sharedEvents.currentConversationMetadataChanged.events) {
+            UserContentContainerReducer.Action.ConversationMetadataChanged
+        }

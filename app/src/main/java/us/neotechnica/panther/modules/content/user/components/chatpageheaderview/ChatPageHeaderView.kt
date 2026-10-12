@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -27,26 +27,31 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.zIndex
 import us.neotechnica.panther.bundle.sessionStoreDidChange
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
+import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.user.components.AvatarImageView
+import us.neotechnica.panther.modules.content.user.constants.ChatPageHeaderViewColors
 import us.neotechnica.panther.modules.content.user.constants.ChatPageHeaderViewFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatPageHeaderViewStrings
 import us.neotechnica.panther.modules.content.user.extensions.chatPageHeaderLabelText
-import us.neotechnica.panther.modules.content.user.extensions.decodedImageBitmap
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 
 // MARK: - Constants Accessors
 
+private typealias Colors = ChatPageHeaderViewColors
 private typealias Floats = ChatPageHeaderViewFloats
 private typealias Strings = ChatPageHeaderViewStrings
 
@@ -70,61 +75,24 @@ fun ChatPageHeaderView(
     LaunchedEffect(conversationIDKey) { viewModel.send(ChatPageHeaderReducer.Action.ReloadData) }
 
     val state by viewModel.state.collectAsState()
-    val colors = LocalPantherColors.current
 
-    val conversation = state.conversation
-    val isGroup = conversation.participants.size > 2
-    val title = conversation.chatPageHeaderLabelText ?: state.cellViewData?.title ?: ""
+    // Reading the identity re-evaluates the content after a reload.
+    state.viewID
 
     Box(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = Floats.horizontalPadding, vertical = Floats.verticalPadding),
+                .padding(vertical = Floats.contentViewVerticalPadding),
     ) {
-        CircleChipButton(
-            systemName = Strings.BACK_BUTTON_IMAGE_SYSTEM_NAME,
-            contentDescription = "Back",
-            onClick = { viewModel.send(ChatPageHeaderReducer.Action.BackButtonTapped) },
-            modifier = Modifier.align(Alignment.CenterStart),
-            tint = colors.titleText,
+        ChatInfoButton(
+            state = state,
+            modifier = Modifier.align(Alignment.TopCenter),
+            onClick = { viewModel.send(ChatPageHeaderReducer.Action.ChatInfoButtonTapped) },
         )
 
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier =
-                Modifier
-                    .align(Alignment.Center)
-                    .clickable { viewModel.send(ChatPageHeaderReducer.Action.ChatInfoButtonTapped) }
-                    .semantics { contentDescription = "Conversation info" },
-        ) {
-            AvatarImageView(
-                remember(conversation.metadata.imageData) { conversation.metadata.imageData?.decodedImageBitmap() },
-                badgeCount = if (isGroup) -1 else 0,
-                size = DpSize(Floats.avatarSize, Floats.avatarSize),
-                modifier = Modifier.zIndex(1f),
-            )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier =
-                    Modifier
-                        .offset(y = -Floats.avatarPillOverlap)
-                        .clip(RoundedCornerShape(Floats.pillCornerRadius))
-                        .background(colors.groupedContentBackground)
-                        .padding(
-                            start = Floats.pillStartPadding,
-                            end = Floats.pillEndPadding,
-                            top = Floats.pillVerticalPadding,
-                            bottom = Floats.pillVerticalPadding,
-                        ),
-            ) {
-                Components.Text(title.ifBlank { " " }, foregroundColor = colors.titleText, font = Font.systemSemibold())
-                Components.Symbol(
-                    Strings.CHAT_INFO_CHEVRON_IMAGE_SYSTEM_NAME,
-                    foregroundColor = colors.subtitleText,
-                    modifier = Modifier.size(Floats.pillChevronSize).padding(start = Floats.pillChevronStartPadding),
-                )
-            }
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = Floats.backButtonViewHorizontalPadding)) {
+            BackButton(onClick = { viewModel.send(ChatPageHeaderReducer.Action.BackButtonTapped) })
         }
     }
 }
@@ -136,3 +104,79 @@ internal fun buildChatPageHeaderViewModel(
         .observing(DependencyValues.current.sharedEvents.sessionStoreDidChange.events) {
             ChatPageHeaderReducer.Action.SessionStoreDidChange(it)
         }
+
+// MARK: - Back Button
+
+@Composable
+private fun BackButton(onClick: () -> Unit) {
+    CircleChipButton(
+        systemName = Strings.BACK_BUTTON_IMAGE_SYSTEM_NAME,
+        contentDescription = "Back",
+        onClick = onClick,
+        modifier = Modifier.size(Floats.backButtonFrameSize),
+        tint = LocalPantherColors.current.titleText,
+        glyphSize = Floats.backButtonSymbolFrameSize,
+    )
+}
+
+// MARK: - Chat Info Button
+
+@Composable
+private fun ChatInfoButton(
+    state: ChatPageHeaderReducer.State,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val colors = LocalPantherColors.current
+    val conversation = state.conversation
+    val cellViewData = state.cellViewData
+    val badgeCount = if (conversation.participants.size > Floats.AVATAR_IMAGE_VIEW_BADGE_COUNT_COMPARATOR) -1 else 0
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier =
+            modifier
+                .clickable(onClick = onClick)
+                .semantics { contentDescription = "Conversation info" },
+    ) {
+        AvatarImageView(
+            remember(cellViewData.thumbnailImage) { cellViewData.thumbnailImage?.asImageBitmap() },
+            badgeCount = badgeCount,
+            size = DpSize(Floats.avatarImageSize, Floats.avatarImageSize),
+            modifier =
+                Modifier
+                    .background(Colors.avatarImageViewBackground, CircleShape)
+                    .zIndex(1f),
+        )
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier =
+                Modifier
+                    .offset(y = Floats.avatarViewSpacing)
+                    .padding(horizontal = Floats.avatarViewNameLabelViewHorizontalPadding)
+                    .clip(CircleShape)
+                    .background(colors.groupedContentBackground)
+                    .padding(Floats.avatarViewNameLabelGlassEffectPadding),
+        ) {
+            Components.Text(
+                conversation.chatPageHeaderLabelText ?: cellViewData.titleLabelText,
+                foregroundColor = colors.titleText,
+                font = Font.systemSemibold(FontScale.Custom(Floats.AVATAR_VIEW_NAME_LABEL_FONT_SIZE)),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = Floats.avatarViewNameLabelTextHorizontalPadding),
+            )
+
+            Components.Symbol(
+                Strings.AVATAR_VIEW_NAME_LABEL_CHEVRON_SYMBOL_IMAGE_SYSTEM_NAME,
+                foregroundColor = Colors.avatarViewNameLabelChevronSymbolForeground,
+                weight = FontWeight.Black,
+                usesIntrinsicSize = false,
+                modifier =
+                    Modifier
+                        .padding(start = Floats.avatarViewNameLabelSpacing)
+                        .size(Floats.avatarViewNameLabelChevronSymbolFrameSize),
+            )
+        }
+    }
+}

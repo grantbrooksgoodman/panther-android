@@ -51,10 +51,6 @@ class ChatPageHeaderReducer : Reducer<ChatPageHeaderReducer.State, ChatPageHeade
         data class SessionStoreDidChange(
             val change: SessionStoreChange,
         ) : Action
-
-        data class CellViewDataResolved(
-            val cellViewData: ConversationCellViewData,
-        ) : Action
     }
 
     // MARK: - State
@@ -62,8 +58,11 @@ class ChatPageHeaderReducer : Reducer<ChatPageHeaderReducer.State, ChatPageHeade
     data class State(
         val conversationIDKey: String = "",
         val viewID: UUID = UUID.randomUUID(),
-        val cellViewData: ConversationCellViewData? = null,
     ) {
+        /** The conversation cell view data used to render the header's avatar and title. */
+        val cellViewData: ConversationCellViewData
+            get() = ConversationCellViewData(conversation) ?: ConversationCellViewData.empty
+
         /**
          * The conversation the header describes, resolved from the
          * session store – an empty placeholder if it no longer exists.
@@ -87,14 +86,14 @@ class ChatPageHeaderReducer : Reducer<ChatPageHeaderReducer.State, ChatPageHeade
             Action.ChatInfoButtonTapped -> {
                 DependencyValues.current.navigation.navigate(
                     Route.UserContent(
-                        UserContentRoute.Push(UserContentNavigatorState.SeguePath.ChatInfo(state.conversationIDKey)),
+                        UserContentRoute.Push(UserContentNavigatorState.SeguePaths.ChatInfo(state.conversationIDKey)),
                     ),
                 )
                 ReduceResult(state)
             }
 
             Action.ReloadData ->
-                ReduceResult(state.copy(viewID = UUID.randomUUID()), resolveCellViewDataEffect(state.conversation))
+                ReduceResult(state.copy(viewID = UUID.randomUUID()))
 
             is Action.SessionStoreDidChange ->
                 if (isRelevantChange(action.change, state.conversation)) {
@@ -107,17 +106,9 @@ class ChatPageHeaderReducer : Reducer<ChatPageHeaderReducer.State, ChatPageHeade
                 } else {
                     ReduceResult(state)
                 }
-
-            is Action.CellViewDataResolved ->
-                ReduceResult(state.copy(cellViewData = action.cellViewData))
         }
 
     // MARK: - Auxiliary
-
-    private fun resolveCellViewDataEffect(conversation: Conversation): Effect<Action> =
-        Effect.run { send ->
-            send(Action.CellViewDataResolved(ConversationCellViewData.build(conversation)))
-        }
 
     private fun isRelevantChange(
         change: SessionStoreChange,

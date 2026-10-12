@@ -158,6 +158,6 @@ object ConversationCellViewService {
 
         val navigation = DependencyValues.current.navigation
         navigation.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
-        navigation.navigate(Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.Splash)))
+        navigation.navigate(Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.Splash)))
     }
 }

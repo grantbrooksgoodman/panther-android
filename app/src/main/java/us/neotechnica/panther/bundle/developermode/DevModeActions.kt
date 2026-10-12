@@ -89,7 +89,7 @@ object AppDevModeActions : DevModeAppActionDelegate {
         if (enteredInput != currentUserID) Application.reset()
 
         Persistent.setString(key, enteredInput)
-        DependencyValues.current.navigation.navigate(Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.Splash)))
+        DependencyValues.current.navigation.navigate(Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.Splash)))
     }
 
     private fun triggerForcedUpdateModal() {

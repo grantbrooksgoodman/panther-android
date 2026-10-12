@@ -13,44 +13,140 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.Application
+import us.neotechnica.panther.bundle.bugPrevention
 import us.neotechnica.panther.bundle.conversation
 import us.neotechnica.panther.bundle.currentConversationMetadataChanged
 import us.neotechnica.panther.bundle.developermode.DangerZone
 import us.neotechnica.panther.bundle.reloadingConversationIDKeys
 import us.neotechnica.panther.bundle.traitCollectionChanged
-import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardService
+import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
+import us.neotechnica.panther.modules.common.contacts.services.ContactPairArchiveService
+import us.neotechnica.panther.modules.common.contacts.services.ContactService
+import us.neotechnica.panther.modules.common.extensions.isOnline
+import us.neotechnica.panther.modules.common.extensions.mismatchedHashAndCallingCode
+import us.neotechnica.panther.modules.common.extensions.notAuthorizedForContacts
+import us.neotechnica.panther.modules.common.extensions.roundedString
+import us.neotechnica.panther.modules.common.models.ConnectionStatusServiceEffectID
+import us.neotechnica.panther.modules.common.services.ConnectionStatusService
 import us.neotechnica.panther.modules.common.services.InviteService
+import us.neotechnica.panther.modules.common.services.PermissionService
 import us.neotechnica.panther.modules.common.services.PushTokenService
 import us.neotechnica.panther.modules.common.services.ReviewService
-import us.neotechnica.panther.modules.content.user.extensions.filteredAndSorted
+import us.neotechnica.panther.modules.common.services.UpdateService
+import us.neotechnica.panther.modules.content.user.constants.ConversationsPageViewFloats
+import us.neotechnica.panther.modules.content.user.extensions.hasContactsBesidesCurrentUser
+import us.neotechnica.panther.modules.content.user.extensions.markStaleLocally
 import us.neotechnica.panther.modules.content.user.models.ChatPageStateServiceEffectID
 import us.neotechnica.panther.modules.content.user.models.MessageDeliveryServiceEffectID
+import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.networking.common.allDataTypes
+import us.neotechnica.panther.modules.networking.common.clearTemporaryCaches
+import us.neotechnica.panther.modules.networking.common.sortedByLatestMessageSentDate
+import us.neotechnica.panther.modules.networking.common.uniquedByID
+import us.neotechnica.panther.modules.networking.common.visibleForCurrentUser
+import us.neotechnica.panther.modules.networking.common.withGlobalCacheStrategy
+import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
+import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
+import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
+import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
+import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
+import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedStates
+import java.util.Date
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.max
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 /**
  * Drives the conversations page's lifecycle, prompts, and data
  * reloads.
  *
- * Responds to the page's lifecycle and interactions: starts observing
- * current-user changes, evaluates startup prompts, reloads
- * conversation data on pull-to-refresh, and keeps the open chat page
- * consistent with session store changes.
+ * Responds to the conversations page's lifecycle and user
+ * interactions: starts observing current-user changes, evaluates
+ * startup prompts, reloads conversation data on pull-to-refresh, and
+ * keeps the open chat page consistent with session store changes.
+ *
+ * @param dependencies The collaborators the service calls; the
+ *   defaults resolve the production services.
  */
-object ConversationsPageViewService {
+class ConversationsPageViewService(
+    private val dependencies: Dependencies = Dependencies(),
+) {
     // MARK: - Types
+
+    /**
+     * The collaborators the service calls.
+     *
+     * @property clearTemporaryCaches Clears the database's temporary
+     *   caches.
+     * @property currentConversation Resolves the session's current
+     *   conversation.
+     * @property currentUser Resolves the session's current user.
+     * @property hasContactsBesidesCurrentUser Whether the contact
+     *   archive holds anyone besides the current user.
+     * @property isChatPagePresented Whether the chat page is
+     *   presented.
+     * @property isSendingMessage Whether a message is being sent.
+     * @property lastContactSyncDate Reads the last contact sync date.
+     * @property notificationPermissionStatus Reads the notifications
+     *   permission status.
+     * @property promptToReview Prompts the user for a store review.
+     * @property requestNotificationPermission Requests the
+     *   notifications permission.
+     * @property resolveCurrentUser Re-resolves the current user's
+     *   data.
+     * @property resolveLastMessage Re-fetches a conversation's last
+     *   message, returning cached values on failure.
+     * @property setLastContactSyncDate Writes the last contact sync
+     *   date.
+     * @property suggestInvitationIfNeeded Suggests inviting friends,
+     *   returning whether a suggestion was made.
+     * @property syncContactPairArchive Syncs the contact pair
+     *   archive.
+     * @property updateReadDateForUnreadMessages Marks the current
+     *   conversation's unread messages read, returning whether any
+     *   were unread.
+     */
+    data class Dependencies(
+        val clearTemporaryCaches: () -> Unit = { Networking.config.databaseDelegate.clearTemporaryCaches() },
+        val currentConversation: () -> Conversation? = { ConversationSessionService.currentConversation },
+        val currentUser: () -> User? = { UserSessionService.currentUser },
+        val hasContactsBesidesCurrentUser: () -> Boolean = { ContactService.hasContactsBesidesCurrentUser },
+        val isChatPagePresented: () -> Boolean = { ChatPageStateService.isPresented },
+        val isSendingMessage: () -> Boolean = { MessageDeliveryService.isSendingMessage.value },
+        val lastContactSyncDate: () -> Date? = { ContactPairArchiveService.lastContactSyncDate },
+        val notificationPermissionStatus: () -> PermissionService.PermissionStatus = {
+            PermissionService.notificationPermissionStatus
+        },
+        val promptToReview: () -> Unit = { ReviewService.promptToReview() },
+        val requestNotificationPermission: suspend () -> Unit = {
+            PermissionService.requestPermission(PermissionService.PermissionType.NOTIFICATIONS)
+        },
+        val resolveCurrentUser: suspend (Set<User.DataType>) -> Unit = { UserSessionService.resolveCurrentUser(it) },
+        val resolveLastMessage: suspend (String, Conversation) -> Unit = { lastMessageID, conversation ->
+            Networking.config.databaseDelegate.withGlobalCacheStrategy(CacheStrategy.RETURN_CACHE_ON_FAILURE) {
+                conversation.resolveMessages(setOf(lastMessageID))
+            }
+        },
+        val setLastContactSyncDate: (Date?) -> Unit = { ContactPairArchiveService.lastContactSyncDate = it },
+        val suggestInvitationIfNeeded: suspend () -> Boolean = { InviteService.suggestInvitationIfNeeded() },
+        val syncContactPairArchive: suspend () -> Unit = { ContactService.syncContactPairArchive() },
+        val updateReadDateForUnreadMessages: suspend () -> Boolean = { ReadReceiptService.updateReadDateForUnreadMessages() },
+    )
 
     private enum class ReloadType {
         // Force update a shuffled third of conversations.
@@ -82,7 +178,8 @@ object ConversationsPageViewService {
 
     /**
      * Responds to the conversations page appearing by observing
-     * current-user changes and registering the device's push token.
+     * current-user changes and registering the device's push token
+     * for the current user.
      */
     fun viewAppeared() {
         didShowSecondsToLoadToast = false
@@ -100,11 +197,17 @@ object ConversationsPageViewService {
     fun viewDisappeared() = Unit
 
     /**
-     * Responds to the conversations page finishing its initial load by
-     * evaluating the startup prompt flow after a short delay.
+     * Responds to the conversations page finishing its initial load.
+     *
+     * Clears temporary database caches, evaluates the startup prompt
+     * flow after a short delay, and registers the connection status
+     * effects that check for updates when connectivity is restored
+     * and show an offline toast when it is lost.
      */
     fun viewLoaded() {
-        Task.delayed(by = 1.seconds) { showPromptsIfNeeded() }
+        dependencies.clearTemporaryCaches()
+        Task.delayed(by = PROMPT_DELAY) { showPromptsIfNeeded() }
+        enableOfflineModeSideEffects()
     }
 
     /**
@@ -114,7 +217,7 @@ object ConversationsPageViewService {
      * closes.
      */
     fun traitCollectionChanged() {
-        if (!ChatPageStateService.isPresented) return
+        if (!dependencies.isChatPagePresented()) return
         ChatPageStateService.addEffectUponIsPresented(
             state = false,
             id = ChatPageStateServiceEffectID.updateAppearance,
@@ -135,12 +238,7 @@ object ConversationsPageViewService {
     fun deleteConversationsToolbarButtonTapped() {
         serviceScope.launch {
             try {
-                UserSessionService.resolveCurrentUser(
-                    setOf(
-                        User.DataType.CONVERSATIONS,
-                        User.DataType.MESSAGES,
-                    ),
-                )
+                dependencies.resolveCurrentUser(setOf(User.DataType.CONVERSATIONS, User.DataType.MESSAGES))
                 DangerZone.deleteConversationsAction.perform()
             } catch (exception: Exception) {
                 Logger.log(exception, with = AlertType.toast)
@@ -152,14 +250,16 @@ object ConversationsPageViewService {
      * Keeps the open chat page consistent with a session store change.
      *
      * If a message is being sent, handling waits until the send
-     * completes. Otherwise, this method marks unread messages as read
-     * – updating the app badge – and notifies observers that the
-     * current conversation's metadata changed. If the chat page is not
-     * presented, this method does nothing.
+     * completes. Otherwise, this method re-fetches the last message
+     * of one-to-one conversations to pick up read receipt changes,
+     * marks unread messages as read – updating the app badge – and
+     * notifies observers that the current conversation's metadata
+     * changed. If the chat page is not presented, this method does
+     * nothing.
      */
     fun handleChatPageStoreChange() {
-        if (!ChatPageStateService.isPresented) return
-        if (MessageDeliveryService.isSendingMessage.value) {
+        if (!dependencies.isChatPagePresented()) return
+        if (dependencies.isSendingMessage()) {
             Logger.log(
                 "Awaiting message send completion before handling chat page store change...",
                 domain = LoggerDomain.conversation,
@@ -171,25 +271,21 @@ object ConversationsPageViewService {
             return
         }
 
-        serviceScope.launch {
-            ConversationSessionService.currentConversation ?: return@launch
-            try {
-                ReadReceiptService.updateReadDateForUnreadMessages()
-            } catch (exception: Exception) {
-                Logger.log(exception)
-            }
-            val sharedEvents = DependencyValues.current.sharedEvents
-            sharedEvents.currentConversationMetadataChanged.send(Unit)
-        }
+        serviceScope.launch { handleChatPageStoreChangeNow() }
     }
 
     /**
      * Reloads conversation data in response to a pull-to-refresh.
      *
-     * Successive refreshes rotate through three reload depths; every
-     * refresh re-resolves the current user's data.
+     * Successive refreshes rotate through three reload depths: a full
+     * reload, which force updates a shuffled third of the user's
+     * conversations; a partial reload, which force updates only the
+     * most recent conversation; and a minimal reload, which force
+     * updates none. Every refresh re-resolves the current user's data
+     * and periodically syncs the contact pair archive.
      *
-     * @throws Exception if resolving the user's data fails.
+     * @throws Exception if resolving user data or syncing contacts
+     *   fails.
      */
     suspend fun reloadData() {
         try {
@@ -201,58 +297,246 @@ object ConversationsPageViewService {
 
     // MARK: - Auxiliary
 
-    /** Logs how long the app's content took to load, once per page appearance. */
+    /**
+     * Logs how long the app's content took to load, once per page
+     * appearance.
+     *
+     * The report includes per-conversation load time and a breakdown
+     * of the user's messages by content type. On prerelease builds,
+     * the report also appears as a toast.
+     */
     fun showSecondsToLoadToastIfNeeded() {
         if (didShowSecondsToLoadToast) return
         didShowSecondsToLoadToast = true
 
-        Task.debounced(TASK_ID_SHOW_SECONDS_TO_LOAD_TOAST, delay = 1.seconds) {
-            val elapsedSeconds = abs(System.currentTimeMillis() - Application.loadStartDate.time) / MILLIS_PER_SECOND
-            val secondsToLoad = max(elapsedSeconds - 1, 0L)
-            val suffix = if (secondsToLoad == 1L) "" else "s"
-            Logger.log(
-                "Loaded content in $secondsToLoad second$suffix.",
-                domain = LoggerDomain.conversation,
+        Task.debounced(TASK_ID_SHOW_SECONDS_TO_LOAD_TOAST, delay = SECONDS_TO_LOAD_TOAST_DELAY) {
+            val message = secondsToLoadMessage()
+            Logger.log(message, domain = LoggerDomain.conversation)
+
+            if (Build.milestone == Build.Milestone.GENERAL_RELEASE) return@debounced
+            Toast.show(
+                Toast(
+                    message = message,
+                    perpetuation = Toast.PerpetuationStrategy.Ephemeral(SECONDS_TO_LOAD_TOAST_DURATION),
+                ),
             )
         }
     }
 
+    internal fun secondsToLoadMessage(): String {
+        val currentUser = dependencies.currentUser()
+        val numberOfConversations =
+            currentUser
+                ?.conversations
+                ?.visibleForCurrentUser
+                ?.size
+                ?: currentUser?.conversationIDs?.size
+                ?: 1
+
+        val secondsToLoad = max(abs(Date().time - Application.loadStartDate.time) / MILLISECONDS_PER_SECOND - 1, 0L)
+        val secondsPerConversation = String.format(Locale.US, "%.2f", secondsToLoad.toFloat() / numberOfConversations.toFloat())
+        val suffix =
+            if ((secondsPerConversation.toFloatOrNull() ?: 0f) <= SECONDS_PER_CONVERSATION_SUFFIX_THRESHOLD) {
+                null
+            } else {
+                " (${secondsPerConversation}s/conversation)"
+            }
+
+        val allMessages =
+            (currentUser?.conversations ?: SessionStore.conversations.values.toList())
+                .visibleForCurrentUser
+                .mapNotNull { it.messages }
+                .flatten()
+
+        val uniqueMessages = allMessages.uniquedByID
+        val audioMessageCount = uniqueMessages.count { it.contentType.isAudio }
+        val mediaMessageCount = uniqueMessages.count { it.contentType.isMedia }
+        val totalMessageCount = uniqueMessages.size
+        val textMessageCount = totalMessageCount - (audioMessageCount + mediaMessageCount)
+
+        val safeMessageCount = if (totalMessageCount == 0) 1.0 else totalMessageCount.toDouble()
+        val audioMessagePercent = (audioMessageCount / safeMessageCount).roundedString
+        val mediaMessagePercent = (mediaMessageCount / safeMessageCount).roundedString
+        val textMessagePercent = (textMessageCount / safeMessageCount).roundedString
+
+        var addendum = ""
+        if (totalMessageCount > 0) {
+            addendum = "\nUser has $totalMessageCount messages and $numberOfConversations conversations."
+            addendum += "\n$textMessagePercent% text, $audioMessagePercent% audio, $mediaMessagePercent% media."
+        }
+
+        val seconds = "second${if (secondsToLoad == 1L) "" else "s"}"
+        return "Loaded content in $secondsToLoad $seconds${suffix ?: ""}.$addendum"
+    }
+
+    private fun enableOfflineModeSideEffects() {
+        fun showOfflineModeToast() {
+            Toast.show(
+                Toast(
+                    Toast.ToastType.Capsule(ToastStyle.WARNING),
+                    message = LocalizedStringKey.OfflineMode.localized(),
+                    perpetuation = Toast.PerpetuationStrategy.Ephemeral(OFFLINE_MODE_TOAST_DURATION),
+                ),
+            )
+        }
+
+        // Fixes a bug in which an offline startup would fail to properly
+        // set the navigation bar appearance.
+        fun updateAppearance() {
+            Logger.log(
+                "Intercepted offline startup navigation bar appearance bug.",
+                domain = LoggerDomain.bugPrevention,
+            )
+
+            Task.delayed(by = UPDATE_APPEARANCE_DELAY) {
+                val sharedEvents = DependencyValues.current.sharedEvents
+                sharedEvents.traitCollectionChanged.send(Unit)
+            }
+        }
+
+        ConnectionStatusService.addEffectUponConnectionChanged(ConnectionStatusServiceEffectID.CHECK_FOR_UPDATES) {
+            if (!Build.isOnline) return@addEffectUponConnectionChanged
+            serviceScope.launch {
+                try {
+                    UpdateService.promptToUpdateIfNeeded()
+                } catch (exception: Exception) {
+                    Logger.log(exception, with = AlertType.toastInPrerelease)
+                }
+            }
+        }
+
+        ConnectionStatusService.addEffectUponConnectionChanged(ConnectionStatusServiceEffectID.SHOW_OFFLINE_MODE_TOAST) {
+            if (Build.isOnline) return@addEffectUponConnectionChanged
+            showOfflineModeToast()
+        }
+
+        if (Build.isOnline) return
+        updateAppearance()
+        showOfflineModeToast()
+    }
+
+    internal suspend fun handleChatPageStoreChangeNow() {
+        val currentConversation = dependencies.currentConversation() ?: return
+
+        // Re-fetch the last message in 1:1 conversations to pick up
+        // read receipt changes that don't affect the conversation hash.
+        if (currentConversation.participants.size == 2) {
+            val lastMessageID = currentConversation.messages?.lastOrNull()?.id ?: currentConversation.messageIDs.lastOrNull()
+            if (lastMessageID != null) resolveLastMessage(lastMessageID, currentConversation)
+        }
+
+        // Mark unread messages as read and update the badge.
+        try {
+            if (dependencies.updateReadDateForUnreadMessages()) return
+        } catch (exception: Exception) {
+            Logger.log(exception, domain = LoggerDomain.conversation)
+            return
+        }
+
+        if (!matchesCurrentConversation(currentConversation.id.key)) return
+        val sharedEvents = DependencyValues.current.sharedEvents
+        sharedEvents.currentConversationMetadataChanged.send(Unit)
+    }
+
+    private fun matchesCurrentConversation(idKey: String): Boolean = dependencies.currentConversation()?.id?.key == idKey
+
     private suspend fun reloadData(type: ReloadType) {
-        val conversations = UserSessionService.currentUser?.conversations?.filteredAndSorted
-        if (!conversations.isNullOrEmpty() && (type == ReloadType.FULL || type == ReloadType.PARTIAL)) {
-            val conversationsToReload =
-                if (type == ReloadType.FULL) {
+        val conversations =
+            dependencies
+                .currentUser()
+                ?.conversations
+                ?.visibleForCurrentUser
+                ?.sortedByLatestMessageSentDate
+        val firstConversation = conversations?.firstOrNull()
+        if (conversations != null && firstConversation != null && (type == ReloadType.FULL || type == ReloadType.PARTIAL)) {
+            var conversationsToReload = listOf(firstConversation)
+            if (type == ReloadType.FULL) {
+                conversationsToReload =
                     if (conversations.size > FULL_RELOAD_SHUFFLE_THRESHOLD) {
                         conversations.shuffled().take(conversations.size / FULL_RELOAD_FRACTION_DENOMINATOR + 1)
                     } else {
                         conversations
                     }
-                } else {
-                    listOf(conversations.first())
-                }
+            }
+
             DependencyValues.current.sharedStates.reloadingConversationIDKeys.value =
                 conversationsToReload.map { it.id.key }.toSet()
+            conversationsToReload.forEach { it.markStaleLocally() }
         }
 
         try {
-            UserSessionService.resolveCurrentUser(User.DataType.entries.toSet())
+            dependencies.resolveCurrentUser(allDataTypes)
         } finally {
             currentReloadType = currentReloadType.next
         }
+
+        syncContactPairArchiveIfNeeded()
     }
 
-    private suspend fun showPromptsIfNeeded() {
-        // Dismiss the keyboard before presenting a startup prompt over the page.
-        KeyboardService.resignFirstResponders()
-        if (!InviteService.suggestInvitationIfNeeded()) {
-            ReviewService.promptToReview()
+    internal suspend fun syncContactPairArchiveIfNeeded() {
+        val lastContactSyncDate = dependencies.lastContactSyncDate()
+        val shouldSync =
+            if (!dependencies.hasContactsBesidesCurrentUser()) {
+                true
+            } else if (lastContactSyncDate != null) {
+                abs(Date().time - lastContactSyncDate.time) / MILLISECONDS_PER_SECOND >=
+                    ConversationsPageViewFloats.CONTACT_SYNC_INTERVAL_SECONDS
+            } else {
+                true
+            }
+
+        if (!shouldSync) return
+        try {
+            dependencies.syncContactPairArchive()
+            dependencies.setLastContactSyncDate(Date())
+        } catch (exception: Exception) {
+            if (!exception.isEqual(toAny = listOf(AppException.mismatchedHashAndCallingCode, AppException.notAuthorizedForContacts))) {
+                throw exception
+            }
+        }
+    }
+
+    private suspend fun resolveLastMessage(
+        lastMessageID: String,
+        conversation: Conversation,
+    ) {
+        try {
+            dependencies.resolveLastMessage(lastMessageID, conversation)
+        } catch (exception: Exception) {
+            Logger.log(exception, domain = LoggerDomain.conversation)
+        }
+    }
+
+    /**
+     * Evaluates several user-facing prompts in priority order: a
+     * notification permission request when the permission is
+     * undetermined, otherwise an invitation suggestion, otherwise a
+     * review prompt.
+     */
+    internal suspend fun showPromptsIfNeeded() {
+        try {
+            if (dependencies.notificationPermissionStatus() == PermissionService.PermissionStatus.UNKNOWN) {
+                dependencies.requestNotificationPermission()
+            } else if (!dependencies.suggestInvitationIfNeeded()) {
+                dependencies.promptToReview()
+            }
+        } catch (exception: Exception) {
+            Logger.log(exception)
         }
     }
 
     // MARK: - Companion
 
-    private const val FULL_RELOAD_FRACTION_DENOMINATOR = 3
-    private const val FULL_RELOAD_SHUFFLE_THRESHOLD = 5
-    private const val MILLIS_PER_SECOND = 1000L
-    private const val TASK_ID_SHOW_SECONDS_TO_LOAD_TOAST = "ConversationsPageViewService/showSecondsToLoadToast"
+    private companion object {
+        const val FULL_RELOAD_FRACTION_DENOMINATOR = 3
+        const val FULL_RELOAD_SHUFFLE_THRESHOLD = 5
+        const val MILLISECONDS_PER_SECOND = 1000L
+        val OFFLINE_MODE_TOAST_DURATION = 10.seconds
+        val PROMPT_DELAY = 1.seconds
+        const val SECONDS_PER_CONVERSATION_SUFFIX_THRESHOLD = 0.05f
+        val SECONDS_TO_LOAD_TOAST_DELAY = 1.seconds
+        val SECONDS_TO_LOAD_TOAST_DURATION = 10.seconds
+        const val TASK_ID_SHOW_SECONDS_TO_LOAD_TOAST = "ConversationsPageViewService/showSecondsToLoadToast"
+        val UPDATE_APPEARANCE_DELAY = 500.milliseconds
+    }
 }

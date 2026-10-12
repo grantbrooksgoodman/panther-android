@@ -20,30 +20,24 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.traitCollectionChanged
-import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
+import us.neotechnica.panther.modules.common.extensions.isOnline
 import us.neotechnica.panther.modules.common.models.ConnectionStatusServiceEffectID
 import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.services.ConnectionStatusService
 import us.neotechnica.panther.modules.common.services.NotificationService
 import us.neotechnica.panther.modules.common.services.PushTokenService
-import us.neotechnica.panther.modules.common.services.UpdateService
 import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.common.dependencies.firebaseMessaging
 import us.neotechnica.panther.modules.notifications.services.PantherMessagingService
 import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.modules.session.state.services.retryAllEligible
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
-import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
-import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
+import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
-import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 import us.neotechnica.panther.translator.Translator
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * The application entry point.
@@ -127,39 +121,8 @@ class PantherApplication : Application() {
 
         // Retry eligible entries when connectivity is restored.
         ConnectionStatusService.addEffectUponConnectionChanged(ConnectionStatusServiceEffectID.RETRY_MESSAGE_OUTBOX) {
-            if (ConnectionStatusService.isOnline) outboxScope.launch { ClientSession.outbox.retryAllEligible() }
+            if (Build.isOnline) outboxScope.launch { ClientSession.outbox.retryAllEligible() }
         }
-
-        // Show an offline toast when connectivity is lost.
-        ConnectionStatusService.addEffectUponConnectionChanged(ConnectionStatusServiceEffectID.SHOW_OFFLINE_MODE_TOAST) {
-            if (!ConnectionStatusService.isOnline) showOfflineModeToast()
-        }
-
-        // Re-check for available updates when connectivity is restored.
-        ConnectionStatusService.addEffectUponConnectionChanged(ConnectionStatusServiceEffectID.CHECK_FOR_UPDATES) {
-            if (ConnectionStatusService.isOnline) {
-                outboxScope.launch {
-                    runCatching { UpdateService.promptToUpdateIfNeeded() }.onFailure {
-                        Logger.log(
-                            it as? Exception ?: Exception.from(it, ExceptionMetadata(this@PantherApplication)),
-                            with = AlertType.toastInPrerelease,
-                        )
-                    }
-                }
-            }
-        }
-
-        if (!ConnectionStatusService.isOnline) showOfflineModeToast()
-    }
-
-    private fun showOfflineModeToast() {
-        Toast.show(
-            Toast(
-                Toast.ToastType.Capsule(ToastStyle.WARNING),
-                message = LocalizedStringKey.OfflineMode.localized(),
-                perpetuation = Toast.PerpetuationStrategy.Ephemeral(OFFLINE_TOAST_SECONDS.seconds),
-            ),
-        )
     }
 
     // MARK: - Translator Wiring
@@ -196,11 +159,5 @@ class PantherApplication : Application() {
         )
 
         Translator.config.registerCurrentActivityProvider { currentActivity.get() }
-    }
-
-    // MARK: - Companion
-
-    private companion object {
-        const val OFFLINE_TOAST_SECONDS = 10L
     }
 }

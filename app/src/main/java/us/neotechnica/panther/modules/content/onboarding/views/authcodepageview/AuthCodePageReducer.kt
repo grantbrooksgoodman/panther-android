@@ -164,7 +164,7 @@ class AuthCodePageReducer : Reducer<AuthCodePageReducer.State, AuthCodePageReduc
                 Overlay.removeOverlay()
 
                 onboardingService.setUserID(action.userID)
-                navigation.navigate(Route.Onboarding(OnboardingRoute.Push(OnboardingNavigatorState.SeguePath.Permission)))
+                navigation.navigate(Route.Onboarding(OnboardingRoute.Push(OnboardingNavigatorState.SeguePaths.Permission)))
                 ReduceResult(state.copy(isBackButtonEnabled = true, isContinueButtonEnabled = true))
             }
 

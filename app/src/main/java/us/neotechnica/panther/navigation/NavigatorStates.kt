@@ -13,92 +13,92 @@ package us.neotechnica.panther.navigation
  *
  * [RootNavigatorState] tracks the presented full-screen [modal] – which
  * determines the top-level screen – along with nested state for each
- * child navigation flow. It defaults to [ModalPath.Splash] on launch.
+ * child navigation flow. It defaults to [ModalPaths.Splash] on launch.
  */
 data class RootNavigatorState(
     val chat: ChatNavigatorState = ChatNavigatorState(),
     val onboarding: OnboardingNavigatorState = OnboardingNavigatorState(),
     val settings: SettingsNavigatorState = SettingsNavigatorState(),
     val userContent: UserContentNavigatorState = UserContentNavigatorState(),
-    val modal: ModalPath? = ModalPath.Splash,
-    val sheet: SheetPath? = null,
-    val stack: List<SeguePath> = emptyList(),
+    val modal: ModalPaths? = ModalPaths.Splash,
+    val sheet: SheetPaths? = null,
+    val stack: List<SeguePaths> = emptyList(),
 ) {
     /** The full-screen destinations at the root level. */
-    sealed interface ModalPath : Paths {
-        data object Onboarding : ModalPath
+    sealed interface ModalPaths : Paths {
+        data object Onboarding : ModalPaths
 
-        data object Splash : ModalPath
+        data object Splash : ModalPaths
 
-        data object UserContent : ModalPath
+        data object UserContent : ModalPaths
     }
 
     /** The push destinations on the root stack. */
-    sealed interface SeguePath : Paths
+    sealed interface SeguePaths : Paths
 
     /** The sheet destinations at the root level. */
-    sealed interface SheetPath : Paths
+    sealed interface SheetPaths : Paths
 }
 
 /** The onboarding flow's navigation state. */
 data class OnboardingNavigatorState(
-    val stack: List<SeguePath> = emptyList(),
+    val stack: List<SeguePaths> = emptyList(),
 ) {
-    sealed interface SeguePath : Paths {
-        data object AuthCode : SeguePath
+    sealed interface SeguePaths : Paths {
+        data object AuthCode : SeguePaths
 
-        data object Permission : SeguePath
+        data object Permission : SeguePaths
 
-        data object SelectLanguage : SeguePath
+        data object SelectLanguage : SeguePaths
 
-        data object SignIn : SeguePath
+        data object SignIn : SeguePaths
 
-        data object VerifyNumber : SeguePath
+        data object VerifyNumber : SeguePaths
     }
 }
 
 /** The signed-in content flow's navigation state. */
 data class UserContentNavigatorState(
-    val stack: List<SeguePath> = emptyList(),
+    val stack: List<SeguePaths> = emptyList(),
 ) {
-    sealed interface SeguePath : Paths {
+    sealed interface SeguePaths : Paths {
         /** The chat page for the conversation with the given key. */
         data class Chat(
             val conversationIDKey: String,
             val focusedMessageID: String? = null,
-        ) : SeguePath
+        ) : SeguePaths
 
         /** The chat-info page for the conversation with the given key. */
         data class ChatInfo(
             val conversationIDKey: String,
-        ) : SeguePath
+        ) : SeguePaths
 
-        data object NewChat : SeguePath
+        data object NewChat : SeguePaths
 
-        data object Settings : SeguePath
+        data object Settings : SeguePaths
 
-        data object ChangeLanguage : SeguePath
+        data object ChangeLanguage : SeguePaths
     }
 }
 
 /** The settings flow's navigation state. */
 data class SettingsNavigatorState(
-    val sheet: SheetPath? = null,
+    val sheet: SheetPaths? = null,
 ) {
     /** The sheet destinations presented over the settings flow. */
-    sealed interface SheetPath : Paths {
+    sealed interface SheetPaths : Paths {
         /** The invite QR code sheet. */
-        data object InviteQRCode : SheetPath
+        data object InviteQRCode : SheetPaths
     }
 }
 
 /** The chat flow's navigation state. */
 data class ChatNavigatorState(
-    val sheet: SheetPath? = null,
+    val sheet: SheetPaths? = null,
 ) {
     /** The sheet destinations presented over the chat flow. */
-    sealed interface SheetPath : Paths {
-        data object ContactSelector : SheetPath
+    sealed interface SheetPaths : Paths {
+        data object ContactSelector : SheetPaths
     }
 }
 
@@ -118,9 +118,9 @@ val RootNavigatorState.descriptor: String?
         val modalPath = modal ?: return null
         val top =
             when (modalPath) {
-                RootNavigatorState.ModalPath.Onboarding -> onboarding.stack.lastOrNull()
-                RootNavigatorState.ModalPath.UserContent -> userContent.stack.lastOrNull()
-                RootNavigatorState.ModalPath.Splash -> null
+                RootNavigatorState.ModalPaths.Onboarding -> onboarding.stack.lastOrNull()
+                RootNavigatorState.ModalPaths.UserContent -> userContent.stack.lastOrNull()
+                RootNavigatorState.ModalPaths.Splash -> null
             }
         return (top ?: modalPath).pathDescriptor
     }

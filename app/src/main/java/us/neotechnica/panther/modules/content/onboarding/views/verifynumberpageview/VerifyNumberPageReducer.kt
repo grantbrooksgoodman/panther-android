@@ -204,7 +204,7 @@ class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNum
                     onboardingService.setPhoneNumber(state.phoneNumber)
                     onboardingService.setRegionCode(state.selectedRegionCode)
                     navigation.navigate(
-                        Route.Onboarding(OnboardingRoute.Stack(listOf(OnboardingNavigatorState.SeguePath.SignIn))),
+                        Route.Onboarding(OnboardingRoute.Stack(listOf(OnboardingNavigatorState.SeguePaths.SignIn))),
                     )
                 }
 
@@ -284,7 +284,7 @@ class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNum
                 onboardingService.setPhoneNumber(state.phoneNumber)
                 onboardingService.setRegionCode(state.selectedRegionCode)
 
-                navigation.navigate(Route.Onboarding(OnboardingRoute.Push(OnboardingNavigatorState.SeguePath.AuthCode)))
+                navigation.navigate(Route.Onboarding(OnboardingRoute.Push(OnboardingNavigatorState.SeguePaths.AuthCode)))
                 ReduceResult(state.copy(isBackButtonEnabled = true, isContinueButtonEnabled = true))
             }
         }

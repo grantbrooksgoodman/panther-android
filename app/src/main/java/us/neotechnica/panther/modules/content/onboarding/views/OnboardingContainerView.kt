@@ -85,11 +85,11 @@ fun OnboardingContainerView(modifier: Modifier = Modifier) {
     ) { path ->
         when (path) {
             null -> WelcomePageView(Modifier.fillMaxSize())
-            OnboardingNavigatorState.SeguePath.SelectLanguage -> SelectLanguagePageView(Modifier.fillMaxSize())
-            OnboardingNavigatorState.SeguePath.VerifyNumber -> VerifyNumberPageView(Modifier.fillMaxSize())
-            OnboardingNavigatorState.SeguePath.AuthCode -> AuthCodePageView(Modifier.fillMaxSize())
-            OnboardingNavigatorState.SeguePath.Permission -> PermissionPageView(Modifier.fillMaxSize())
-            OnboardingNavigatorState.SeguePath.SignIn -> SignInPageView(Modifier.fillMaxSize())
+            OnboardingNavigatorState.SeguePaths.SelectLanguage -> SelectLanguagePageView(Modifier.fillMaxSize())
+            OnboardingNavigatorState.SeguePaths.VerifyNumber -> VerifyNumberPageView(Modifier.fillMaxSize())
+            OnboardingNavigatorState.SeguePaths.AuthCode -> AuthCodePageView(Modifier.fillMaxSize())
+            OnboardingNavigatorState.SeguePaths.Permission -> PermissionPageView(Modifier.fillMaxSize())
+            OnboardingNavigatorState.SeguePaths.SignIn -> SignInPageView(Modifier.fillMaxSize())
         }
     }
 }

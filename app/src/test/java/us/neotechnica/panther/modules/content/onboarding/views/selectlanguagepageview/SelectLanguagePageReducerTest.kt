@@ -118,7 +118,7 @@ class SelectLanguagePageReducerTest {
         assertEquals("es", RuntimeStorage.languageCode)
         assertEquals("es", DependencyValues.current.onboardingService.languageCode)
         assertEquals(
-            listOf(OnboardingNavigatorState.SeguePath.VerifyNumber),
+            listOf(OnboardingNavigatorState.SeguePaths.VerifyNumber),
             DependencyValues.current.navigation.state.value.onboarding.stack,
         )
     }

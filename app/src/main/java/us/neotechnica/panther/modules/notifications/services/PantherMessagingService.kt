@@ -188,7 +188,7 @@ class PantherMessagingService : FirebaseMessagingService() {
             val chatRoute =
                 Route.UserContent(
                     UserContentRoute.Push(
-                        UserContentNavigatorState.SeguePath.Chat(
+                        UserContentNavigatorState.SeguePaths.Chat(
                             conversationIDKey,
                             focusedMessageID = focusedMessageID,
                         ),

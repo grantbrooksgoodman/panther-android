@@ -191,7 +191,7 @@ class PermissionPageReducer : Reducer<PermissionPageReducer.State, PermissionPag
                     Logger.log(exception, with = AlertType.toast)
                     ReduceResult(state.copy(isBackButtonEnabled = true, isFinishButtonEnabled = true))
                 } else {
-                    navigation.navigate(Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.Splash)))
+                    navigation.navigate(Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.Splash)))
                     ReduceResult(state)
                 }
             }

@@ -40,7 +40,7 @@ class SignInPageReducerTest {
 
     private val reducer = SignInPageReducer()
 
-    private val onboardingStack: List<OnboardingNavigatorState.SeguePath>
+    private val onboardingStack: List<OnboardingNavigatorState.SeguePaths>
         get() =
             DependencyValues.current.navigation.state.value.onboarding.stack
 
@@ -88,7 +88,7 @@ class SignInPageReducerTest {
     @Test
     fun `back during phone number entry pops the page`() {
         DependencyValues.current.navigation.navigate(
-            Route.Onboarding(OnboardingRoute.Stack(listOf(OnboardingNavigatorState.SeguePath.SignIn))),
+            Route.Onboarding(OnboardingRoute.Stack(listOf(OnboardingNavigatorState.SeguePaths.SignIn))),
         )
 
         val result =
@@ -132,15 +132,15 @@ class SignInPageReducerTest {
     @Test
     fun `authentication presents the splash page without clearing the onboarding stack`() {
         DependencyValues.current.navigation.navigate(
-            Route.Onboarding(OnboardingRoute.Stack(listOf(OnboardingNavigatorState.SeguePath.SignIn))),
+            Route.Onboarding(OnboardingRoute.Stack(listOf(OnboardingNavigatorState.SeguePaths.SignIn))),
         )
-        DependencyValues.current.navigation.navigate(Route.Root(RootRoute.SetModal(RootNavigatorState.ModalPath.Onboarding)))
+        DependencyValues.current.navigation.navigate(Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.Onboarding)))
 
         reducer.reduce(SignInPageReducer.State(), SignInPageReducer.Action.AuthenticateUserReturned("user-id"))
 
         val navigatorState = DependencyValues.current.navigation.state.value
-        assertEquals(RootNavigatorState.ModalPath.Splash, navigatorState.modal)
-        assertEquals(listOf(OnboardingNavigatorState.SeguePath.SignIn), navigatorState.onboarding.stack)
+        assertEquals(RootNavigatorState.ModalPaths.Splash, navigatorState.modal)
+        assertEquals(listOf(OnboardingNavigatorState.SeguePaths.SignIn), navigatorState.onboarding.stack)
         assertFalse(Overlay.isVisible.value)
     }
 }

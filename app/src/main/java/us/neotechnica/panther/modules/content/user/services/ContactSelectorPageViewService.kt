@@ -162,12 +162,15 @@ object ContactSelectorPageViewService {
             ContactSelectorPageView.EntryPoint.NEW_CHAT_PAGE_VIEW -> {
                 DependencyValues.current.navigation.navigate(Route.Chat(ChatRoute.Sheet(null)))
 
-                delay(INPUT_BAR_APPEARANCE_DELAY)
-                RecipientBarService.contactSelectionUI.selectContactPair(selectedContactPair, performInputBarFix = true)
+                // Dismissing the sheet closes the page's view model, so the
+                // deferred selection runs on a detached task.
+                Task.delayed(by = INPUT_BAR_APPEARANCE_DELAY) {
+                    RecipientBarService.contactSelectionUI.selectContactPair(selectedContactPair, performInputBarFix = true)
 
-                delay(LABEL_REPRESENTATION_DELAY)
-                val recipientBarIsFirstResponder = RecipientBarService.layout.isTextFieldFirstResponder.value
-                RecipientBarService.contactSelectionUI.toggleLabelRepresentation(on = !recipientBarIsFirstResponder)
+                    delay(LABEL_REPRESENTATION_DELAY)
+                    val recipientBarIsFirstResponder = RecipientBarService.layout.isTextFieldFirstResponder.value
+                    RecipientBarService.contactSelectionUI.toggleLabelRepresentation(on = !recipientBarIsFirstResponder)
+                }
             }
         }
     }
