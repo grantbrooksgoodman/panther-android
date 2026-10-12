@@ -10,6 +10,7 @@ package us.neotechnica.panther.bundle
 
 import us.neotechnica.panther.modules.common.contacts.services.ContactPairArchiveService
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
+import us.neotechnica.panther.modules.common.models.ContactImageCache
 import us.neotechnica.panther.modules.common.services.CommonPropertyLists
 import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.common.services.TextToSpeechServiceCache
@@ -79,6 +80,10 @@ val CacheDomain.Companion.chatInfoPageViewService: CacheDomain
 /** The cache domain for the `commonPropertyLists` cache. */
 val CacheDomain.Companion.commonPropertyLists: CacheDomain
     get() = CacheDomain("commonPropertyLists") { CommonPropertyLists.clearCache() }
+
+/** The cache domain for the `contactImage` cache. */
+val CacheDomain.Companion.contactImage: CacheDomain
+    get() = CacheDomain("contactImage") { ContactImageCache.clearCache() }
 
 /** The cache domain for the `contactPairArchive` cache. */
 val CacheDomain.Companion.contactPairArchive: CacheDomain

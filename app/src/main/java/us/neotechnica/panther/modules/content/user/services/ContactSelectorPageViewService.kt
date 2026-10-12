@@ -11,6 +11,7 @@ package us.neotechnica.panther.modules.content.user.services
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.chatInfoPageLoadingStateUpdated
 import us.neotechnica.panther.bundle.currentConversationActivityChanged
@@ -18,14 +19,14 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
-import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.common.services.InviteService
 import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.content.user.extensions.userIDs
 import us.neotechnica.panther.modules.content.user.extensions.users
-import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageReducer
+import us.neotechnica.panther.modules.content.user.services.recipientbar.RecipientBarService
+import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageView
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.user.models.User
@@ -40,8 +41,10 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Handles the contact selector page's user interactions.
@@ -60,12 +63,23 @@ object ContactSelectorPageViewService {
     /**
      * Dismisses the contact selector sheet without a selection.
      *
+     * When entered from the new chat page, the contact selection UI's
+     * label representation is updated to match the recipient bar's
+     * focus.
+     *
      * @param from The page from which the contact selector was
      *   presented.
      */
-    @Suppress("UnusedParameter")
-    fun cancelToolbarButtonTapped(from: ContactSelectorPageReducer.EntryPoint) {
+    fun cancelToolbarButtonTapped(from: ContactSelectorPageView.EntryPoint) {
         DependencyValues.current.navigation.navigate(Route.Chat(ChatRoute.Sheet(null)))
+
+        if (from != ContactSelectorPageView.EntryPoint.NEW_CHAT_PAGE_VIEW) return
+        Task.delayed(by = INPUT_BAR_APPEARANCE_DELAY) {
+            Task.delayed(by = LABEL_REPRESENTATION_DELAY) {
+                val recipientBarIsFirstResponder = RecipientBarService.layout.isTextFieldFirstResponder.value
+                RecipientBarService.contactSelectionUI.toggleLabelRepresentation(on = !recipientBarIsFirstResponder)
+            }
+        }
     }
 
     /**
@@ -113,10 +127,11 @@ object ContactSelectorPageViewService {
      * Responds to the user selecting a contact pair on the contact
      * selector page.
      *
-     * From the chat info page, an action sheet offers to add the selected
-     * user to the current conversation; users already participating are
-     * ignored. From the new chat page, the sheet is dismissed and the
-     * selection is applied to the recipient bar.
+     * When entered from the chat info page, an action sheet offers to
+     * add the selected user to the current conversation – users already
+     * participating are ignored. When entered from the new chat page,
+     * the sheet is dismissed and the selection is applied to the
+     * recipient bar.
      *
      * @param selectedContactPair The contact pair the user selected.
      * @param from The page from which the contact selector was
@@ -124,10 +139,10 @@ object ContactSelectorPageViewService {
      */
     suspend fun selectedContactPairChanged(
         selectedContactPair: ContactPair,
-        from: ContactSelectorPageReducer.EntryPoint,
+        from: ContactSelectorPageView.EntryPoint,
     ) {
         when (from) {
-            ContactSelectorPageReducer.EntryPoint.CHAT_INFO_PAGE_VIEW -> {
+            ContactSelectorPageView.EntryPoint.CHAT_INFO_PAGE_VIEW -> {
                 val user = selectedContactPair.users.firstOrNull() ?: return
                 val userID = selectedContactPair.userIDs.firstOrNull() ?: return
                 val conversation = ConversationSessionService.currentConversation ?: return
@@ -144,9 +159,15 @@ object ContactSelectorPageViewService {
                 ).present(translating = listOf(ActionSheet.TranslationOptionKey.Actions(emptyList())))
             }
 
-            ContactSelectorPageReducer.EntryPoint.NEW_CHAT_PAGE_VIEW -> {
-                RecipientBarContactSelectionUIService.selectContactPair(selectedContactPair)
+            ContactSelectorPageView.EntryPoint.NEW_CHAT_PAGE_VIEW -> {
                 DependencyValues.current.navigation.navigate(Route.Chat(ChatRoute.Sheet(null)))
+
+                delay(INPUT_BAR_APPEARANCE_DELAY)
+                RecipientBarService.contactSelectionUI.selectContactPair(selectedContactPair, performInputBarFix = true)
+
+                delay(LABEL_REPRESENTATION_DELAY)
+                val recipientBarIsFirstResponder = RecipientBarService.layout.isTextFieldFirstResponder.value
+                RecipientBarService.contactSelectionUI.toggleLabelRepresentation(on = !recipientBarIsFirstResponder)
             }
         }
     }
@@ -168,4 +189,9 @@ object ContactSelectorPageViewService {
             Logger.log(exception, with = AlertType.toast)
         }
     }
+
+    // MARK: - Constants
+
+    private val INPUT_BAR_APPEARANCE_DELAY = 100.milliseconds
+    private val LABEL_REPRESENTATION_DELAY = 200.milliseconds
 }

@@ -8,16 +8,12 @@
 
 package us.neotechnica.panther.modules.content.user.views.newchatpageview
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -25,7 +21,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -33,12 +28,15 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.focus.FocusRequester
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.isNewChatPageDoneToolbarButtonEnabled
 import us.neotechnica.panther.bundle.messageOutboxDidChange
@@ -46,14 +44,10 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.MessageInputBar
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
-import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
-import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
+import us.neotechnica.panther.designsystem.modules.foundation.components.HeaderView
 import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.models.ContactPair
-import us.neotechnica.panther.modules.common.services.InviteService
-import us.neotechnica.panther.modules.common.services.PermissionService
 import us.neotechnica.panther.modules.content.user.components.ContactPairCellView
 import us.neotechnica.panther.modules.content.user.components.ContentPickers
 import us.neotechnica.panther.modules.content.user.components.DeliveryProgressView
@@ -61,20 +55,18 @@ import us.neotechnica.panther.modules.content.user.components.RecipientBar
 import us.neotechnica.panther.modules.content.user.components.anyOutboxSending
 import us.neotechnica.panther.modules.content.user.components.rememberContentPickers
 import us.neotechnica.panther.modules.content.user.components.rememberRegisteredDeliveryProgressIndicatorService
-import us.neotechnica.panther.modules.content.user.constants.NewChatPageViewFloats
-import us.neotechnica.panther.modules.content.user.extensions.hasContactsBesidesCurrentUser
-import us.neotechnica.panther.modules.content.user.extensions.syncIfNeeded
+import us.neotechnica.panther.modules.content.user.constants.ContactSelectorPageViewFloats
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
-import us.neotechnica.panther.modules.content.user.services.RecipientBarContactSelectionUIService
+import us.neotechnica.panther.modules.content.user.services.recipientbar.RecipientBarLayoutService
+import us.neotechnica.panther.modules.content.user.services.recipientbar.RecipientBarService
+import us.neotechnica.panther.modules.content.user.services.recipientbar.RecipientBarTableViewService
 import us.neotechnica.panther.modules.content.user.views.chatpageview.ChatPageView
-import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageReducer
 import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageView
 import us.neotechnica.panther.modules.content.user.views.newchatpageview.NewChatPageReducer.Action
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.navigation.ChatNavigatorState
 import us.neotechnica.panther.navigation.ChatRoute
-import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
@@ -88,14 +80,10 @@ import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedStates
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action as AlertKitAction
 
-// MARK: - Constants Accessors
-
-private typealias Floats = NewChatPageViewFloats
-
 /**
  * The new-conversation page: choose recipients through the recipient
- * bar (typing a phone number or picking from contacts), compose a first
- * message or attach media, and create the conversation on send.
+ * bar, preview the matching conversation, compose a first message or
+ * attach media, and create the conversation on send.
  *
  * @param modifier The modifier for this view.
  */
@@ -119,35 +107,32 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsState()
     val navState by navigation.state.collectAsState()
     val colors = LocalPantherColors.current
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val deliveryProgressIndicatorService = rememberRegisteredDeliveryProgressIndicatorService()
-    val pickers =
-        rememberContentPickers(
-            onPicked = { mediaFile ->
-                scope.launch {
-                    try {
-                        MessageDeliveryService.sendMediaMessage(mediaFile)
-                        val conversationIDKey = ConversationSessionService.currentConversation?.id?.key
-                        if (conversationIDKey != null) viewModel.send(Action.SendReturned(conversationIDKey))
-                    } catch (exception: Exception) {
-                        Logger.log(exception, with = AlertType.toast)
-                    }
-                }
-            },
-            onFailed = { Logger.log(it, with = AlertType.toast) },
-        )
+    val pickers = rememberNewChatContentPickers(viewModel, scope)
 
-    Box(modifier = modifier.fillMaxSize().background(colors.groupedContentBackground)) {
+    val recipientBar = RecipientBarService
+    val selectedContactPairs by recipientBar.contactSelectionUI.selectedContactPairs.collectAsState()
+    val isTextFieldFirstResponder by recipientBar.layout.isTextFieldFirstResponder.collectAsState()
+    val inputBarPlaceholder by recipientBar.layout.inputBarPlaceholder.collectAsState()
+    val isTableViewVisible by recipientBar.tableView.isTableViewVisible.collectAsState()
+    val sections by recipientBar.tableView.sections.collectAsState()
+    val conversationIDKey by recipientBar.config.conversationIDKey.collectAsState()
+
+    val inputBarFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        recipientBar.layout.firstResponderRequests.collect { responder ->
+            if (responder == RecipientBarLayoutService.FirstResponder.INPUT_BAR) {
+                withFrameNanos {}
+                runCatching { inputBarFocusRequester.requestFocus() }
+            }
+        }
+    }
+
+    Box(modifier = modifier.fillMaxSize().background(colors.background)) {
         Column(modifier = Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
             Box {
-                Header(
-                    title = state.navigationTitle,
-                    doneText = state.doneToolbarButtonText,
-                    isDoneBold = state.shouldUseBoldDoneToolbarButton,
-                    isDoneEnabled = state.isDoneToolbarButtonEnabled,
-                    onDone = { viewModel.send(Action.DoneToolbarButtonTapped) },
-                )
+                NewChatPageHeader(state = state, onDone = { viewModel.send(Action.DoneToolbarButtonTapped) })
                 DeliveryProgressView(
                     progress = deliveryProgressIndicatorService.progress,
                     alpha = deliveryProgressIndicatorService.alpha,
@@ -155,34 +140,40 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
                 )
             }
 
-            RecipientBar(
-                selectedContactPairs = state.selectedContactPairs,
-                query = state.recipientQuery,
-                highlightedViewID = state.highlightedViewID,
-                onQueryChange = { viewModel.send(Action.RecipientQueryChanged(it)) },
-                onSubmit = { viewModel.send(Action.RecipientQuerySubmitted) },
-                onBackspace = { viewModel.send(Action.RecipientBackspaced) },
-                onChipTap = { viewModel.send(Action.RecipientChipTapped(it)) },
-                onRemove = { viewModel.send(Action.RemoveRecipientTapped(it)) },
-                onAdd = { scope.launch { selectContactButtonTapped(context, navigation) } },
-            )
+            RecipientBar()
 
-            SuggestionsOrConversationPreview(
-                suggestions = state.suggestions,
-                existingConversationIDKey = state.existingConversationIDKey,
-                onSuggestionTapped = { viewModel.send(Action.SuggestionTapped(it)) },
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-            )
+            if (isTableViewVisible) {
+                SuggestionsTableView(
+                    sections = sections,
+                    onContactPairSelected = { contactPair ->
+                        recipientBar.contactSelectionUI.selectContactPair(contactPair)
+                        if (!recipientBar.layout.isTextFieldFirstResponder.value) {
+                            recipientBar.layout.textFieldBecomeFirstResponder()
+                        }
+                    },
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                )
+            } else {
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    conversationIDKey?.let { key ->
+                        key(key) {
+                            ChatPageView(conversationIDKey = key, embedded = true, modifier = Modifier.fillMaxSize())
+                        }
+                    }
+                }
 
-            MessageInputBar(
-                text = state.inputText,
-                placeholder = LocalizedStringKey.NewMessage.localized(),
-                isSending = state.isSendingMessage || state.hasSendingOutboxEntry,
-                onTextChange = { viewModel.send(Action.InputChanged(it)) },
-                onSend = { viewModel.send(Action.SendTapped) },
-                onAttach = { scope.launch { presentAttachMediaSheet(pickers) } },
-                enabled = state.selectedContactPairs.isNotEmpty(),
-            )
+                MessageInputBar(
+                    text = state.inputText,
+                    placeholder = inputBarPlaceholder ?: "",
+                    isSending = state.isSendingMessage || state.hasSendingOutboxEntry,
+                    onTextChange = { viewModel.send(Action.InputChanged(it)) },
+                    onSend = { viewModel.send(Action.SendTapped) },
+                    onAttach = { scope.launch { presentAttachMediaSheet(pickers) } },
+                    enabled = selectedContactPairs.isNotEmpty() && !isTextFieldFirstResponder,
+                    isAttachEnabled = !isTextFieldFirstResponder,
+                    focusRequester = inputBarFocusRequester,
+                )
+            }
         }
 
         if (navState.chat.sheet == ChatNavigatorState.SheetPath.ContactSelector) {
@@ -190,49 +181,113 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
                 onDismissRequest = { navigation.navigate(Route.Chat(ChatRoute.Sheet(null))) },
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             ) {
-                ContactSelectorPageView(entryPoint = ContactSelectorPageReducer.EntryPoint.NEW_CHAT_PAGE_VIEW)
+                ContactSelectorPageView(entryPoint = ContactSelectorPageView.EntryPoint.NEW_CHAT_PAGE_VIEW)
             }
         }
     }
 }
 
-// The whitespace shows contact suggestions while a recipient is being
-// typed; otherwise, when the selected recipients match an existing
-// conversation, it previews that conversation.
+// MARK: - Content Pickers
+
+// Sends a picked attachment as the first message, then navigates into
+// the created conversation.
 @Composable
-private fun SuggestionsOrConversationPreview(
-    suggestions: List<ContactPair>,
-    existingConversationIDKey: String?,
-    onSuggestionTapped: (ContactPair) -> Unit,
+private fun rememberNewChatContentPickers(
+    viewModel: ViewModel<NewChatPageReducer.State, NewChatPageReducer.Action>,
+    scope: CoroutineScope,
+): ContentPickers =
+    rememberContentPickers(
+        onPicked = { mediaFile ->
+            scope.launch {
+                try {
+                    MessageDeliveryService.sendMediaMessage(mediaFile)
+                    val conversationIDKey = ConversationSessionService.currentConversation?.id?.key
+                    if (conversationIDKey != null) {
+                        viewModel.send(Action.FirstMessageSent)
+                        viewModel.send(Action.SendReturned(conversationIDKey))
+                    }
+                } catch (exception: Exception) {
+                    Logger.log(exception, with = AlertType.toast)
+                }
+            }
+        },
+        onFailed = { Logger.log(it, with = AlertType.toast) },
+    )
+
+// MARK: - Header
+
+@Composable
+private fun NewChatPageHeader(
+    state: NewChatPageReducer.State,
+    onDone: () -> Unit,
+) {
+    val colors = LocalPantherColors.current
+
+    HeaderView(
+        centerItem =
+            HeaderView.CenterItemType.Text(
+                HeaderView.TextAttributes(state.navigationTitle, foregroundColor = colors.navigationBarTitle),
+            ),
+        rightItem =
+            HeaderView.PeripheralButtonType.Text(
+                HeaderView.TextButtonAttributes(
+                    text =
+                        HeaderView.TextAttributes(
+                            state.doneToolbarButtonText,
+                            font = if (state.shouldUseBoldDoneToolbarButton) Font.systemSemibold() else Font.system,
+                            foregroundColor = if (state.isDoneToolbarButtonEnabled) colors.navigationBarButton else colors.disabled,
+                        ),
+                    isEnabled = state.isDoneToolbarButtonEnabled,
+                    action = onDone,
+                ),
+            ),
+        attributes =
+            HeaderView.Attributes(
+                showsDivider = state.shouldUseBoldDoneToolbarButton,
+                sizeClass = HeaderView.SizeClass.Sheet,
+            ),
+    )
+}
+
+// MARK: - Suggestions Table
+
+@Composable
+private fun SuggestionsTableView(
+    sections: List<RecipientBarTableViewService.TableViewSection>,
+    onContactPairSelected: (ContactPair) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalPantherColors.current
-    Box(modifier = modifier) {
-        when {
-            suggestions.isNotEmpty() -> {
-                // Dismiss the keyboard once the contact list starts scrolling.
-                val suggestionsListState = rememberLazyListState()
-                LaunchedEffect(suggestionsListState) {
-                    snapshotFlow { suggestionsListState.isScrollInProgress }
-                        .collect { if (it) KeyboardService.resignFirstResponders() }
-                }
-                LazyColumn(state = suggestionsListState, modifier = Modifier.fillMaxSize()) {
-                    items(suggestions, key = { it.contact.encodedHash }) { contactPair ->
-                        ContactPairCellView(
-                            contactPair = contactPair,
-                            action = { onSuggestionTapped(contactPair) },
-                        )
-                        HorizontalDivider(color = colors.groupedContentBackground)
-                    }
-                }
-            }
+    val listState = rememberLazyListState()
 
-            existingConversationIDKey != null ->
-                ChatPageView(
-                    conversationIDKey = existingConversationIDKey,
-                    embedded = true,
-                    modifier = Modifier.fillMaxSize(),
+    // Dismiss the keyboard once the contact list starts scrolling.
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.isScrollInProgress }.collect { if (it) KeyboardService.resignFirstResponders() }
+    }
+
+    LazyColumn(state = listState, modifier = modifier) {
+        sections.forEach { section ->
+            item(key = "section-${section.letter}") {
+                Components.Text(
+                    section.letter,
+                    foregroundColor = colors.titleText,
+                    modifier =
+                        Modifier.padding(
+                            horizontal = ContactSelectorPageViewFloats.listViewRowHorizontalPadding,
+                            vertical = ContactSelectorPageViewFloats.listViewSectionHeaderVerticalPadding,
+                        ),
                 )
+            }
+            items(section.contactPairs, key = { it.contact.encodedHash }) { contactPair ->
+                ContactPairCellView(
+                    contactPair = contactPair,
+                    modifier =
+                        Modifier
+                            .heightIn(min = ContactSelectorPageViewFloats.listViewDefaultMinListRowHeight)
+                            .padding(horizontal = ContactSelectorPageViewFloats.listViewRowHorizontalPadding),
+                    action = { onContactPairSelected(contactPair) },
+                )
+            }
         }
     }
 }
@@ -243,71 +298,9 @@ private fun buildNewChatViewModel(): ViewModel<NewChatPageReducer.State, NewChat
             Action.IsSendingMessageChanged(it)
         }.observing(DependencyValues.current.sharedEvents.messageOutboxDidChange.events) {
             Action.MessageOutboxChanged(anyOutboxSending())
-        }.observing(RecipientBarContactSelectionUIService.selectedContactPairs) {
-            Action.SelectedContactPairsChanged(it)
-        }.observing(RecipientBarContactSelectionUIService.highlightedViewID) {
-            Action.HighlightedViewIDChanged(it)
         }.observing(DependencyValues.current.sharedStates.isNewChatPageDoneToolbarButtonEnabled.changes) {
             Action.IsDoneToolbarButtonEnabledChanged(it)
         }
-
-/**
- * Opens the contact selector:
- * a call-to-action when contacts access is denied, a contact-pair sync and
- * an invitation prompt when the address book is empty, and otherwise the
- * selector.
- */
-private suspend fun selectContactButtonTapped(
-    context: Context,
-    navigation: Navigation,
-) {
-    if (PermissionService.contactPermissionStatus != PermissionService.PermissionStatus.GRANTED) {
-        presentContactsPermissionCTA(context)
-        return
-    }
-
-    if (!ContactService.hasContactsBesidesCurrentUser) {
-        val isDoneToolbarButtonEnabled = DependencyValues.current.sharedStates.isNewChatPageDoneToolbarButtonEnabled
-        isDoneToolbarButtonEnabled.value = false
-        HUD.showProgress(isModal = true)
-        runCatching { ContactService.syncIfNeeded() }
-        HUD.hide()
-        isDoneToolbarButtonEnabled.value = true
-
-        if (!ContactService.hasContactsBesidesCurrentUser) {
-            runCatching { InviteService.presentInvitationPrompt() }
-            return
-        }
-    }
-
-    navigation.navigate(Route.Chat(ChatRoute.Sheet(ChatNavigatorState.SheetPath.ContactSelector)))
-}
-
-private suspend fun presentContactsPermissionCTA(context: Context) {
-    var shouldOpenSettings = false
-    val openSettingsAction = AlertKitAction("Open Settings") { shouldOpenSettings = true }
-
-    ActionSheet(
-        title = "Contacts Access",
-        message = "Enable contacts access in Settings to choose a recipient.",
-        actions = listOf(openSettingsAction),
-        cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
-    ).present(
-        translating =
-            listOf(
-                ActionSheet.TranslationOptionKey.Actions(),
-                ActionSheet.TranslationOptionKey.Message,
-                ActionSheet.TranslationOptionKey.Title,
-            ),
-    )
-    if (!shouldOpenSettings) return
-
-    runCatching {
-        context.startActivity(
-            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)),
-        )
-    }
-}
 
 // The attach-media action sheet.
 private suspend fun presentAttachMediaSheet(pickers: ContentPickers) {
@@ -327,39 +320,4 @@ private suspend fun presentAttachMediaSheet(pickers: ContentPickers) {
                 ActionSheet.TranslationOptionKey.Actions(),
             ),
     )
-}
-
-// MARK: - Header
-
-@Composable
-private fun Header(
-    title: String,
-    doneText: String,
-    isDoneBold: Boolean,
-    isDoneEnabled: Boolean,
-    onDone: () -> Unit,
-) {
-    val colors = LocalPantherColors.current
-    Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Floats.headerHorizontalPadding, vertical = Floats.headerVerticalPadding),
-    ) {
-        Components.Text(
-            title,
-            foregroundColor = colors.titleText,
-            font = Font.systemBold(FontScale.Large),
-            modifier = Modifier.align(Alignment.Center),
-        )
-        Components.Text(
-            doneText,
-            foregroundColor = if (isDoneEnabled) colors.accent else colors.disabled,
-            font = if (isDoneBold) Font.systemSemibold() else Font.system,
-            modifier =
-                Modifier
-                    .align(Alignment.CenterEnd)
-                    .clickable(enabled = isDoneEnabled, onClick = onDone),
-        )
-    }
 }

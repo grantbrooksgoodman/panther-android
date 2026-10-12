@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.common.models
 
+import us.neotechnica.panther.modules.content.user.extensions.mock
 import us.neotechnica.panther.networking.modules.common.interfaces.Serializable
 
 /**
@@ -20,16 +21,27 @@ import us.neotechnica.panther.networking.modules.common.interfaces.Serializable
  * user's contacts can be messaged.
  */
 class ContactPair(
+    /** The device contact. */
     val contact: Contact,
+    /**
+     * The contact's phone numbers, each paired with the registered
+     * users it resolves to. Must not be empty.
+     */
     val numberPairs: List<NumberPair>,
 ) : Serializable<Map<String, Any?>> {
-    // MARK: - Type Aliases
+    // MARK: - Types
 
     private enum class Keys(
         val rawValue: String,
     ) {
         CONTACT("contact"),
         NUMBER_PAIRS("numberPairs"),
+    }
+
+    // MARK: - Init
+
+    init {
+        assert(numberPairs.isNotEmpty()) { "Initialized ContactPair with empty NumberPair array" }
     }
 
     // MARK: - Computed Properties
@@ -43,9 +55,9 @@ class ContactPair(
 
     // MARK: - Equatable Conformance
 
-    override fun equals(other: Any?): Boolean =
-        other is ContactPair && contact == other.contact && numberPairs == other.numberPairs
+    override fun equals(other: Any?): Boolean = other is ContactPair && contact == other.contact && numberPairs == other.numberPairs
 
+    /** Hashes the contact's identifier, the pairs' compiled number strings, and their user IDs. */
     override fun hashCode(): Int {
         var result = contact.id.hashCode()
         result = 31 * result + numberPairs.map { it.phoneNumber.compiledNumberString }.hashCode()
@@ -56,12 +68,17 @@ class ContactPair(
     // MARK: - Companion
 
     companion object {
+        /** A placeholder contact pair with an empty name. */
+        val empty: ContactPair
+            get() = mock(withName = "")
+
         /**
          * Reconstructs a contact pair from its stored encoded map, or
          * `null` if the map is malformed.
          */
         fun decode(data: Map<String, Any?>): ContactPair? {
             val contactMap = data[Keys.CONTACT.rawValue] as? Map<*, *> ?: return null
+
             @Suppress("UNCHECKED_CAST")
             val contact = Contact.decode(contactMap as Map<String, Any?>) ?: return null
             val numberPairs =

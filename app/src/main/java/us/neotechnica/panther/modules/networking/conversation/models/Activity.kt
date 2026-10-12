@@ -9,7 +9,6 @@
 package us.neotechnica.panther.modules.networking.conversation.models
 
 import us.neotechnica.panther.modules.common.constants.CommonConstants
-import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.displayName

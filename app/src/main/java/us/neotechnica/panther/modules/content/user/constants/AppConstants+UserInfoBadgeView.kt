@@ -17,13 +17,19 @@ import androidx.compose.ui.unit.dp
 object UserInfoBadgeViewFloats {
     val bodyCornerRadius: Dp = 3.dp
     val bodyMaxHeight: Dp = 20.dp
-    val bodyMaxWidth: Dp = 56.dp
-    val labelViewHorizontalPadding: Dp = 5.dp
+    val bodyMaxWidth: Dp = 50.dp
+
     val labelViewHStackSpacing: Dp = 2.dp
+
     val labelViewImageCornerRadius: Dp = 2.dp
     val labelViewImageFrameHeight: Dp = 10.dp
     val labelViewImageFrameWidth: Dp = 20.dp
-    val labelViewVerticalPadding: Dp = 2.dp
+
+    val labelViewTextFrameHeight: Dp = 10.dp
+    val labelViewTextFrameWidth: Dp = 20.dp
+
+    const val LABEL_VIEW_TEXT_OPACITY = 0.8f
+    const val LABEL_VIEW_TEXT_SHADOW_RADIUS = 20f
 }
 
 // MARK: - Color
@@ -31,4 +37,5 @@ object UserInfoBadgeViewFloats {
 object UserInfoBadgeViewColors {
     val bodyDarkForeground = Color(0xFF27252A)
     val bodyLightForeground = Color(0xFFE5E5EA)
+    val labelViewTextShadow = Color.Black
 }

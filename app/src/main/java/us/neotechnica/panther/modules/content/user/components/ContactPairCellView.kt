@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,25 +26,32 @@ import us.neotechnica.panther.modules.content.user.extensions.containsCurrentUse
 import us.neotechnica.panther.modules.content.user.extensions.isSelected
 import us.neotechnica.panther.modules.content.user.extensions.userIDs
 import us.neotechnica.panther.modules.content.user.extensions.users
+import us.neotechnica.panther.modules.content.user.services.ChatPageStateService
 import us.neotechnica.panther.modules.content.user.services.ConversationCellViewService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 
+// MARK: - Constants Accessors
+
+private typealias CellFloats = ContactPairCellViewFloats
+
 /**
  * A row describing a contact pair in a contact list.
  *
  * Use [ContactPairCellView] to display a contact's name with a user
- * info badge and, when applicable, a blocked or "my account"
+ * info badge and – when applicable – a blocked or "my account"
  * annotation. When given an action, the row becomes a button that is
  * disabled for contact pairs that contain a blocked user, contain the
  * current user, are already selected, or participate in the current
  * conversation.
  *
  * @param contactPair The contact pair the cell describes.
- * @param isInspectable Reserved for a future inspection affordance;
- *   currently has no effect.
+ * @param isInspectable A Boolean value that indicates whether the
+ *   cell's name labels include a hidden inspection marker. Accepted
+ *   for signature parity; Compose has no inspection marker.
+ * @param modifier The modifier for this view.
  * @param action The action performed when the user taps the cell, or
  *   `null` to make the cell non-interactive.
  */
@@ -53,6 +59,7 @@ import us.neotechnica.panther.subsystem.modules.localization.models.localized
 fun ContactPairCellView(
     contactPair: ContactPair,
     @Suppress("UnusedParameter") isInspectable: Boolean = false,
+    modifier: Modifier = Modifier,
     action: (() -> Unit)? = null,
 ) {
     val colors = LocalPantherColors.current
@@ -62,17 +69,13 @@ fun ContactPairCellView(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
-                .then(if (action != null) Modifier.clickable(enabled = isSelectionEnabled, onClick = action) else Modifier)
-                .padding(
-                    horizontal = ContactPairCellViewFloats.horizontalPadding,
-                    vertical = ContactPairCellViewFloats.verticalPadding,
-                ),
+                .then(if (action != null) Modifier.clickable(enabled = isSelectionEnabled, onClick = action) else Modifier),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(ContactPairCellViewFloats.hStackSpacing),
+            horizontalArrangement = Arrangement.spacedBy(CellFloats.hStackSpacing),
         ) {
             if (contactPair.contact.firstName.isNotBlank()) {
                 Components.Text(contactPair.contact.firstName, foregroundColor = foregroundColor)
@@ -103,7 +106,12 @@ fun ContactPairCellView(
 // MARK: - Auxiliary
 
 private fun isSelectionEnabled(contactPair: ContactPair): Boolean {
-    val participantUserIDs = ConversationSessionService.currentConversation?.participants?.map { it.userID }
+    val participantUserIDs =
+        if (ChatPageStateService.isPresented) {
+            ConversationSessionService.currentConversation?.participants?.map { it.userID }
+        } else {
+            null
+        }
     val isParticipantInCurrentConversation =
         participantUserIDs != null && contactPair.userIDs.any { participantUserIDs.contains(it) }
     return !(

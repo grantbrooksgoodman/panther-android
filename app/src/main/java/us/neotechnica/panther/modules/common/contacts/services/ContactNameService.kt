@@ -9,7 +9,6 @@
 package us.neotechnica.panther.modules.common.contacts.services
 
 import us.neotechnica.panther.modules.common.contacts.models.DeviceContact
-import us.neotechnica.panther.modules.common.extensions.formattedString
 
 /** Derives a display name from a contact read from the device's address book. */
 internal object ContactNameService {

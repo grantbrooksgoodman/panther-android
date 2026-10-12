@@ -36,7 +36,6 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
-import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.content.user.components.AvatarImageView
 

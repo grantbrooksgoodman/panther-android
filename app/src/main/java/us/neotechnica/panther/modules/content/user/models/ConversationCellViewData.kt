@@ -8,7 +8,9 @@
 
 package us.neotechnica.panther.modules.content.user.models
 
+import android.graphics.Bitmap
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
+import us.neotechnica.panther.modules.content.user.extensions.contactPair
 import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.content.user.extensions.isMock
@@ -43,6 +45,8 @@ data class ConversationCellViewData(
     val isGroup: Boolean,
     val participantCount: Int,
     val otherUser: User?,
+    /** The image the avatar displays, or `null` to show a placeholder symbol. */
+    val thumbnailImage: Bitmap? = null,
 ) {
     companion object {
         /** An empty placeholder used before a cell's data resolves. */
@@ -87,6 +91,16 @@ data class ConversationCellViewData(
             val isGroup = conversation.participants.size > 2
             val hasName = title.any { it.isLetter() }
             val lastMessageFromOthers = messages.lastOrNull { !it.isFromCurrentUser }
+            val thumbnailImage =
+                if (conversation.metadata.name.isBangQualifiedEmpty && users.size == 1) {
+                    users
+                        .firstOrNull()
+                        ?.contactPair
+                        ?.contact
+                        ?.image
+                } else {
+                    null
+                }
 
             val data =
                 ConversationCellViewData(
@@ -102,6 +116,7 @@ data class ConversationCellViewData(
                     isGroup = isGroup,
                     participantCount = users.size,
                     otherUser = if (!isGroup) users.firstOrNull() else null,
+                    thumbnailImage = thumbnailImage,
                 )
 
             if (!conversation.isMock) ConversationCellViewDataCache.cache(cacheQuery, conversation.id.key, data)

@@ -8,7 +8,6 @@
 
 package us.neotechnica.panther.modules.content.user.extensions
 
-import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.models.Contact
 import us.neotechnica.panther.networking.modules.common.extensions.digits
 

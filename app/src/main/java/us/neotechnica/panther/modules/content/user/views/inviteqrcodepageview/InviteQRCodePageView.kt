@@ -28,17 +28,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.style.TextAlign
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
-import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
+import us.neotechnica.panther.designsystem.modules.foundation.components.HeaderView
+import us.neotechnica.panther.designsystem.modules.foundation.extensions.doneButton
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.user.constants.InviteQRCodePageViewFloats
 import us.neotechnica.panther.modules.content.user.services.InviteQRCodePageViewService
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.networking.modules.translation.extensions.value
-import us.neotechnica.panther.subsystem.modules.localization.models.LocalizationSource
-import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 
 // MARK: - Constants Accessors
@@ -64,7 +62,13 @@ fun InviteQRCodePageView(modifier: Modifier = Modifier) {
     Box(modifier = modifier.fillMaxSize().background(colors.groupedContentBackground)) {
         StatefulView(state = state.viewState) {
             Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
-                Header(onDone = { viewModel.send(InviteQRCodePageReducer.Action.DoneButtonTapped) })
+                HeaderView(
+                    rightItem =
+                        HeaderView.PeripheralButtonType.doneButton(foregroundColor = colors.navigationBarButton) {
+                            viewModel.send(InviteQRCodePageReducer.Action.DoneButtonTapped)
+                        },
+                    attributes = HeaderView.Attributes(sizeClass = HeaderView.SizeClass.Sheet),
+                )
 
                 Column(
                     modifier = Modifier.fillMaxSize(),
@@ -79,7 +83,11 @@ fun InviteQRCodePageView(modifier: Modifier = Modifier) {
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(bottom = Floats.imageBottomPadding, start = Floats.imageHorizontalPadding, end = Floats.imageHorizontalPadding),
+                                .padding(
+                                    bottom = Floats.imageBottomPadding,
+                                    start = Floats.imageHorizontalPadding,
+                                    end = Floats.imageHorizontalPadding,
+                                ),
                     )
 
                     qrCode?.let {
@@ -95,21 +103,5 @@ fun InviteQRCodePageView(modifier: Modifier = Modifier) {
                 }
             }
         }
-    }
-}
-
-// MARK: - Header
-
-@Composable
-private fun Header(onDone: () -> Unit) {
-    val colors = LocalPantherColors.current
-    Box(modifier = Modifier.fillMaxWidth().padding(Floats.imageHorizontalPadding)) {
-        CircleChipButton(
-            systemName = "checkmark",
-            contentDescription = LocalizedStringKey.Done.localized(LocalizationSource.SUBSYSTEM),
-            onClick = onDone,
-            modifier = Modifier.align(Alignment.CenterEnd),
-            tint = colors.titleText,
-        )
     }
 }

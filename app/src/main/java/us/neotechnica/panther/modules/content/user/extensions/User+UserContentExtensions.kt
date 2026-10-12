@@ -10,7 +10,6 @@ package us.neotechnica.panther.modules.content.user.extensions
 
 import us.neotechnica.panther.bundle.currentUserID
 import us.neotechnica.panther.modules.common.contacts.services.ContactPairArchiveService
-import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.services.PushTokenService
 import us.neotechnica.panther.modules.networking.user.models.DeviceID

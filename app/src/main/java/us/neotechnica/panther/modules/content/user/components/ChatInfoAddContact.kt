@@ -33,7 +33,6 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewConstants
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewFloats
-import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageReducer
 import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageView
 import us.neotechnica.panther.navigation.ChatNavigatorState
 import us.neotechnica.panther.navigation.ChatRoute
@@ -116,7 +115,7 @@ fun ChatInfoContactSelectorHost() {
             onDismissRequest = { navigation.navigate(Route.Chat(ChatRoute.Sheet(null))) },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         ) {
-            ContactSelectorPageView(entryPoint = ContactSelectorPageReducer.EntryPoint.CHAT_INFO_PAGE_VIEW)
+            ContactSelectorPageView(entryPoint = ContactSelectorPageView.EntryPoint.CHAT_INFO_PAGE_VIEW)
         }
     }
 }

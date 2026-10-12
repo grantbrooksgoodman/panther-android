@@ -10,7 +10,7 @@ package us.neotechnica.panther.modules.content.user.views.inviteqrcodepageview
 
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.navigation.SettingsRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
@@ -35,17 +35,22 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
  * - Tapping done dismisses the page.
  */
 class InviteQRCodePageReducer : Reducer<InviteQRCodePageReducer.State, InviteQRCodePageReducer.Action> {
-    // MARK: - Action
+    // MARK: - Actions
 
+    /** The actions the invite QR code page can process. */
     sealed interface Action {
+        /** An action that indicates the view appeared. Begins display string resolution. */
         data object ViewAppeared : Action
 
+        /** An action that indicates the user tapped the done button. Dismisses the page. */
         data object DoneButtonTapped : Action
 
+        /** An action that indicates display string resolution succeeded, carrying the resolved strings. */
         data class ResolveReturned(
             val strings: List<TranslationOutputMap>,
         ) : Action
 
+        /** An action that indicates display string resolution failed, carrying the resulting [Exception]. */
         data class ResolveFailed(
             val exception: Exception,
         ) : Action
@@ -53,8 +58,11 @@ class InviteQRCodePageReducer : Reducer<InviteQRCodePageReducer.State, InviteQRC
 
     // MARK: - State
 
+    /** The state of the invite QR code page. */
     data class State(
+        /** The page's translated display strings. Contains the default, untranslated strings until resolution completes. */
         val strings: List<TranslationOutputMap> = InviteQRCodePageViewStrings.defaultOutputMap,
+        /** The page's loading state. Remains loading until display string resolution completes. */
         val viewState: ViewState = ViewState.Loading,
     )
 
@@ -69,7 +77,7 @@ class InviteQRCodePageReducer : Reducer<InviteQRCodePageReducer.State, InviteQRC
                 ReduceResult(state.copy(viewState = ViewState.Loading), resolveEffect())
 
             Action.DoneButtonTapped -> {
-                DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
+                DependencyValues.current.navigation.navigate(Route.Settings(SettingsRoute.Sheet(null)))
                 ReduceResult(state)
             }
 

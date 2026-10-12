@@ -9,17 +9,19 @@
 package us.neotechnica.panther.modules.common.contacts.models
 
 import us.neotechnica.panther.modules.common.models.PhoneNumber
+import us.neotechnica.panther.modules.common.services.PhoneNumberService
 
 /**
  * A contact read from the device's address book, grouped by its
  * address-book identifier.
  *
  * Carries the raw name fields the device exposes across its structured
- * name, nickname, and organization records, together with the merged
- * phone numbers belonging to the contact. These fields feed name
- * resolution and the matching of contacts to registered users.
+ * name, nickname, and organization records, the contact's thumbnail
+ * image data, and the merged phone numbers belonging to the contact.
+ * These fields feed name resolution and the matching of contacts to
+ * registered users.
  */
-internal data class DeviceContact(
+internal class DeviceContact(
     val id: String,
     val givenName: String,
     val familyName: String,
@@ -29,4 +31,39 @@ internal data class DeviceContact(
     val organizationName: String,
     val phoneticOrganizationName: String,
     val phoneNumbers: List<PhoneNumber>,
-)
+    val imageData: ByteArray?,
+) {
+    // MARK: - Methods
+
+    /**
+     * Returns a Boolean value that indicates whether any of the
+     * contact's phone numbers is the given phone number.
+     *
+     * A number matches on compiled-number equality – the device number
+     * with or without its leading calling code – or on national-number
+     * equality once the number's length validates for the given
+     * number's calling code.
+     *
+     * @param phoneNumber The phone number to match.
+     */
+    fun matches(phoneNumber: PhoneNumber): Boolean {
+        val compiledNumberString = phoneNumber.compiledNumberString
+        val nationalNumberString = phoneNumber.nationalNumberString
+        if (compiledNumberString.isEmpty()) return false
+
+        return phoneNumbers.any { number ->
+            number.compiledNumberString == compiledNumberString ||
+                (
+                    nationalNumberString.isNotEmpty() &&
+                        number.nationalNumberString == nationalNumberString &&
+                        PhoneNumberService.numberIsValidLength(nationalNumberString.length, phoneNumber.callingCode)
+                )
+        }
+    }
+
+    // MARK: - Equatable Conformance
+
+    override fun equals(other: Any?): Boolean = other is DeviceContact && other.id == id
+
+    override fun hashCode(): Int = id.hashCode()
+}

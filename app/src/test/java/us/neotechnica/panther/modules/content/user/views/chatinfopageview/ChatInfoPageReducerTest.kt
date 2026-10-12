@@ -15,6 +15,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import us.neotechnica.panther.modules.common.models.Contact
 import us.neotechnica.panther.modules.common.models.ContactPair
+import us.neotechnica.panther.modules.common.models.NumberPair
+import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.content.user.extensions.empty
 import us.neotechnica.panther.modules.content.user.models.ChatParticipant
 import us.neotechnica.panther.modules.content.user.services.ChatInfoPageViewService
@@ -25,15 +27,24 @@ class ChatInfoPageReducerTest {
 
     private val reducer = ChatInfoPageReducer()
 
-    private fun participant(name: String): ChatParticipant =
-        ChatParticipant(
+    private fun participant(name: String): ChatParticipant {
+        val phoneNumber =
+            PhoneNumber(
+                callingCode = "1",
+                nationalNumberString = "5550000000",
+                regionCode = "US",
+                label = null,
+                internalFormattedString = null,
+            )
+        return ChatParticipant(
             displayName = name,
             contactPair =
                 ContactPair(
-                    contact = Contact(id = name, firstName = name, lastName = "", phoneNumbers = emptyList(), imageData = null),
-                    numberPairs = emptyList(),
+                    contact = Contact(id = name, firstName = name, lastName = "", phoneNumbers = listOf(phoneNumber), imageData = null),
+                    numberPairs = listOf(NumberPair(phoneNumber = phoneNumber, userIDs = listOf("user-$name"))),
                 ),
         )
+    }
 
     private fun conversationRequiringConsent(): Conversation =
         Conversation.empty.copy(metadata = Conversation.empty.metadata.copyWith(requiresConsentFromInitiator = "initiator"))

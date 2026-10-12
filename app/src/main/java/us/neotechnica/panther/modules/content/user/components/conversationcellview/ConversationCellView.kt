@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
@@ -154,7 +155,7 @@ private fun Avatar(
     // circle-clipped, so the count badge is never cut off at the corner.
     Box(modifier = Modifier.size(ConversationCellViewFloats.avatarSize)) {
         AvatarImageView(
-            remember(imageData) { imageData?.decodedImageBitmap() },
+            remember(imageData, data.thumbnailImage) { imageData?.decodedImageBitmap() ?: data.thumbnailImage?.asImageBitmap() },
             badgeCount = if (data.isGroup) -1 else 0,
             size = DpSize(ConversationCellViewFloats.avatarSize, ConversationCellViewFloats.avatarSize),
         )

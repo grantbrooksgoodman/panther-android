@@ -33,6 +33,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
@@ -63,6 +65,9 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
  * @param onRemoveAttachment Invoked when the staged attachment is removed.
  * @param enabled An additional gate on the send button, beyond a
  *   non-blank, non-sending message (for example, requiring a recipient).
+ * @param isAttachEnabled Whether the attach button responds to taps.
+ * @param focusRequester A requester that can give the text field
+ *   focus, or `null`.
  * @param modifier The modifier for this bar.
  */
 @Composable
@@ -77,6 +82,8 @@ fun MessageInputBar(
     attachmentPreview: ByteArray? = null,
     onRemoveAttachment: () -> Unit = {},
     enabled: Boolean = true,
+    isAttachEnabled: Boolean = true,
+    focusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalPantherColors.current
@@ -102,7 +109,7 @@ fun MessageInputBar(
                 background = colors.background,
                 onClick = onAttach,
                 description = "Attach media",
-                enabled = !isSending,
+                enabled = !isSending && isAttachEnabled,
                 elevated = true,
             )
 
@@ -128,7 +135,10 @@ fun MessageInputBar(
                     textStyle = Font.system.textStyle.copy(color = colors.titleText),
                     cursorBrush = SolidColor(if (isSending) Color.Transparent else colors.accent),
                     maxLines = FIELD_MAX_LINES,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
                 )
             }
 

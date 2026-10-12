@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpSize
@@ -45,7 +46,6 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.contacts.components.rememberContactCardPresenter
-import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.content.user.components.AvatarImageView
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewFloats
@@ -196,7 +196,15 @@ private fun ContactDetailCard(
                 .clickable { onTap(phoneNumber, contactName) }
                 .padding(Floats.cardPadding),
     ) {
-        AvatarImageView(null, size = DpSize(Floats.avatarSize, Floats.avatarSize))
+        AvatarImageView(
+            remember(state.contactPair) {
+                state.contactPair
+                    ?.contact
+                    ?.image
+                    ?.asImageBitmap()
+            },
+            size = DpSize(Floats.avatarSize, Floats.avatarSize),
+        )
         Column(modifier = Modifier.weight(1f).padding(start = Floats.contactNameStartPadding)) {
             Components.Text(title, foregroundColor = colors.titleText, font = Font.systemSemibold())
             subtitle?.let {

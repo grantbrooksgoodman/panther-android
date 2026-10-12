@@ -50,12 +50,13 @@ object AudioMessagePlaybackService {
 
     private val scope = CoroutineScope(Dispatchers.Main)
 
-    private val audioAttributes =
+    private val audioAttributes by lazy {
         AudioAttributes
             .Builder()
             .setUsage(AudioAttributes.USAGE_MEDIA)
             .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
             .build()
+    }
 
     // Backed by observable snapshot state so audio bubbles reflect the
     // playing message and its progress.

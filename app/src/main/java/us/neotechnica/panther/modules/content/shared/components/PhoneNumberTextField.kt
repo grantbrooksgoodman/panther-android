@@ -12,7 +12,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
-import us.neotechnica.panther.modules.common.extensions.partiallyFormatted
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.common.services.PhoneNumberService
 import us.neotechnica.panther.modules.common.services.RegionDetailService

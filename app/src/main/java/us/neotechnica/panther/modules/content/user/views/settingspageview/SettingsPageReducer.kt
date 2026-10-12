@@ -9,7 +9,6 @@
 package us.neotechnica.panther.modules.content.user.views.settingspageview
 
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
-import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.content.user.models.BuildInfoButtonStrings
 import us.neotechnica.panther.modules.content.user.services.DeveloperModeListItem

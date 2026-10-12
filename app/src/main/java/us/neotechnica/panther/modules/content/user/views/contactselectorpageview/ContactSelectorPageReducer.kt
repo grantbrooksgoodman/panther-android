@@ -60,27 +60,26 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
  *   through [ContactSelectorPageViewService].
  */
 class ContactSelectorPageReducer : Reducer<ContactSelectorPageReducer.State, ContactSelectorPageReducer.Action> {
-    // MARK: - Types
+    // MARK: - Actions
 
-    /** The context the page was presented from. */
-    enum class EntryPoint {
-        CHAT_INFO_PAGE_VIEW,
-        NEW_CHAT_PAGE_VIEW,
-    }
-
-    // MARK: - Action
-
+    /** The actions the contact selector page can process. */
     sealed interface Action {
+        /** An action that indicates the view appeared. Begins display string resolution when presented from the chat info page. */
         data object ViewAppeared : Action
 
+        /** An action that indicates the view disappeared. */
         data object ViewDisappeared : Action
 
+        /** An action that indicates the user tapped the cancel toolbar button. Dismisses the page. */
         data object CancelToolbarButtonTapped : Action
 
+        /** An action that indicates the user tapped the find-user button. Looks up a registered user by the entered phone number. */
         data object FindUserButtonTapped : Action
 
+        /** An action that indicates the user tapped the invite toolbar button. Begins inviting someone to the app. */
         data object InviteToolbarButtonTapped : Action
 
+        /** An action that indicates the user lookup failed, carrying the resulting [Exception]. */
         data class FindUserFailed(
             val exception: Exception,
         ) : Action
@@ -108,14 +107,16 @@ class ContactSelectorPageReducer : Reducer<ContactSelectorPageReducer.State, Con
 
     // MARK: - State
 
+    /** The state of the contact selector page. */
     data class State(
-        val entryPoint: EntryPoint,
+        /** The context the page was presented from. */
+        val entryPoint: ContactSelectorPageView.EntryPoint,
         val inviteToolbarButtonText: String = LocalizedStringKey.Invite.localized(),
         val searchQuery: String = "",
         val selectedContactPair: ContactPair? = null,
         val strings: List<TranslationOutputMap> = ContactSelectorPageViewStrings.defaultOutputMap,
         val viewState: ViewState = ViewState.Loading,
-        val foundContactPair: ContactPair? = null,
+        internal val foundContactPair: ContactPair? = null,
     ) {
         /** The user's known contact pairs, from the contact pair archive. */
         val contactPairs: List<ContactPair>
@@ -124,7 +125,7 @@ class ContactSelectorPageReducer : Reducer<ContactSelectorPageReducer.State, Con
         /** The page's navigation title. */
         val navigationTitle: String
             get() =
-                if (entryPoint == EntryPoint.CHAT_INFO_PAGE_VIEW) {
+                if (entryPoint == ContactSelectorPageView.EntryPoint.CHAT_INFO_PAGE_VIEW) {
                     strings.value(ContactSelectorPageViewStrings.navigationTitle)
                 } else {
                     LocalizedStringKey.Contacts.localized()
@@ -133,7 +134,8 @@ class ContactSelectorPageReducer : Reducer<ContactSelectorPageReducer.State, Con
         /** The text shown when no contacts match the search. */
         val noResultsLabelText: String
             get() {
-                if (entryPoint == EntryPoint.CHAT_INFO_PAGE_VIEW && searchQuery.isNotBlank() && searchQuery == searchQuery.digits) {
+                val isPhoneNumberQuery = searchQuery.isNotBlank() && searchQuery == searchQuery.digits
+                if (entryPoint == ContactSelectorPageView.EntryPoint.CHAT_INFO_PAGE_VIEW && isPhoneNumberQuery) {
                     return strings.value(ContactSelectorPageViewStrings.noResultsLabelText)
                 }
                 return LocalizedStringKey.NoResults.localized()
@@ -146,7 +148,7 @@ class ContactSelectorPageReducer : Reducer<ContactSelectorPageReducer.State, Con
         /** The search bar's placeholder text. */
         val searchBarPlaceholderText: String
             get() =
-                if (entryPoint == EntryPoint.CHAT_INFO_PAGE_VIEW) {
+                if (entryPoint == ContactSelectorPageView.EntryPoint.CHAT_INFO_PAGE_VIEW) {
                     strings.value(ContactSelectorPageViewStrings.searchBarPlaceholderText)
                 } else {
                     LocalizedStringKey.Search.localized()
@@ -158,9 +160,9 @@ class ContactSelectorPageReducer : Reducer<ContactSelectorPageReducer.State, Con
 
         /** Whether the invite button is shown. */
         val shouldShowInviteButton: Boolean
-            get() = contactPairs.isEmpty() || entryPoint == EntryPoint.NEW_CHAT_PAGE_VIEW
+            get() = contactPairs.isEmpty() || entryPoint == ContactSelectorPageView.EntryPoint.NEW_CHAT_PAGE_VIEW
 
-        val queryMatchesFoundContactPair: Boolean
+        internal val queryMatchesFoundContactPair: Boolean
             get() {
                 val found = foundContactPair ?: return false
                 val phoneNumbers = found.users.map { it.phoneNumber }
@@ -177,7 +179,7 @@ class ContactSelectorPageReducer : Reducer<ContactSelectorPageReducer.State, Con
     ): ReduceResult<State, Action> =
         when (action) {
             Action.ViewAppeared ->
-                if (state.entryPoint != EntryPoint.CHAT_INFO_PAGE_VIEW) {
+                if (state.entryPoint != ContactSelectorPageView.EntryPoint.CHAT_INFO_PAGE_VIEW) {
                     ReduceResult(state.copy(viewState = ViewState.Loaded))
                 } else {
                     ReduceResult(state.copy(viewState = ViewState.Loading), resolveEffect())
@@ -191,7 +193,7 @@ class ContactSelectorPageReducer : Reducer<ContactSelectorPageReducer.State, Con
             }
 
             Action.FindUserButtonTapped ->
-                if (state.entryPoint == EntryPoint.CHAT_INFO_PAGE_VIEW &&
+                if (state.entryPoint == ContactSelectorPageView.EntryPoint.CHAT_INFO_PAGE_VIEW &&
                     state.queriedContactPairs.isEmpty() &&
                     state.searchQuery == state.searchQuery.digits
                 ) {

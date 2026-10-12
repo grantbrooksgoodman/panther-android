@@ -62,7 +62,6 @@ import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.contacts.components.ContactCardPresenter
 import us.neotechnica.panther.modules.common.contacts.components.rememberContactCardPresenter
-import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.content.user.components.AddContactButton
 import us.neotechnica.panther.modules.content.user.components.AvatarImageView
 import us.neotechnica.panther.modules.content.user.components.ChatInfoContactSelectorHost

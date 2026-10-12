@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.constants
 
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -15,6 +16,10 @@ import androidx.compose.ui.unit.dp
 
 object ContactPairCellViewFloats {
     val hStackSpacing: Dp = 3.5.dp
-    val horizontalPadding: Dp = 20.dp
-    val verticalPadding: Dp = 12.dp
+}
+
+// MARK: - Color
+
+object ContactPairCellViewColors {
+    val prevaricationModeBackground = Color(0xFFF3EDE6)
 }

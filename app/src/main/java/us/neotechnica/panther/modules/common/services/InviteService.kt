@@ -29,9 +29,12 @@ import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.ReviewServiceStorageKey
 import us.neotechnica.panther.modules.common.services.AnalyticsService.AnalyticsEvent
 import us.neotechnica.panther.modules.content.onboarding.dependencies.onboardingService
+import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewConstants
 import us.neotechnica.panther.modules.content.user.extensions.hasContactsBesidesCurrentUser
+import us.neotechnica.panther.modules.content.user.views.settingspageview.SettingsPageViewStrings
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -107,7 +110,29 @@ object InviteService {
      * @throws Exception if metadata resolution or translation fails.
      */
     suspend fun composeInvitation(languageCode: String?) {
-        composeInvitation(languageCode, retried = false)
+        val appShareLink = MetadataService.appShareLink
+        if (appShareLink == null) {
+            MetadataService.resolveValues()
+            return composeInvitation(languageCode)
+        }
+
+        val promptMessage =
+            "Hey, let's chat on ⌘${Build.finalName}⌘! It's a simple messaging app that allows us to " +
+                "easily talk to each other in our native languages!"
+
+        AnalyticsService.logEvent(AnalyticsEvent.INVITE)
+        if (languageCode == "en") {
+            return presentActivityViewController(appShareLink, promptMessage.sanitized)
+        }
+
+        val translation =
+            Networking.config.hostedTranslationDelegate.translate(
+                TranslationInput(promptMessage),
+                LanguagePair(from = "en", to = languageCode ?: RuntimeStorage.languageCode),
+                hudConfig = HUDConfig(appearsAfter = Duration.ZERO, isModal = true),
+            )
+
+        presentActivityViewController(appShareLink, translation.output.sanitized)
     }
 
     // MARK: - Present Invitation Prompt
@@ -151,8 +176,13 @@ object InviteService {
     suspend fun suggestInvitationIfNeeded(): Boolean {
         if (!canSuggestInvitation) return false
 
-        val didSync = runCatching { ContactService.syncContactPairArchive() }.isSuccess
-        if (!didSync) return false
+        try {
+            ContactService.syncContactPairArchive()
+        } catch (exception: Exception) {
+            Logger.log(exception, with = AlertType.toast)
+            return false
+        }
+
         if (hasContactsBesidesCurrentUser()) return false
 
         presentInvitationSuggestionPrompt()
@@ -160,36 +190,6 @@ object InviteService {
     }
 
     // MARK: - Auxiliary
-
-    private suspend fun composeInvitation(
-        languageCode: String?,
-        retried: Boolean,
-    ) {
-        val appShareLink = MetadataService.appShareLink
-        if (appShareLink == null) {
-            if (retried) throw Exception("Failed to resolve app share link.", metadata = ExceptionMetadata(this))
-            MetadataService.resolveValues()
-            return composeInvitation(languageCode, retried = true)
-        }
-
-        val promptMessage =
-            "Hey, let's chat on ⌘${Build.finalName}⌘! It's a simple messaging app that allows us to " +
-                "easily talk to each other in our native languages!"
-
-        AnalyticsService.logEvent(AnalyticsEvent.INVITE)
-        if (languageCode == "en") {
-            return presentShareSheet(appShareLink, promptMessage.sanitized)
-        }
-
-        val translation =
-            Networking.config.hostedTranslationDelegate.translate(
-                TranslationInput(promptMessage),
-                LanguagePair(from = "en", to = languageCode ?: RuntimeStorage.languageCode),
-                hudConfig = HUDConfig(appearsAfter = Duration.ZERO, isModal = true),
-            )
-
-        presentShareSheet(appShareLink, translation.output.sanitized)
-    }
 
     /**
      * Presents an alert suggesting that the user invite their contacts
@@ -249,19 +249,35 @@ object InviteService {
         return shouldTranslate
     }
 
-    private fun presentShareSheet(
+    private suspend fun presentActivityViewController(
         appShareLink: String,
         text: String,
     ) {
         val context = appContext ?: return
+        val chooserTitle =
+            runCatching {
+                Networking.config.hostedTranslationDelegate
+                    .resolve(SettingsPageViewStrings)
+                    .value(SettingsPageViewStrings.inviteFriendsButtonText)
+            }.getOrDefault(SettingsPageViewConstants.INVITE_FRIENDS_BUTTON_TEXT)
+
         val shareIntent =
             Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, "$text\n$appShareLink")
+                putExtra(Intent.EXTRA_TEXT, activityItems(appShareLink, text))
             }
-        val chooser = Intent.createChooser(shareIntent, INVITE_FRIENDS).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+        val chooser = Intent.createChooser(shareIntent, chooserTitle).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
         runCatching { context.startActivity(chooser) }
     }
+
+    /**
+     * The share payload: the app share link, then the invitation
+     * text, as separate lines.
+     */
+    internal fun activityItems(
+        appShareLink: String,
+        text: String,
+    ): String = "$appShareLink\n$text"
 
     private fun hasContactsBesidesCurrentUser(): Boolean = ContactService.hasContactsBesidesCurrentUser
 
@@ -269,6 +285,5 @@ object InviteService {
 
     // MARK: - Companion
 
-    private const val INVITE_FRIENDS = "Invite friends"
     private const val PRESENT_PICKER_DELAY_SECONDS = 2
 }

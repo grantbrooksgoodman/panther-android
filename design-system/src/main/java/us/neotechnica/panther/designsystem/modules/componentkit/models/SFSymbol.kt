@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Cancel
@@ -82,6 +83,7 @@ object SFSymbol {
     private val SYMBOLS: Map<String, ImageVector> =
         mapOf(
             "plus" to Icons.Filled.Add,
+            "plus.circle" to Icons.Filled.AddCircle,
             "arrow.up" to Icons.Filled.ArrowUpward,
             "checkmark" to Icons.Filled.Check,
             "xmark" to Icons.Filled.Close,

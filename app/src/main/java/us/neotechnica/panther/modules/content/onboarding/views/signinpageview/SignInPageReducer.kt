@@ -12,7 +12,6 @@ import us.neotechnica.panther.bundle.currentUserID
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardService
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
-import us.neotechnica.panther.modules.common.extensions.partiallyFormatted
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.services.PhoneNumberService

@@ -9,13 +9,12 @@
 package us.neotechnica.panther.modules.content.user.extensions
 
 import us.neotechnica.panther.modules.common.extensions.compiledNumberStrings
-import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.models.Contact
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.models.NumberPair
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
-import us.neotechnica.panther.modules.content.user.services.RecipientBarContactSelectionUIService
+import us.neotechnica.panther.modules.content.user.services.recipientbar.RecipientBarService
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 
@@ -41,7 +40,9 @@ val ContactPair.containsCurrentUser: Boolean
  * selected as a recipient.
  */
 val ContactPair.isSelected: Boolean
-    get() = RecipientBarContactSelectionUIService.selectedContactPairs.value.contains(this)
+    get() =
+        RecipientBarService.contactSelectionUI.selectedContactPairs.value
+            .contains(this)
 
 /**
  * Whether the contact pair is a mock, representing an unresolved
@@ -68,10 +69,6 @@ val ContactPair.users: List<User>
     get() = numberPairs.flatMap { it.users }
 
 // MARK: - Methods
-
-/** An empty contact pair with a blank name. */
-val ContactPair.Companion.empty: ContactPair
-    get() = mock(withName = "")
 
 /**
  * Creates a mock contact pair with the given name, representing an

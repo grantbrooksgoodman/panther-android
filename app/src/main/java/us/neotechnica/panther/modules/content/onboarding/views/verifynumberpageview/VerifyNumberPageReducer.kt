@@ -11,7 +11,6 @@ package us.neotechnica.panther.modules.content.onboarding.views.verifynumberpage
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardService
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
-import us.neotechnica.panther.modules.common.extensions.partiallyFormatted
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.common.services.PhoneNumberService
 import us.neotechnica.panther.modules.common.services.RegionDetailService

@@ -32,12 +32,13 @@ import java.util.Locale
 object TextToSpeechService {
     // MARK: - Properties
 
-    private val audioAttributes =
+    private val audioAttributes by lazy {
         AudioAttributes
             .Builder()
             .setUsage(AudioAttributes.USAGE_MEDIA)
             .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
             .build()
+    }
 
     private var audioManager: AudioManager? = null
     private var engine: TextToSpeech? = null

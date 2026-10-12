@@ -9,7 +9,9 @@
 package us.neotechnica.panther.modules.common.contacts.services
 
 import org.json.JSONObject
+import us.neotechnica.panther.bundle.contactImage
 import us.neotechnica.panther.bundle.contactPairArchiveService
+import us.neotechnica.panther.bundle.contacts
 import us.neotechnica.panther.bundle.updatedContactPairArchive
 import us.neotechnica.panther.modules.common.constants.NotificationExtensionConstants
 import us.neotechnica.panther.modules.common.extensions.ContactPairArchiveServiceStorageKey
@@ -18,8 +20,13 @@ import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.common.services.PhoneNumberService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.models.CacheDomain
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
+import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
+import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
@@ -71,7 +78,8 @@ object ContactPairArchiveService {
      *
      * Pairs already present in the archive are skipped; otherwise, any
      * existing pair for the same contact identifier is replaced. Adding
-     * values notifies observers that the archive changed.
+     * values clears the contact image cache and notifies observers that
+     * the archive changed.
      *
      * @param contactPairs The contact pairs to add.
      */
@@ -82,22 +90,46 @@ object ContactPairArchiveService {
             if (values.contains(contactPair)) continue
             values.removeAll { it.contact.id == contactPair.contact.id }
             values.add(contactPair)
-            Logger.log("Added contact pair to persisted archive. (${contactPair.contact.fullName})")
+
+            Logger.log(
+                Exception(
+                    "Added contact pair to persisted archive.",
+                    isReportable = false,
+                    userInfo =
+                        mapOf(
+                            "FullName" to contactPair.contact.fullName,
+                            "PhoneNumbers" to
+                                contactPair.numberPairs
+                                    .map { it.phoneNumber.formattedString() }
+                                    .toString(),
+                        ),
+                    metadata = ExceptionMetadata(this),
+                ),
+                domain = LoggerDomain.contacts,
+            )
         }
 
         archive = values
         cachedContactPairsForPhoneNumbers.wrappedValue =
             cachedContactPairsForPhoneNumbers.wrappedValue?.filterValues { !contactPairs.contains(it) }
 
-        DependencyValues.current.sharedEvents.updatedContactPairArchive.send(Unit)
+        CoreUtilities.clearCaches(listOf(CacheDomain.contactImage))
+        DependencyValues.current.sharedEvents.updatedContactPairArchive
+            .send(Unit)
     }
 
     // MARK: - Removal
 
-    /** Removes every contact pair from the archive. Observers are not notified. */
+    /**
+     * Removes every contact pair from the archive.
+     *
+     * Clearing the archive also clears the contact image cache.
+     * Observers are not notified.
+     */
     fun clearArchive() {
         archive = emptyList()
         cachedContactPairsForPhoneNumbers.wrappedValue = null
+        CoreUtilities.clearCaches(listOf(CacheDomain.contactImage))
     }
 
     // MARK: - Retrieval

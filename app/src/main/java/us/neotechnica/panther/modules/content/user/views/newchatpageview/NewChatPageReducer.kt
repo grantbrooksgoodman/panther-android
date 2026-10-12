@@ -8,162 +8,120 @@
 
 package us.neotechnica.panther.modules.content.user.views.newchatpageview
 
-import us.neotechnica.panther.modules.common.contacts.services.ContactPairArchiveService
-import us.neotechnica.panther.modules.common.models.ContactPair
-import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.common.services.AnalyticsService
-import us.neotechnica.panther.modules.content.user.extensions.contactPair
-import us.neotechnica.panther.modules.content.user.extensions.empty
-import us.neotechnica.panther.modules.content.user.extensions.isMock
-import us.neotechnica.panther.modules.content.user.extensions.isSelected
-import us.neotechnica.panther.modules.content.user.extensions.mock
-import us.neotechnica.panther.modules.content.user.extensions.queried
-import us.neotechnica.panther.modules.content.user.extensions.uniquedByPhoneNumber
-import us.neotechnica.panther.modules.content.user.extensions.userIDs
-import us.neotechnica.panther.modules.content.user.extensions.users
-import us.neotechnica.panther.modules.content.user.extensions.withUser
+import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
-import us.neotechnica.panther.modules.content.user.services.RecipientBarContactSelectionUIService
+import us.neotechnica.panther.modules.content.user.services.recipientbar.RecipientBarService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.networking.common.sortedByLatestMessageSentDate
-import us.neotechnica.panther.modules.networking.common.visibleForCurrentUser
-import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.networking.user.services.UserService
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentNavigatorState
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
-import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
-import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
 
 /**
- * The reducer for starting a new conversation.
+ * The reducer that drives the new chat page.
  *
- * Recipients are chosen through the recipient bar – from the contact
- * suggestions, the contact selector, or by entering a phone number,
- * which resolves to its registered user or an unregistered mock. The
- * current conversation is kept in sync with the selected recipients,
- * and the first message sends through the delivery service and
- * navigates into the resulting conversation.
+ * This page composes a new conversation. The user chooses recipients
+ * through the recipient bar, which [RecipientBarService] drives, and
+ * sends the first message through the page's input bar.
+ *
+ * The page's behavior contract:
+ *
+ * - On appearance, the page configures its toolbar – titling it and
+ *   labeling the done button as Cancel.
+ * - Once the first message is sent, the toolbar updates to reflect the
+ *   now-created conversation: its title becomes the conversation's
+ *   title and the done button is relabeled; the page then navigates
+ *   into that conversation.
+ * - Tapping done dismisses the page.
  */
 class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.Action> {
-    // MARK: - Action
+    // MARK: - Actions
 
+    /** The actions the new chat page can process. */
     sealed interface Action {
+        /** An action that indicates the view appeared. Configures the toolbar. */
         data object ViewAppeared : Action
 
+        /** An action that indicates the view disappeared. Releases the recipient bar and the composed conversation. */
         data object ViewDisappeared : Action
 
+        /** An action that indicates the user tapped the done button. Dismisses the page. */
         data object DoneToolbarButtonTapped : Action
 
-        data class RecipientQueryChanged(
-            val query: String,
-        ) : Action
+        /** An action that indicates the first message was sent. Updates the toolbar to reflect the now-created conversation. */
+        data object FirstMessageSent : Action
 
-        data object RecipientQuerySubmitted : Action
+        /** An action that indicates the user tapped the send button. Sends the entered text as the first message. */
+        data object SendTapped : Action
 
-        data object RecipientBackspaced : Action
-
-        data class SuggestionTapped(
-            val contactPair: ContactPair,
-        ) : Action
-
-        data class RecipientChipTapped(
-            val viewID: String,
-        ) : Action
-
-        data class RemoveRecipientTapped(
-            val viewID: String,
-        ) : Action
-
+        /** An action that indicates the input bar's text changed, carrying the new value. */
         data class InputChanged(
             val text: String,
         ) : Action
 
-        data object SendTapped : Action
-
-        data class HighlightedViewIDChanged(
-            val highlightedViewID: String?,
-        ) : Action
-
+        /** An action that indicates whether the done button is enabled changed, carrying the new value. */
         data class IsDoneToolbarButtonEnabledChanged(
             val isDoneToolbarButtonEnabled: Boolean,
         ) : Action
 
+        /** An action that indicates whether a message send is in flight changed, carrying the new value. */
         data class IsSendingMessageChanged(
             val isSendingMessage: Boolean,
         ) : Action
 
+        /** An action that indicates the outbox changed, carrying whether an entry is still sending. */
         data class MessageOutboxChanged(
             val hasSendingOutboxEntry: Boolean,
         ) : Action
 
-        data class ResolvedContactPairsReturned(
-            val contactPairs: List<ContactPair>,
-        ) : Action
-
-        data class ResolvedConversationReturned(
-            val existingConversationIDKey: String?,
-        ) : Action
-
-        data class SelectedContactPairsChanged(
-            val selectedContactPairs: List<ContactPair>,
-        ) : Action
-
-        data class SendReturned(
-            val conversationIDKey: String,
-        ) : Action
-
+        /** An action that indicates the first message failed to send, carrying the resulting [Exception] and the text to restore. */
         data class SendFailed(
             val exception: Exception,
             val restoredText: String,
+        ) : Action
+
+        /** An action that indicates the first message was sent, carrying the created conversation's key. */
+        data class SendReturned(
+            val conversationIDKey: String,
         ) : Action
     }
 
     // MARK: - State
 
+    /** The state of the new chat page. */
     data class State(
-        val doneToolbarButtonText: String = LocalizedStringKey.Cancel.localized(),
+        /** The text the done button displays. */
+        val doneToolbarButtonText: String = "",
+        /** A Boolean value that indicates whether the first message has been sent. */
+        val hasSentFirstMessage: Boolean = false,
+        /** A Boolean value that indicates whether an outbox entry is still sending. */
         val hasSendingOutboxEntry: Boolean = false,
-        val highlightedViewID: String? = null,
+        /** The text the input bar displays. */
         val inputText: String = "",
+        /** A Boolean value that indicates whether the done button is enabled. */
         val isDoneToolbarButtonEnabled: Boolean = true,
+        /** A Boolean value that indicates whether a message send is in flight. */
         val isSendingMessage: Boolean = false,
-        val navigationTitle: String = LocalizedStringKey.NewMessage.localized(),
-        val recipientQuery: String = "",
-        val resolvedContactPairs: List<ContactPair> = emptyList(),
-        val selectedContactPairs: List<ContactPair> = emptyList(),
+        /** The page's navigation title. */
+        val navigationTitle: String = "",
+        /** A Boolean value that indicates whether the done button uses a bold font. */
         val shouldUseBoldDoneToolbarButton: Boolean = false,
-        val existingConversationIDKey: String? = null,
-    ) {
-        /** The contact suggestions matching [recipientQuery], excluding already-selected recipients. */
-        val suggestions: List<ContactPair>
-            get() =
-                when {
-                    recipientQuery.isBlank() -> emptyList()
-                    recipientQuery.trim() == "0" -> resolvedContactPairs.filter { !it.isSelected }
-                    else -> resolvedContactPairs.queried(recipientQuery)
-                }
-
-        /** Whether the first message can be sent. */
-        val canSend: Boolean
-            get() = selectedContactPairs.isNotEmpty() && inputText.isNotBlank() && !isSendingMessage
-    }
+    )
 
     // MARK: - Reduce
 
-    @Suppress("CyclomaticComplexMethod")
     override fun reduce(
         state: State,
         action: Action,
@@ -171,19 +129,17 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
         when (action) {
             Action.ViewAppeared -> {
                 AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.ACCESS_NEW_CHAT_PAGE)
-                ReduceResult(state, resolveContactPairsEffect())
+                ReduceResult(
+                    state.copy(
+                        doneToolbarButtonText = LocalizedStringKey.Cancel.localized(),
+                        navigationTitle = LocalizedStringKey.NewMessage.localized(),
+                    ),
+                )
             }
 
             Action.ViewDisappeared -> {
-                // Clear the current-conversation pointer only when leaving
-                // without navigating into a chat (e.g. cancel). When the first
-                // message was sent, the page navigated into the created
-                // conversation and the chat now reads this pointer – clearing it
-                // would blank that chat. The recipient-bar reset below emits an
-                // empty selection, so guard it the same way (see
-                // SelectedContactPairsChanged).
-                if (!hasNavigatedToChat()) ConversationSessionService.setCurrentConversation(null)
-                RecipientBarContactSelectionUIService.reset()
+                if (!state.hasSentFirstMessage) ConversationSessionService.setCurrentConversation(null)
+                RecipientBarService.reset()
                 ReduceResult(state)
             }
 
@@ -192,67 +148,21 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
                 ReduceResult(state)
             }
 
-            is Action.RecipientQueryChanged ->
-                ReduceResult(state.copy(recipientQuery = action.query))
+            Action.FirstMessageSent -> reduceFirstMessageSent(state)
 
-            Action.RecipientQuerySubmitted ->
-                ReduceResult(state.copy(recipientQuery = ""), recipientQuerySubmittedEffect(state.recipientQuery))
-
-            Action.RecipientBackspaced ->
-                ReduceResult(state, Effect.fireAndForget { onSuperfluousBackspace() })
-
-            is Action.SuggestionTapped ->
-                ReduceResult(
-                    state.copy(recipientQuery = ""),
-                    Effect.fireAndForget { RecipientBarContactSelectionUIService.selectContactPair(action.contactPair) },
-                )
-
-            is Action.RecipientChipTapped ->
-                ReduceResult(state, Effect.fireAndForget { RecipientBarContactSelectionUIService.toggleIsHighlighted(action.viewID) })
-
-            is Action.RemoveRecipientTapped ->
-                ReduceResult(state, Effect.fireAndForget { RecipientBarContactSelectionUIService.deselectContactPair(action.viewID) })
-
-            is Action.InputChanged ->
-                ReduceResult(state.copy(inputText = action.text))
-
-            Action.SendTapped ->
-                if (!state.canSend) {
-                    ReduceResult(state)
-                } else {
-                    ReduceResult(state.copy(inputText = ""), sendEffect(state.inputText))
-                }
-
-            is Action.HighlightedViewIDChanged ->
-                ReduceResult(state.copy(highlightedViewID = action.highlightedViewID))
+            is Action.InputChanged -> ReduceResult(state.copy(inputText = action.text))
 
             is Action.IsDoneToolbarButtonEnabledChanged ->
                 ReduceResult(state.copy(isDoneToolbarButtonEnabled = action.isDoneToolbarButtonEnabled))
 
-            is Action.IsSendingMessageChanged ->
-                ReduceResult(state.copy(isSendingMessage = action.isSendingMessage))
+            is Action.IsSendingMessageChanged -> ReduceResult(state.copy(isSendingMessage = action.isSendingMessage))
 
-            is Action.MessageOutboxChanged ->
-                ReduceResult(state.copy(hasSendingOutboxEntry = action.hasSendingOutboxEntry))
+            is Action.MessageOutboxChanged -> ReduceResult(state.copy(hasSendingOutboxEntry = action.hasSendingOutboxEntry))
 
-            is Action.ResolvedContactPairsReturned ->
-                ReduceResult(state.copy(resolvedContactPairs = action.contactPairs))
-
-            is Action.ResolvedConversationReturned ->
-                ReduceResult(state.copy(existingConversationIDKey = action.existingConversationIDKey))
-
-            is Action.SelectedContactPairsChanged ->
-                // Ignore the empty selection emitted while the page tears down
-                // after navigating into the sent conversation – resolving it
-                // would reset the current conversation and blank that chat.
-                if (hasNavigatedToChat()) {
-                    ReduceResult(state)
-                } else {
-                    ReduceResult(
-                        state.copy(selectedContactPairs = action.selectedContactPairs),
-                        resolveConversationEffect(action.selectedContactPairs),
-                    )
-                }
+            is Action.SendFailed -> {
+                Logger.log(action.exception, with = AlertType.toast)
+                ReduceResult(state.copy(inputText = action.restoredText))
+            }
 
             is Action.SendReturned -> {
                 DependencyValues.current.navigation.navigate(
@@ -260,124 +170,31 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
                         UserContentRoute.Stack(listOf(UserContentNavigatorState.SeguePath.Chat(action.conversationIDKey))),
                     ),
                 )
-                ReduceResult(state)
+                ReduceResult(state.copy(hasSentFirstMessage = true))
             }
 
-            is Action.SendFailed -> {
-                Logger.log(action.exception, with = AlertType.toast)
-                ReduceResult(state.copy(inputText = action.restoredText))
-            }
+            Action.SendTapped ->
+                if (state.inputText.isBlank() || state.isSendingMessage) {
+                    ReduceResult(state)
+                } else {
+                    ReduceResult(state.copy(inputText = ""), sendEffect(state.inputText))
+                }
         }
 
     // MARK: - Auxiliary
 
-    /**
-     * Whether the page has navigated into a chat – i.e. the first message
-     * was sent and the created conversation is now shown. Teardown work
-     * (clearing the pointer, resolving the emptied selection) must not run
-     * in this case, or it would blank the conversation just opened.
-     */
-    private fun hasNavigatedToChat(): Boolean =
-        DependencyValues.current.navigation.state.value.userContent.stack
-            .lastOrNull() is UserContentNavigatorState.SeguePath.Chat
+    private fun reduceFirstMessageSent(state: State): ReduceResult<State, Action> {
+        val currentConversation = ConversationSessionService.currentConversation ?: return ReduceResult(state)
+        val titleLabelText = ConversationCellViewData.title(currentConversation)
 
-    private fun resolveContactPairsEffect(): Effect<Action> =
-        Effect.run { send ->
-            send(Action.ResolvedContactPairsReturned(resolveContactPairs()))
-        }
-
-    private fun resolveContactPairs(): List<ContactPair> {
-        val knownContactPairs = ContactPairArchiveService.allValues()
-        val visibleConversations =
-            UserSessionService.currentUser
-                ?.conversations
-                ?.visibleForCurrentUser
-                ?.filter { it.users != null }
-        if (knownContactPairs.isEmpty() || visibleConversations == null) return knownContactPairs.uniquedByPhoneNumber
-
-        val knownUserIDs = knownContactPairs.userIDs.toSet()
-        val seenUserIDs = mutableSetOf<String>()
-        val unknownContactPairs =
-            visibleConversations
-                .flatMap { it.users.orEmpty() }
-                .filter { it.id !in knownUserIDs && seenUserIDs.add(it.id) }
-                .map { ContactPair.withUser(it) }
-
-        return (knownContactPairs + unknownContactPairs).uniquedByPhoneNumber
+        return ReduceResult(
+            state.copy(
+                doneToolbarButtonText = LocalizedStringKey.Done.localized(LocalizationSource.SUBSYSTEM),
+                navigationTitle = titleLabelText,
+                shouldUseBoldDoneToolbarButton = true,
+            ),
+        )
     }
-
-    private fun recipientQuerySubmittedEffect(text: String): Effect<Action> =
-        Effect.fireAndForget {
-            if (text.isBlank()) {
-                RecipientBarContactSelectionUIService.unhighlightAllViews()
-                if (RecipientBarContactSelectionUIService.selectedContactPairs.value.any { it.isMock }) {
-                    RecipientBarContactSelectionUIService.deselectMockContactPairs()
-                }
-                return@fireAndForget
-            }
-
-            val phoneNumber = PhoneNumber(text)
-            val sanitizedLength =
-                text
-                    .replace("-", "")
-                    .replace("+", "")
-                    .trim()
-                    .length
-            val isPhoneNumber = phoneNumber.compiledNumberString.length > 1 && text.digits.length == sanitizedLength
-            if (!isPhoneNumber) {
-                RecipientBarContactSelectionUIService.selectContactPair(ContactPair.mock(withName = text))
-                return@fireAndForget
-            }
-
-            try {
-                val user = UserService.getUser(phoneNumber)
-                RecipientBarContactSelectionUIService.selectContactPair(user.contactPair ?: ContactPair.withUser(user))
-            } catch (exception: Exception) {
-                Logger.log(exception)
-                RecipientBarContactSelectionUIService.selectContactPair(ContactPair.mock(withName = text))
-            }
-        }
-
-    private fun onSuperfluousBackspace() {
-        val lastContactPair = RecipientBarContactSelectionUIService.selectedContactPairs.value.lastOrNull() ?: return
-        val lastViewID = lastContactPair.contact.encodedHash
-        if (RecipientBarContactSelectionUIService.isHighlighted(lastViewID)) {
-            RecipientBarContactSelectionUIService.deselectContactPair(lastViewID)
-        } else {
-            RecipientBarContactSelectionUIService.toggleIsHighlighted(lastViewID)
-        }
-    }
-
-    private fun resolveConversationEffect(selectedContactPairs: List<ContactPair>): Effect<Action> =
-        Effect.run { send ->
-            val userIDs = selectedContactPairs.userIDs
-            val users = selectedContactPairs.users
-            val sortedUserIDs = userIDs.sorted()
-            val existingConversation =
-                UserSessionService.currentUser
-                    ?.conversations
-                    ?.visibleForCurrentUser
-                    ?.filter { it.users != null }
-                    ?.sortedByLatestMessageSentDate
-                    ?.firstOrNull { conversation ->
-                        val conversationUserIDs =
-                            conversation.users
-                                .orEmpty()
-                                .map { it.id }
-                                .sorted()
-                        conversationUserIDs == sortedUserIDs
-                    }
-
-            val conversation =
-                when {
-                    existingConversation != null -> existingConversation
-                    selectedContactPairs.isEmpty() -> Conversation.empty
-                    selectedContactPairs.all { it.isMock } -> Conversation.empty(withUsers = users)
-                    else -> Conversation.mock(withUsers = users)
-                }
-            ConversationSessionService.setCurrentConversation(conversation)
-            send(Action.ResolvedConversationReturned(existingConversation?.id?.key))
-        }
 
     private fun sendEffect(text: String): Effect<Action> =
         Effect.run { send ->
@@ -385,6 +202,7 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
                 MessageDeliveryService.sendTextMessage(text)
                 val conversationIDKey = ConversationSessionService.currentConversation?.id?.key
                 if (conversationIDKey != null) {
+                    send(Action.FirstMessageSent)
                     send(Action.SendReturned(conversationIDKey))
                 } else {
                     send(Action.SendFailed(Exception("No conversation resolved.", metadata = ExceptionMetadata(this)), text))

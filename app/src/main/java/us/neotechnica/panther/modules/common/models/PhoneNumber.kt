@@ -8,6 +8,8 @@
 
 package us.neotechnica.panther.modules.common.models
 
+import com.google.i18n.phonenumbers.NumberParseException
+import com.google.i18n.phonenumbers.PhoneNumberUtil
 import us.neotechnica.panther.modules.common.services.PhoneNumberService
 import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
@@ -17,36 +19,43 @@ import us.neotechnica.panther.networking.modules.common.interfaces.SerializableD
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.EncodedHashable
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 
 /**
- * A phone number decomposed into its calling code, national
- * number, and region.
+ * A phone number decomposed into its calling code, national number,
+ * and region.
  *
- * [PhoneNumber] is the app's canonical phone number
- * representation. Create phone numbers from raw components; the
- * calling code and national number are reduced to their digits.
+ * [PhoneNumber] is the app's canonical phone number representation.
+ * Its [compiledNumberString] identifies a number across the app, such
+ * as when matching contacts to registered users.
  *
- * **Important:** Equality and hashing derive from [hashFactors],
- * which include the number's [label] and [internalFormattedString]
- * in addition to its digits. A phone number decoded from the wire
- * carries `null` for both, so it can hash differently from the
- * local instance that produced it.
+ * Create phone numbers from raw components or from a string; the
+ * string factory derives the calling code and region using the
+ * device's region and number length validation.
+ *
+ * Every stored property is immutable except the per-region formatted
+ * string cache, which is lock-isolated; a phone number can therefore
+ * be formatted concurrently from any thread.
+ *
+ * **Important:** Equality and hashing derive from [hashFactors], which
+ * include the number's [label] and [internalFormattedString] in
+ * addition to its digits. Two phone numbers with the same digits but
+ * different labels are not equal.
  */
 class PhoneNumber(
     callingCode: String,
     nationalNumberString: String,
     /** The code of the region the number belongs to. */
     val regionCode: String,
-    /** The label associated with the number, or `null`. */
-    val label: String?,
+    label: String?,
     /**
      * The system-provided international format of the number, or
-     * `null`.
+     * `null`. Used as a formatting fallback.
      */
     val internalFormattedString: String?,
 ) : Serializable<Map<String, Any?>>,
     EncodedHashable {
-    // MARK: - Type Aliases
+    // MARK: - Types
 
     private enum class Keys(
         val rawValue: String,
@@ -56,27 +65,39 @@ class PhoneNumber(
         REGION_CODE("regionCode"),
     }
 
+    /** A formatted string, cached alongside the code of the region it was formatted for. */
+    private class FormattedStringCacheEntry(
+        val formattedString: String,
+        val regionCode: String,
+    )
+
     // MARK: - Properties
 
     /** The number's calling code, containing digits only. */
     val callingCode: String = callingCode.digits
 
+    /** The label associated with the number, such as Home or Mobile, or `null`. */
+    val label: String? = label?.trim()
+
     /** The number's national portion, containing digits only. */
     val nationalNumberString: String = nationalNumberString.digits
+
+    private val formattedStringCache = LockIsolated<FormattedStringCacheEntry?>(null)
 
     // MARK: - Computed Properties
 
     /**
-     * The number's compiled number string: its calling code followed
-     * by its national number, containing digits only.
+     * The number's compiled number string.
+     *
+     * A compiled number string is a phone number's calling code
+     * followed by its national number, containing digits only.
      */
     val compiledNumberString: String get() = callingCode + nationalNumberString
 
     /**
      * The serialized representation of the phone number.
      *
-     * The [label] and [internalFormattedString] are not
-     * serialized.
+     * The [label] and [internalFormattedString] are not serialized.
      */
     override val encoded: Map<String, Any?>
         get() =
@@ -86,6 +107,13 @@ class PhoneNumber(
                 Keys.REGION_CODE.rawValue to regionCode,
             )
 
+    /**
+     * The strings that collectively define this instance's identity
+     * for hashing purposes, sorted alphabetically.
+     *
+     * Contains the calling code, national number, region code, label,
+     * and internal formatted string.
+     */
     override val hashFactors: List<String>
         get() =
             listOf(
@@ -95,6 +123,124 @@ class PhoneNumber(
                 nationalNumberString,
                 regionCode,
             ).sorted()
+
+    // MARK: - Formatted Strings
+
+    /**
+     * Returns the number formatted for display, prefixed with its
+     * calling code.
+     *
+     * The formatted result is cached per region; formatting again for
+     * the same region returns the cached string. The cache is
+     * lock-isolated, so this method is safe to call concurrently.
+     *
+     * @param regionCode The code of the region whose formatting
+     *   conventions to use. Pass `null` to use the number's region.
+     *
+     * @return The formatted number, prefixed with `+` and the calling
+     *   code.
+     */
+    fun formattedString(regionCode: String? = null): String {
+        val resolvedRegionCode = regionCode ?: this.regionCode
+
+        formattedStringCache.wrappedValue
+            ?.takeIf { it.regionCode == resolvedRegionCode }
+            ?.let { return it.formattedString }
+
+        val partiallyFormatted = partiallyFormatted(resolvedRegionCode)
+
+        if (partiallyFormatted.digits.startsWith(callingCode)) {
+            if (partiallyFormatted.startsWith("+")) return partiallyFormatted
+            return "+${partiallyFormatted.trimStart()}"
+        }
+
+        val formattedString = "+$callingCode ${partiallyFormatted.trimStart()}"
+        formattedStringCache.wrappedValue = FormattedStringCacheEntry(formattedString, resolvedRegionCode)
+
+        return formattedString
+    }
+
+    /**
+     * Returns the national number formatted for the given region's
+     * conventions, without a calling code prefix.
+     *
+     * @param regionCode The code of the region whose formatting
+     *   conventions to use. Pass `null` to use the number's region.
+     *
+     * @return The formatted national number.
+     */
+    fun partiallyFormatted(regionCode: String? = null): String {
+        val resolvedRegionCode = regionCode ?: this.regionCode
+
+        val partialNumberString = nationalNumberString.ifEmpty { compiledNumberString }
+        if (partialNumberString.isEmpty()) return partialNumberString
+
+        var fullFormatAttempt = formattedString(regionCode = resolvedRegionCode, includeCallingCode = false)
+
+        val regionCallingCode = RegionDetailService.callingCode(resolvedRegionCode) ?: return fullFormatAttempt
+
+        if (fullFormatAttempt != failsafeFormat(partialNumberString)) {
+            if (!fullFormatAttempt.startsWith("+$regionCallingCode")) {
+                return formatPartial(partialNumberString, resolvedRegionCode)
+            }
+
+            fullFormatAttempt = fullFormatAttempt.replace("+$regionCallingCode", "")
+            return fullFormatAttempt.trim()
+        }
+
+        return formatPartial(partialNumberString, resolvedRegionCode)
+    }
+
+    private fun failsafeFormat(numberString: String): String {
+        val digits = numberString.digits
+        val evenDigits = digits.length % 2 == 0
+
+        val formattedString = StringBuilder()
+        for ((index, character) in digits.withIndex()) {
+            when {
+                index == 0 -> formattedString.append(character)
+                index % 2 != 0 -> formattedString.append(if (evenDigits) "" else " ").append(character)
+                else -> formattedString.append(if (evenDigits) " " else "").append(character)
+            }
+        }
+
+        return formattedString.toString().trim()
+    }
+
+    private fun formatPartial(
+        numberString: String,
+        regionCode: String,
+    ): String {
+        val formatter = PhoneNumberUtil.getInstance().getAsYouTypeFormatter(regionCode.uppercase())
+        var formatted = ""
+        for (character in numberString.digits) formatted = formatter.inputDigit(character)
+        return formatted.trim()
+    }
+
+    private fun formattedString(
+        regionCode: String,
+        includeCallingCode: Boolean,
+    ): String {
+        if (callingCode == "1" && internalFormattedString?.contains("+") == true) {
+            return internalFormattedString
+        }
+
+        val fallbackFormatted = failsafeFormat(compiledNumberString)
+
+        return try {
+            val utility = PhoneNumberUtil.getInstance()
+            val parsed = utility.parse(nationalNumberString, regionCode.uppercase())
+            val format =
+                if (includeCallingCode) {
+                    PhoneNumberUtil.PhoneNumberFormat.INTERNATIONAL
+                } else {
+                    PhoneNumberUtil.PhoneNumberFormat.NATIONAL
+                }
+            utility.format(parsed, format) ?: internalFormattedString ?: fallbackFormatted
+        } catch (_: NumberParseException) {
+            internalFormattedString ?: fallbackFormatted
+        }
+    }
 
     // MARK: - Equatable Conformance
 
@@ -212,7 +358,7 @@ class PhoneNumber(
                 callingCode = resolvedCallingCode,
                 nationalNumberString = numberValue,
                 regionCode = regionCode ?: deviceRegionCode,
-                label = label?.trim(),
+                label = label,
                 internalFormattedString = null,
             )
         }

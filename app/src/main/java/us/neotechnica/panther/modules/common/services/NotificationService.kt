@@ -16,7 +16,6 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
-import us.neotechnica.panther.modules.common.extensions.formattedString
 import us.neotechnica.panther.modules.common.extensions.notRegisteredForPushNotifications
 import us.neotechnica.panther.modules.common.extensions.stalePushToken
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID

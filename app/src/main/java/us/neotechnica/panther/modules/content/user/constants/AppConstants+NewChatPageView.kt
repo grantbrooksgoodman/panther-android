@@ -14,27 +14,15 @@ import androidx.compose.ui.unit.dp
 // MARK: - Float
 
 object NewChatPageViewFloats {
-    val addButtonGlyphSize: Dp = 18.dp
-    val addButtonSize: Dp = 28.dp
-    val addButtonStartPadding: Dp = 6.dp
-    val chipRemoveIconSize: Dp = 12.dp
-    val chipRemoveIconStartPadding: Dp = 4.dp
-    val chipSpacing: Dp = 6.dp
-    val fieldMinWidth: Dp = 120.dp
-    val fieldVerticalPadding: Dp = 4.dp
-    val headerHorizontalPadding: Dp = 16.dp
-    val headerVerticalPadding: Dp = 12.dp
-    val recipientBarBottomPadding: Dp = 8.dp
-    val recipientBarCornerRadius: Dp = 20.dp
-    val recipientBarEndPadding: Dp = 6.dp
-    val recipientBarHorizontalPadding: Dp = 16.dp
-    val recipientBarStartPadding: Dp = 14.dp
-    val recipientBarTopPadding: Dp = 8.dp
-    val recipientBarVerticalPadding: Dp = 4.dp
-    val recipientChipEndPadding: Dp = 6.dp
-    val recipientChipStartPadding: Dp = 10.dp
-    val recipientChipVerticalPadding: Dp = 4.dp
-    val toLabelEndPadding: Dp = 6.dp
+    val doneToolbarButtonFrameHeight: Dp = 30.dp
+    val doneToolbarButtonFrameWidth: Dp = 30.dp
 
-    const val CHIP_BACKGROUND_ALPHA = 0.15f
+    val navigationBarHeightIncrement: Dp = 20.dp
+}
+
+// MARK: - String
+
+object NewChatPageViewConstants {
+    const val CANCEL_TOOLBAR_BUTTON_IMAGE_SYSTEM_NAME = "xmark"
+    const val DONE_TOOLBAR_BUTTON_IMAGE_SYSTEM_NAME = "checkmark"
 }

@@ -13,38 +13,40 @@ import android.net.Uri
 import android.provider.ContactsContract
 import us.neotechnica.panther.bundle.contactPairArchiveService
 import us.neotechnica.panther.bundle.contacts
+import us.neotechnica.panther.bundle.conversationCellViewData
+import us.neotechnica.panther.bundle.queriedContactPairs
 import us.neotechnica.panther.modules.common.contacts.models.DeviceContact
 import us.neotechnica.panther.modules.common.extensions.ContactPairArchiveServiceStorageKey
 import us.neotechnica.panther.modules.common.extensions.emptyContactList
 import us.neotechnica.panther.modules.common.models.Contact
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.models.NumberPair
-import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.common.services.PermissionService
 import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.content.user.extensions.uniquedByPhoneNumber
 import us.neotechnica.panther.modules.content.user.extensions.userIDs
 import us.neotechnica.panther.modules.content.user.extensions.withUser
-import us.neotechnica.panther.modules.content.user.models.ConversationCellViewDataCache
-import us.neotechnica.panther.modules.content.user.models.QueriedContactPairCache
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.networking.user.services.UserService
 import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
+import us.neotechnica.panther.subsystem.modules.foundation.models.CacheDomain
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.models.SingleSlotCoalescer
+import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 
 /**
- * Matches the user's device contacts with registered users.
+ * Use [ContactService] to match the user's device contacts with
+ * registered users.
  *
- * Queries the device's address book for contacts whose phone numbers
- * belong to registered users, maintains the contact pair archive with
- * the results, and caches the fetched contacts in memory.
+ * The service queries the device's address book for contacts whose
+ * phone numbers belong to registered users, maintains the contact pair
+ * archive with the results, and caches the fetched contacts in memory.
  */
 object ContactService {
     // MARK: - Properties
@@ -72,13 +74,15 @@ object ContactService {
      * Rebuilds the contact pair archive by matching every registered
      * user against the device's contacts.
      *
-     * Fetches all registered users, queries the device's address book
-     * for contacts matching their phone numbers, and replaces the
-     * archive's contents with the results. Users without a matching
-     * device contact are persisted separately to the unknown contact
-     * pair archive. Related caches are cleared before the archive is
-     * repopulated. If no device contact matches any registered user,
-     * this method returns without modifying the archive.
+     * This method fetches all registered users, queries the device's
+     * address book for contacts matching their phone numbers, and
+     * replaces the archive's contents with the results. Users without a
+     * matching device contact are persisted separately to the unknown
+     * contact pair archive. Related caches are cleared before the
+     * archive is repopulated.
+     *
+     * If no device contact matches any registered user, this method
+     * returns without modifying the archive.
      *
      * Concurrent calls coalesce onto a single in-flight sync.
      *
@@ -130,8 +134,12 @@ object ContactService {
             val users = UserService.getAllUsers()
             val contactPairs = fetchContactPairs(users)
 
-            ConversationCellViewDataCache.clearCache()
-            QueriedContactPairCache.clearCache()
+            CoreUtilities.clearCaches(
+                listOf(
+                    CacheDomain.conversationCellViewData,
+                    CacheDomain.queriedContactPairs,
+                ),
+            )
 
             contactPairArchive.clearArchive()
             contactPairArchive.addValues(contactPairs)
@@ -159,9 +167,39 @@ object ContactService {
             throw Exception("Not authorized for contacts.", isReportable = false, metadata = ExceptionMetadata(this))
         }
 
-        val matchedDeviceContacts = mutableListOf<DeviceContact>()
+        val deviceContacts = DeviceContactReader.read(resolver)
+        val contactPairs = contactPairs(users, deviceContacts)
+
+        val matchedDeviceContacts = deviceContacts.filter { deviceContact -> contactPairs.any { it.contact.id == deviceContact.id } }
+        cachedDeviceContacts.wrappedValue = ((cachedDeviceContacts.wrappedValue ?: emptyList()) + matchedDeviceContacts).distinct()
+
+        if (contactPairs.isEmpty()) {
+            throw Exception("Empty contact list.", isReportable = false, metadata = ExceptionMetadata(this))
+        }
+
+        return contactPairs
+    }
+
+    /**
+     * Pairs every device contact whose numbers match a registered user
+     * with the users it matches.
+     *
+     * Each matching user contributes a number pair; a contact matched by
+     * several users carries their pairs de-duplicated and sorted by
+     * calling code. The result is unique, sorted by first name, and
+     * de-duplicated by phone number.
+     *
+     * @param users The registered users to match.
+     * @param deviceContacts The device contacts to match against.
+     *
+     * @return The matched contact pairs.
+     */
+    internal fun contactPairs(
+        users: List<User>,
+        deviceContacts: List<DeviceContact>,
+    ): List<ContactPair> {
         val contactPairs =
-            DeviceContactReader.read(resolver).mapNotNull { deviceContact ->
+            deviceContacts.mapNotNull { deviceContact ->
                 val numberPairs =
                     users
                         .filter { deviceContact.matches(it.phoneNumber) }
@@ -170,7 +208,6 @@ object ContactService {
                         .sortedBy { it.phoneNumber.callingCode }
                 if (numberPairs.isEmpty()) return@mapNotNull null
 
-                matchedDeviceContacts.add(deviceContact)
                 val (firstName, lastName) = ContactNameService.name(deviceContact)
                 ContactPair(
                     contact =
@@ -179,30 +216,12 @@ object ContactService {
                             firstName = firstName,
                             lastName = lastName,
                             phoneNumbers = deviceContact.phoneNumbers,
-                            imageData = null,
+                            imageData = deviceContact.imageData,
                         ),
                     numberPairs = numberPairs,
                 )
             }
 
-        cachedDeviceContacts.wrappedValue = ((cachedDeviceContacts.wrappedValue ?: emptyList()) + matchedDeviceContacts).distinct()
-
-        if (contactPairs.isEmpty()) {
-            throw Exception("Empty contact list.", isReportable = false, metadata = ExceptionMetadata(this))
-        }
-
         return contactPairs.distinct().sortedBy { it.contact.firstName }.uniquedByPhoneNumber
-    }
-
-    private fun DeviceContact.matches(phoneNumber: PhoneNumber): Boolean {
-        val compiledNumberString = phoneNumber.compiledNumberString
-        val nationalNumberString = phoneNumber.nationalNumberString
-        return phoneNumbers.any { number ->
-            val numberCompiledNumberString = number.compiledNumberString
-            numberCompiledNumberString == compiledNumberString ||
-                (nationalNumberString.isNotEmpty() && number.nationalNumberString == nationalNumberString) ||
-                (compiledNumberString.isNotEmpty() && numberCompiledNumberString.endsWith(compiledNumberString)) ||
-                (nationalNumberString.isNotEmpty() && numberCompiledNumberString.endsWith(nationalNumberString))
-        }
     }
 }

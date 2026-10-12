@@ -98,12 +98,10 @@ fun ChatPageView(
     val viewModel = remember { buildChatPageViewModel() }
 
     DisposableEffect(Unit) {
-        if (!embedded) ChatPageStateService.setIsPresented(true)
+        ChatPageStateService.setIsPresented(true)
         onDispose {
-            if (!embedded) {
-                ChatPageStateService.setIsPresented(false)
-                viewModel.send(ChatPageReducer.Action.ViewDisappeared)
-            }
+            ChatPageStateService.setIsPresented(false)
+            if (!embedded) viewModel.send(ChatPageReducer.Action.ViewDisappeared)
             viewModel.close()
         }
     }

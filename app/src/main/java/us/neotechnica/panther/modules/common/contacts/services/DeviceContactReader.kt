@@ -10,6 +10,7 @@ package us.neotechnica.panther.modules.common.contacts.services
 
 import android.content.ContentResolver
 import android.database.Cursor
+import android.net.Uri
 import android.provider.ContactsContract
 import us.neotechnica.panther.modules.common.contacts.models.DeviceContact
 import us.neotechnica.panther.modules.common.models.PhoneNumber
@@ -18,9 +19,9 @@ import us.neotechnica.panther.modules.common.models.PhoneNumber
  * Reads the device's address book, grouping its records by contact
  * identifier.
  *
- * Collects phone numbers, structured names, nicknames, and
- * organization names, and assembles a [DeviceContact] for every
- * contact that has at least one phone number.
+ * Collects phone numbers, thumbnail images, structured names,
+ * nicknames, and organization names, and assembles a [DeviceContact]
+ * for every contact that has at least one phone number.
  */
 internal object DeviceContactReader {
     // MARK: - Types
@@ -37,18 +38,23 @@ internal object DeviceContactReader {
         val phoneticOrganizationName: String = "",
     )
 
+    private class PhoneRecords(
+        val phoneNumbers: MutableList<PhoneNumber> = mutableListOf(),
+        var photoThumbnailURI: String? = null,
+    )
+
     // MARK: - Read
 
     /** Returns every device contact that has at least one phone number. */
     fun read(resolver: ContentResolver): List<DeviceContact> {
-        val phoneNumbersForContactIDs = readPhoneNumbers(resolver)
-        if (phoneNumbersForContactIDs.isEmpty()) return emptyList()
+        val phoneRecordsForContactIDs = readPhoneRecords(resolver)
+        if (phoneRecordsForContactIDs.isEmpty()) return emptyList()
 
         val nameFieldsForContactIDs = readNameFields(resolver)
         val nicknamesForContactIDs = readNicknames(resolver)
         val organizationFieldsForContactIDs = readOrganizationFields(resolver)
 
-        return phoneNumbersForContactIDs.map { (contactID, phoneNumbers) ->
+        return phoneRecordsForContactIDs.map { (contactID, phoneRecords) ->
             val nameFields = nameFieldsForContactIDs[contactID] ?: NameFields()
             val organizationFields = organizationFieldsForContactIDs[contactID] ?: OrganizationFields()
             DeviceContact(
@@ -60,31 +66,45 @@ internal object DeviceContactReader {
                 nickname = nicknamesForContactIDs[contactID] ?: "",
                 organizationName = organizationFields.organizationName,
                 phoneticOrganizationName = organizationFields.phoneticOrganizationName,
-                phoneNumbers = phoneNumbers,
+                phoneNumbers = phoneRecords.phoneNumbers.distinct(),
+                imageData = phoneRecords.photoThumbnailURI?.let { readImageData(resolver, it) },
             )
         }
     }
 
     // MARK: - Auxiliary
 
-    private fun readPhoneNumbers(resolver: ContentResolver): Map<String, List<PhoneNumber>> {
+    private fun readPhoneRecords(resolver: ContentResolver): Map<String, PhoneRecords> {
         val projection =
             arrayOf(
                 ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
                 ContactsContract.CommonDataKinds.Phone.NUMBER,
                 ContactsContract.CommonDataKinds.Phone.LABEL,
+                ContactsContract.CommonDataKinds.Phone.PHOTO_THUMBNAIL_URI,
             )
 
-        val phoneNumbersForContactIDs = linkedMapOf<String, MutableList<PhoneNumber>>()
+        val phoneRecordsForContactIDs = linkedMapOf<String, PhoneRecords>()
         query(resolver, ContactsContract.CommonDataKinds.Phone.CONTENT_URI, projection, null) { cursor ->
             val contactID = cursor.string(ContactsContract.CommonDataKinds.Phone.CONTACT_ID) ?: return@query
             val number = cursor.string(ContactsContract.CommonDataKinds.Phone.NUMBER) ?: return@query
             if (number.isBlank()) return@query
             val label = cursor.string(ContactsContract.CommonDataKinds.Phone.LABEL)
-            phoneNumbersForContactIDs.getOrPut(contactID) { mutableListOf() }.add(PhoneNumber(number, label))
+            val records = phoneRecordsForContactIDs.getOrPut(contactID) { PhoneRecords() }
+            records.phoneNumbers.add(PhoneNumber(number, label))
+            if (records.photoThumbnailURI == null) {
+                records.photoThumbnailURI = cursor.string(ContactsContract.CommonDataKinds.Phone.PHOTO_THUMBNAIL_URI)
+            }
         }
-        return phoneNumbersForContactIDs.mapValues { (_, numbers) -> numbers.distinct() }
+        return phoneRecordsForContactIDs
     }
+
+    private fun readImageData(
+        resolver: ContentResolver,
+        photoThumbnailURI: String,
+    ): ByteArray? =
+        runCatching {
+            resolver.openInputStream(Uri.parse(photoThumbnailURI))?.use { it.readBytes() }
+        }.getOrNull()?.takeIf { it.isNotEmpty() }
 
     private fun readNameFields(resolver: ContentResolver): Map<String, NameFields> {
         val projection =
@@ -147,7 +167,7 @@ internal object DeviceContactReader {
 
     private inline fun query(
         resolver: ContentResolver,
-        uri: android.net.Uri,
+        uri: Uri,
         projection: Array<String>,
         selection: Pair<String, Array<String>>?,
         onRow: (Cursor) -> Unit,

@@ -15,34 +15,45 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import androidx.compose.ui.text.style.TextAlign
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.models.FlagImage
+import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.content.user.constants.UserInfoBadgeViewColors
 import us.neotechnica.panther.modules.content.user.constants.UserInfoBadgeViewFloats
 import us.neotechnica.panther.modules.networking.user.models.User
+import androidx.compose.material3.Text as Material3Text
+
+// MARK: - Constants Accessors
+
+private typealias BadgeColors = UserInfoBadgeViewColors
+private typealias BadgeFloats = UserInfoBadgeViewFloats
 
 /**
  * A badge displaying a user's language code and regional flag.
  *
  * Use [UserInfoBadgeView] alongside a user's name to indicate their
  * language and region. The flag is resolved from the user's region
- * code; when given an action, the badge becomes a button.
+ * code, falling back to their language code; when given an action, the
+ * badge becomes a button.
  *
  * @param user The user the badge describes.
  * @param action The action performed when the user taps the badge, or
@@ -54,50 +65,75 @@ fun UserInfoBadgeView(
     action: (() -> Unit)? = null,
 ) {
     val colors = LocalPantherColors.current
-    val isDark = ThemeService.isDarkModeActive(isSystemInDarkTheme())
-    val bodyColor = if (isDark) UserInfoBadgeViewColors.bodyDarkForeground else UserInfoBadgeViewColors.bodyLightForeground
+    val isDarkModeActive = ThemeService.isDarkModeActive(isSystemInDarkTheme())
+    val bodyColor = if (isDarkModeActive) BadgeColors.bodyDarkForeground else BadgeColors.bodyLightForeground
 
     val context = LocalContext.current
     val flagImage =
         remember(user.phoneNumber.regionCode, user.languageCode) {
-            FlagImage.named(user.phoneNumber.regionCode, context) ?: FlagImage.named(user.languageCode, context)
+            RegionDetailService.image(RegionDetailService.QueryStrategy.RegionCode(user.phoneNumber.regionCode))
+                ?: FlagImage.named(user.languageCode, context)
         }
 
     Box(
         contentAlignment = Alignment.Center,
         modifier =
             Modifier
-                .then(if (action != null) Modifier.clickable(onClick = action) else Modifier)
-                .widthIn(max = UserInfoBadgeViewFloats.bodyMaxWidth)
-                .clip(RoundedCornerShape(UserInfoBadgeViewFloats.bodyCornerRadius))
+                .widthIn(max = BadgeFloats.bodyMaxWidth)
+                .heightIn(max = BadgeFloats.bodyMaxHeight)
+                .clip(RoundedCornerShape(BadgeFloats.bodyCornerRadius))
                 .background(bodyColor)
-                .padding(
-                    horizontal = UserInfoBadgeViewFloats.labelViewHorizontalPadding,
-                    vertical = UserInfoBadgeViewFloats.labelViewVerticalPadding,
-                ),
+                .then(if (action != null) Modifier.clickable(onClick = action) else Modifier),
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(UserInfoBadgeViewFloats.labelViewHStackSpacing),
+            horizontalArrangement = Arrangement.spacedBy(BadgeFloats.labelViewHStackSpacing),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Components.Text(
-                user.languageCode.uppercase(),
-                foregroundColor = colors.subtitleText,
-                font = Font.systemSemibold(FontScale.Small),
-            )
-
-            flagImage?.let {
-                Image(
-                    painter = painterResource(it.resourceID),
-                    contentDescription = null,
-                    contentScale = ContentScale.FillBounds,
-                    modifier =
-                        Modifier
-                            .size(
-                                width = UserInfoBadgeViewFloats.labelViewImageFrameWidth,
-                                height = UserInfoBadgeViewFloats.labelViewImageFrameHeight,
-                            ).clip(RoundedCornerShape(UserInfoBadgeViewFloats.labelViewImageCornerRadius)),
+            // The label's frame is narrower than its glyphs, so the text is
+            // drawn unclipped and centred over the frame as SwiftUI does.
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier =
+                    Modifier
+                        .size(width = BadgeFloats.labelViewTextFrameWidth, height = BadgeFloats.labelViewTextFrameHeight)
+                        .wrapContentSize(unbounded = true)
+                        .alpha(BadgeFloats.LABEL_VIEW_TEXT_OPACITY),
+            ) {
+                Material3Text(
+                    text = user.languageCode.uppercase(),
+                    color = colors.titleText,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    softWrap = false,
+                    style =
+                        Font.systemSemibold(FontScale.Small).textStyle.copy(
+                            shadow =
+                                Shadow(
+                                    color = BadgeColors.labelViewTextShadow,
+                                    blurRadius = BadgeFloats.LABEL_VIEW_TEXT_SHADOW_RADIUS,
+                                ),
+                        ),
                 )
+            }
+
+            Box(
+                modifier =
+                    Modifier
+                        .size(width = BadgeFloats.labelViewImageFrameWidth, height = BadgeFloats.labelViewImageFrameHeight)
+                        .clip(RoundedCornerShape(BadgeFloats.labelViewImageCornerRadius)),
+            ) {
+                flagImage?.let {
+                    Image(
+                        painter = painterResource(it.resourceID),
+                        contentDescription = null,
+                        contentScale = ContentScale.FillBounds,
+                        modifier =
+                            Modifier.size(
+                                width = BadgeFloats.labelViewImageFrameWidth,
+                                height = BadgeFloats.labelViewImageFrameHeight,
+                            ),
+                    )
+                }
             }
         }
     }

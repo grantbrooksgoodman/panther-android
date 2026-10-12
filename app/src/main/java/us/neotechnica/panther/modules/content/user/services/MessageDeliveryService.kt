@@ -13,11 +13,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.services.HapticsService
 import us.neotechnica.panther.modules.content.user.extensions.isMock
+import us.neotechnica.panther.modules.content.user.extensions.uniquedByID
+import us.neotechnica.panther.modules.content.user.extensions.users
 import us.neotechnica.panther.modules.content.user.models.ContextMenuInteraction
 import us.neotechnica.panther.modules.content.user.models.MessageDeliveryServiceEffectID
+import us.neotechnica.panther.modules.content.user.services.recipientbar.RecipientBarService
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.user.models.User
@@ -65,18 +69,20 @@ object MessageDeliveryService {
     private val conversation: Conversation?
         get() = ConversationSessionService.currentConversation
 
+    private val conversationContext: Pair<Conversation?, Boolean>
+        get() = (if (conversation?.isMock ?: true) null else conversation) to isPenPalsConversation
+
     private val isExistingConversation: Boolean
         get() = conversation != null && conversation?.isMock != true
 
-    private val selectedContactPairUsers: List<User>
-        get() =
-            RecipientBarContactSelectionUIService
-                .selectedContactPairs
-                .value
-                .flatMap { contactPair -> contactPair.numberPairs.flatMap { it.users } }
+    private val isPenPalsConversation: Boolean
+        get() = conversation?.metadata?.isPenPalsConversation == true
+
+    private val selectedContactPairs: List<ContactPair>
+        get() = RecipientBarService.contactSelectionUI.selectedContactPairs.value
 
     private val users: List<User>
-        get() = (conversation?.users?.takeIf { it.isNotEmpty() } ?: selectedContactPairUsers).distinctBy { it.id }
+        get() = (conversation?.users ?: selectedContactPairs.users).uniquedByID
 
     // MARK: - Add Effect
 
@@ -150,12 +156,13 @@ object MessageDeliveryService {
         beginSend()
 
         try {
+            val (contextConversation, contextIsPenPalsConversation) = conversationContext
             val updated =
                 MessageSessionService.sendTextMessage(
                     text = text.trimEnd(),
                     toUsers = recipients,
-                    inConversation = currentConversation?.takeUnless { it.isMock },
-                    isPenPalsConversation = currentConversation?.metadata?.isPenPalsConversation ?: false,
+                    inConversation = contextConversation,
+                    isPenPalsConversation = contextIsPenPalsConversation,
                 )
             outboxEntryID?.let { MessageOutboxService.remove(it) }
             AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.SEND_TEXT_MESSAGE)
@@ -191,38 +198,40 @@ object MessageDeliveryService {
         val currentUser = UserSessionService.currentUser
         var outboxEntryID: String? = null
         if (isExistingConversation && currentConversation != null && currentUser != null) {
-            val stagedFileName =
-                mediaFile.localPathFile?.let { MessageOutboxService.storePayloadFile(from = it) } ?: return
-            val entry =
-                OutboxEntry(
-                    id = "${OutboxEntry.ID_PREFIX}${UUID.randomUUID()}",
-                    conversationIDKey = currentConversation.id.key,
-                    fromAccountID = currentUser.id,
-                    recipientUserIDs = recipients.map { it.id },
-                    payload = OutboxEntry.Payload.Media(stagedFileName, mediaFile.fileExtension),
-                    isPenPalsConversation = currentConversation.metadata.isPenPalsConversation,
-                    createdDate = Date(),
-                    attemptCount = 1,
-                    lastAttemptDate = Date(),
-                    reservedRemoteID = null,
-                    state = OutboxEntry.State.SENDING,
-                    transcription = null,
-                )
-            outboxEntryID = entry.id
-            MessageOutboxService.enqueue(entry)
+            val stagedFileName = mediaFile.localPathFile?.let { MessageOutboxService.storePayloadFile(from = it) }
+            if (stagedFileName == null) {
+                Logger.log(Exception("Failed to stage media payload.", metadata = ExceptionMetadata(this)))
+            } else {
+                val entry =
+                    OutboxEntry(
+                        id = "${OutboxEntry.ID_PREFIX}${UUID.randomUUID()}",
+                        conversationIDKey = currentConversation.id.key,
+                        fromAccountID = currentUser.id,
+                        recipientUserIDs = recipients.map { it.id },
+                        payload = OutboxEntry.Payload.Media(stagedFileName, mediaFile.fileExtension),
+                        isPenPalsConversation = currentConversation.metadata.isPenPalsConversation,
+                        createdDate = Date(),
+                        attemptCount = 1,
+                        lastAttemptDate = Date(),
+                        reservedRemoteID = null,
+                        state = OutboxEntry.State.SENDING,
+                        transcription = null,
+                    )
+                outboxEntryID = entry.id
+                MessageOutboxService.enqueue(entry)
+            }
         }
 
         beginSend()
 
-        val targetConversation = currentConversation?.takeUnless { it.isMock }
-        val isPenPalsConversation = currentConversation?.metadata?.isPenPalsConversation ?: false
+        val (contextConversation, contextIsPenPalsConversation) = conversationContext
         try {
             val updated =
                 MessageSessionService.sendMediaMessage(
                     mediaFile = mediaFile,
                     toUsers = recipients,
-                    inConversation = targetConversation,
-                    isPenPalsConversation = isPenPalsConversation,
+                    inConversation = contextConversation,
+                    isPenPalsConversation = contextIsPenPalsConversation,
                 )
             outboxEntryID?.let { MessageOutboxService.remove(it) }
             AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.SEND_MEDIA_MESSAGE)

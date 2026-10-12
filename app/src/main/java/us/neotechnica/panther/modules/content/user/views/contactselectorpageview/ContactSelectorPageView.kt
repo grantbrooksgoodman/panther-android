@@ -10,17 +10,12 @@ package us.neotechnica.panther.modules.content.user.views.contactselectorpagevie
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -31,23 +26,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
-import us.neotechnica.panther.designsystem.modules.componentkit.models.TextFit
+import us.neotechnica.panther.designsystem.modules.foundation.components.HeaderView
+import us.neotechnica.panther.designsystem.modules.foundation.extensions.cancelButton
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.models.ContactPair
-import us.neotechnica.panther.modules.content.shared.components.SearchBar
+import us.neotechnica.panther.modules.content.shared.components.SearchBarInView
 import us.neotechnica.panther.modules.content.user.components.ContactPairCellView
+import us.neotechnica.panther.modules.content.user.constants.ContactSelectorPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.ContactSelectorPageViewFloats
+import us.neotechnica.panther.modules.content.user.extensions.alphabeticallySorted
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 
 // MARK: - Constants Accessors
 
+private typealias Colors = ContactSelectorPageViewColors
 private typealias Floats = ContactSelectorPageViewFloats
 
 /**
@@ -55,158 +54,133 @@ private typealias Floats = ContactSelectorPageViewFloats
  * phone number to look up its registered user. Presented as a sheet
  * either from the chat info page – to add a participant – or from the
  * new chat page – to choose a recipient.
- *
- * @param entryPoint The context the page was presented from.
- * @param modifier The modifier for this view.
  */
-@Composable
-fun ContactSelectorPageView(
-    entryPoint: ContactSelectorPageReducer.EntryPoint,
-    modifier: Modifier = Modifier,
-) {
-    val viewModel =
-        remember(entryPoint) {
-            ViewModel(ContactSelectorPageReducer.State(entryPoint), ContactSelectorPageReducer())
+object ContactSelectorPageView {
+    // MARK: - Types
+
+    /** The context the page was presented from. */
+    enum class EntryPoint {
+        CHAT_INFO_PAGE_VIEW,
+        NEW_CHAT_PAGE_VIEW,
+    }
+
+    // MARK: - Body
+
+    /**
+     * Renders the contact selector page.
+     *
+     * @param entryPoint The context the page was presented from.
+     * @param modifier The modifier for this view.
+     */
+    @Composable
+    operator fun invoke(
+        entryPoint: EntryPoint,
+        modifier: Modifier = Modifier,
+    ) {
+        val viewModel =
+            remember(entryPoint) {
+                ViewModel(ContactSelectorPageReducer.State(entryPoint), ContactSelectorPageReducer())
+            }
+        DisposableEffect(viewModel) {
+            onDispose {
+                viewModel.send(ContactSelectorPageReducer.Action.ViewDisappeared)
+                viewModel.close()
+            }
         }
-    DisposableEffect(viewModel) { onDispose { viewModel.close() } }
-    LaunchedEffect(Unit) { viewModel.send(ContactSelectorPageReducer.Action.ViewAppeared) }
-    BackHandler { viewModel.send(ContactSelectorPageReducer.Action.CancelToolbarButtonTapped) }
+        LaunchedEffect(Unit) { viewModel.send(ContactSelectorPageReducer.Action.ViewAppeared) }
+        BackHandler { viewModel.send(ContactSelectorPageReducer.Action.CancelToolbarButtonTapped) }
 
-    val state by viewModel.state.collectAsState()
-    val colors = LocalPantherColors.current
+        val state by viewModel.state.collectAsState()
+        val colors = LocalPantherColors.current
 
-    StatefulView(state = state.viewState, modifier = modifier.background(colors.groupedContentBackground)) {
-        Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
-            Header(
-                title = state.navigationTitle,
-                showInvite = state.shouldShowInviteButton,
-                inviteText = state.inviteToolbarButtonText,
-                onInvite = { viewModel.send(ContactSelectorPageReducer.Action.InviteToolbarButtonTapped) },
-                onCancel = { viewModel.send(ContactSelectorPageReducer.Action.CancelToolbarButtonTapped) },
-            )
-
-            SearchBar(
-                query = state.searchQuery,
-                onQueryChange = { viewModel.send(ContactSelectorPageReducer.Action.SearchQueryChanged(it)) },
-                placeholderText = state.searchBarPlaceholderText,
-                keyboardType =
-                    if (entryPoint == ContactSelectorPageReducer.EntryPoint.CHAT_INFO_PAGE_VIEW) {
-                        KeyboardType.Phone
+        StatefulView(state = state.viewState, modifier = modifier.background(colors.groupedContentBackground)) {
+            HeaderView(
+                leftItem =
+                    if (state.shouldShowInviteButton) {
+                        HeaderView.PeripheralButtonType.Text(
+                            HeaderView.TextButtonAttributes(
+                                text =
+                                    HeaderView.TextAttributes(
+                                        state.inviteToolbarButtonText,
+                                        foregroundColor = colors.navigationBarButton,
+                                    ),
+                            ) {
+                                viewModel.send(ContactSelectorPageReducer.Action.InviteToolbarButtonTapped)
+                            },
+                        )
                     } else {
-                        KeyboardType.Text
+                        null
                     },
-            )
-
-            if (state.queriedContactPairs.isNotEmpty()) {
-                ContactList(
-                    state = state,
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    onSelect = { viewModel.send(ContactSelectorPageReducer.Action.SelectedContactPairChanged(it)) },
-                )
-            } else {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    NoResultsView(
-                        text = state.noResultsLabelText,
-                        isFindUser = state.noResultsLabelText != LocalizedStringKey.NoResults.localized(),
-                        onFindUser = { viewModel.send(ContactSelectorPageReducer.Action.FindUserButtonTapped) },
-                    )
+                centerItem =
+                    HeaderView.CenterItemType.Text(
+                        HeaderView.TextAttributes(state.navigationTitle, foregroundColor = colors.navigationBarTitle),
+                    ),
+                rightItem =
+                    HeaderView.PeripheralButtonType.cancelButton(
+                        font = Font.system(FontScale.Custom(Floats.CANCEL_TOOLBAR_BUTTON_SYSTEM_FONT_SIZE)),
+                        foregroundColor = colors.navigationBarButton,
+                    ) {
+                        viewModel.send(ContactSelectorPageReducer.Action.CancelToolbarButtonTapped)
+                    },
+                attributes = HeaderView.Attributes(showsDivider = false, sizeClass = HeaderView.SizeClass.Sheet),
+            ) {
+                SearchBarInView(
+                    query = state.searchQuery,
+                    onQueryChange = { viewModel.send(ContactSelectorPageReducer.Action.SearchQueryChanged(it)) },
+                    keyboardType = if (entryPoint == EntryPoint.CHAT_INFO_PAGE_VIEW) KeyboardType.Phone else null,
+                    placeholderText = state.searchBarPlaceholderText,
+                ) {
+                    Box(modifier = Modifier.fillMaxSize().background(colors.groupedContentBackground)) {
+                        if (state.queriedContactPairs.isNotEmpty()) {
+                            ListView(
+                                sections = state.sections,
+                                onSelect = { viewModel.send(ContactSelectorPageReducer.Action.SelectedContactPairChanged(it)) },
+                            )
+                        } else {
+                            NoResultsView(
+                                text = state.noResultsLabelText,
+                                onFindUser = { viewModel.send(ContactSelectorPageReducer.Action.FindUserButtonTapped) },
+                                modifier = Modifier.align(Alignment.Center),
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-// MARK: - Header
+// MARK: - List View
 
 @Composable
-private fun Header(
-    title: String,
-    showInvite: Boolean,
-    inviteText: String,
-    onInvite: () -> Unit,
-    onCancel: () -> Unit,
-) {
-    val colors = LocalPantherColors.current
-    val buttonFit =
-        TextFit(
-            maxLines = 1,
-            minimumScaleFactor = Floats.titleMinimumScaleFactor,
-            overflow = TextOverflow.Ellipsis,
-        )
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(colors.navigationBarBackground)
-                .padding(
-                    horizontal = Floats.headerHorizontalPadding,
-                    vertical = Floats.headerVerticalPadding,
-                ),
-    ) {
-        Box(modifier = Modifier.weight(1f)) {
-            if (showInvite) {
-                Components.FittedText(
-                    inviteText,
-                    foregroundColor = colors.accent,
-                    fit = buttonFit,
-                    modifier = Modifier.align(Alignment.CenterStart).clickable(onClick = onInvite),
-                )
-            }
-        }
-
-        Components.FittedText(
-            title,
-            foregroundColor = colors.titleText,
-            fit =
-                TextFit(
-                    maxLines = if (title.length >= Floats.titleLongCharacterThreshold) Floats.titleLongLineLimit else 1,
-                    minimumScaleFactor = Floats.titleMinimumScaleFactor,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                ),
-            font = Font.systemBold(FontScale.Large),
-            modifier = Modifier.weight(1f),
-        )
-
-        Box(modifier = Modifier.weight(1f)) {
-            Components.FittedText(
-                LocalizedStringKey.Cancel.localized(),
-                foregroundColor = colors.accent,
-                fit = buttonFit,
-                modifier = Modifier.align(Alignment.CenterEnd).clickable(onClick = onCancel),
-            )
-        }
-    }
-}
-
-// MARK: - Contact List
-
-@Composable
-private fun ContactList(
-    state: ContactSelectorPageReducer.State,
-    modifier: Modifier,
+private fun ListView(
+    sections: Map<String, List<ContactPair>>,
     onSelect: (ContactPair) -> Unit,
 ) {
     val colors = LocalPantherColors.current
-    val sections = state.sections
-    LazyColumn(modifier = modifier) {
-        sections.keys.alphabeticallySorted().forEach { letter ->
+
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        sections.keys.toList().alphabeticallySorted.forEach { letter ->
             item(key = "section-$letter") {
                 Components.Text(
                     letter,
-                    foregroundColor = colors.subtitleText,
-                    font = Font.systemSemibold(FontScale.Small),
+                    foregroundColor = colors.titleText,
                     modifier =
                         Modifier.padding(
-                            horizontal = Floats.sectionHeaderHorizontalPadding,
-                            vertical = Floats.sectionHeaderVerticalPadding,
+                            horizontal = Floats.listViewRowHorizontalPadding,
+                            vertical = Floats.listViewSectionHeaderVerticalPadding,
                         ),
                 )
             }
-            items(sections[letter].orEmpty(), key = { it.contact.id + it.compiledNumberStringsKey() }) { contactPair ->
-                ContactPairCellView(contactPair = contactPair, action = { onSelect(contactPair) })
-                HorizontalDivider(color = colors.groupedContentBackground)
+            items(sections[letter].orEmpty(), key = { it.contact.encodedHash }) { contactPair ->
+                ContactPairCellView(
+                    contactPair = contactPair,
+                    modifier =
+                        Modifier
+                            .heightIn(min = Floats.listViewDefaultMinListRowHeight)
+                            .padding(horizontal = Floats.listViewRowHorizontalPadding),
+                    action = { onSelect(contactPair) },
+                )
             }
         }
     }
@@ -217,28 +191,22 @@ private fun ContactList(
 @Composable
 private fun NoResultsView(
     text: String,
-    isFindUser: Boolean,
     onFindUser: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val colors = LocalPantherColors.current
-    val modifier =
-        Modifier
-            .then(if (isFindUser) Modifier.clickable(onClick = onFindUser) else Modifier)
-            .padding(horizontal = Floats.emptyStateHorizontalPadding, vertical = Floats.emptyStateVerticalPadding)
-    Components.Text(
-        text,
-        foregroundColor = if (isFindUser) colors.accent else colors.subtitleText,
-        textAlign = TextAlign.Center,
-        modifier = modifier,
-    )
+    if (text == LocalizedStringKey.NoResults.localized()) {
+        Components.Text(
+            text,
+            foregroundColor = Colors.noResultsLabelForeground,
+            textAlign = TextAlign.Center,
+            modifier = modifier.padding(horizontal = Floats.noResultsLabelHorizontalPadding),
+        )
+    } else {
+        Components.Button(
+            text = text,
+            foregroundColor = Colors.noResultsLabelAlternateForeground,
+            onClick = onFindUser,
+            modifier = modifier.padding(horizontal = Floats.noResultsLabelHorizontalPadding),
+        )
+    }
 }
-
-// MARK: - Auxiliary
-
-/** Sorts section titles with alphabetically-prefixed titles first, then the rest. */
-private fun Set<String>.alphabeticallySorted(): List<String> {
-    val (alphabetical, other) = partition { it.firstOrNull()?.isLetter() == true }
-    return alphabetical.sorted() + other.sorted()
-}
-
-private fun ContactPair.compiledNumberStringsKey(): String = contact.phoneNumbers.joinToString(",") { it.compiledNumberString }

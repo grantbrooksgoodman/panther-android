@@ -22,9 +22,11 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.DpSize
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
@@ -104,7 +106,10 @@ private fun RowContent(
                 .padding(horizontal = ChatInfoPageViewFloats.cardHorizontalPadding, vertical = ChatInfoPageViewFloats.rowVerticalPadding),
     ) {
         AvatarImageView(
-            null,
+            remember(participant.contactPair) {
+                participant.contactPair.contact.image
+                    ?.asImageBitmap()
+            },
             size = DpSize(ChatInfoPageViewFloats.rowAvatarSize, ChatInfoPageViewFloats.rowAvatarSize),
         )
         Components.Text(
