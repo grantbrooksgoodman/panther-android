@@ -21,6 +21,7 @@ object MediaPreviewOverlayFloats {
     val documentGlyphSize: Dp = 72.dp
     val documentNameHorizontalPadding: Dp = 32.dp
     val documentSpacing: Dp = 16.dp
+    val titleTopPadding: Dp = 12.dp
 
     const val IMAGE_DECODE_MAX_DIMENSION = 2048
     const val MAX_ZOOM = 5f
@@ -33,10 +34,4 @@ object MediaPreviewOverlayColors {
     val background = Color(0xFF000000)
     val closeButtonBackground = Color(0x73000000)
     val foreground = Color(0xFFFFFFFF)
-}
-
-// MARK: - String
-
-object MediaPreviewOverlayStrings {
-    const val OPEN = "Open"
 }

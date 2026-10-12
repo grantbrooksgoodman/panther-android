@@ -8,174 +8,209 @@
 
 package us.neotechnica.panther.modules.content.user.components
 
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
-import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellFloats
-import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellStrings
+import androidx.compose.ui.unit.sp
+import us.neotechnica.panther.modules.content.user.constants.ChatPageViewColors
+import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
+import us.neotechnica.panther.modules.content.user.constants.ChatPageViewStrings
+import us.neotechnica.panther.modules.content.user.extensions.chatPageMessageSeparatorAttributedDateString
+import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
-import us.neotechnica.panther.modules.content.user.extensions.otherParticipantReadReceipt
+import us.neotechnica.panther.modules.content.user.extensions.isMock
+import us.neotechnica.panther.modules.content.user.extensions.isOutboxMessage
+import us.neotechnica.panther.modules.content.user.services.AlternateMessageService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.subsystem.modules.localization.models.LocalizationSource
+import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.formattedShortString
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.languageExonym
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
-import us.neotechnica.panther.subsystem.modules.localization.services.LocalizedStringResolver
-import java.text.SimpleDateFormat
-import java.util.Calendar
+import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
 
-/**
- * Builds the annotated string used to highlight the message currently
- * being spoken aloud: the whole text takes a base color – white for own
- * messages or in dark mode, otherwise black – and the spoken range is
- * highlighted in red.
- */
-@Composable
-internal fun spokenAnnotatedString(
-    text: String,
-    isOwn: Boolean,
-    highlightRange: IntRange?,
-): AnnotatedString {
-    val baseColor = if (isOwn || isSystemInDarkTheme()) Color.White else Color.Black
-    return buildAnnotatedString {
-        append(text)
-        addStyle(SpanStyle(color = baseColor), 0, text.length)
-        highlightRange?.let { range ->
-            val start = range.first.coerceIn(0, text.length)
-            val end = (range.last + 1).coerceIn(start, text.length)
-            if (start < end) addStyle(SpanStyle(color = Color.Red), start, end)
-        }
-    }
-}
+// MARK: - Constants Accessors
 
-internal fun displayText(row: ChatMessageRowData): String {
-    val translation = row.translation ?: return ""
-    val primary = if (row.message.isFromCurrentUser) translation.input.value else translation.output
-    val alternate = if (row.message.isFromCurrentUser) translation.output else translation.input.value
-    return sanitized(if (row.showAlternate) alternate else primary)
-}
-
-internal fun separatorDate(
-    message: Message,
-    previousMessage: Message?,
-): Date? {
-    val show =
-        previousMessage == null ||
-            (message.sentDate.time - previousMessage.sentDate.time) > ChatMessageCellFloats.DAY_SEPARATOR_GAP_MILLIS
-    if (!show) return null
-    return message.sentDate
-}
+private typealias DataSourceColors = ChatPageViewColors.MessagesDataSource
+private typealias DataSourceFloats = ChatPageViewFloats.MessagesDataSource
+private typealias DataSourceStrings = ChatPageViewStrings.MessagesDataSource
+private typealias DataSourceLayoutFloats = ChatPageViewFloats.MessagesLayoutDelegate
 
 /**
- * The attributed day-separator string (`Today 9:26 PM`), with the day
- * prefix rendered bold.
+ * Returns the attributed text for the cell's bottom label, or `null`
+ * when the cell shows none.
+ *
+ * A failed outbox message reads "Not Delivered". Otherwise the label
+ * names the language of displayed alternate content and, for the last
+ * confirmed own message in a one-to-one conversation, the message's
+ * delivery or read status. Reactions render as chips beside the label
+ * rather than within it.
+ *
+ * @param row The row to build the label for.
  */
-internal fun separatorAnnotatedString(date: Date): AnnotatedString =
-    buildAnnotatedString {
-        val parts = separatorParts(date)
-        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(parts.prefix) }
-        append(" ${parts.time}")
-    }
+internal fun cellBottomLabelAttributedText(row: ChatMessageRowData): AnnotatedString? {
+    val message = row.message
+    if (message.isMock || (message.isOutboxMessage && !row.isFailed)) return null
 
-/**
- * The attributed string for a system message: a bold date-separator line
- * (`Today 13:35`) followed by the activity text, with participant names
- * (wrapped in `⌘…⌘` sentinels) rendered bold.
- */
-internal fun systemMessageString(
-    output: String,
-    date: Date,
-): AnnotatedString =
-    buildAnnotatedString {
-        val parts = separatorParts(date)
-        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(parts.prefix) }
-        append(" ${parts.time}\n")
-        appendActivity(output)
-    }
-
-private fun AnnotatedString.Builder.appendActivity(text: String) {
-    val cleaned = text.replace("⁂", "").replace("※", "")
-    var isBold = false
-    for (segment in cleaned.split("⌘")) {
-        if (segment.isNotEmpty()) {
-            if (isBold) {
-                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(segment) }
-            } else {
-                append(segment)
+    if (row.isFailed) {
+        return buildAnnotatedString {
+            withBoldStyle(DataSourceColors.cellBottomLabelAttributedTextNotDeliveredForeground) {
+                append(LocalizedStringKey.NotDelivered.localized())
             }
         }
-        isBold = !isBold
     }
-}
 
-private data class SeparatorParts(
-    val prefix: String,
-    val time: String,
-)
+    val languagePair = message.translation?.languagePair
+    val fromLanguageExonym = languagePair?.from?.languageExonym
+    val toLanguageExonym = languagePair?.to?.languageExonym
+
+    var alternateMessageString: String? = null
+    var alternateMessageExonym: String? = null
+    if (AlternateMessageService.isDisplayingAlternateText(message) && fromLanguageExonym != null && toLanguageExonym != null) {
+        val originalString = LocalizedStringKey.OriginalInLanguage.localized().replace("⌘", fromLanguageExonym)
+        val translationString = LocalizedStringKey.TranslationInLanguage.localized().replace("⌘", toLanguageExonym)
+        alternateMessageString = if (message.isFromCurrentUser) translationString else originalString
+        alternateMessageExonym = if (message.isFromCurrentUser) toLanguageExonym else fromLanguageExonym
+    }
+
+    // The alternate footer suppresses the delivery status.
+    if (alternateMessageString != null) {
+        return buildAnnotatedString {
+            appendWithBoldKeywords(alternateMessageString, listOf(alternateMessageExonym.orEmpty()))
+        }
+    }
+
+    if (!row.isGroup && row.isLastConfirmedOwnMessage && message.isFromCurrentUser) {
+        val readDate = message.readReceipts?.firstOrNull { it.userID != User.currentUserID }?.readDate
+        return buildAnnotatedString {
+            if (readDate == null) {
+                withBoldStyle(DataSourceColors.cellBottomLabelAttributedTextBoldAttributesForeground) {
+                    append(LocalizedStringKey.Delivered.localized())
+                }
+            } else {
+                withBoldStyle(DataSourceColors.cellBottomLabelAttributedTextBoldAttributesForeground) {
+                    append(LocalizedStringKey.Read.localized())
+                }
+                withStandardStyle { append(" ${readDate.formattedShortString}") }
+            }
+        }
+    }
+
+    return null
+}
 
 /**
- * Resolves a day-separator word (e.g. `Today`, `Yesterday`), which live
- * in different localization tables, preferring the app table and falling
- * back to the subsystem table before the missing placeholder.
+ * Returns the attributed text for the cell's top label, showing the
+ * message's date separator, or `null` when the message follows its
+ * predecessor closely enough to need none.
+ *
+ * @param row The row to build the label for.
  */
-private fun dayWord(key: LocalizedStringKey): String {
-    val appValue = key.localized(LocalizationSource.APP)
-    return if (appValue != LocalizedStringResolver.MISSING) appValue else key.localized(LocalizationSource.SUBSYSTEM)
+internal fun cellTopLabelAttributedText(row: ChatMessageRowData): AnnotatedString? {
+    val previousMessage = row.previousMessage
+    val secondsSincePrevious =
+        previousMessage?.let { (row.message.sentDate.time - it.sentDate.time) / MILLISECONDS_PER_SECOND }
+    val isCloseToPrevious =
+        secondsSincePrevious != null &&
+            secondsSincePrevious <= DataSourceLayoutFloats.CELL_TOP_LABEL_HEIGHT_SENT_DATE_SECONDS_COMPARATOR
+    if (isCloseToPrevious) return null
+
+    return row.message.sentDate.chatPageMessageSeparatorAttributedDateString
 }
 
-private fun separatorParts(date: Date): SeparatorParts {
-    val messageDay = Calendar.getInstance().apply { time = date }
-    val today = Calendar.getInstance()
-    val time = SimpleDateFormat(ChatMessageCellStrings.TIME_FORMAT, Locale.getDefault()).format(date)
-    val daysApart = (today.timeInMillis - messageDay.timeInMillis) / ChatMessageCellFloats.MILLIS_PER_DAY
-    val prefix =
-        when {
-            isSameDay(messageDay, today) -> dayWord(LocalizedStringKey.Today)
-            isYesterday(messageDay, today) -> dayWord(LocalizedStringKey.Yesterday)
-            daysApart < ChatMessageCellFloats.DAYS_IN_WEEK ->
-                SimpleDateFormat(
-                    ChatMessageCellStrings.DAY_OF_WEEK_FORMAT,
-                    Locale.getDefault(),
-                ).format(date)
-            else -> SimpleDateFormat(ChatMessageCellStrings.FULL_DATE_FORMAT, Locale.getDefault()).format(date)
+/**
+ * Returns the attributed text for the message's timestamp label, shown
+ * when the user drags the list: the message's sent time in the short
+ * style.
+ *
+ * @param message The message to build the label for.
+ */
+internal fun messageTimestampLabelAttributedText(message: Message): AnnotatedString =
+    buildAnnotatedString {
+        withStyle(
+            SpanStyle(
+                fontSize = DataSourceFloats.MESSAGE_TIMESTAMP_LABEL_ATTRIBUTED_TEXT_ATTRIBUTES_SYSTEM_FONT_SIZE.sp,
+                color = DataSourceColors.messageTimestampLabelAttributedTextAttributesForeground,
+            ),
+        ) {
+            append(shortTimeString(message.sentDate))
         }
-    return SeparatorParts(prefix, time)
-}
+    }
 
-private fun isYesterday(
-    day: Calendar,
-    today: Calendar,
-): Boolean {
-    val yesterday = today.clone() as Calendar
-    yesterday.add(Calendar.DAY_OF_YEAR, -1)
-    return isSameDay(day, yesterday)
-}
-
-internal fun statusText(
-    message: Message,
-    isFailed: Boolean,
-): Pair<String, Boolean>? {
-    if (isFailed) return LocalizedStringKey.NotDelivered.localized() to true
-    val readReceipt = message.otherParticipantReadReceipt
-    return if (readReceipt != null) {
-        val time = SimpleDateFormat(ChatMessageCellStrings.TIME_FORMAT, Locale.getDefault()).format(readReceipt.readDate)
-        "${LocalizedStringKey.Read.localized()} $time" to false
-    } else {
-        LocalizedStringKey.Delivered.localized() to false
+/**
+ * Returns the attributed text for the message's top label, showing the
+ * sender's name in group conversations, or `null` when the row shows
+ * none.
+ *
+ * @param row The row to build the label for.
+ */
+internal fun messageTopLabelAttributedText(row: ChatMessageRowData): AnnotatedString? {
+    if (!row.isGroup || row.message.isFromCurrentUser) return null
+    val senderName = row.senderName ?: return null
+    return buildAnnotatedString {
+        withStyle(
+            SpanStyle(
+                fontSize = DataSourceFloats.MESSAGE_TOP_LABEL_ATTRIBUTED_TEXT_ATTRIBUTES_FONT_SIZE.sp,
+                color = DataSourceColors.messageTopLabelAttributedTextAttributesForeground,
+            ),
+        ) {
+            append("${DataSourceStrings.MESSAGE_TOP_LABEL_ATTRIBUTED_TEXT_PREFIX}$senderName")
+        }
     }
 }
 
-private fun isSameDay(
-    left: Calendar,
-    right: Calendar,
-): Boolean =
-    left.get(Calendar.YEAR) == right.get(Calendar.YEAR) &&
-        left.get(Calendar.DAY_OF_YEAR) == right.get(Calendar.DAY_OF_YEAR)
+// MARK: - Auxiliary
 
-private fun sanitized(value: String): String = value.replace("⁂", "").replace("⌘", "").replace("※", "")
+private fun AnnotatedString.Builder.appendWithBoldKeywords(
+    string: String,
+    keywords: List<String>,
+) {
+    val start = length
+    withStandardStyle { append(string) }
+    keywords.filter { it.isNotEmpty() }.forEach { keyword ->
+        var index = string.indexOf(keyword)
+        while (index >= 0) {
+            addStyle(
+                SpanStyle(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = DataSourceFloats.CELL_BOTTOM_LABEL_ATTRIBUTED_TEXT_BOLD_ATTRIBUTES_SYSTEM_FONT_SIZE.sp,
+                    color = DataSourceColors.cellBottomLabelAttributedTextBoldAttributesForeground,
+                ),
+                start + index,
+                start + index + keyword.length,
+            )
+            index = string.indexOf(keyword, index + keyword.length)
+        }
+    }
+}
+
+private fun shortTimeString(date: Date): String = DateFormat.getTimeInstance(DateFormat.SHORT, Locale.getDefault()).format(date)
+
+private fun AnnotatedString.Builder.withBoldStyle(
+    color: Color,
+    block: AnnotatedString.Builder.() -> Unit,
+) {
+    withStyle(
+        SpanStyle(
+            fontWeight = FontWeight.Bold,
+            fontSize = DataSourceFloats.CELL_BOTTOM_LABEL_ATTRIBUTED_TEXT_BOLD_ATTRIBUTES_SYSTEM_FONT_SIZE.sp,
+            color = color,
+        ),
+    ) { block() }
+}
+
+private fun AnnotatedString.Builder.withStandardStyle(block: AnnotatedString.Builder.() -> Unit) {
+    withStyle(
+        SpanStyle(
+            fontSize = DataSourceFloats.CELL_BOTTOM_LABEL_ATTRIBUTED_TEXT_STANDARD_ATTRIBUTES_SYSTEM_FONT_SIZE.sp,
+            color = DataSourceColors.cellBottomLabelAttributedTextStandardAttributesForeground,
+        ),
+    ) { block() }
+}
+
+private const val MILLISECONDS_PER_SECOND = 1000L

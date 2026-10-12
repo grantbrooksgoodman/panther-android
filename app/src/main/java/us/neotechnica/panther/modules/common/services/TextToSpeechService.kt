@@ -158,6 +158,12 @@ object TextToSpeechService {
         endSpeaking()
     }
 
+    /** Stops the in-progress utterance, if any. */
+    fun stopSpeakingIfNeeded() {
+        if (!speaking) return
+        stop()
+    }
+
     // MARK: - Highest Quality Voice
 
     /**

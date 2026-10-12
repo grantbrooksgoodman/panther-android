@@ -30,17 +30,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.isNewChatPageDoneToolbarButtonEnabled
 import us.neotechnica.panther.bundle.messageOutboxDidChange
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.MessageInputBar
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
@@ -49,13 +45,13 @@ import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardS
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.content.user.components.ContactPairCellView
-import us.neotechnica.panther.modules.content.user.components.ContentPickers
 import us.neotechnica.panther.modules.content.user.components.DeliveryProgressView
 import us.neotechnica.panther.modules.content.user.components.RecipientBar
+import us.neotechnica.panther.modules.content.user.components.RegisterContentPickerLaunchers
 import us.neotechnica.panther.modules.content.user.components.anyOutboxSending
-import us.neotechnica.panther.modules.content.user.components.rememberContentPickers
 import us.neotechnica.panther.modules.content.user.components.rememberRegisteredDeliveryProgressIndicatorService
 import us.neotechnica.panther.modules.content.user.constants.ContactSelectorPageViewFloats
+import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.content.user.services.recipientbar.RecipientBarLayoutService
 import us.neotechnica.panther.modules.content.user.services.recipientbar.RecipientBarService
@@ -63,22 +59,15 @@ import us.neotechnica.panther.modules.content.user.services.recipientbar.Recipie
 import us.neotechnica.panther.modules.content.user.views.chatpageview.ChatPageView
 import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageView
 import us.neotechnica.panther.modules.content.user.views.newchatpageview.NewChatPageReducer.Action
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.navigation.ChatNavigatorState
 import us.neotechnica.panther.navigation.ChatRoute
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
-import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
-import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
-import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedStates
-import us.neotechnica.panther.designsystem.modules.alertkit.models.Action as AlertKitAction
 
 /**
  * The new-conversation page: choose recipients through the recipient
@@ -107,9 +96,9 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsState()
     val navState by navigation.state.collectAsState()
     val colors = LocalPantherColors.current
-    val scope = rememberCoroutineScope()
     val deliveryProgressIndicatorService = rememberRegisteredDeliveryProgressIndicatorService()
-    val pickers = rememberNewChatContentPickers(viewModel, scope)
+    RegisterContentPickerLaunchers()
+    RegisterMediaMessageSentHook(viewModel)
 
     val recipientBar = RecipientBarService
     val selectedContactPairs by recipientBar.contactSelectionUI.selectedContactPairs.collectAsState()
@@ -157,7 +146,11 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     conversationIDKey?.let { key ->
                         key(key) {
-                            ChatPageView(conversationIDKey = key, embedded = true, modifier = Modifier.fillMaxSize())
+                            ChatPageView(
+                                conversationIDKey = key,
+                                configuration = ChatPageView.Configuration.NewChat,
+                                modifier = Modifier.fillMaxSize(),
+                            )
                         }
                     }
                 }
@@ -168,8 +161,8 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
                     isSending = state.isSendingMessage || state.hasSendingOutboxEntry,
                     onTextChange = { viewModel.send(Action.InputChanged(it)) },
                     onSend = { viewModel.send(Action.SendTapped) },
-                    onAttach = { scope.launch { presentAttachMediaSheet(pickers) } },
-                    enabled = selectedContactPairs.isNotEmpty() && !isTextFieldFirstResponder,
+                    onAttach = { MediaActionHandlerService.attachMediaButtonTapped() },
+                    isSendEnabled = selectedContactPairs.isNotEmpty() && !isTextFieldFirstResponder && state.inputText.isNotBlank(),
                     isAttachEnabled = !isTextFieldFirstResponder,
                     focusRequester = inputBarFocusRequester,
                 )
@@ -187,32 +180,20 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
     }
 }
 
-// MARK: - Content Pickers
+// MARK: - Media Message Sent Hook
 
-// Sends a picked attachment as the first message, then navigates into
-// the created conversation.
+// A picked attachment sends as the first message; the hook then navigates
+// into the created conversation.
 @Composable
-private fun rememberNewChatContentPickers(
-    viewModel: ViewModel<NewChatPageReducer.State, NewChatPageReducer.Action>,
-    scope: CoroutineScope,
-): ContentPickers =
-    rememberContentPickers(
-        onPicked = { mediaFile ->
-            scope.launch {
-                try {
-                    MessageDeliveryService.sendMediaMessage(mediaFile)
-                    val conversationIDKey = ConversationSessionService.currentConversation?.id?.key
-                    if (conversationIDKey != null) {
-                        viewModel.send(Action.FirstMessageSent)
-                        viewModel.send(Action.SendReturned(conversationIDKey))
-                    }
-                } catch (exception: Exception) {
-                    Logger.log(exception, with = AlertType.toast)
-                }
-            }
-        },
-        onFailed = { Logger.log(it, with = AlertType.toast) },
-    )
+private fun RegisterMediaMessageSentHook(viewModel: ViewModel<NewChatPageReducer.State, NewChatPageReducer.Action>) {
+    DisposableEffect(viewModel) {
+        MediaActionHandlerService.onMediaMessageSent = { conversation ->
+            viewModel.send(Action.FirstMessageSent)
+            viewModel.send(Action.SendReturned(conversation.id.key))
+        }
+        onDispose { MediaActionHandlerService.onMediaMessageSent = null }
+    }
+}
 
 // MARK: - Header
 
@@ -301,23 +282,3 @@ private fun buildNewChatViewModel(): ViewModel<NewChatPageReducer.State, NewChat
         }.observing(DependencyValues.current.sharedStates.isNewChatPageDoneToolbarButtonEnabled.changes) {
             Action.IsDoneToolbarButtonEnabledChanged(it)
         }
-
-// The attach-media action sheet.
-private suspend fun presentAttachMediaSheet(pickers: ContentPickers) {
-    ActionSheet(
-        title = "Attach media",
-        actions =
-            listOf(
-                AlertKitAction("Take photo") { pickers.launchCamera() },
-                AlertKitAction("Select document") { pickers.launchDocument() },
-                AlertKitAction("Select photo or video") { pickers.launchPhotoOrVideo() },
-            ),
-        cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
-    ).present(
-        translating =
-            listOf(
-                ActionSheet.TranslationOptionKey.Title,
-                ActionSheet.TranslationOptionKey.Actions(),
-            ),
-    )
-}

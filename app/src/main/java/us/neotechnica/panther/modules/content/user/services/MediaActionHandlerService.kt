@@ -8,7 +8,6 @@
 
 package us.neotechnica.panther.modules.content.user.services
 
-import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -16,10 +15,7 @@ import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
 import android.media.MediaMetadataRetriever
 import android.net.Uri
-import android.os.Build
-import android.os.Environment
 import android.os.ParcelFileDescriptor
-import android.provider.MediaStore
 import android.provider.OpenableColumns
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
@@ -32,22 +28,36 @@ import androidx.media3.transformer.Effects
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import us.neotechnica.panther.bundle.media
+import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.modules.common.models.DocumentFileExtension
 import us.neotechnica.panther.modules.common.models.ImageFileExtension
 import us.neotechnica.panther.modules.common.models.MediaFileExtension
 import us.neotechnica.panther.modules.common.models.VideoFileExtension
-import us.neotechnica.panther.modules.content.user.constants.MediaActionHandlerFloats
-import us.neotechnica.panther.modules.content.user.constants.MediaActionHandlerStrings
+import us.neotechnica.panther.modules.common.services.HapticsService
+import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceFloats
+import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceStrings
+import us.neotechnica.panther.modules.content.user.models.ContentPickerResult
+import us.neotechnica.panther.modules.content.user.services.contentpicker.ContentPickerService
+import us.neotechnica.panther.modules.content.user.services.contentpicker.ContentPickerSource
+import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
+import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import java.io.ByteArrayOutputStream
 import java.io.File
 import kotlin.coroutines.resume
@@ -55,29 +65,110 @@ import kotlin.coroutines.resumeWithException
 
 // MARK: - Constants Accessors
 
-private typealias Floats = MediaActionHandlerFloats
-private typealias Strings = MediaActionHandlerStrings
+private typealias Floats = ChatPageViewServiceFloats.MediaActionHandler
+private typealias Strings = ChatPageViewServiceStrings.MediaActionHandler
 
 /**
- * Processes media selected from a content picker into a sendable
- * [MediaFile] – compressing images, staging videos and documents, and
- * generating thumbnails.
+ * The service that handles media attachment actions.
  *
- * **Note:** Videos are staged unchanged (there is no system
- * transcoder; see `DEVIATIONS.md`). PDF thumbnails are rendered;
- * other document types are sent without one. Sending the resulting
- * media file lands with the send pipeline.
+ * [MediaActionHandlerService] presents the attach-media action sheet,
+ * then, based on the user's choice, presents the camera, document, or
+ * photo-and-video picker. It processes the selected item – compressing
+ * images and videos and generating thumbnails where needed – and sends
+ * it as a media message.
+ *
+ * **Note:** Videos that cannot be transcoded are staged unchanged. PDF
+ * thumbnails are rendered; other document types are sent without one.
  */
 object MediaActionHandlerService {
     // MARK: - Properties
 
     private var appContext: Context? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    /** A Boolean value that indicates whether a content picker is currently presented. */
+    var isPresentingPickerController = false
+        private set
+
+    /**
+     * A hook run after a picked item is sent as a media message, with
+     * the conversation it was sent to. The new chat page uses it to
+     * navigate into the conversation its first message created.
+     */
+    var onMediaMessageSent: ((Conversation) -> Unit)? = null
 
     // MARK: - Init
 
     /** Prepares the service with the application context. */
     fun initialize(context: Context) {
         appContext = context.applicationContext
+    }
+
+    // MARK: - Attach Media Button Tapped
+
+    /**
+     * Presents the attach-media action sheet.
+     *
+     * The sheet offers to take a photo, select a document, or select a
+     * photo or video; choosing an option presents the corresponding
+     * picker.
+     */
+    fun attachMediaButtonTapped() {
+        HapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
+
+        val takePhotoAction = Action("Take photo") { presentCameraPicker() }
+        val selectDocumentAction = Action("Select document") { presentDocumentPicker() }
+        val selectPhotoOrVideoAction = Action("Select photo or video") { presentMediaPicker() }
+
+        scope.launch {
+            ActionSheet(
+                title = "Attach media",
+                actions = listOf(takePhotoAction, selectDocumentAction, selectPhotoOrVideoAction),
+                cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
+            ).present(
+                translating =
+                    listOf(
+                        ActionSheet.TranslationOptionKey.Title,
+                        ActionSheet.TranslationOptionKey.Actions(),
+                    ),
+            )
+        }
+    }
+
+    // MARK: - Process & Send Document
+
+    private suspend fun processAndSendDocument(uri: Uri) {
+        val fileExtension =
+            displayName(uri)?.substringAfterLast('.', "")?.takeIf { it.isNotEmpty() }
+                ?: throw failure("Failed to determine file type.")
+        val mediaFileExtension = MediaFileExtension.from(fileExtension) ?: throw failure("Failed to determine file type.")
+
+        // An unknown extension resolves to a plain-text document, so
+        // confirm the file truly conforms to plain text before sending it.
+        if (mediaFileExtension is MediaFileExtension.Document && mediaFileExtension.fileExtension is DocumentFileExtension.PlainText) {
+            val mimeType = requireContext().contentResolver.getType(uri).orEmpty()
+            if (!mimeType.startsWith(PLAIN_TEXT_MIME_TYPE_PREFIX)) throw failure("Failed to determine file type.")
+        }
+
+        if (mediaFileExtension.isImage) return processAndSendImage(uri)
+        if (mediaFileExtension.isVideo) return processAndSendVideo(uri)
+
+        val mediaFile = withContext(Dispatchers.IO) { documentMediaFile(uri, mediaFileExtension) }
+        sendMediaMessage(mediaFile)
+    }
+
+    // MARK: - Process & Send Image
+
+    private suspend fun processAndSendImage(uri: Uri) {
+        val mediaFile = withContext(Dispatchers.IO) { imageMediaFile(uri) }
+        sendMediaMessage(mediaFile)
+    }
+
+    // MARK: - Process & Send Video
+
+    private suspend fun processAndSendVideo(uri: Uri) {
+        val mediaFile = processVideo(uri)
+        sendMediaMessage(mediaFile)
     }
 
     // MARK: - Process Image
@@ -130,13 +221,7 @@ object MediaActionHandlerService {
                     ?: throw failure("Failed to determine file type.")
             val fileExtension = MediaFileExtension.from(extension) ?: throw failure("Failed to determine file type.")
             if (fileExtension.isImage) return@withContext imageMediaFile(uri)
-
-            val relativePath = "${NetworkPath.media.rawValue}/${Strings.DEFAULT_DOCUMENT_NAME}.${fileExtension.rawValue}"
-            copyToFile(uri, relativePath)
-            if (fileExtension.rawValue == DocumentFileExtension.Pdf.rawValue) {
-                pdfThumbnail(relativePath)?.let { writeThumbnail(it, relativePath) }
-            }
-            MediaFile(relativePath, Strings.DEFAULT_DOCUMENT_NAME, fileExtension)
+            documentMediaFile(uri, fileExtension)
         }
 
     // MARK: - Compress Image
@@ -158,83 +243,54 @@ object MediaActionHandlerService {
             bitmap.jpegCompressedToKB(targetKB)
         }
 
-    // MARK: - Save Media
-
-    /**
-     * Saves the given media file to the device's shared media
-     * collections: images to Pictures, videos to Movies, and other files
-     * to Downloads.
-     *
-     * @throws Exception if the file cannot be read or written.
-     */
-    suspend fun saveMedia(mediaFile: MediaFile): Unit =
-        withContext(Dispatchers.IO) {
-            val source = mediaFile.localPathFile ?: throw failure("Failed to resolve local media path.")
-            val extension = mediaFile.fileExtension
-            val collection =
-                when {
-                    extension.isImage -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-                    extension.isVideo -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
-                    else -> downloadsContentUri()
-                }
-            val directory =
-                when {
-                    extension.isImage -> Environment.DIRECTORY_PICTURES
-                    extension.isVideo -> Environment.DIRECTORY_MOVIES
-                    else -> Environment.DIRECTORY_DOWNLOADS
-                }
-            writeToMediaStore(
-                source = source,
-                displayName = "${mediaFile.name}.${extension.rawValue}",
-                mimeType = extension.contentTypeString,
-                collection = collection,
-                directory = directory,
-            )
-        }
-
     // MARK: - Auxiliary
 
-    private fun downloadsContentUri(): Uri =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            MediaStore.Downloads.EXTERNAL_CONTENT_URI
-        } else {
-            MediaStore.Files.getContentUri("external")
+    private fun documentMediaFile(
+        uri: Uri,
+        fileExtension: MediaFileExtension,
+    ): MediaFile {
+        val relativePath = "${NetworkPath.media.rawValue}/${Strings.DEFAULT_DOCUMENT_NAME}.${fileExtension.rawValue}"
+        copyToFile(uri, relativePath)
+        if (fileExtension.rawValue == DocumentFileExtension.Pdf.rawValue) {
+            pdfThumbnail(relativePath)?.let { writeThumbnail(it, relativePath) }
         }
+        return MediaFile(relativePath, Strings.DEFAULT_DOCUMENT_NAME, fileExtension)
+    }
 
-    @Suppress("LongParameterList")
-    private fun writeToMediaStore(
-        source: File,
-        displayName: String,
-        mimeType: String,
-        collection: Uri,
-        directory: String,
-    ) {
-        val resolver = requireContext().contentResolver
-        val values =
-            ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
-                put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    put(MediaStore.MediaColumns.RELATIVE_PATH, directory)
-                    put(MediaStore.MediaColumns.IS_PENDING, 1)
-                } else {
-                    val publicDirectory = Environment.getExternalStoragePublicDirectory(directory)
-                    if (!publicDirectory.exists()) publicDirectory.mkdirs()
-                    put(MediaStore.MediaColumns.DATA, File(publicDirectory, displayName).absolutePath)
+    private suspend fun sendMediaMessage(mediaFile: MediaFile) {
+        MessageDeliveryService.sendMediaMessage(mediaFile)
+        ConversationSessionService.currentConversation?.let { conversation -> onMediaMessageSent?.invoke(conversation) }
+    }
+
+    private suspend fun onContentPickerDismissed(callback: Result<ContentPickerResult>?) {
+        val result = callback ?: return
+        val value = result.getOrElse { throw it as? Exception ?: failure("Failed to process media.") }
+        when (value) {
+            is ContentPickerResult.Document -> processAndSendDocument(value.uri)
+            is ContentPickerResult.Image -> processAndSendImage(value.uri)
+            is ContentPickerResult.Video -> processAndSendVideo(value.uri)
+        }
+    }
+
+    private fun presentCameraPicker() = presentPicker(ContentPickerService.camera)
+
+    private fun presentDocumentPicker() = presentPicker(ContentPickerService.document)
+
+    private fun presentMediaPicker() = presentPicker(ContentPickerService.media)
+
+    private fun presentPicker(picker: ContentPickerSource) {
+        picker.present()
+        isPresentingPickerController = true
+
+        picker.onDismiss { result ->
+            scope.launch {
+                isPresentingPickerController = false
+                try {
+                    onContentPickerDismissed(result)
+                } catch (exception: Exception) {
+                    Logger.log(exception, with = AlertType.toast)
                 }
             }
-
-        val uri =
-            runCatching { resolver.insert(collection, values) }.getOrNull()
-                ?: throw failure("Failed to save media.")
-        val output = resolver.openOutputStream(uri) ?: throw failure("Failed to write media.")
-        runCatching { output.use { stream -> source.inputStream().use { it.copyTo(stream) } } }
-            .getOrElse { throw failure("Failed to write media.") }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            values.clear()
-            values.put(MediaStore.MediaColumns.IS_PENDING, 0)
-            resolver.update(uri, values, null, null)
         }
     }
 
@@ -346,7 +402,7 @@ object MediaActionHandlerService {
                         null
                     } else {
                         renderer.openPage(0).use { page ->
-                            val target = Floats.THUMBNAIL_IMAGE_SIZE * Floats.THUMBNAIL_IMAGE_SCALE
+                            val target = Floats.THUMBNAIL_IMAGE_SIZE_WIDTH * Floats.THUMBNAIL_IMAGE_SCALE
                             val scale = minOf(target.toFloat() / page.width, target.toFloat() / page.height)
                             val bitmap =
                                 Bitmap.createBitmap(
@@ -383,13 +439,14 @@ object MediaActionHandlerService {
         return data
     }
 
-    private fun requireContext(): Context = appContext ?: throw failure("Media action handler is not initialized.")
+    internal fun requireContext(): Context = appContext ?: throw failure("Media action handler is not initialized.")
 
-    private fun failure(message: String): Exception = Exception(message, metadata = ExceptionMetadata(this))
+    internal fun failure(message: String): Exception = Exception(message, metadata = ExceptionMetadata(this))
 
     // MARK: - Companion
 
     private const val INITIAL_QUALITY = 100
+    private const val PLAIN_TEXT_MIME_TYPE_PREFIX = "text/"
     private const val QUALITY_STEP = 5
     private const val BYTES_PER_KB = 1024
 }

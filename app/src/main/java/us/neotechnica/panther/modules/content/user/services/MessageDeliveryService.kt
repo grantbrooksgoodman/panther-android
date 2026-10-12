@@ -153,7 +153,7 @@ object MessageDeliveryService {
             MessageOutboxService.enqueue(entry)
         }
 
-        beginSend()
+        val startedConversationIDKey = beginSend()
 
         try {
             val (contextConversation, contextIsPenPalsConversation) = conversationContext
@@ -176,7 +176,7 @@ object MessageDeliveryService {
                 throw exception
             }
         } finally {
-            cleanUpAfterSend()
+            cleanUpAfterSend(startedConversationIDKey)
         }
     }
 
@@ -222,7 +222,7 @@ object MessageDeliveryService {
             }
         }
 
-        beginSend()
+        val startedConversationIDKey = beginSend()
 
         val (contextConversation, contextIsPenPalsConversation) = conversationContext
         try {
@@ -245,7 +245,7 @@ object MessageDeliveryService {
                 throw exception
             }
         } finally {
-            cleanUpAfterSend()
+            cleanUpAfterSend(startedConversationIDKey)
         }
     }
 
@@ -257,17 +257,26 @@ object MessageDeliveryService {
         ConversationSessionService.setCurrentConversation(conversation)
     }
 
-    private suspend fun beginSend() {
+    private suspend fun beginSend(): String? {
         setIsSendingMessage(true)
         withContext(Dispatchers.Main) {
             DependencyValues.current.clientSession
                 .deliveryProgressIndicator
                 ?.startAnimatingDeliveryProgress()
         }
+        return conversation?.id?.key
     }
 
-    private suspend fun cleanUpAfterSend() {
+    // The progress indicator stops only while the conversation the send
+    // started in is still current, so a send that completes after the
+    // user moved on never interrupts another conversation's indicator.
+    private suspend fun cleanUpAfterSend(startedConversationIDKey: String?) {
         setIsSendingMessage(false)
+        val currentConversationIDKey = conversation?.id?.key
+        if (startedConversationIDKey != null && currentConversationIDKey != null && startedConversationIDKey != currentConversationIDKey) {
+            return
+        }
+
         withContext(Dispatchers.Main) {
             DependencyValues.current.clientSession
                 .deliveryProgressIndicator

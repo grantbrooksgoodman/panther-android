@@ -65,6 +65,10 @@ class ContextMenuController internal constructor() {
 
     private val registry = mutableMapOf<String, () -> ActiveContextMenu?>()
 
+    /** Whether a context menu is currently presented. */
+    val isPresenting: Boolean
+        get() = active != null
+
     internal fun present(item: ActiveContextMenu) {
         active = item
     }

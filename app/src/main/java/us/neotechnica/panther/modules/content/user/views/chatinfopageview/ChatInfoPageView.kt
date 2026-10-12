@@ -75,6 +75,7 @@ import us.neotechnica.panther.modules.content.user.extensions.decodedImageBitmap
 import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.content.user.models.ChatParticipant
 import us.neotechnica.panther.modules.content.user.models.MediaItemViewData
+import us.neotechnica.panther.modules.content.user.services.ChatInfoPageViewService
 import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
@@ -177,11 +178,13 @@ fun ChatInfoPageView(
             }
         }
 
+        LaunchedEffect(previewIndex) { ChatInfoPageViewService.setIsPreviewingMedia(previewIndex != null) }
         previewIndex?.let { index ->
             MediaPreviewOverlay(
                 mediaFiles = state.mediaItems.map { it.file },
                 startIndex = index,
                 onDismiss = { previewIndex = null },
+                title = LocalizedStringKey.Attachment.localized().lowercase(),
             )
         }
 

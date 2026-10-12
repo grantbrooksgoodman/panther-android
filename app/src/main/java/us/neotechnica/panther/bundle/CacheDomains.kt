@@ -19,6 +19,7 @@ import us.neotechnica.panther.modules.content.user.models.ConversationCellViewDa
 import us.neotechnica.panther.modules.content.user.models.QueriedContactPairCache
 import us.neotechnica.panther.modules.content.user.models.QueriedConversationCache
 import us.neotechnica.panther.modules.content.user.services.ChatInfoPageViewService
+import us.neotechnica.panther.modules.content.user.services.MediaMessagePreviewService
 import us.neotechnica.panther.modules.content.user.services.SettingsPageViewService
 import us.neotechnica.panther.modules.networking.conversation.models.ActivityDescriptionCache
 import us.neotechnica.panther.modules.networking.message.models.AudioFileDurationCache
@@ -48,6 +49,7 @@ object CacheDomainList : CacheDomainListDelegate {
                 CacheDomain.contactService,
                 CacheDomain.conversationArchive,
                 CacheDomain.conversationCellViewData,
+                CacheDomain.mediaMessagePreviewService,
                 CacheDomain.messageArchive,
                 CacheDomain.Networking.database,
                 CacheDomain.Networking.storage,
@@ -76,6 +78,10 @@ val CacheDomain.Companion.audioFileDuration: CacheDomain
 /** The cache domain for the `chatInfoPageViewService` cache. */
 val CacheDomain.Companion.chatInfoPageViewService: CacheDomain
     get() = CacheDomain("chatInfoPageViewService") { ChatInfoPageViewService.clearCache() }
+
+/** The cache domain for the `mediaMessagePreviewService` cache. */
+val CacheDomain.Companion.mediaMessagePreviewService: CacheDomain
+    get() = CacheDomain("mediaMessagePreviewService") { MediaMessagePreviewService.clearCache() }
 
 /** The cache domain for the `commonPropertyLists` cache. */
 val CacheDomain.Companion.commonPropertyLists: CacheDomain

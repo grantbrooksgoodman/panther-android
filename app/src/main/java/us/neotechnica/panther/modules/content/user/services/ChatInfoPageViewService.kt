@@ -84,6 +84,19 @@ object ChatInfoPageViewService {
     var isPreviewingMedia = false
         private set
 
+    // MARK: - Set Is Previewing Media
+
+    /**
+     * Records whether a media preview is presented over the chat info
+     * page.
+     *
+     * @param isPreviewingMedia A Boolean value that indicates whether a
+     *   preview is presented.
+     */
+    fun setIsPreviewingMedia(isPreviewingMedia: Boolean) {
+        this.isPreviewingMedia = isPreviewingMedia
+    }
+
     private val cachedChatParticipantsForUserIDs = LockIsolated<Map<String, ChatParticipant>?>(null)
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 

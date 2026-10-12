@@ -15,12 +15,16 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import us.neotechnica.panther.modules.content.user.constants.DeliveryProgressIndicatorFloats
+import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceFloats
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.session.entity.interfaces.DeliveryProgressIndicator
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
+
+// MARK: - Constants Accessors
+
+private typealias IndicatorFloats = ChatPageViewServiceFloats.DeliveryProgressIndicator
 
 /**
  * The service that manages the message delivery progress bar.
@@ -80,7 +84,7 @@ class DeliveryProgressIndicatorService(
     }
 
     override fun startAnimatingDeliveryProgress() {
-        instantiateDeliveryProgressJob(DeliveryProgressIndicatorFloats.HIDDEN_TIMER_TIME_INTERVAL)
+        instantiateDeliveryProgressJob(IndicatorFloats.HIDDEN_TIMER_TIME_INTERVAL)
         instantiateAppearanceJob()
     }
 
@@ -92,7 +96,7 @@ class DeliveryProgressIndicatorService(
             progressAnimatable.animateTo(1f, tween(durationMillis = animationDurationMillis()))
         }
         scope.launch {
-            delay((DeliveryProgressIndicatorFloats.ANIMATION_DELAY * MILLIS_PER_SECOND).toLong())
+            delay((IndicatorFloats.ANIMATION_DELAY * MILLIS_PER_SECOND).toLong())
             alphaAnimatable.animateTo(0f, tween(durationMillis = animationDurationMillis()))
             progressAnimatable.snapTo(0f)
         }
@@ -116,16 +120,16 @@ class DeliveryProgressIndicatorService(
 
     // MARK: - Auxiliary
 
-    private fun animationDurationMillis(): Int = (DeliveryProgressIndicatorFloats.ANIMATION_DURATION * MILLIS_PER_SECOND).toInt()
+    private fun animationDurationMillis(): Int = (IndicatorFloats.ANIMATION_DURATION * MILLIS_PER_SECOND).toInt()
 
     private fun instantiateAppearanceJob() {
         appearanceJob?.cancel()
         appearanceJob =
             scope.launch {
-                delay((DeliveryProgressIndicatorFloats.APPEARANCE_TIMER_TIME_INTERVAL * MILLIS_PER_SECOND).toLong())
+                delay((IndicatorFloats.APPEARANCE_TIMER_TIME_INTERVAL * MILLIS_PER_SECOND).toLong())
                 if (!(MessageDeliveryService.isSendingMessage.value || isSendingOutboxEntry)) return@launch
                 alphaAnimatable.animateTo(1f, tween(durationMillis = animationDurationMillis()))
-                instantiateDeliveryProgressJob(DeliveryProgressIndicatorFloats.VISIBLE_TIMER_TIME_INTERVAL)
+                instantiateDeliveryProgressJob(IndicatorFloats.VISIBLE_TIMER_TIME_INTERVAL)
             }
     }
 
@@ -133,8 +137,8 @@ class DeliveryProgressIndicatorService(
         deliveryProgressJob?.cancel()
         deliveryProgressJob =
             scope.launch {
-                val increment = DeliveryProgressIndicatorFloats.TIMER_PROGRESS_INCREMENT
-                val threshold = DeliveryProgressIndicatorFloats.TIMER_PROGRESS_INCREMENT_THRESHOLD
+                val increment = IndicatorFloats.TIMER_PROGRESS_INCREMENT
+                val threshold = IndicatorFloats.TIMER_PROGRESS_INCREMENT_THRESHOLD
                 while (isActive) {
                     delay((timeInterval * MILLIS_PER_SECOND).toLong())
                     if (progressAnimatable.targetValue + increment < threshold) {

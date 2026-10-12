@@ -11,13 +11,16 @@ package us.neotechnica.panther.modules.content.user.views.chatpageview
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.services.TextToSpeechService
+import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceFloats
+import us.neotechnica.panther.modules.content.user.dependencies.contextMenuActionHandlerService
+import us.neotechnica.panther.modules.content.user.dependencies.inputBarService
 import us.neotechnica.panther.modules.content.user.extensions.chatPageHeaderLabelText
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
+import us.neotechnica.panther.modules.content.user.services.AlternateMessageService
 import us.neotechnica.panther.modules.content.user.services.AudioMessagePlaybackService
-import us.neotechnica.panther.modules.content.user.services.ContextMenuActionHandlerService
+import us.neotechnica.panther.modules.content.user.services.ChatPageViewService
 import us.neotechnica.panther.modules.content.user.services.ReadReceiptService
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
-import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
@@ -28,6 +31,7 @@ import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
+import us.neotechnica.panther.subsystem.modules.effect.cancellable
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
@@ -35,64 +39,53 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStora
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
 import java.util.UUID
+import kotlin.time.Duration.Companion.milliseconds
+
+// MARK: - Constants Accessors
+
+private typealias ReducerFloats = ChatPageViewServiceFloats
 
 /**
  * The reducer for a single conversation's chat page.
  *
  * Sets the conversation current on appearance, observes its displayed
  * messages, sends text through the outbox-backed delivery service,
- * and marks incoming messages read.
+ * reloads on debounced session store and outbox changes, and marks
+ * incoming messages read.
  */
 class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
     // MARK: - Action
 
     sealed interface Action {
-        data class ViewFirstAppeared(
+        data class ViewAppeared(
             val conversationIDKey: String,
-            val focusedMessageID: String? = null,
+            val configuration: ChatPageView.Configuration,
         ) : Action
 
         data class MessagesUpdated(
             val messages: List<Message>,
         ) : Action
 
-        data class TitleResolved(
-            val title: String,
-        ) : Action
-
-        data class InputChanged(
+        data class TextViewDidChange(
             val text: String,
         ) : Action
 
-        data object SendTapped : Action
+        data object DidPressSendButton : Action
 
-        data class ToggleAlternate(
-            val messageID: String,
+        data class HandleViewAlternateAction(
+            val message: Message,
         ) : Action
 
-        data class ToggleAudioTranscription(
-            val messageID: String,
+        data class HandleAudioMessageAction(
+            val message: Message,
         ) : Action
 
-        data class React(
+        data class ReactToSelectedMessage(
             val message: Message,
             val style: Reaction.Style,
         ) : Action
 
-        data class Speak(
-            val messageID: String,
-            val displayText: String,
-        ) : Action
-
-        data class AttachmentPicked(
-            val mediaFile: MediaFile,
-        ) : Action
-
-        data object RemoveAttachment : Action
-
-        data object SendMedia : Action
-
-        data class StoreChanged(
+        data class HandleSessionStoreChange(
             val change: SessionStoreChange,
         ) : Action
 
@@ -100,9 +93,11 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             val isSendingMessage: Boolean,
         ) : Action
 
-        data class MessageOutboxChanged(
-            val hasSendingOutboxEntry: Boolean,
+        data class HandleOutboxChange(
+            val isSendingOutboxEntry: Boolean,
         ) : Action
+
+        data object ReloadRequested : Action
 
         data object ConversationUnavailable : Action
 
@@ -113,19 +108,18 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
 
     data class State(
         val conversationIDKey: String = "",
+        val configuration: ChatPageView.Configuration = ChatPageView.Configuration.Default(),
         val messages: List<Message> = emptyList(),
-        val pendingAttachment: MediaFile? = null,
-        val alternateTextMessageIDs: Set<String> = emptySet(),
-        val audioTranscriptionMessageIDs: Set<String> = emptySet(),
-        val inputText: String = "",
         val isSendingMessage: Boolean = false,
-        val hasSendingOutboxEntry: Boolean = false,
+        val isSendingOutboxEntry: Boolean = false,
         val languageCode: String = "en",
-        val title: String = "",
-        val focusedMessageID: String? = null,
         val changeToken: UUID = UUID.randomUUID(),
         val viewState: ViewState = ViewState.Loading,
-    )
+    ) {
+        /** The identifier of the message to reveal and highlight, if any. */
+        val focusedMessageID: String?
+            get() = configuration.focusedMessageID
+    }
 
     // MARK: - Reduce
 
@@ -135,15 +129,17 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         action: Action,
     ): ReduceResult<State, Action> =
         when (action) {
-            is Action.ViewFirstAppeared -> {
-                AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.ACCESS_CHAT)
+            is Action.ViewAppeared -> {
+                if (action.configuration is ChatPageView.Configuration.Default) {
+                    AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.ACCESS_CHAT)
+                }
                 ReduceResult(
                     state.copy(
                         conversationIDKey = action.conversationIDKey,
+                        configuration = action.configuration,
                         languageCode = RuntimeStorage.languageCode,
-                        focusedMessageID = action.focusedMessageID,
                     ),
-                    startEffect(action.conversationIDKey, action.focusedMessageID),
+                    viewAppearedEffect(action.conversationIDKey, action.configuration),
                 )
             }
 
@@ -157,79 +153,56 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
                     markReadEffect(),
                 )
 
-            is Action.TitleResolved ->
-                ReduceResult(state.copy(title = action.title))
+            is Action.TextViewDidChange -> {
+                DependencyValues.current.inputBarService.textViewDidChange(action.text)
+                ReduceResult(state)
+            }
 
-            is Action.InputChanged ->
-                ReduceResult(state.copy(inputText = action.text))
-
-            Action.SendTapped -> {
-                if (state.isSendingMessage || state.inputText.isBlank()) {
+            Action.DidPressSendButton -> {
+                val inputBarService = DependencyValues.current.inputBarService
+                val text = inputBarService.text.value
+                if (state.isSendingMessage || text.isBlank()) {
                     ReduceResult(state)
                 } else {
-                    ReduceResult(state.copy(inputText = ""), sendEffect(state.inputText))
+                    inputBarService.toggleSendingUI(on = true)
+                    ReduceResult(state, sendEffect(text))
                 }
             }
 
-            is Action.ToggleAlternate -> {
-                val isDisplayingAlternateText = action.messageID in state.alternateTextMessageIDs
-                if (!isDisplayingAlternateText) {
-                    AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.VIEW_ALTERNATE)
-                }
-
-                val updated =
-                    if (isDisplayingAlternateText) {
-                        state.alternateTextMessageIDs - action.messageID
-                    } else {
-                        state.alternateTextMessageIDs + action.messageID
-                    }
-                ReduceResult(state.copy(alternateTextMessageIDs = updated))
+            is Action.HandleViewAlternateAction -> {
+                AlternateMessageService.toggle(AlternateMessageService.AlternateMessageType.ALTERNATE_TEXT, action.message)
+                ReduceResult(state.copy(changeToken = UUID.randomUUID()))
             }
 
-            is Action.ToggleAudioTranscription -> {
-                val isDisplayingAudioTranscription = action.messageID in state.audioTranscriptionMessageIDs
-                if (!isDisplayingAudioTranscription) {
-                    AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.VIEW_ALTERNATE)
-                }
-
-                val updated =
-                    if (isDisplayingAudioTranscription) {
-                        state.audioTranscriptionMessageIDs - action.messageID
-                    } else {
-                        state.audioTranscriptionMessageIDs + action.messageID
-                    }
-                ReduceResult(state.copy(audioTranscriptionMessageIDs = updated))
+            is Action.HandleAudioMessageAction -> {
+                AlternateMessageService.toggle(AlternateMessageService.AlternateMessageType.AUDIO_TRANSCRIPTION, action.message)
+                ReduceResult(state.copy(changeToken = UUID.randomUUID()))
             }
 
-            is Action.React ->
+            is Action.ReactToSelectedMessage ->
                 ReduceResult(state, reactEffect(action.message, action.style))
 
-            is Action.Speak ->
-                ReduceResult(state, speakEffect(state, action.messageID, action.displayText))
-
-            is Action.AttachmentPicked ->
-                ReduceResult(state.copy(pendingAttachment = action.mediaFile))
-
-            Action.RemoveAttachment ->
-                ReduceResult(state.copy(pendingAttachment = null))
-
-            Action.SendMedia ->
-                state.pendingAttachment?.let { mediaFile ->
-                    ReduceResult(state.copy(pendingAttachment = null), sendMediaEffect(mediaFile))
-                } ?: ReduceResult(state)
-
-            is Action.StoreChanged ->
+            is Action.HandleSessionStoreChange ->
                 if (shouldReload(action.change)) {
-                    ReduceResult(state.copy(changeToken = UUID.randomUUID()), markReadEffect())
+                    val effect = reloadEffect(ReducerFloats.SESSION_STORE_CHANGE_DEBOUNCE_MILLISECONDS, ReloadEffectID.SESSION_STORE)
+                    ReduceResult(state, effect)
                 } else {
                     ReduceResult(state)
                 }
 
-            is Action.IsSendingMessageChanged ->
+            is Action.IsSendingMessageChanged -> {
+                DependencyValues.current.inputBarService.toggleSendingUI(on = action.isSendingMessage, clearInputTextViewText = false)
                 ReduceResult(state.copy(isSendingMessage = action.isSendingMessage))
+            }
 
-            is Action.MessageOutboxChanged ->
-                ReduceResult(state.copy(hasSendingOutboxEntry = action.hasSendingOutboxEntry))
+            is Action.HandleOutboxChange ->
+                ReduceResult(
+                    state.copy(isSendingOutboxEntry = action.isSendingOutboxEntry),
+                    reloadEffect(ReducerFloats.OUTBOX_CHANGE_DEBOUNCE_MILLISECONDS, ReloadEffectID.OUTBOX),
+                )
+
+            Action.ReloadRequested ->
+                ReduceResult(state.copy(changeToken = UUID.randomUUID()), markReadEffect())
 
             Action.ConversationUnavailable -> {
                 DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
@@ -237,29 +210,17 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             }
 
             Action.ViewDisappeared -> {
-                // Clear the current-conversation pointer only when the page is
-                // truly being dismissed – not when it
-                // is covered by a sub-page of the same conversation, which on Android
-                // is a push that disposes the chat. Clearing it there would strand
-                // chat info's own actions, such as adding a participant, that read the
-                // current conversation.
-                if (!isCoveredBySubPage(state.conversationIDKey)) {
-                    TextToSpeechService.stop()
-                    AudioMessagePlaybackService.stopPlayback()
-                    ContextMenuActionHandlerService.resetSpeakingMessage()
-                    // Flush read receipts for any message that arrived within the
-                    // mark-read debounce window just before the page was left. The
-                    // page's own mark-read effect runs on the view model's scope, so
-                    // disposing the page cancels it mid-flight; this detached flush
-                    // outlives the view model and catches those stragglers.
-                    ReadReceiptService.flushUnreadMessages(state.conversationIDKey)
-                    ConversationSessionService.setCurrentConversation(null)
-                }
+                viewDisappeared(state)
                 ReduceResult(state)
             }
         }
 
     // MARK: - Auxiliary
+
+    private enum class ReloadEffectID {
+        OUTBOX,
+        SESSION_STORE,
+    }
 
     /**
      * Whether the chat page is being disposed because a sub-page of the
@@ -276,24 +237,17 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         }
     }
 
-    private fun speakEffect(
-        state: State,
-        messageID: String,
-        displayText: String,
+    private fun reloadEffect(
+        debounceMilliseconds: Long,
+        id: ReloadEffectID,
     ): Effect<Action> =
-        Effect.run {
-            val message = state.messages.firstOrNull { it.id == messageID } ?: return@run
-            val isDisplayingAlternateText = messageID in state.alternateTextMessageIDs
-            try {
-                ContextMenuActionHandlerService.handleSpeakAction(message, message.translation, displayText, isDisplayingAlternateText)
-            } catch (exception: Exception) {
-                Logger.log(exception, with = AlertType.toast)
-            }
-        }
+        Effect
+            .task<Action>(delay = debounceMilliseconds.milliseconds) { Action.ReloadRequested }
+            .cancellable(id, cancelInFlight = true)
 
-    private fun startEffect(
+    private fun viewAppearedEffect(
         conversationIDKey: String,
-        focusedMessageID: String?,
+        configuration: ChatPageView.Configuration,
     ): Effect<Action> =
         Effect.run { send ->
             val conversation = SessionStore.getConversation(conversationIDKey)
@@ -302,10 +256,52 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
                 return@run
             }
 
+            ChatPageViewService.setConfiguration(configuration)
+            ConversationSessionService.resetMessageOffset()
             ConversationSessionService.setCurrentConversation(conversation)
-            focusedMessageID?.let { ConversationSessionService.incrementMessageOffset(it) }
-            val title = conversation.chatPageHeaderLabelText ?: ConversationCellViewData(conversation)?.titleLabelText
-            title?.let { send(Action.TitleResolved(it)) }
+            configuration.focusedMessageID?.let { ConversationSessionService.incrementMessageOffset(it) }
+
+            val inputBarService = DependencyValues.current.inputBarService
+            inputBarService.configureInputBar(forceUpdate = true)
+            inputBarService.toggleSendingUI(on = false)
+
+            val navigationTitle = conversation.chatPageHeaderLabelText ?: ConversationCellViewData(conversation)?.titleLabelText
+            navigationTitle?.let { ChatPageViewService.setNavigationTitle(it) }
             markCurrentConversationAsRead()
+        }
+
+    // Speech, playback, and alternate content stop on every disappearance;
+    // the current-conversation pointer clears only when the page is truly
+    // being dismissed – not when covered by a sub-page of the same
+    // conversation, which on Android is a push that disposes the chat.
+    private fun viewDisappeared(state: State) {
+        TextToSpeechService.stopSpeakingIfNeeded()
+        AudioMessagePlaybackService.stopPlayback()
+        DependencyValues.current.contextMenuActionHandlerService.resetSpeakingMessage()
+        AlternateMessageService.restoreAllAlternateTextMessageIDs()
+        AlternateMessageService.restoreAllAudioTranscriptionMessageIDs()
+        DependencyValues.current.inputBarService.textViewDidChange("")
+
+        if (state.configuration is ChatPageView.Configuration.Preview) return
+        if (!isCoveredBySubPage(state.conversationIDKey)) {
+            // Flush read receipts for any message that arrived within the
+            // mark-read debounce window just before the page was left; the
+            // detached flush outlives the view model.
+            ReadReceiptService.flushUnreadMessages(state.conversationIDKey)
+            ConversationSessionService.setCurrentConversation(null)
+            ChatPageViewService.clearNavigationTitle()
+        }
+
+        ConversationSessionService.resetMessageOffset()
+    }
+
+    private fun sendEffect(text: String): Effect<Action> =
+        Effect.run {
+            val inputBarService = DependencyValues.current.inputBarService
+            try {
+                inputBarService.actionHandler.didPressSendButton(text)
+            } catch (exception: Exception) {
+                Logger.log(exception, with = AlertType.toast)
+            }
         }
 }

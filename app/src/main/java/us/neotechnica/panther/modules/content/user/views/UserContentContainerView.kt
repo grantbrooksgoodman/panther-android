@@ -183,7 +183,11 @@ private fun DestinationView(path: UserContentNavigatorState.SeguePaths) {
     // insets its own content.
     when (path) {
         is UserContentNavigatorState.SeguePaths.Chat ->
-            ChatPageView(path.conversationIDKey, path.focusedMessageID, Modifier.fillMaxSize())
+            ChatPageView(
+                conversationIDKey = path.conversationIDKey,
+                configuration = ChatPageView.Configuration.Default(focusedMessageID = path.focusedMessageID),
+                modifier = Modifier.fillMaxSize(),
+            )
 
         is UserContentNavigatorState.SeguePaths.ChatInfo ->
             ChatInfoPageView(path.conversationIDKey, Modifier.fillMaxSize())

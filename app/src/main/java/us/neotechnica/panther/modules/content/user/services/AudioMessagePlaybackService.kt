@@ -26,10 +26,15 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.modules.common.services.HapticsService
 import us.neotechnica.panther.modules.common.services.TextToSpeechService
+import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceFloats
 import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.networking.message.models.AudioMessageReference
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
+
+// MARK: - Constants Accessors
+
+private typealias PlaybackFloats = ChatPageViewServiceFloats.AudioMessagePlayback
 
 /**
  * Manages audio message playback: tap-to-play/pause, playback-progress,
@@ -68,6 +73,10 @@ object AudioMessagePlaybackService {
     /** The identifier of the message currently playing, or `null`. */
     val playingMessageID: String?
         get() = mutablePlayingMessageID
+
+    /** The message currently playing, or `null`. */
+    val playingMessage: Message?
+        get() = mutablePlayingMessageID?.let { id -> ConversationSessionService.displayedMessages.value.firstOrNull { it.id == id } }
 
     /** The playback progress of the current message, in `0.0...1.0`. */
     val progress: Float
@@ -157,7 +166,7 @@ object AudioMessagePlaybackService {
 
         next ?: return
         scope.launch {
-            delay(PLAY_NEXT_MESSAGE_DELAY_MILLISECONDS)
+            delay(PlaybackFloats.PLAY_NEXT_MESSAGE_DELAY_MILLISECONDS)
             val reference = next.audioComponent ?: return@launch
             didTapPlayButton(next, reference)
         }
@@ -181,7 +190,7 @@ object AudioMessagePlaybackService {
                         mutableProgress =
                             runCatching { currentPlayer.currentPosition.toFloat() / duration }.getOrDefault(0f).coerceIn(0f, 1f)
                     }
-                    delay(PROGRESS_POLL_INTERVAL_MILLISECONDS)
+                    delay((PlaybackFloats.PLAYBACK_TIMER_TIME_INTERVAL * MILLISECONDS_PER_SECOND).toLong())
                 }
             }
     }
@@ -208,6 +217,5 @@ object AudioMessagePlaybackService {
 
     // MARK: - Companion
 
-    private const val PROGRESS_POLL_INTERVAL_MILLISECONDS = 50L
-    private const val PLAY_NEXT_MESSAGE_DELAY_MILLISECONDS = 500L
+    private const val MILLISECONDS_PER_SECOND = 1000f
 }

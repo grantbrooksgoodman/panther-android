@@ -10,66 +10,75 @@ package us.neotechnica.panther.modules.content.user.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
-import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.content.user.constants.ChatPageViewColors
+import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
 import us.neotechnica.panther.modules.content.user.constants.MediaMessageBubbleColors
 import us.neotechnica.panther.modules.content.user.constants.MediaMessageBubbleFloats
+import us.neotechnica.panther.modules.content.user.constants.UserContentExtensionsStrings
+import us.neotechnica.panther.modules.content.user.services.MediaMessagePreviewService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
-import androidx.compose.material3.Text as Material3Text
 
 /**
  * A message bubble carrying media: an inline image, a video thumbnail
- * with a play affordance, or a document card. When no media file is
- * available ([mediaFile] `null`), a loading placeholder is shown.
+ * with a play affordance, or a document rendered as a photo through its
+ * thumbnail inside a gray outlined bubble.
+ *
+ * A placeholder spinner shows only while the file is absent; a file
+ * that cannot be decoded, or a document without a thumbnail, shows the
+ * missing-image glyph instead.
  *
  * The bubble carries no tap handler of its own: the enclosing
  * `MessageContextMenu` owns the tap (to open the preview) alongside the
- * long-press and double-tap, so a single gesture detector arbitrates all
- * three.
+ * long-press and double-tap. Pinching the bubble also opens the
+ * preview.
  *
- * @param mediaFile The media file, or `null` if none is available.
+ * @param mediaFile The media file.
  * @param isOwn Whether the message is from the current user.
+ * @param onPinch Invoked when the bubble is pinched outward.
  */
 @Composable
 fun MediaMessageBubble(
-    mediaFile: MediaFile?,
+    mediaFile: MediaFile,
     isOwn: Boolean,
+    onPinch: () -> Unit = {},
 ) {
-    val shape =
-        RoundedCornerShape(
-            topStart = MediaMessageBubbleFloats.bubbleRadius,
-            topEnd = MediaMessageBubbleFloats.bubbleRadius,
-            bottomStart = if (isOwn) MediaMessageBubbleFloats.bubbleRadius else MediaMessageBubbleFloats.bubbleTailRadius,
-            bottomEnd = if (isOwn) MediaMessageBubbleFloats.bubbleTailRadius else MediaMessageBubbleFloats.bubbleRadius,
-        )
+    val shape = bubbleShape(isOwn)
+    val pinchModifier =
+        Modifier.pointerInput(mediaFile.relativePath) {
+            detectTransformGestures { _, _, zoom, _ -> if (zoom > PINCH_OPEN_ZOOM_THRESHOLD) onPinch() }
+        }
 
-    val fileExtension = mediaFile?.fileExtension
-    when {
-        mediaFile == null -> Placeholder(shape, isOwn)
-        fileExtension?.isImage == true -> ImageContent(mediaFile, shape)
-        fileExtension?.isVideo == true -> VideoContent(mediaFile, shape)
-        else -> DocumentContent(mediaFile, isOwn, shape)
+    val fileExtension = mediaFile.fileExtension
+    val isFilePresent = mediaFile.localPathFile?.exists() == true
+    Box(modifier = pinchModifier) {
+        when {
+            !isFilePresent -> Placeholder(shape, isOwn)
+            fileExtension.isImage -> ImageContent(mediaFile, shape)
+            fileExtension.isVideo -> VideoContent(mediaFile, shape)
+            else -> DocumentContent(mediaFile, shape)
+        }
     }
 }
 
@@ -80,18 +89,11 @@ private fun ImageContent(
     mediaFile: MediaFile,
     shape: Shape,
 ) {
-    val image =
-        remember(mediaFile.relativePath) {
-            MediaImageLoader.decode(mediaFile.localPathFile, MediaMessageBubbleFloats.IMAGE_DECODE_MAX_DIMENSION)
-        }
+    val image = remember(mediaFile.relativePath) { MediaMessagePreviewService.thumbnail(mediaFile) }
     if (image == null) {
-        Placeholder(shape, isOwn = false)
+        MissingImage(shape)
         return
     }
-
-    val displayHeight =
-        (MediaMessageBubbleFloats.imageMaxWidth / (image.width.toFloat() / image.height))
-            .coerceAtMost(MediaMessageBubbleFloats.imageMaxHeight)
 
     Image(
         bitmap = image,
@@ -100,7 +102,7 @@ private fun ImageContent(
         modifier =
             Modifier
                 .width(MediaMessageBubbleFloats.imageMaxWidth)
-                .height(displayHeight)
+                .height(displayHeight(image))
                 .clip(shape),
     )
 }
@@ -112,24 +114,17 @@ private fun VideoContent(
     mediaFile: MediaFile,
     shape: Shape,
 ) {
-    val thumbnail =
-        remember(mediaFile.relativePath) {
-            MediaImageLoader.decode(mediaFile.thumbnailFile, MediaMessageBubbleFloats.IMAGE_DECODE_MAX_DIMENSION)
-        }
-    val displayHeight =
-        if (thumbnail != null) {
-            (MediaMessageBubbleFloats.imageMaxWidth / (thumbnail.width.toFloat() / thumbnail.height))
-                .coerceAtMost(MediaMessageBubbleFloats.imageMaxHeight)
-        } else {
-            MediaMessageBubbleFloats.imageMaxWidth / MediaMessageBubbleFloats.VIDEO_DEFAULT_ASPECT_RATIO
-        }
+    val thumbnail = remember(mediaFile.relativePath) { MediaMessagePreviewService.thumbnail(mediaFile) }
+    val height =
+        thumbnail?.let { displayHeight(it) }
+            ?: (MediaMessageBubbleFloats.imageMaxWidth / MediaMessageBubbleFloats.VIDEO_DEFAULT_ASPECT_RATIO)
 
     Box(
         contentAlignment = Alignment.Center,
         modifier =
             Modifier
                 .width(MediaMessageBubbleFloats.imageMaxWidth)
-                .height(displayHeight)
+                .height(height)
                 .clip(shape)
                 .background(MediaMessageBubbleColors.videoPlaceholderBackground),
     ) {
@@ -138,8 +133,10 @@ private fun VideoContent(
                 bitmap = thumbnail,
                 contentDescription = LocalizedStringKey.Video.localized(),
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.width(MediaMessageBubbleFloats.imageMaxWidth).height(displayHeight),
+                modifier = Modifier.width(MediaMessageBubbleFloats.imageMaxWidth).height(height),
             )
+        } else {
+            MissingImageGlyph()
         }
         PlayBadge()
     }
@@ -165,37 +162,49 @@ private fun PlayBadge() {
 
 // MARK: - Document
 
+// A document renders as a photo through its thumbnail inside a gray
+// outlined bubble; without a thumbnail, the missing-image glyph shows.
 @Composable
 private fun DocumentContent(
     mediaFile: MediaFile,
-    isOwn: Boolean,
     shape: Shape,
 ) {
+    val thumbnail = remember(mediaFile.relativePath) { MediaMessagePreviewService.thumbnail(mediaFile) }
     val colors = LocalPantherColors.current
-    val foreground = if (isOwn) MediaMessageBubbleColors.playGlyph else colors.titleText
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
+    val outline =
+        Modifier.border(
+            ChatPageViewFloats.MessagesDisplayDelegate.bubbleOutlineWidth,
+            ChatPageViewColors.MessagesDisplayDelegate.documentBubbleOutline,
+            shape,
+        )
+
+    if (thumbnail == null) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier =
+                Modifier
+                    .width(MediaMessageBubbleFloats.placeholderWidth)
+                    .height(MediaMessageBubbleFloats.placeholderHeight)
+                    .clip(shape)
+                    .background(colors.receiverBubble)
+                    .then(outline),
+        ) {
+            MissingImageGlyph()
+        }
+        return
+    }
+
+    Image(
+        bitmap = thumbnail,
+        contentDescription = LocalizedStringKey.Document.localized(),
+        contentScale = ContentScale.Crop,
         modifier =
             Modifier
+                .width(MediaMessageBubbleFloats.imageMaxWidth)
+                .height(displayHeight(thumbnail))
                 .clip(shape)
-                .background(if (isOwn) colors.senderBubble else colors.receiverBubble)
-                .padding(MediaMessageBubbleFloats.documentPadding)
-                .widthIn(max = MediaMessageBubbleFloats.imageMaxWidth),
-    ) {
-        Components.Symbol(
-            "doc.circle.fill",
-            foregroundColor = foreground,
-            modifier = Modifier.size(MediaMessageBubbleFloats.documentIconSize),
-        )
-        Material3Text(
-            "${mediaFile.name}.${mediaFile.fileExtension.rawValue}",
-            color = foreground,
-            style = Font.system.textStyle,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(start = MediaMessageBubbleFloats.documentTextStartPadding),
-        )
-    }
+                .then(outline),
+    )
 }
 
 // MARK: - Placeholder
@@ -218,3 +227,36 @@ private fun Placeholder(
         CircularProgressIndicator(color = colors.subtitleText)
     }
 }
+
+@Composable
+private fun MissingImage(shape: Shape) {
+    val colors = LocalPantherColors.current
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+            Modifier
+                .width(MediaMessageBubbleFloats.placeholderWidth)
+                .height(MediaMessageBubbleFloats.placeholderHeight)
+                .clip(shape)
+                .background(colors.receiverBubble),
+    ) {
+        MissingImageGlyph()
+    }
+}
+
+@Composable
+private fun MissingImageGlyph() {
+    Components.Symbol(
+        UserContentExtensionsStrings.UIImage.MISSING_IMAGE_SYSTEM_NAME,
+        foregroundColor = MediaMessageBubbleColors.missingImageGlyph,
+        modifier = Modifier.size(MediaMessageBubbleFloats.missingImageGlyphSize),
+    )
+}
+
+// MARK: - Auxiliary
+
+private fun displayHeight(image: ImageBitmap): Dp =
+    (MediaMessageBubbleFloats.imageMaxWidth / (image.width.toFloat() / image.height))
+        .coerceAtMost(MediaMessageBubbleFloats.imageMaxHeight)
+
+private const val PINCH_OPEN_ZOOM_THRESHOLD = 1.05f

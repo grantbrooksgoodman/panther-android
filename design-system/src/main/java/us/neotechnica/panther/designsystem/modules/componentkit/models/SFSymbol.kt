@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.ArrowCircleUp
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Cancel
@@ -52,6 +53,7 @@ import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
@@ -124,6 +126,8 @@ object SFSymbol {
             "play.fill" to Icons.Filled.PlayArrow,
             "play.circle.fill" to Icons.Filled.PlayArrow,
             "pause.fill" to Icons.Filled.Pause,
+            "stop.fill" to Icons.Filled.Stop,
+            "arrow.up.circle.fill" to Icons.Filled.ArrowCircleUp,
             "square.and.arrow.down" to Icons.Filled.Download,
             "square.and.pencil" to Icons.Filled.Edit,
             "globe" to Icons.Filled.Language,

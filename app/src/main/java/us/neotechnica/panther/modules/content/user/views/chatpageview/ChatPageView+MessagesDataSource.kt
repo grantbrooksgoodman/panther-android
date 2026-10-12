@@ -8,35 +8,65 @@
 
 package us.neotechnica.panther.modules.content.user.views.chatpageview
 
+import androidx.compose.animation.core.animate
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import us.neotechnica.panther.modules.content.user.components.ChatMessageCell
 import us.neotechnica.panther.modules.content.user.components.ChatMessageRowData
+import us.neotechnica.panther.modules.content.user.components.messageTimestampLabelAttributedText
+import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
+import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceFloats
+import us.neotechnica.panther.modules.content.user.extensions.contactPair
 import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.content.user.extensions.isOutboxMessage
-import us.neotechnica.panther.modules.content.user.extensions.isSystemMessage
 import us.neotechnica.panther.modules.content.user.extensions.systemLocalized
+import us.neotechnica.panther.modules.content.user.services.ChatPageViewService
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
-import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
+
+// MARK: - Constants Accessors
+
+private typealias TimestampFloats = ChatPageViewFloats.MessageTimestamp
 
 // The maximum number of frames to keep re-pinning the newest message while
 // its content settles into place, guarding against an unbounded loop.
@@ -47,9 +77,10 @@ private const val SCROLL_SETTLE_MAX_FRAMES = 8
  *
  * The list starts pinned and scrolls to the bottom on initial load, when
  * the user sends a message, or whenever pinned content grows – a
- * reaction landing below the last message. It unpins the moment the user drags the list to
- * read earlier messages and re-pins once the list next rests at the very
- * bottom, so content growth is never mistaken for the user scrolling away.
+ * reaction landing below the last message. It unpins the moment the
+ * user drags the list to read earlier messages and re-pins once the
+ * list next rests at the very bottom, so content growth is never
+ * mistaken for the user scrolling away.
  */
 @Composable
 private fun StickToBottomEffect(
@@ -110,28 +141,94 @@ private fun StickToBottomEffect(
     }
 }
 
+/**
+ * Loads older messages when the user drags past the topmost message,
+ * and scrolls to the topmost message after a scroll-to-top load.
+ */
 @Composable
-@Suppress("LongParameterList")
+private fun rememberLoadMoreMessagesConnection(listState: LazyListState): NestedScrollConnection {
+    var hasRequestedLoad by remember { mutableStateOf(false) }
+    LaunchedEffect(listState) {
+        listState.interactionSource.interactions.collect { interaction ->
+            if (interaction is DragInteraction.Stop || interaction is DragInteraction.Cancel) hasRequestedLoad = false
+        }
+    }
+
+    val didLoadFromScrollToTop by ChatPageViewService.didLoadMoreMessagesFromScrollToTop.collectAsState()
+    LaunchedEffect(didLoadFromScrollToTop) {
+        if (!didLoadFromScrollToTop) return@LaunchedEffect
+        delay(ChatPageViewServiceFloats.LOAD_MORE_MESSAGES_DELAY_MILLISECONDS)
+        listState.animateScrollToItem(0)
+        ChatPageViewService.didScrollToTopAfterLoading()
+    }
+
+    return remember(listState) {
+        object : NestedScrollConnection {
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource,
+            ): Offset {
+                // An unconsumed downward drag at the very top is the user
+                // pulling for older messages.
+                val isAtTop = listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+                if (source == NestedScrollSource.UserInput && available.y > 0f && isAtTop && !hasRequestedLoad) {
+                    hasRequestedLoad = true
+                    ChatPageViewService.loadMoreMessages(fromScrollToTop = false)
+                }
+                return Offset.Zero
+            }
+        }
+    }
+}
+
+/**
+ * The message list: every displayed message as a [ChatMessageCell],
+ * pinned to the newest message, loading older messages on an upward
+ * drag at the top, and revealing each message's timestamp as the list
+ * is dragged toward the leading edge.
+ *
+ * @param state The chat page state.
+ * @param modifier The modifier for the list.
+ * @param onReact Applies the given reaction style to the given message.
+ */
+@Composable
 internal fun MessageList(
     state: ChatPageReducer.State,
     modifier: Modifier,
-    onToggleAlternate: (String) -> Unit,
-    onToggleAudioTranscription: (String) -> Unit,
-    onTapMedia: (String) -> Unit,
     onReact: (Message, Reaction.Style) -> Unit,
-    onSpeak: (String, String) -> Unit,
-    onFailedIndicatorTapped: (String) -> Unit,
-    onSaveMedia: (MediaFile) -> Unit,
 ) {
     val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
     val messages = state.messages
     val users = ConversationSessionService.currentConversation?.users.orEmpty()
     val isGroup = (ConversationSessionService.currentConversation?.participants?.size ?: 2) > 2
     val lastConfirmedOwnIndex = messages.indexOfLast { it.isFromCurrentUser && !it.isOutboxMessage }
+    val loadMoreConnection = rememberLoadMoreMessagesConnection(listState)
 
     StickToBottomEffect(listState, state)
 
-    LazyColumn(state = listState, modifier = modifier, verticalArrangement = Arrangement.Top) {
+    // Dragging toward the leading edge reveals the timestamps; releasing
+    // springs the list back.
+    val revealDistancePx = with(LocalDensity.current) { TimestampFloats.revealDistance.toPx() }
+    var revealOffset by remember { mutableFloatStateOf(0f) }
+    val revealFraction = (-revealOffset / revealDistancePx).coerceIn(0f, 1f)
+    val revealModifier =
+        Modifier.pointerInput(revealDistancePx) {
+            detectHorizontalDragGestures(
+                onDragEnd = { scope.launch { animate(revealOffset, 0f) { value, _ -> revealOffset = value } } },
+                onDragCancel = { scope.launch { animate(revealOffset, 0f) { value, _ -> revealOffset = value } } },
+            ) { change, dragAmount ->
+                change.consume()
+                revealOffset = (revealOffset + dragAmount).coerceIn(-revealDistancePx, 0f)
+            }
+        }
+
+    LazyColumn(
+        state = listState,
+        modifier = modifier.nestedScroll(loadMoreConnection).then(revealModifier),
+        verticalArrangement = Arrangement.Top,
+    ) {
         itemsIndexed(messages, key = { _, message -> message.id }) { index, displayedMessage ->
             // System rows render the activity's localized description.
             val message = displayedMessage.systemLocalized
@@ -139,46 +236,63 @@ internal fun MessageList(
                 message.isOutboxMessage &&
                     MessageOutboxService.entry(message.id)?.state == OutboxEntry.State.FAILED
 
-            val showSender = isGroup && !message.isFromCurrentUser && !message.isSystemMessage
-            val firstOfRun = messages.getOrNull(index - 1)?.fromAccountID != message.fromAccountID
-            val lastOfRun = messages.getOrNull(index + 1)?.fromAccountID != message.fromAccountID
+            val previousMessage = messages.getOrNull(index - 1)
+            val showSender = isGroup && !message.isFromCurrentUser
+            val firstOfRun = previousMessage?.fromAccountID != message.fromAccountID
             val senderUser =
                 if (showSender) {
                     users.firstOrNull { it.id == message.fromAccountID } ?: SessionStore.users[message.fromAccountID]
                 } else {
                     null
                 }
-            val senderDisplayName = senderUser?.displayName
+            val senderImage =
+                remember(senderUser?.id) {
+                    senderUser
+                        ?.contactPair
+                        ?.contact
+                        ?.image
+                        ?.asImageBitmap()
+                }
 
-            ChatMessageCell(
-                row =
-                    ChatMessageRowData(
-                        message = message,
-                        previousMessage = messages.getOrNull(index - 1),
-                        translation = message.translation,
-                        showAlternate = message.id in state.alternateTextMessageIDs,
-                        isLastConfirmedOwnMessage = index == lastConfirmedOwnIndex,
-                        isGroup = isGroup,
-                        isFailed = isFailed,
-                        senderName = if (showSender && firstOfRun) (senderDisplayName ?: message.fromAccountID) else null,
-                        senderInitials = senderDisplayName?.contactInitials() ?: "",
-                        showSenderAvatar = showSender && lastOfRun,
-                        reactions = message.reactions.orEmpty(),
-                        mediaFile = message.richContent?.mediaComponent,
-                        audioReference = message.audioComponent,
-                        isDisplayingAudioTranscription = message.id in state.audioTranscriptionMessageIDs,
-                    ),
-                onToggleAlternate = onToggleAlternate,
-                onToggleAudioTranscription = onToggleAudioTranscription,
-                onTapMedia = onTapMedia,
-                onReact = onReact,
-                onSpeak = onSpeak,
-                onFailedIndicatorTapped = onFailedIndicatorTapped,
-                onSaveMedia = onSaveMedia,
-            )
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Box(modifier = Modifier.fillMaxWidth().graphicsLayer { translationX = revealOffset }) {
+                    ChatMessageCell(
+                        row =
+                            ChatMessageRowData(
+                                message = message,
+                                previousMessage = previousMessage,
+                                isLastConfirmedOwnMessage = index == lastConfirmedOwnIndex,
+                                isGroup = isGroup,
+                                isFailed = isFailed,
+                                senderName = if (showSender && firstOfRun) senderUser?.displayName ?: message.fromAccountID else null,
+                                senderImage = senderImage,
+                                reactions = message.reactions.orEmpty(),
+                            ),
+                        onReact = onReact,
+                        onFailedIndicatorTapped = { messageID ->
+                            scope.launch { ChatPageViewService.presentFailedMessageActionSheet(forMessageID = messageID) }
+                        },
+                    )
+                }
+
+                if (revealFraction > 0f) {
+                    Text(
+                        text = messageTimestampLabelAttributedText(message),
+                        textAlign = TextAlign.End,
+                        modifier =
+                            Modifier
+                                .align(Alignment.CenterEnd)
+                                .width(TimestampFloats.labelWidth)
+                                .padding(end = TIMESTAMP_END_PADDING)
+                                .graphicsLayer {
+                                    alpha = revealFraction
+                                    translationX = revealOffset + revealDistancePx
+                                },
+                    )
+                }
+            }
         }
     }
 }
 
-/** The uppercased first letters of each word of the name. */
-private fun String.contactInitials(): String = split(" ").mapNotNull { it.firstOrNull()?.uppercase() }.joinToString("")
+private val TIMESTAMP_END_PADDING = 8.dp

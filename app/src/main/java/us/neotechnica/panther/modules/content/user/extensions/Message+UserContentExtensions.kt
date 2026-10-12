@@ -8,8 +8,19 @@
 
 package us.neotechnica.panther.modules.content.user.extensions
 
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
 import us.neotechnica.panther.modules.common.constants.CommonConstants
+import us.neotechnica.panther.modules.content.user.constants.ChatPageViewStrings
+import us.neotechnica.panther.modules.content.user.constants.SystemMessageCellFloats
+import us.neotechnica.panther.modules.content.user.dependencies.contextMenuActionHandlerService
+import us.neotechnica.panther.modules.content.user.models.MessageKind
+import us.neotechnica.panther.modules.content.user.services.AlternateMessageService
+import us.neotechnica.panther.modules.content.user.services.AudioMessagePlaybackService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
 import us.neotechnica.panther.modules.networking.message.models.Message
@@ -187,3 +198,133 @@ fun Message.textContains(searchTerm: String): Boolean {
     val comparator = if (isFromCurrentUser) translation.input.value else translation.output.sanitized
     return comparator.lowercase().trim().contains(normalizedSearchTerm)
 }
+
+// MARK: - Display
+
+/**
+ * The attributed string for a system message, combining its date
+ * separator and activity text, or `null` if the message is not a
+ * system message. Participant names wrapped in `⌘…⌘` sentinels render
+ * bold; the caller supplies the color.
+ */
+val Message.attributedSystemString: AnnotatedString?
+    get() {
+        if (!isSystemMessage) return null
+        val text = systemLocalized.translation?.output ?: return null
+        val dateString = sentDate.chatPageMessageSeparatorAttributedDateString ?: return null
+
+        return buildAnnotatedString {
+            append(dateString)
+            append("\n")
+            val activityStart = length
+            val sanitizedText = text.sanitized
+            append(sanitizedText)
+            addStyle(
+                SpanStyle(fontSize = SystemMessageCellFloats.ACTIVITY_STRING_SYSTEM_FONT_SIZE.sp),
+                activityStart,
+                activityStart + sanitizedText.length,
+            )
+
+            // Map each sentinel-wrapped range onto the sanitized text.
+            var sanitizedOffset = 0
+            var isBold = false
+            text.split("⌘").forEach { segment ->
+                val cleanedSegment = segment.sanitized
+                if (isBold && cleanedSegment.isNotEmpty()) {
+                    addStyle(
+                        SpanStyle(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = SystemMessageCellFloats.ACTIVITY_STRING_SYSTEM_FONT_SIZE.sp,
+                        ),
+                        activityStart + sanitizedOffset,
+                        activityStart + sanitizedOffset + cleanedSegment.length,
+                    )
+                }
+                sanitizedOffset += cleanedSegment.length
+                isBold = !isBold
+            }
+        }
+    }
+
+/**
+ * A Boolean value that indicates whether this message's audio is
+ * currently playing.
+ */
+val Message.isPlayingMessage: Boolean
+    get() {
+        if (!contentType.isAudio || audioComponent == null) return false
+        val playingMessageID = AudioMessagePlaybackService.playingMessageID ?: return false
+        return playingMessageID == id
+    }
+
+/**
+ * A Boolean value that indicates whether this message is currently
+ * being spoken aloud.
+ */
+val Message.isSpeakingMessage: Boolean
+    get() {
+        val speakingMessage = DependencyValues.current.contextMenuActionHandlerService.speakingMessage ?: return false
+        return speakingMessage.id == id
+    }
+
+/**
+ * The message's content, as represented for display in the message
+ * list.
+ *
+ * Maps the message to text, attributed text, audio, photo, or video
+ * based on its content type and the alternate content it currently
+ * displays.
+ */
+val Message.kind: MessageKind
+    get() {
+        if (isSystemMessage) return MessageKind.Custom
+
+        if (contentType.isAudio) {
+            val audioComponent = audioComponent
+            val translation = translation
+            if (audioComponent != null && translation != null) {
+                if (!AlternateMessageService.isDisplayingAudioTranscription(this)) {
+                    return MessageKind.Audio(if (isFromCurrentUser) audioComponent.original else audioComponent.translated)
+                }
+
+                return MessageKind.AttributedText(
+                    (if (isFromCurrentUser) translation.input.value else translation.output).sanitized,
+                    isItalicized = true,
+                )
+            }
+        } else if (contentType.isMedia) {
+            documentComponent?.let { return MessageKind.Photo(it) }
+            imageComponent?.let { return MessageKind.Photo(it) }
+            videoComponent?.let { return MessageKind.Video(it) }
+        }
+
+        val translation = translation ?: return MessageKind.Text(ChatPageViewStrings.MessagesDataSource.MISSING_TRANSLATION_TEXT)
+
+        val isDisplayingAlternateText = AlternateMessageService.isDisplayingAlternateText(this)
+        val primaryText = if (isFromCurrentUser) translation.input.value else translation.output
+        val alternateText = if (isFromCurrentUser) translation.output else translation.input.value
+
+        val consentAcknowledgementMessage = LocalizedStringKey.MessageRecipientConsentAcknowledgementMessage.localized()
+        val consentRequestMessage = LocalizedStringKey.MessageRecipientConsentRequestMessage.localized()
+
+        val resolvedText =
+            if (isConsentMessage) {
+                (if (isConsentAcknowledgementMessage) consentAcknowledgementMessage else consentRequestMessage).sanitized.trim()
+            } else {
+                if (isDisplayingAlternateText) alternateText else primaryText
+            }
+
+        return MessageKind.AttributedText(resolvedText.sanitized, isItalicized = isConsentMessage || isDisplayingAlternateText)
+    }
+
+/**
+ * The text the message's label displays, or `null` if the message
+ * renders no text.
+ */
+val Message.messageLabelText: String?
+    get() =
+        when (val kind = kind) {
+            is MessageKind.AttributedText -> kind.text
+            is MessageKind.Text -> kind.text
+            else -> null
+        }

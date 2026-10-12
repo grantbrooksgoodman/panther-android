@@ -29,6 +29,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -47,7 +48,6 @@ import androidx.core.content.FileProvider
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.modules.content.user.constants.MediaPreviewOverlayColors
 import us.neotechnica.panther.modules.content.user.constants.MediaPreviewOverlayFloats
-import us.neotechnica.panther.modules.content.user.constants.MediaPreviewOverlayStrings
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
@@ -56,17 +56,19 @@ import us.neotechnica.panther.subsystem.modules.localization.models.localized
  * A full-screen preview over a conversation's media, opened from a chat
  * bubble or the ChatInfo attachments list. Swipe to page through every
  * item, starting at [startIndex]: images are pinch-zoomable, videos play
- * inline, and documents open in an external viewer.
+ * inline, and documents open directly in the system viewer.
  *
  * @param mediaFiles The conversation's media, in display order.
  * @param startIndex The index of the item to show first.
  * @param onDismiss Dismisses the preview.
+ * @param title The title shown above the pages, or `null` for none.
  */
 @Composable
 fun MediaPreviewOverlay(
     mediaFiles: List<MediaFile>,
     startIndex: Int,
     onDismiss: () -> Unit,
+    title: String? = null,
 ) {
     if (mediaFiles.isEmpty()) return
     BackHandler(onBack = onDismiss)
@@ -77,6 +79,18 @@ fun MediaPreviewOverlay(
     Box(modifier = Modifier.fillMaxSize().background(MediaPreviewOverlayColors.background)) {
         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
             MediaPage(mediaFiles[page])
+        }
+
+        title?.let {
+            Components.Text(
+                it,
+                foregroundColor = MediaPreviewOverlayColors.foreground,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .statusBarsPadding()
+                        .padding(top = MediaPreviewOverlayFloats.titleTopPadding),
+            )
         }
 
         CloseButton(
@@ -159,9 +173,12 @@ private fun VideoPlayer(mediaFile: MediaFile) {
 
 // MARK: - Document
 
+// A document opens directly in the system viewer; its glyph and name
+// stand behind the viewer while it is up.
 @Composable
 private fun DocumentPage(mediaFile: MediaFile) {
     val context = LocalContext.current
+    LaunchedEffect(mediaFile.relativePath) { openExternally(context, mediaFile) }
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -182,11 +199,6 @@ private fun DocumentPage(mediaFile: MediaFile) {
                     start = MediaPreviewOverlayFloats.documentNameHorizontalPadding,
                     end = MediaPreviewOverlayFloats.documentNameHorizontalPadding,
                 ),
-        )
-        Components.CapsuleButton(
-            MediaPreviewOverlayStrings.OPEN,
-            action = { openExternally(context, mediaFile) },
-            modifier = Modifier.padding(top = MediaPreviewOverlayFloats.documentSpacing),
         )
     }
 }

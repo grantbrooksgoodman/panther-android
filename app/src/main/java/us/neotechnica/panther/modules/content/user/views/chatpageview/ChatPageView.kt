@@ -8,6 +8,8 @@
 
 package us.neotechnica.panther.modules.content.user.views.chatpageview
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,53 +22,47 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import androidx.compose.ui.draw.alpha
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import us.neotechnica.panther.bundle.messageOutboxDidChange
 import us.neotechnica.panther.bundle.sessionStoreDidChange
-import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
-import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.componentkit.components.ContextMenuHost
 import us.neotechnica.panther.designsystem.modules.componentkit.components.LocalContextMenuController
 import us.neotechnica.panther.designsystem.modules.componentkit.components.MessageInputBar
-import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
-import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardService
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
-import us.neotechnica.panther.modules.common.services.HapticsService
-import us.neotechnica.panther.modules.content.user.components.ContentPickers
+import us.neotechnica.panther.modules.common.models.ConnectionStatusServiceEffectID
+import us.neotechnica.panther.modules.common.services.ConnectionStatusService
 import us.neotechnica.panther.modules.content.user.components.DeliveryProgressView
 import us.neotechnica.panther.modules.content.user.components.MediaPreviewOverlay
+import us.neotechnica.panther.modules.content.user.components.RegisterContentPickerLaunchers
 import us.neotechnica.panther.modules.content.user.components.anyOutboxSending
 import us.neotechnica.panther.modules.content.user.components.chatpageheaderview.ChatPageHeaderView
-import us.neotechnica.panther.modules.content.user.components.rememberContentPickers
 import us.neotechnica.panther.modules.content.user.components.rememberRegisteredDeliveryProgressIndicatorService
+import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceFloats
+import us.neotechnica.panther.modules.content.user.dependencies.inputBarService
 import us.neotechnica.panther.modules.content.user.models.ContextMenuInteraction
 import us.neotechnica.panther.modules.content.user.services.ChatPageStateService
 import us.neotechnica.panther.modules.content.user.services.DeliveryProgressIndicatorService
-import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
+import us.neotechnica.panther.modules.content.user.services.InputBarService
+import us.neotechnica.panther.modules.content.user.services.MediaMessagePreviewService
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.content.user.services.SearchInteractionService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
-import us.neotechnica.panther.modules.session.state.services.retry
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
-import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
-import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
+
+// MARK: - Constants Accessors
+
+private typealias PageFloats = ChatPageViewServiceFloats
 
 /**
  * The chat page for a single conversation.
@@ -75,139 +71,189 @@ import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
  * user, with a long-press context menu, delivery status, and an input
  * bar that sends through the outbox-backed delivery pipeline.
  *
- * When [embedded], the view renders only the message list – omitting its
- * header and input bar, the presented-state tracking, and the
- * current-conversation teardown – so the new chat page can preview an
- * existing conversation between its recipient and input bars while owning
- * that lifecycle itself.
- *
- * @param conversationIDKey The identifier key of the conversation.
- * @param focusedMessageID The identifier of a message to reveal and
- *   highlight – for example, one navigated to from search – or `null`.
- * @param modifier The modifier for this view.
- * @param embedded Whether the view is embedded as a message-list preview
- *   rather than presented as the full chat page.
+ * The page presents in one of three [Configuration]s: the default
+ * configuration shows the full page; the new chat configuration renders
+ * only the message list between the new chat page's recipient and
+ * input bars, which own the page lifecycle; and the preview
+ * configuration shows a read-only message list.
  */
-@Composable
-fun ChatPageView(
-    conversationIDKey: String,
-    focusedMessageID: String? = null,
-    modifier: Modifier = Modifier,
-    embedded: Boolean = false,
-) {
-    val viewModel = remember { buildChatPageViewModel() }
+object ChatPageView {
+    // MARK: - Types
 
-    DisposableEffect(Unit) {
-        ChatPageStateService.setIsPresented(true)
-        onDispose {
-            ChatPageStateService.setIsPresented(false)
-            if (!embedded) viewModel.send(ChatPageReducer.Action.ViewDisappeared)
-            viewModel.close()
-        }
-    }
-    LaunchedEffect(conversationIDKey) {
-        viewModel.send(ChatPageReducer.Action.ViewFirstAppeared(conversationIDKey, focusedMessageID))
-        viewModel.send(ChatPageReducer.Action.MessageOutboxChanged(anyOutboxSending()))
-    }
+    /** The configurations the chat page presents in. */
+    sealed interface Configuration {
+        /** The identifier of a message to reveal and highlight, or `null`. */
+        val focusedMessageID: String?
 
-    val state by viewModel.state.collectAsState()
-    val deliveryProgressIndicatorService = rememberRegisteredDeliveryProgressIndicatorService()
-    var previewMessageID by remember { mutableStateOf<String?>(null) }
+        /**
+         * The default configuration, displaying an existing conversation
+         * with its header and input bar.
+         *
+         * @property focusedMessageID The identifier of a message to reveal
+         *   and highlight – for example, one navigated to from search – or
+         *   `null`.
+         */
+        data class Default(
+            override val focusedMessageID: String? = null,
+        ) : Configuration
 
-    val scope = rememberCoroutineScope()
-    val pickers =
-        rememberContentPickers(
-            onPicked = { viewModel.send(ChatPageReducer.Action.AttachmentPicked(it)) },
-            onFailed = { Logger.log(it, with = AlertType.toast) },
-        )
-    val pendingAttachment = state.pendingAttachment
-    val attachmentPreview by
-        produceState<ByteArray?>(null, pendingAttachment) {
-            value =
-                pendingAttachment?.let {
-                    withContext(Dispatchers.IO) { (it.thumbnailFile ?: it.localPathFile)?.readBytes() }
-                }
+        /** The new chat configuration, previewing the conversation beneath the recipient bar. */
+        data object NewChat : Configuration {
+            override val focusedMessageID: String? get() = null
         }
 
-    val mediaMessages = state.messages.filter { it.richContent?.mediaComponent != null }
-    val previewMediaFiles = mediaMessages.mapNotNull { it.richContent?.mediaComponent }
-    val previewStartIndex = mediaMessages.indexOfFirst { it.id == previewMessageID }
+        /**
+         * The preview configuration, displaying a read-only message list
+         * with the input bar hidden.
+         *
+         * @property focusedMessageID The identifier of a message to reveal
+         *   and highlight, or `null`.
+         */
+        data class Preview(
+            override val focusedMessageID: String? = null,
+        ) : Configuration
+    }
 
-    StatefulView(state = state.viewState, modifier = modifier) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            ContextMenuHost(
-                modifier = Modifier.fillMaxSize(),
-                canBegin = ContextMenuInteraction.canBegin,
-            ) {
-                SpeechSynthesizerDidFinishOrCancel()
-                FocusedMessageInteractionEffect(focusedMessageID = state.focusedMessageID)
+    // MARK: - View
 
-                Column(
-                    modifier = if (embedded) Modifier.fillMaxSize() else Modifier.fillMaxSize().systemBarsPadding().imePadding(),
-                ) {
-                    if (!embedded) {
-                        ChatHeaderWithDeliveryProgress(
-                            conversationIDKey = state.conversationIDKey,
-                            service = deliveryProgressIndicatorService,
-                        )
-                    }
+    /**
+     * Presents the chat page for the given conversation.
+     *
+     * @param conversationIDKey The identifier key of the conversation.
+     * @param configuration The configuration to present the page in.
+     * @param modifier The modifier for this view.
+     */
+    @Composable
+    operator fun invoke(
+        conversationIDKey: String,
+        configuration: Configuration = Configuration.Default(),
+        modifier: Modifier = Modifier,
+    ) {
+        val viewModel = remember { buildChatPageViewModel() }
+        val inputBarService = remember { DependencyValues.current.inputBarService }
+        val isDefault = configuration is Configuration.Default
 
-                    MessageList(
-                        state = state,
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                        onToggleAlternate = { viewModel.send(ChatPageReducer.Action.ToggleAlternate(it)) },
-                        onToggleAudioTranscription = { viewModel.send(ChatPageReducer.Action.ToggleAudioTranscription(it)) },
-                        onTapMedia = {
-                            KeyboardService.resignFirstResponders()
-                            previewMessageID = it
-                        },
-                        onReact = { message, style -> viewModel.send(ChatPageReducer.Action.React(message, style)) },
-                        onSpeak = { messageID, text -> viewModel.send(ChatPageReducer.Action.Speak(messageID, text)) },
-                        onFailedIndicatorTapped = { messageID ->
-                            scope.launch { presentFailedMessageActionSheet(messageID, scope) }
-                        },
-                        onSaveMedia = { mediaFile -> scope.launch { saveMedia(mediaFile) } },
-                    )
-
-                    if (!embedded) {
-                        MessageInputBar(
-                            text = state.inputText,
-                            placeholder = LocalizedStringKey.NewMessage.localized(),
-                            isSending = state.isSendingMessage || state.hasSendingOutboxEntry,
-                            onTextChange = { viewModel.send(ChatPageReducer.Action.InputChanged(it)) },
-                            onSend = {
-                                if (state.pendingAttachment != null) {
-                                    viewModel.send(ChatPageReducer.Action.SendMedia)
-                                } else {
-                                    viewModel.send(ChatPageReducer.Action.SendTapped)
-                                }
-                            },
-                            onAttach = { scope.launch { presentAttachMediaSheet(pickers) } },
-                            attachmentPreview = attachmentPreview,
-                            onRemoveAttachment = { viewModel.send(ChatPageReducer.Action.RemoveAttachment) },
-                        )
-                    }
-                }
+        DisposableEffect(Unit) {
+            ChatPageStateService.setIsPresented(true)
+            ConnectionStatusService.addEffectUponConnectionChanged(id = ConnectionStatusServiceEffectID.CONFIGURE_INPUT_BAR) {
+                inputBarService.configureInputBar(forceUpdate = true)
             }
+            onDispose {
+                ChatPageStateService.setIsPresented(false)
+                ConnectionStatusService.removeEffect(ConnectionStatusServiceEffectID.CONFIGURE_INPUT_BAR)
+                viewModel.send(ChatPageReducer.Action.ViewDisappeared)
+                viewModel.close()
+            }
+        }
+        LaunchedEffect(conversationIDKey) {
+            viewModel.send(ChatPageReducer.Action.ViewAppeared(conversationIDKey, configuration))
+            viewModel.send(ChatPageReducer.Action.HandleOutboxChange(anyOutboxSending()))
+        }
 
-            if (previewMessageID != null && previewStartIndex >= 0) {
-                MediaPreviewOverlay(
-                    mediaFiles = previewMediaFiles,
-                    startIndex = previewStartIndex,
-                    onDismiss = { previewMessageID = null },
-                )
+        val state by viewModel.state.collectAsState()
+        val deliveryProgressIndicatorService = rememberRegisteredDeliveryProgressIndicatorService()
+        val isPreviewingMedia = MediaMessagePreviewService.isPreviewingMedia
+        val previewingMessageID = MediaMessagePreviewService.previewingMessageID
+
+        val mediaMessages = state.messages.filter { it.richContent?.mediaComponent != null }
+        val previewMediaFiles = mediaMessages.mapNotNull { it.richContent?.mediaComponent }
+        val previewStartIndex = mediaMessages.indexOfFirst { it.id == previewingMessageID }
+
+        if (isDefault) RegisterContentPickerLaunchers()
+
+        StatefulView(state = state.viewState, modifier = modifier) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                ContextMenuHost(
+                    modifier = Modifier.fillMaxSize(),
+                    canBegin = ContextMenuInteraction.canBegin,
+                ) {
+                    SpeechSynthesizerDidFinishOrCancel()
+                    FocusedMessageInteractionEffect(focusedMessageID = state.focusedMessageID)
+
+                    Column(
+                        modifier = if (isDefault) Modifier.fillMaxSize().systemBarsPadding().imePadding() else Modifier.fillMaxSize(),
+                    ) {
+                        if (isDefault) {
+                            ChatHeaderWithDeliveryProgress(
+                                conversationIDKey = state.conversationIDKey,
+                                service = deliveryProgressIndicatorService,
+                            )
+                        }
+
+                        MessageList(
+                            state = state,
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                            onReact = { message, style -> viewModel.send(ChatPageReducer.Action.ReactToSelectedMessage(message, style)) },
+                        )
+
+                        if (isDefault) {
+                            ChatInputBar(viewModel = viewModel, inputBarService = inputBarService, state = state)
+                        }
+                    }
+                }
+
+                if (isPreviewingMedia && previewStartIndex >= 0) {
+                    MediaPreviewOverlay(
+                        mediaFiles = previewMediaFiles,
+                        startIndex = previewStartIndex,
+                        onDismiss = { MediaMessagePreviewService.dismissPreview() },
+                        title = LocalizedStringKey.Attachment.localized().lowercase(),
+                    )
+                }
             }
         }
     }
 }
 
+// MARK: - Input Bar
+
+// The input bar fades in after a short delay once the page has appeared.
+@Composable
+private fun ChatInputBar(
+    viewModel: ViewModel<ChatPageReducer.State, ChatPageReducer.Action>,
+    inputBarService: InputBarService,
+    state: ChatPageReducer.State,
+) {
+    val text by inputBarService.text.collectAsState()
+    val isSendButtonEnabled by inputBarService.isSendButtonEnabled.collectAsState()
+    val isAttachMediaButtonEnabled by inputBarService.isAttachMediaButtonEnabled.collectAsState()
+    val isShowingSendingUI by inputBarService.isShowingSendingUI.collectAsState()
+
+    var hasAppeared by remember { mutableStateOf(false) }
+    val appearanceDurationMillis = (PageFloats.INPUT_BAR_APPEARANCE_ANIMATION_DURATION * MILLISECONDS_PER_SECOND).toInt()
+    LaunchedEffect(Unit) {
+        delay(appearanceDurationMillis.toLong())
+        hasAppeared = true
+    }
+    val alpha by animateFloatAsState(if (hasAppeared) 1f else 0f, tween(appearanceDurationMillis), label = "inputBarAlpha")
+
+    MessageInputBar(
+        text = text,
+        placeholder = LocalizedStringKey.NewMessage.localized(),
+        isSending = isShowingSendingUI || state.isSendingOutboxEntry,
+        onTextChange = { viewModel.send(ChatPageReducer.Action.TextViewDidChange(it)) },
+        onSend = { viewModel.send(ChatPageReducer.Action.DidPressSendButton) },
+        onAttach = { inputBarService.actionHandler.didPressAttachMediaButton() },
+        isSendEnabled = isSendButtonEnabled,
+        isAttachEnabled = isAttachMediaButtonEnabled,
+        onFocusChanged = { inputBarService.setIsFirstResponder(it) },
+        modifier = Modifier.alpha(alpha),
+    )
+}
+
+// MARK: - Auxiliary
+
 @Composable
 private fun FocusedMessageInteractionEffect(focusedMessageID: String?) {
     val controller = LocalContextMenuController.current
+    val scope = rememberCoroutineScope()
     LaunchedEffect(controller, focusedMessageID) {
         if (controller == null || focusedMessageID == null) return@LaunchedEffect
-        SearchInteractionService(focusedMessageID) { controller.present(it) }
-            .triggerFocusedMessageCellInteractionIfNeeded()
+        scope.launch {
+            delay(PageFloats.TRIGGER_FOCUSED_MESSAGE_CELL_INTERACTION_DELAY_MILLISECONDS)
+            SearchInteractionService(focusedMessageID) { controller.present(it) }
+                .triggerFocusedMessageCellInteractionIfNeeded()
+        }
     }
 }
 
@@ -231,66 +277,11 @@ private fun buildChatPageViewModel(): ViewModel<ChatPageReducer.State, ChatPageR
         .observing(ConversationSessionService.displayedMessages) {
             ChatPageReducer.Action.MessagesUpdated(it)
         }.observing(DependencyValues.current.sharedEvents.sessionStoreDidChange.events) { change ->
-            ChatPageReducer.Action.StoreChanged(change)
+            ChatPageReducer.Action.HandleSessionStoreChange(change)
         }.observing(MessageDeliveryService.isSendingMessage) {
             ChatPageReducer.Action.IsSendingMessageChanged(it)
         }.observing(DependencyValues.current.sharedEvents.messageOutboxDidChange.events) {
-            ChatPageReducer.Action.MessageOutboxChanged(anyOutboxSending())
+            ChatPageReducer.Action.HandleOutboxChange(anyOutboxSending())
         }
 
-/**
- * Saves the given media file to the device, showing a success HUD on
- * completion.
- */
-private suspend fun saveMedia(mediaFile: MediaFile) {
-    try {
-        MediaActionHandlerService.saveMedia(mediaFile)
-        HUD.showSuccess()
-    } catch (exception: Exception) {
-        Logger.log(exception, with = AlertType.toast)
-    }
-}
-
-/**
- * Presents an action sheet for a failed message, offering to retry or
- * delete it.
- */
-private suspend fun presentFailedMessageActionSheet(
-    messageID: String,
-    scope: CoroutineScope,
-) {
-    ActionSheet(
-        actions =
-            listOf(
-                Action(
-                    title = LocalizedStringKey.Delete.localized(),
-                    style = ActionStyle.DESTRUCTIVE,
-                ) { MessageOutboxService.remove(messageID) },
-                Action(
-                    title = LocalizedStringKey.TryAgain.localized(),
-                ) { scope.launch { MessageOutboxService.retry(messageID) } },
-            ),
-        cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
-    ).present(translating = emptyList())
-}
-
-// The attach-media action sheet.
-private suspend fun presentAttachMediaSheet(pickers: ContentPickers) {
-    HapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
-    ActionSheet(
-        title = "Attach media",
-        actions =
-            listOf(
-                Action("Take photo") { pickers.launchCamera() },
-                Action("Select document") { pickers.launchDocument() },
-                Action("Select photo or video") { pickers.launchPhotoOrVideo() },
-            ),
-        cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
-    ).present(
-        translating =
-            listOf(
-                ActionSheet.TranslationOptionKey.Title,
-                ActionSheet.TranslationOptionKey.Actions(),
-            ),
-    )
-}
+private const val MILLISECONDS_PER_SECOND = 1000f

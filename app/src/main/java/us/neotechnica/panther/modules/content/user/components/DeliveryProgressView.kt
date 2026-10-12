@@ -21,8 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.content.user.constants.DeliveryProgressIndicatorColors
-import us.neotechnica.panther.modules.content.user.constants.DeliveryProgressIndicatorFloats
+import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceColors
+import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceFloats
 import us.neotechnica.panther.modules.content.user.services.DeliveryProgressIndicatorService
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
@@ -31,8 +31,8 @@ import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.Dep
 
 // MARK: - Constants Accessors
 
-private typealias Colors = DeliveryProgressIndicatorColors
-private typealias Floats = DeliveryProgressIndicatorFloats
+private typealias Colors = ChatPageViewServiceColors.DeliveryProgressIndicator
+private typealias Floats = ChatPageViewServiceFloats.DeliveryProgressIndicator
 
 /**
  * The thin delivery progress bar shown beneath the chat header while

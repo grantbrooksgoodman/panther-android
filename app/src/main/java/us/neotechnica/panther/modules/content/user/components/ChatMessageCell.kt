@@ -8,101 +8,94 @@
 
 package us.neotechnica.panther.modules.content.user.components
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.designsystem.modules.componentkit.components.LocalContextMenuController
 import us.neotechnica.panther.designsystem.modules.componentkit.components.MessageContextMenu
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAlignment
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
-import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.modules.common.services.TextToSpeechService
-import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellColors
-import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellFloats
-import us.neotechnica.panther.modules.content.user.constants.ChatMessageCellStrings
+import us.neotechnica.panther.modules.content.user.constants.ChatPageViewColors
+import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
+import us.neotechnica.panther.modules.content.user.constants.ChatPageViewStrings
+import us.neotechnica.panther.modules.content.user.constants.UserContentExtensionsColors
 import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.content.user.extensions.isSystemMessage
+import us.neotechnica.panther.modules.content.user.extensions.kind
+import us.neotechnica.panther.modules.content.user.models.MessageKind
 import us.neotechnica.panther.modules.content.user.services.AudioMessagePlaybackService
+import us.neotechnica.panther.modules.content.user.services.MediaMessagePreviewService
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
-import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
-import androidx.compose.material3.Text as Material3Text
+
+// MARK: - Constants Accessors
+
+private typealias CellDataSourceColors = ChatPageViewColors.MessagesDataSource
+private typealias CellDataSourceStrings = ChatPageViewStrings.MessagesDataSource
+private typealias CellDisplayFloats = ChatPageViewFloats.MessagesDisplayDelegate
+private typealias CellLayoutFloats = ChatPageViewFloats.MessagesLayoutDelegate
 
 /**
  * A single chat row: an optional day separator, the message bubble
- * (with a long-press context menu), and, for the last confirmed own
- * message in a one-to-one chat, a delivery status label.
+ * (with a long-press context menu), and its bottom label – reaction
+ * chips, the alternate-content language, or the delivery status.
+ * System messages render as a centered, bubble-less activity cell.
  *
  * @param row The row's display inputs.
- * @param onToggleAlternate Toggles the alternate text for a message ID.
- * @param onToggleAudioTranscription Toggles an audio message's
- *   transcription for a message ID.
- * @param onTapMedia Opens the media preview for the given media message ID.
  * @param onReact Applies the given reaction style to the given message.
- * @param onSpeak Speaks the given displayed text for the given message ID.
  * @param onFailedIndicatorTapped Presents the retry/delete action sheet
  *   for the given failed outbox message ID.
- * @param onSaveMedia Saves the given media file to the device.
  */
 @Composable
-@Suppress("LongParameterList")
 fun ChatMessageCell(
     row: ChatMessageRowData,
-    onToggleAlternate: (String) -> Unit,
-    onToggleAudioTranscription: (String) -> Unit,
-    onTapMedia: (String) -> Unit,
     onReact: (Message, Reaction.Style) -> Unit,
-    onSpeak: (String, String) -> Unit,
     onFailedIndicatorTapped: (String) -> Unit,
-    onSaveMedia: (MediaFile) -> Unit,
 ) {
-    val colors = LocalPantherColors.current
     val message = row.message
+    if (message.isSystemMessage) {
+        SystemMessageCell(message)
+        return
+    }
 
     Column(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .padding(
-                    horizontal = ChatMessageCellFloats.rowHorizontalPadding,
-                    vertical = ChatMessageCellFloats.rowVerticalPadding,
+                    horizontal = CellLayoutFloats.rowHorizontalPadding,
+                    vertical = CellLayoutFloats.rowVerticalPadding,
                 ),
     ) {
-        if (message.isSystemMessage) {
+        cellTopLabelAttributedText(row)?.let { label ->
+            val isDarkModeActive = ThemeService.isDarkModeActive(isSystemInDarkTheme())
             Box(
-                modifier = Modifier.fillMaxWidth().padding(vertical = ChatMessageCellFloats.separatorVerticalPadding),
+                modifier = Modifier.fillMaxWidth().height(CellLayoutFloats.cellTopLabelHeight),
                 contentAlignment = Alignment.Center,
             ) {
-                Material3Text(
-                    text = systemMessageString(row.translation?.output ?: "", message.sentDate),
-                    color = colors.subtitleText,
-                    style = Font.system(FontScale.Small).textStyle,
-                    textAlign = TextAlign.Center,
-                )
-            }
-            return@Column
-        }
-
-        separatorDate(message, row.previousMessage)?.let { date ->
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(vertical = ChatMessageCellFloats.separatorVerticalPadding),
-                contentAlignment = Alignment.Center,
-            ) {
-                Material3Text(
-                    text = separatorAnnotatedString(date),
-                    color = colors.subtitleText,
-                    style = Font.system(FontScale.Small).textStyle,
+                Text(
+                    text = label,
+                    color =
+                        if (isDarkModeActive) {
+                            UserContentExtensionsColors.Date.chatPageMessageSeparatorAttributedDateStringStandardAttributesDarkForeground
+                        } else {
+                            UserContentExtensionsColors.Date.chatPageMessageSeparatorAttributedDateStringStandardAttributesLightForeground
+                        },
                     textAlign = TextAlign.Center,
                 )
             }
@@ -110,13 +103,8 @@ fun ChatMessageCell(
 
         MessageContent(
             row = row,
-            onToggleAlternate = onToggleAlternate,
-            onToggleAudioTranscription = onToggleAudioTranscription,
-            onTapMedia = onTapMedia,
             onReact = onReact,
-            onSpeak = onSpeak,
             onFailedIndicatorTapped = onFailedIndicatorTapped,
-            onSaveMedia = onSaveMedia,
         )
 
         BottomLabel(row = row, isOwn = message.isFromCurrentUser)
@@ -126,144 +114,142 @@ fun ChatMessageCell(
 /**
  * The message's bubble (media, audio, or text) with its long-press
  * context menu, preceded by the sender's avatar in received group
- * messages. An audio message renders as its transcription bubble when
- * that alternate is displayed.
+ * messages.
  */
 @Composable
-@Suppress("LongParameterList")
 private fun MessageContent(
     row: ChatMessageRowData,
-    onToggleAlternate: (String) -> Unit,
-    onToggleAudioTranscription: (String) -> Unit,
-    onTapMedia: (String) -> Unit,
     onReact: (Message, Reaction.Style) -> Unit,
-    onSpeak: (String, String) -> Unit,
     onFailedIndicatorTapped: (String) -> Unit,
-    onSaveMedia: (MediaFile) -> Unit,
 ) {
-    val colors = LocalPantherColors.current
-    val clipboard = LocalClipboardManager.current
+    val controller = LocalContextMenuController.current
     val message = row.message
     val isOwn = message.isFromCurrentUser
-    val displayText = displayText(row)
-    val reactionChoices = reactionChoicesFor(row, onReact)
+    val kind = message.kind
+    val reactionChoices = reactionChoicesFor(message, row.reactions, onReact)
     val alignment = if (isOwn) ContextMenuAlignment.TRAILING else ContextMenuAlignment.LEADING
 
     val isSpeakingThisMessage = TextToSpeechService.speakingMessageID == message.id
     val speakingHighlightRange = if (isSpeakingThisMessage) TextToSpeechService.spokenRange else null
+    val isMedia = kind is MessageKind.Photo || kind is MessageKind.Video
 
+    val failedPaddingModifier =
+        if (row.isFailed) {
+            Modifier.padding(end = ChatPageViewFloats.MessageFlowLayout.failedIndicatorPaddingRight)
+        } else {
+            Modifier
+        }
     Row(
         horizontalArrangement = if (isOwn) Arrangement.End else Arrangement.Start,
         verticalAlignment = Alignment.Bottom,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        if (row.isGroup && !isOwn) {
-            SenderAvatar(show = row.showSenderAvatar)
-        }
+        if (row.isGroup && !isOwn) SenderAvatar(row)
         if (row.isFailed) {
             FailedOutboxIndicator(
                 onTap = { onFailedIndicatorTapped(message.id) },
                 modifier = Modifier.align(Alignment.CenterVertically),
             )
         }
-        if (message.contentType.isMedia) {
-            MessageContextMenu(
-                actions = row.mediaFile?.let { mediaActionsFor(message, it, onSaveMedia) } ?: emptyList(),
-                alignment = alignment,
-                reactionChoices = reactionChoices,
-                alignsMenuCardToLeadingEdge = true,
-                menuKey = message.id,
-                onTap = { onTapMedia(message.id) },
-                header = { SenderNameLabel(row) },
-            ) {
-                MediaMessageBubble(mediaFile = row.mediaFile, isOwn = isOwn)
-            }
-        } else if (row.audioReference != null) {
-            val isPlaying = AudioMessagePlaybackService.playingMessageID == message.id
-            val transcriptionText = displayText
-            MessageContextMenu(
-                actions =
-                    audioActionsFor(row, transcriptionText, onToggleAudioTranscription, onSpeak) {
-                        clipboard.setText(AnnotatedString(transcriptionText))
-                    },
-                alignment = alignment,
-                reactionChoices = reactionChoices,
-                alignsMenuCardToLeadingEdge = true,
-                menuKey = message.id,
-                header = { SenderNameLabel(row) },
-            ) {
-                if (row.isDisplayingAudioTranscription) {
-                    MessageBubble(
-                        transcriptionText,
-                        isOwn,
-                        colors.senderBubble,
-                        colors.receiverBubble,
-                        colors.titleText,
-                        isAlternate = true,
-                        isSpeaking = isSpeakingThisMessage,
-                        highlightRange = speakingHighlightRange,
-                    )
-                } else {
-                    AudioMessageBubble(
-                        reference = row.audioReference,
-                        isOwn = isOwn,
-                        isPlaying = isPlaying,
-                        progress = if (isPlaying) AudioMessagePlaybackService.progress else 0f,
-                        onPlay = { AudioMessagePlaybackService.didTapPlayButton(message, row.audioReference) },
-                    )
-                }
-            }
-        } else {
-            MessageContextMenu(
-                actions = actionsFor(row, displayText, onToggleAlternate, onSpeak) { clipboard.setText(AnnotatedString(displayText)) },
-                alignment = alignment,
-                reactionChoices = reactionChoices,
-                alignsMenuCardToLeadingEdge = true,
-                menuKey = message.id,
-                header = { SenderNameLabel(row) },
-            ) {
-                MessageBubble(
-                    displayText,
-                    isOwn,
-                    colors.senderBubble,
-                    colors.receiverBubble,
-                    colors.titleText,
-                    isAlternate = row.showAlternate,
-                    isSpeaking = isSpeakingThisMessage,
-                    highlightRange = speakingHighlightRange,
-                )
-            }
+
+        MessageContextMenu(
+            actions = contextMenuActions(message),
+            alignment = alignment,
+            reactionChoices = reactionChoices,
+            alignsMenuCardToLeadingEdge = true,
+            menuKey = message.id,
+            // Tapping anywhere in a failed bubble presents the retry sheet;
+            // tapping a media bubble opens the preview.
+            onTap =
+                when {
+                    row.isFailed -> {
+                        { onFailedIndicatorTapped(message.id) }
+                    }
+                    isMedia -> {
+                        { MediaMessagePreviewService.didTapImage(message, controller?.isPresenting == true) }
+                    }
+                    else -> null
+                },
+            modifier = failedPaddingModifier,
+            header = { SenderNameLabel(row) },
+        ) {
+            MessageKindContent(
+                row = row,
+                kind = kind,
+                isSpeaking = isSpeakingThisMessage,
+                highlightRange = speakingHighlightRange,
+                isPresentingContextMenu = controller?.isPresenting == true,
+            )
         }
+    }
+}
+
+// The bubble for the message's kind: audio, attributed or plain text,
+// photo, or video.
+@Composable
+private fun MessageKindContent(
+    row: ChatMessageRowData,
+    kind: MessageKind,
+    isSpeaking: Boolean,
+    highlightRange: IntRange?,
+    isPresentingContextMenu: Boolean,
+) {
+    val message = row.message
+    val isOwn = message.isFromCurrentUser
+    val isPlayingThisMessage = AudioMessagePlaybackService.playingMessageID == message.id
+
+    when (kind) {
+        is MessageKind.Audio ->
+            AudioMessageBubble(
+                item = kind.item,
+                isOwn = isOwn,
+                isPlaying = isPlayingThisMessage,
+                progress = if (isPlayingThisMessage) AudioMessagePlaybackService.progress else 0f,
+                onPlay = { message.audioComponent?.let { AudioMessagePlaybackService.didTapPlayButton(message, it) } },
+            )
+
+        is MessageKind.AttributedText ->
+            MessageBubble(
+                text = kind.text,
+                isOwn = isOwn,
+                isItalicized = kind.isItalicized,
+                isSpeaking = isSpeaking,
+                highlightRange = highlightRange,
+            )
+
+        is MessageKind.Text ->
+            MessageBubble(text = kind.text, isOwn = isOwn, isItalicized = false)
+
+        is MessageKind.Photo, is MessageKind.Video ->
+            MediaMessageBubble(
+                mediaFile = (kind as? MessageKind.Photo)?.item ?: (kind as MessageKind.Video).item,
+                isOwn = isOwn,
+                onPinch = { MediaMessagePreviewService.didTapImage(message, isPresentingContextMenu) },
+            )
+
+        MessageKind.Custom -> Unit
     }
 }
 
 /**
  * The label below a message bubble: its reaction chips (one per style,
- * with a count and the current user's own reaction highlighted) and, for
- * the last confirmed own message in a one-to-one chat, its delivery
- * status. Aligns to the message's side.
+ * with a count and the current user's own reaction highlighted) and the
+ * bottom label text – the alternate-content language or the delivery
+ * status – joined by a separator. Aligns to the message's side with
+ * the outgoing or incoming insets.
  */
 @Composable
 private fun BottomLabel(
     row: ChatMessageRowData,
     isOwn: Boolean,
 ) {
-    val colors = LocalPantherColors.current
     val chips = reactionChips(row.reactions)
-    val status =
-        if (isOwn && row.isLastConfirmedOwnMessage && !row.isGroup) statusText(row.message, row.isFailed) else null
-    if (chips.isEmpty() && status == null) return
+    val label = cellBottomLabelAttributedText(row)
+    if (chips.isEmpty() && label == null) return
 
     // Align the label to the message bubble, not the screen edge: group
     // received bubbles are indented past the sender avatar column.
-    val leadingInset =
-        if (row.isGroup &&
-            !isOwn
-        ) {
-            ChatMessageCellFloats.senderAvatarSize + ChatMessageCellFloats.senderAvatarSpacing
-        } else {
-            0.dp
-        }
+    val leadingInset = if (row.isGroup && !isOwn) CellDisplayFloats.avatarSize + CellDisplayFloats.avatarSpacing else 0.dp
 
     Row(
         horizontalArrangement = if (isOwn) Arrangement.End else Arrangement.Start,
@@ -272,25 +258,21 @@ private fun BottomLabel(
             Modifier
                 .fillMaxWidth()
                 .padding(
-                    top = ChatMessageCellFloats.bottomLabelTopPadding,
-                    start = ChatMessageCellFloats.bottomLabelStartPadding + leadingInset,
-                    end = ChatMessageCellFloats.bottomLabelEndPadding,
+                    top = ChatPageViewFloats.messageOutgoingCellBottomLabelAlignmentTopTextInset,
+                    start = if (isOwn) 0.dp else ChatPageViewFloats.messageOutgoingCellBottomLabelAlignmentRightTextInset + leadingInset,
+                    end = if (isOwn) ChatPageViewFloats.messageOutgoingCellBottomLabelAlignmentRightTextInset else 0.dp,
                 ),
     ) {
         chips.forEach { chip -> ReactionChipView(chip) }
-        if (status != null) {
+        if (label != null) {
             if (chips.isNotEmpty()) {
                 Components.Text(
-                    ChatMessageCellStrings.STATUS_SEPARATOR,
-                    foregroundColor = colors.subtitleText,
+                    CellDataSourceStrings.BOTTOM_LABEL_COMPONENT_SEPARATOR,
+                    foregroundColor = CellDataSourceColors.cellBottomLabelAttributedTextStandardAttributesForeground,
                     font = Font.system(FontScale.Small),
                 )
             }
-            Components.Text(
-                status.first,
-                foregroundColor = if (status.second) ChatMessageCellColors.error else colors.subtitleText,
-                font = Font.system(FontScale.Small),
-            )
+            Text(text = label)
         }
     }
 }

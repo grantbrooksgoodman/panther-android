@@ -24,6 +24,8 @@ import us.neotechnica.panther.modules.common.extensions.ApplicationStorageKey
 import us.neotechnica.panther.modules.common.extensions.isEmulator
 import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.services.CommonPropertyLists
+import us.neotechnica.panther.modules.common.services.DefaultAttributeDetectionServiceDelegate
+import us.neotechnica.panther.modules.common.services.DocumentExportService
 import us.neotechnica.panther.modules.common.services.ErrorReportingService
 import us.neotechnica.panther.modules.common.services.ExceptionMetadataService
 import us.neotechnica.panther.modules.common.services.InviteService
@@ -33,6 +35,7 @@ import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.common.services.UpdateService
 import us.neotechnica.panther.modules.content.user.services.AudioMessagePlaybackService
+import us.neotechnica.panther.modules.content.user.services.ContextMenuActionHandlerService
 import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
 import us.neotechnica.panther.modules.content.user.services.SettingsPageViewService
 import us.neotechnica.panther.modules.networking.translation.delegates.LocalTranslationArchiverDelegate
@@ -263,6 +266,9 @@ object Application {
         TextToSpeechService.initialize(context)
         AudioMessagePlaybackService.initialize(context)
         MediaActionHandlerService.initialize(context)
+        ContextMenuActionHandlerService.initialize(context)
+        DefaultAttributeDetectionServiceDelegate.initialize(context)
+        DocumentExportService.initialize(context)
     }
 
     private fun registerDelegates() {

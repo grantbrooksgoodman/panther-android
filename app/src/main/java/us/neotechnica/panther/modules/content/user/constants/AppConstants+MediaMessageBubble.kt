@@ -22,6 +22,7 @@ object MediaMessageBubbleFloats {
     val documentTextStartPadding: Dp = 10.dp
     val imageMaxHeight: Dp = 280.dp
     val imageMaxWidth: Dp = 240.dp
+    val missingImageGlyphSize: Dp = 100.dp
     val placeholderHeight: Dp = 150.dp
     val placeholderWidth: Dp = 210.dp
     val playBackgroundSize: Dp = 54.dp
@@ -34,6 +35,7 @@ object MediaMessageBubbleFloats {
 // MARK: - Color
 
 object MediaMessageBubbleColors {
+    val missingImageGlyph = Color(0xFFC7C7CC)
     val playBackground = Color(0x73000000)
     val playGlyph = Color(0xFFFFFFFF)
     val videoPlaceholderBackground = Color(0xFF1C1C1E)

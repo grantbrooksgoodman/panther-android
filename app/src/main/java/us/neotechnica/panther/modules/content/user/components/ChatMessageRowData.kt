@@ -8,52 +8,36 @@
 
 package us.neotechnica.panther.modules.content.user.components
 
+import androidx.compose.ui.graphics.ImageBitmap
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
-import us.neotechnica.panther.modules.networking.message.models.AudioMessageReference
-import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.translator.models.Translation
 
 /**
  * The display inputs for a single chat row.
  *
  * @property message The message to render.
- * @property previousMessage The prior row's message, for day-separator gaps.
- * @property translation The message's translation, or `null` if it has
- *   none.
- * @property showAlternate Whether to show the alternate (original vs.
- *   translated) text.
+ * @property previousMessage The prior row's message, for day-separator
+ *   gaps and sender-run detection.
  * @property isLastConfirmedOwnMessage Whether this is the last confirmed
- *   own message (drives the status label).
- * @property isGroup Whether the conversation has more than two participants.
+ *   own message (drives the delivery status label).
+ * @property isGroup Whether the conversation has more than two
+ *   participants.
  * @property isFailed Whether this is a failed outbox message.
- * @property senderName The sender's display name (contact name or number),
- *   shown above the first message in a run from a group participant, or
- *   `null` when it should be hidden.
- * @property senderInitials The sender's initials, for the avatar fallback.
- * @property showSenderAvatar Whether to render the sender's avatar beside
- *   this row (the last message in a run from a group participant).
- * @property reactions The message's reactions, or empty when it has none.
- * @property mediaFile The message's media file, or `null` if the message
- *   is not media.
- * @property audioReference The message's audio, or `null` if the message
- *   is not audio.
- * @property isDisplayingAudioTranscription Whether an audio message shows
- *   its transcription in place of the audio bubble.
+ * @property senderName The sender's display name, shown above the first
+ *   message in a run from a group participant, or `null` when it should
+ *   be hidden.
+ * @property senderImage The sender's contact image, or `null` for the
+ *   generic avatar glyph.
+ * @property reactions The message's reactions, or empty when it has
+ *   none.
  */
 data class ChatMessageRowData(
     val message: Message,
     val previousMessage: Message?,
-    val translation: Translation?,
-    val showAlternate: Boolean,
-    val isDisplayingAudioTranscription: Boolean = false,
     val isLastConfirmedOwnMessage: Boolean,
     val isGroup: Boolean,
     val isFailed: Boolean,
     val senderName: String?,
-    val senderInitials: String = "",
-    val showSenderAvatar: Boolean = false,
+    val senderImage: ImageBitmap? = null,
     val reactions: List<Reaction> = emptyList(),
-    val mediaFile: MediaFile? = null,
-    val audioReference: AudioMessageReference? = null,
 )

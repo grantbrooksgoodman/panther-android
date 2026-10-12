@@ -13,8 +13,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
 import us.neotechnica.panther.designsystem.modules.componentkit.components.LocalContextMenuController
 import us.neotechnica.panther.modules.common.services.TextToSpeechService
-import us.neotechnica.panther.modules.content.user.services.ContextMenuActionHandlerService
+import us.neotechnica.panther.modules.content.user.dependencies.contextMenuActionHandlerService
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 
+/**
+ * Dismisses any presented context menu and clears the speaking message
+ * when speech synthesis finishes or is cancelled.
+ */
 @Composable
 internal fun SpeechSynthesizerDidFinishOrCancel() {
     val controller = LocalContextMenuController.current
@@ -23,7 +28,7 @@ internal fun SpeechSynthesizerDidFinishOrCancel() {
         snapshotFlow { TextToSpeechService.isSpeaking }.collect { isSpeaking ->
             if (wasSpeaking && !isSpeaking) {
                 controller?.dismiss()
-                ContextMenuActionHandlerService.resetSpeakingMessage()
+                DependencyValues.current.contextMenuActionHandlerService.resetSpeakingMessage()
             }
             wasSpeaking = isSpeaking
         }
