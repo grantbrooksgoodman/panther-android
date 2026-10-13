@@ -19,6 +19,7 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 object SplashPageViewFloats {
     const val ACTIVITY_INDICATOR_SCALE_EFFECT = 0.8f
     const val PROGRESS_BAR_FADE_IN_DELAY_MILLISECONDS = 1750L
+    const val PROGRESS_BAR_FADE_IN_DURATION_MILLISECONDS = 500
 
     val imageFrameHeight: Dp = 70.dp
     val imageFrameWidth: Dp = 150.dp

@@ -18,16 +18,10 @@ object UserContentContainerViewFloats {
     val chatInfoToolbarButtonFrameMinWidth: Dp = 30.dp
     val chatPageHeaderContentHeight: Dp = 105.dp
     val chatPageHeaderContentHeightIncrement: Dp = 7.dp
-
-    /** The duration of the push and pop slide, in milliseconds. */
-    const val TRANSITION_MILLIS = 250
 }
 
 // MARK: - String
 
 object UserContentContainerViewStrings {
     const val CHAT_INFO_BUTTON_IMAGE_SYSTEM_NAME = "info.circle"
-
-    /** The label of the push and pop transition. */
-    const val ANIMATION_LABEL = "UserContentContainerView"
 }

@@ -42,8 +42,6 @@ import androidx.compose.ui.unit.sp
 import us.neotechnica.panther.designsystem.modules.alertkit.components.ActionButtonView
 import us.neotechnica.panther.designsystem.modules.alertkit.components.AlertKitDialog
 import us.neotechnica.panther.designsystem.modules.alertkit.components.AlertLabelView
-import us.neotechnica.panther.designsystem.modules.alertkit.components.alertDismissalAnimationSpec
-import us.neotechnica.panther.designsystem.modules.alertkit.components.alertPresentationAnimationSpec
 import us.neotechnica.panther.designsystem.modules.alertkit.constants.AlertViewFloats
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.separator
@@ -54,6 +52,7 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.AlertKitPalet
 import us.neotechnica.panther.designsystem.modules.alertkit.services.AlertPresenter
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
+import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 
 // MARK: - Constants Accessors
 
@@ -98,12 +97,12 @@ internal fun AlertView(
     AlertKitDialog(state = state) { transition ->
         transition.AnimatedVisibility(
             enter =
-                fadeIn(alertPresentationAnimationSpec()) +
+                fadeIn(SystemAnimation.alertTransition()) +
                     scaleIn(
-                        alertPresentationAnimationSpec(),
+                        SystemAnimation.alertTransition(),
                         initialScale = AlertFloats.PRESENTATION_INITIAL_SCALE,
                     ),
-            exit = fadeOut(alertDismissalAnimationSpec()),
+            exit = fadeOut(SystemAnimation.alertTransition()),
             modifier =
                 Modifier
                     .align(Alignment.Center)

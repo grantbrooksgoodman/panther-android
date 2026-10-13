@@ -129,18 +129,17 @@ fun RegionMenu(
         }
     }
 
-    if (state.isPresented) {
-        PageSheetView(
-            onDismissRequest = { viewModel.send(RegionMenuReducer.Action.RunIsPresentedEffect(false)) },
-            containerColor = colors.navigationBarBackground,
-        ) {
-            RegionPickerView(
-                state = state,
-                onSearchQueryChange = { viewModel.send(RegionMenuReducer.Action.SearchQueryChanged(it)) },
-                onRegionTitleSelected = { viewModel.send(RegionMenuReducer.Action.SelectedRegionTitleChanged(it)) },
-                onListAppeared = { viewModel.send(RegionMenuReducer.Action.ListViewAppeared(it)) },
-            )
-        }
+    PageSheetView(
+        isPresented = state.isPresented,
+        onDismissRequest = { viewModel.send(RegionMenuReducer.Action.RunIsPresentedEffect(false)) },
+        containerColor = colors.navigationBarBackground,
+    ) {
+        RegionPickerView(
+            state = state,
+            onSearchQueryChange = { viewModel.send(RegionMenuReducer.Action.SearchQueryChanged(it)) },
+            onRegionTitleSelected = { viewModel.send(RegionMenuReducer.Action.SelectedRegionTitleChanged(it)) },
+            onListAppeared = { viewModel.send(RegionMenuReducer.Action.ListViewAppeared(it)) },
+        )
     }
 }
 

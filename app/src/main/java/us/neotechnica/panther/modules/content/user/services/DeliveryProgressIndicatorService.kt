@@ -9,18 +9,20 @@
 package us.neotechnica.panther.modules.content.user.services
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FiniteAnimationSpec
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceFloats
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.session.entity.interfaces.DeliveryProgressIndicator
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
+import kotlin.time.Duration.Companion.seconds
 
 // MARK: - Constants Accessors
 
@@ -78,7 +80,7 @@ class DeliveryProgressIndicatorService(
         scope.launch {
             progressAnimatable.animateTo(
                 targetValue = progressAnimatable.targetValue + by,
-                animationSpec = tween(durationMillis = animationDurationMillis()),
+                animationSpec = animationSpec(),
             )
         }
     }
@@ -93,11 +95,11 @@ class DeliveryProgressIndicatorService(
         deliveryProgressJob = null
 
         scope.launch {
-            progressAnimatable.animateTo(1f, tween(durationMillis = animationDurationMillis()))
+            progressAnimatable.animateTo(1f, animationSpec())
         }
         scope.launch {
             delay((IndicatorFloats.ANIMATION_DELAY * MILLIS_PER_SECOND).toLong())
-            alphaAnimatable.animateTo(0f, tween(durationMillis = animationDurationMillis()))
+            alphaAnimatable.animateTo(0f, animationSpec())
             progressAnimatable.snapTo(0f)
         }
     }
@@ -120,7 +122,9 @@ class DeliveryProgressIndicatorService(
 
     // MARK: - Auxiliary
 
-    private fun animationDurationMillis(): Int = (IndicatorFloats.ANIMATION_DURATION * MILLIS_PER_SECOND).toInt()
+    // The curve of a UIKit `UIView.animate(withDuration:)` animation.
+    private fun animationSpec(): FiniteAnimationSpec<Float> =
+        SystemAnimation.easeInOut(IndicatorFloats.ANIMATION_DURATION.toDouble().seconds)
 
     private fun instantiateAppearanceJob() {
         appearanceJob?.cancel()
@@ -128,7 +132,7 @@ class DeliveryProgressIndicatorService(
             scope.launch {
                 delay((IndicatorFloats.APPEARANCE_TIMER_TIME_INTERVAL * MILLIS_PER_SECOND).toLong())
                 if (!(MessageDeliveryService.isSendingMessage.value || isSendingOutboxEntry)) return@launch
-                alphaAnimatable.animateTo(1f, tween(durationMillis = animationDurationMillis()))
+                alphaAnimatable.animateTo(1f, animationSpec())
                 instantiateDeliveryProgressJob(IndicatorFloats.VISIBLE_TIMER_TIME_INTERVAL)
             }
     }

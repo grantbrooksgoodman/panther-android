@@ -9,6 +9,7 @@
 package us.neotechnica.panther.designsystem.modules.alertkit.views
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -34,13 +35,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import us.neotechnica.panther.designsystem.modules.alertkit.components.ActionButtonView
 import us.neotechnica.panther.designsystem.modules.alertkit.components.AlertKitDialog
 import us.neotechnica.panther.designsystem.modules.alertkit.components.AlertLabelView
-import us.neotechnica.panther.designsystem.modules.alertkit.components.alertDismissalAnimationSpec
-import us.neotechnica.panther.designsystem.modules.alertkit.components.alertPresentationAnimationSpec
 import us.neotechnica.panther.designsystem.modules.alertkit.constants.ActionSheetViewFloats
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.separator
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.styled
@@ -52,6 +52,7 @@ import us.neotechnica.panther.designsystem.modules.alertkit.services.AlertPresen
 import us.neotechnica.panther.designsystem.modules.alertkit.services.PresentedAlert
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
+import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 
 // MARK: - Constants Accessors
 
@@ -78,8 +79,8 @@ internal fun ActionSheetView(alert: PresentedAlert.ActionSheet) {
         onDimmingViewTapped = { state.dismiss(alert.onCancel) },
     ) { transition ->
         transition.AnimatedVisibility(
-            enter = slideInVertically(alertPresentationAnimationSpec()) { it },
-            exit = slideOutVertically(alertDismissalAnimationSpec()) { it },
+            enter = slideInVertically(SystemAnimation.alertTransition(IntOffset.VisibilityThreshold)) { it },
+            exit = slideOutVertically(SystemAnimation.alertTransition(IntOffset.VisibilityThreshold)) { it },
             modifier =
                 Modifier
                     .align(Alignment.BottomCenter)

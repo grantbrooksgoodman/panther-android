@@ -109,9 +109,10 @@ fun AddContactButton(
 fun ChatInfoContactSelectorHost() {
     val navigation = remember { DependencyValues.current.navigation }
     val navState by navigation.state.collectAsState()
-    if (navState.chat.sheet == ChatNavigatorState.SheetPaths.ContactSelector) {
-        PageSheetView(onDismissRequest = { navigation.navigate(Route.Chat(ChatRoute.Sheet(null))) }) {
-            ContactSelectorPageView(entryPoint = ContactSelectorPageView.EntryPoint.CHAT_INFO_PAGE_VIEW)
-        }
+    PageSheetView(
+        isPresented = navState.chat.sheet == ChatNavigatorState.SheetPaths.ContactSelector,
+        onDismissRequest = { navigation.navigate(Route.Chat(ChatRoute.Sheet(null))) },
+    ) {
+        ContactSelectorPageView(entryPoint = ContactSelectorPageView.EntryPoint.CHAT_INFO_PAGE_VIEW)
     }
 }

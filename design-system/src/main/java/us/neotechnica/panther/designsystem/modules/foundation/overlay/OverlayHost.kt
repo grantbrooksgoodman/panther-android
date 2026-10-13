@@ -9,8 +9,7 @@
 package us.neotechnica.panther.designsystem.modules.foundation.overlay
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,6 +23,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Renders the global activity [Overlay] over the current screen.
@@ -31,8 +32,8 @@ import androidx.compose.ui.Modifier
  * Place a single [OverlayHost] near the root of the composition, above
  * the app's content. While a modal overlay is visible, it dims the
  * screen and consumes input so the underlying UI cannot be interacted
- * with. Removal fades out over 0.2 seconds unless the overlay was
- * removed without animation.
+ * with. The overlay appears at once; its removal fades out over 0.2
+ * seconds unless the overlay was removed without animation.
  */
 @Composable
 fun OverlayHost() {
@@ -40,8 +41,8 @@ fun OverlayHost() {
     val animatesRemoval by Overlay.animatesRemoval.collectAsState()
 
     AnimatedVisibility(
-        enter = fadeIn(tween(FADE_DURATION_MILLIS)),
-        exit = fadeOut(tween(if (animatesRemoval) FADE_DURATION_MILLIS else 0)),
+        enter = EnterTransition.None,
+        exit = fadeOut(SystemAnimation.easeInOut((if (animatesRemoval) FADE_DURATION_MILLIS else 0).milliseconds)),
         visible = isVisible,
     ) {
         val activityIndicator by Overlay.activityIndicator.collectAsState()

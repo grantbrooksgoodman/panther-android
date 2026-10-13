@@ -9,7 +9,6 @@
 package us.neotechnica.panther.modules.content.user.views.chatpageview
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,6 +34,7 @@ import us.neotechnica.panther.bundle.sessionStoreDidChange
 import us.neotechnica.panther.designsystem.modules.componentkit.components.ContextMenuHost
 import us.neotechnica.panther.designsystem.modules.componentkit.components.LocalContextMenuController
 import us.neotechnica.panther.designsystem.modules.componentkit.components.MessageInputBar
+import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.modules.common.models.ConnectionStatusServiceEffectID
 import us.neotechnica.panther.modules.common.services.ConnectionStatusService
@@ -60,6 +60,7 @@ import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.Dep
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
+import kotlin.time.Duration.Companion.milliseconds
 
 // MARK: - Constants Accessors
 
@@ -226,7 +227,11 @@ private fun ChatInputBar(
         delay(appearanceDurationMillis.toLong())
         hasAppeared = true
     }
-    val alpha by animateFloatAsState(if (hasAppeared) 1f else 0f, tween(appearanceDurationMillis), label = "inputBarAlpha")
+    val alpha by animateFloatAsState(
+        if (hasAppeared) 1f else 0f,
+        SystemAnimation.easeInOut(appearanceDurationMillis.milliseconds),
+        label = "inputBarAlpha",
+    )
 
     MessageInputBar(
         text = text,

@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -77,6 +78,7 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedStates
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.milliseconds
 import androidx.compose.material3.Text as Material3Text
 
 // MARK: - Constants Accessors
@@ -160,8 +162,12 @@ fun ConversationCellView(
                     .background(colors.background)
                     .anchoredDraggable(draggableState, Orientation.Horizontal, enabled = !isShowingRedactedContent),
         ) {
+            // The cell's menu stands in for SwiftUI's `contextMenu`, so it
+            // keeps the system long-press timeout rather than the shorter
+            // message bubble press.
             MessageContextMenu(
                 liftedBackground = colors.background,
+                minimumPressDuration = LocalViewConfiguration.current.longPressTimeoutMillis.milliseconds,
                 menuLeadingOffset = CellFloats.contextMenuLeadingOffset,
                 actions =
                     listOf(

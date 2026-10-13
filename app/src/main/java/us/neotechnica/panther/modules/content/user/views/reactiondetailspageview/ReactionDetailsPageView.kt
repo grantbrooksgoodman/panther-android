@@ -9,14 +9,11 @@
 package us.neotechnica.panther.modules.content.user.views.reactiondetailspageview
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
@@ -28,15 +25,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpSize
 import us.neotechnica.panther.bundle.currentConversationMetadataChanged
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
-import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
+import us.neotechnica.panther.designsystem.modules.foundation.components.HeaderView
+import us.neotechnica.panther.designsystem.modules.foundation.extensions.doneButton
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.user.components.SquareIconView
+import us.neotechnica.panther.modules.content.user.constants.ReactionDetailsPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.ReactionDetailsPageViewFloats
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.displayName
@@ -48,13 +46,13 @@ import us.neotechnica.panther.modules.session.entity.services.ConversationSessio
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
-import us.neotechnica.panther.subsystem.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 
 // MARK: - Constants Accessors
 
+private typealias Colors = ReactionDetailsPageViewColors
 private typealias Floats = ReactionDetailsPageViewFloats
 
 /**
@@ -62,7 +60,8 @@ private typealias Floats = ReactionDetailsPageViewFloats
  *
  * Lists the reactions on a message, grouped by reaction, showing the
  * names of the participants who reacted with each, each row led by a
- * square icon of the reaction.
+ * square icon of the reaction. The list sits below a sheet header with
+ * the page title and a trailing Done button.
  *
  * @param messageID The identifier of the message whose reactions are
  *   shown.
@@ -92,45 +91,42 @@ fun ReactionDetailsPageView(
     val colors = LocalPantherColors.current
     val groups = remember(state.messageID, state.viewID) { reactionGroups(state.messageID) }
 
-    Box(modifier = modifier.fillMaxSize().background(colors.groupedContentBackground)) {
-        Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
-            Row(
-                horizontalArrangement = Arrangement.End,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = Floats.headerHorizontalPadding, vertical = Floats.headerVerticalPadding),
-            ) {
-                CircleChipButton(
-                    systemName = "checkmark",
-                    contentDescription = LocalizedStringKey.Done.localized(LocalizationSource.SUBSYSTEM),
-                    onClick = { viewModel.send(ReactionDetailsPageReducer.Action.DoneHeaderItemTapped) },
-                    tint = colors.titleText,
-                )
-            }
+    Column(modifier = modifier.fillMaxSize().background(colors.groupedContentBackground)) {
+        HeaderView(
+            centerItem =
+                HeaderView.CenterItemType.Text(
+                    HeaderView.TextAttributes(state.navigationTitle, foregroundColor = colors.navigationBarTitle),
+                ),
+            rightItem =
+                HeaderView.PeripheralButtonType.doneButton(foregroundColor = Colors.doneHeaderItemForeground) {
+                    viewModel.send(ReactionDetailsPageReducer.Action.DoneHeaderItemTapped)
+                },
+            attributes = HeaderView.Attributes(sizeClass = HeaderView.SizeClass.Sheet),
+        )
 
-            Components.Text(
-                state.navigationTitle,
-                foregroundColor = colors.titleText,
-                font = Font.systemBold(FontScale.Large),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(bottom = Floats.titleBottomPadding),
-            )
-
-            ReactionGroupList(groups)
-        }
+        ReactionGroupList(
+            groups,
+            modifier =
+                Modifier.padding(
+                    start = Floats.groupListViewHorizontalPadding,
+                    top = Floats.groupListViewTopPadding,
+                    end = Floats.groupListViewHorizontalPadding,
+                ),
+        )
     }
 }
 
 // MARK: - Reaction Group List
 
 @Composable
-private fun ReactionGroupList(groups: List<ReactionGroup>) {
+private fun ReactionGroupList(
+    groups: List<ReactionGroup>,
+    modifier: Modifier = Modifier,
+) {
     val colors = LocalPantherColors.current
     Column(
         modifier =
-            Modifier
-                .padding(horizontal = Floats.listHorizontalPadding)
+            modifier
                 .clip(RoundedCornerShape(Floats.listCornerRadius))
                 .background(colors.groupedRowBackground),
     ) {

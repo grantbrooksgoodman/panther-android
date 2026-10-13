@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -88,11 +87,8 @@ fun rememberContactCardPresenter(): ContactCardPresenter {
     var card by remember { mutableStateOf<ContactCardInfo?>(null) }
     val context = LocalContext.current
 
-    card?.let { info ->
-        ContactDetailSheet(
-            info = info,
-            onDismiss = { card = null },
-        )
+    PageSheetView(item = card, onDismissRequest = { card = null }) { info ->
+        ContactDetailView(info = info, onDismiss = { card = null })
     }
 
     return ContactCardPresenter(
@@ -109,9 +105,8 @@ fun rememberContactCardPresenter(): ContactCardPresenter {
 
 // MARK: - Contact Detail Sheet
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ContactDetailSheet(
+private fun ContactDetailView(
     info: ContactCardInfo,
     onDismiss: () -> Unit,
 ) {
@@ -120,38 +115,36 @@ private fun ContactDetailSheet(
     val isDarkModeActive = ThemeService.isDarkModeActive(isSystemInDarkTheme())
     val number = info.phoneNumber?.formattedString()
 
-    PageSheetView(onDismissRequest = onDismiss) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .padding(vertical = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(vertical = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        AvatarImageView(
+            null,
+            size = DpSize(AVATAR_SIZE, AVATAR_SIZE),
+        )
+        val title = info.displayName ?: number
+        title?.let { Components.Text(it, foregroundColor = colors.titleText, font = Font.systemSemibold(FontScale.Large)) }
+        if (number != null && number != title) {
+            Components.Text(number, foregroundColor = colors.subtitleText, font = Font.system)
+        }
+        Button(
+            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            onClick = {
+                addToContacts(context, info.displayName, number)
+                onDismiss()
+            },
         ) {
-            AvatarImageView(
-                null,
-                size = DpSize(AVATAR_SIZE, AVATAR_SIZE),
+            Components.Text(
+                ADD_TO_CONTACTS_TITLE,
+                foregroundColor = if (isDarkModeActive) Color.Black else Color.White,
+                font = Font.systemSemibold()
             )
-            val title = info.displayName ?: number
-            title?.let { Components.Text(it, foregroundColor = colors.titleText, font = Font.systemSemibold(FontScale.Large)) }
-            if (number != null && number != title) {
-                Components.Text(number, foregroundColor = colors.subtitleText, font = Font.system)
-            }
-            Button(
-                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                onClick = {
-                    addToContacts(context, info.displayName, number)
-                    onDismiss()
-                },
-            ) {
-                Components.Text(
-                    ADD_TO_CONTACTS_TITLE,
-                    foregroundColor = if (isDarkModeActive) Color.Black else Color.White,
-                    font = Font.systemSemibold()
-                )
-            }
         }
     }
 }

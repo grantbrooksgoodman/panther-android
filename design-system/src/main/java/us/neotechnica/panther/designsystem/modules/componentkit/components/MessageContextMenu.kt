@@ -30,17 +30,19 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import us.neotechnica.panther.designsystem.R
 import us.neotechnica.panther.designsystem.modules.componentkit.extensions.detectMessageTapGestures
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAction
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAlignment
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ReactionChoice
-import us.neotechnica.panther.designsystem.modules.foundation.services.SoundPlayer
+import kotlin.time.Duration
 
 /**
  * Wraps a message bubble so a long press lifts it and presents [actions]
  * in a context menu, following the bubble's [alignment], with an optional
  * row of [reactionChoices] above the bubble.
+ *
+ * The long press carries into the menu: without lifting, the user can
+ * drag onto an action – highlighting it – and release to select it.
  *
  * @param actions The menu's actions.
  * @param alignment The side the menu anchors to.
@@ -52,6 +54,8 @@ import us.neotechnica.panther.designsystem.modules.foundation.services.SoundPlay
  *   copy, so a transparent row (such as a list cell) stays readable over
  *   the dimmed backdrop. Pass `null` when the content paints its own
  *   background, such as a message bubble.
+ * @param minimumPressDuration How long a press must be held to present
+ *   the menu. The default is the 220-millisecond message bubble press.
  * @param menuLeadingOffset For [ContextMenuAlignment.LEADING], the inset
  *   from the content's leading edge at which the menu's leading text (and
  *   the reaction row's leading edge) is aligned, so a full-width row can
@@ -73,6 +77,7 @@ fun MessageContextMenu(
     reactionChoices: List<ReactionChoice> = emptyList(),
     liftScale: Float = LIFT_SCALE_BONUS,
     liftedBackground: Color? = null,
+    minimumPressDuration: Duration = GESTURE_PRESS_DURATION,
     menuLeadingOffset: Dp = 0.dp,
     alignsMenuCardToLeadingEdge: Boolean = false,
     menuKey: String? = null,
@@ -96,36 +101,38 @@ fun MessageContextMenu(
     val currentOnTap by rememberUpdatedState(onTap)
     val currentReactionChoices by rememberUpdatedState(reactionChoices)
 
+    // The menu as it stands, or `null` when the bubble has neither
+    // actions nor reactions or has not yet been laid out.
+    fun activeContextMenu(): ActiveContextMenu? {
+        val hasMenu = currentActions.isNotEmpty() || currentReactionChoices.isNotEmpty()
+        if (!hasMenu || anchorBounds == Rect.Zero) return null
+        return ActiveContextMenu(
+            anchorBounds,
+            alignment,
+            currentActions,
+            currentReactionChoices,
+            liftScale,
+            liftedBackground,
+            menuLeadingOffset,
+            alignsMenuCardToLeadingEdge,
+            currentContent,
+        )
+    }
+
     // Register this menu under its key so it can be opened
     // programmatically (such as focusing a message from search).
     if (menuKey != null && controller != null) {
         DisposableEffect(menuKey, controller) {
-            controller.register(menuKey) {
-                val hasMenu = currentActions.isNotEmpty() || currentReactionChoices.isNotEmpty()
-                if (!hasMenu || anchorBounds == Rect.Zero) {
-                    null
-                } else {
-                    ActiveContextMenu(
-                        anchorBounds,
-                        alignment,
-                        currentActions,
-                        currentReactionChoices,
-                        liftScale,
-                        liftedBackground,
-                        menuLeadingOffset,
-                        alignsMenuCardToLeadingEdge,
-                        currentContent,
-                    )
-                }
-            }
+            controller.register(menuKey, ::activeContextMenu)
             onDispose { controller.unregister(menuKey) }
         }
     }
 
-    // Hide the origin bubble while it is the lifted one, so only the
-    // overlay's copy is visible (no double image).
-    val isLifted =
-        controller?.active?.anchorBounds == anchorBounds && controller?.active != null && anchorBounds != Rect.Zero
+    // Hide the origin bubble while it is the lifted one – until its copy
+    // finishes animating back after dismissal – so only the overlay's copy
+    // is visible (no double image).
+    val liftedMenu = controller?.displayed
+    val isLifted = liftedMenu != null && liftedMenu.anchorBounds == anchorBounds && anchorBounds != Rect.Zero
 
     Column(
         modifier,
@@ -150,8 +157,9 @@ fun MessageContextMenu(
             Modifier
                 .onGloballyPositioned { coordinates ->
                     anchorBounds = Rect(coordinates.positionInRoot(), coordinates.size.toSize())
-                }.pointerInput(controller, handlesTap, hasDoubleTapDefault) {
+                }.pointerInput(controller, handlesTap, hasDoubleTapDefault, minimumPressDuration) {
                     detectMessageTapGestures(
+                        minimumPressDuration = minimumPressDuration,
                         onTap =
                             if (handlesTap) {
                                 { position -> currentOnTap?.invoke(anchorBounds.topLeft + position) }
@@ -171,25 +179,15 @@ fun MessageContextMenu(
                             } else {
                                 null
                             },
-                        onLongPress = {
-                            val hasMenu = currentActions.isNotEmpty() || currentReactionChoices.isNotEmpty()
-                            if (hasMenu && controller?.canBegin == true && anchorBounds != Rect.Zero) {
-                                SoundPlayer.play(R.raw.selection)
-                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                controller.present(
-                                    ActiveContextMenu(
-                                        anchorBounds,
-                                        alignment,
-                                        currentActions,
-                                        currentReactionChoices,
-                                        liftScale,
-                                        liftedBackground,
-                                        menuLeadingOffset,
-                                        alignsMenuCardToLeadingEdge,
-                                        currentContent,
-                                    ),
-                                )
-                            }
+                        // The press carries into the menu it presents: releasing
+                        // it over a menu element selects that element.
+                        onLongPress = { state, position ->
+                            controller?.beginInteraction(
+                                state,
+                                location = anchorBounds.topLeft + position,
+                                dragThreshold = INTERACTION_DRAG_THRESHOLD.toPx(),
+                                menu = ::activeContextMenu,
+                            )
                         },
                     )
                 }.alpha(if (isLifted) 0f else 1f),

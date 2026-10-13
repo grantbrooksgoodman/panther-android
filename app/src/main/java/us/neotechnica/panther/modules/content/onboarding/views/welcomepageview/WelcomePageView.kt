@@ -9,8 +9,6 @@
 package us.neotechnica.panther.modules.content.onboarding.views.welcomepageview
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.EaseIn
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -42,6 +40,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.constants.StackFloats
+import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
@@ -95,7 +94,7 @@ fun WelcomePageView(modifier: Modifier = Modifier) {
 
             AnimatedContent(
                 targetState = state.welcomeLabelText,
-                transitionSpec = { fadeIn(tween(easing = EaseIn)) togetherWith fadeOut(tween(easing = EaseIn)) },
+                transitionSpec = { fadeIn(SystemAnimation.easeIn()) togetherWith fadeOut(SystemAnimation.easeIn()) },
                 label = "WelcomeLabelText",
                 modifier =
                     Modifier

@@ -9,9 +9,7 @@
 package us.neotechnica.panther.modules.content.shared.views.splashpageview
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.EaseIn
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -42,6 +40,7 @@ import us.neotechnica.panther.R
 import us.neotechnica.panther.bundle.Application
 import us.neotechnica.panther.bundle.networkActivityOccurred
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.designsystem.modules.theming.views.ThemedView
@@ -54,6 +53,7 @@ import us.neotechnica.panther.modules.content.shared.services.SplashPageViewServ
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.models.SharedEvent
 import java.util.Date
+import kotlin.time.Duration.Companion.milliseconds
 
 // MARK: - Constants Accessors
 
@@ -162,14 +162,14 @@ private fun ProgressBar(
 ) {
     val animatedProgress by animateFloatAsState(
         targetValue = initializationProgress,
-        animationSpec = tween(easing = EaseIn),
+        animationSpec = SystemAnimation.easeIn(),
         label = "SplashInitializationProgress",
     )
 
     val fadeIn = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
         delay(Floats.PROGRESS_BAR_FADE_IN_DELAY_MILLISECONDS)
-        fadeIn.animateTo(1f)
+        fadeIn.animateTo(1f, SystemAnimation.easeIn(Floats.PROGRESS_BAR_FADE_IN_DURATION_MILLISECONDS.milliseconds))
     }
 
     ThemedView {

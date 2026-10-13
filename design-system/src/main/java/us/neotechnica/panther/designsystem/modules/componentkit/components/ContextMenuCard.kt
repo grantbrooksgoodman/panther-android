@@ -24,15 +24,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAction
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 
+// The menu's elements – one row per action – with the element under a
+// held long press highlighted. Each element reports its layout
+// coordinates, including the divider below it, so a held long press
+// can be hit-tested against contiguous elements.
 @Composable
 internal fun ContextMenuCard(
     actions: List<ContextMenuAction>,
+    highlightedElementIndex: Int?,
+    onElementPositioned: (Int, LayoutCoordinates) -> Unit,
     onSelect: (ContextMenuAction) -> Unit,
 ) {
     val colors = LocalPantherColors.current
@@ -45,30 +53,33 @@ internal fun ContextMenuCard(
     ) {
         actions.forEachIndexed { index, action ->
             val contentColor = if (action.isDestructive) DESTRUCTIVE_COLOR else colors.titleText
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(MENU_ROW_HEIGHT)
-                        .clickable { onSelect(action) }
-                        .padding(start = MENU_ROW_START_PADDING, end = 12.dp),
-            ) {
-                Components.Text(
-                    action.title,
-                    foregroundColor = contentColor,
-                    font = Font.system,
-                    modifier = Modifier.weight(1f),
-                )
-                Components.Symbol(
-                    action.systemImageName,
-                    foregroundColor = contentColor,
-                    modifier = Modifier.size(MENU_ICON_SIZE),
-                )
-            }
+            Column(modifier = Modifier.onGloballyPositioned { onElementPositioned(index, it) }) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(MENU_ROW_HEIGHT)
+                            .background(if (index == highlightedElementIndex) MENU_ELEMENT_HIGHLIGHTED_BACKGROUND else Color.Transparent)
+                            .clickable { onSelect(action) }
+                            .padding(start = MENU_ROW_START_PADDING, end = 12.dp),
+                ) {
+                    Components.Text(
+                        action.title,
+                        foregroundColor = contentColor,
+                        font = Font.system,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Components.Symbol(
+                        action.systemImageName,
+                        foregroundColor = contentColor,
+                        modifier = Modifier.size(MENU_ICON_SIZE),
+                    )
+                }
 
-            if (index != actions.lastIndex) {
-                HorizontalDivider(thickness = MENU_DIVIDER_THICKNESS, color = colors.subtitleText.copy(alpha = 0.25f))
+                if (index != actions.lastIndex) {
+                    HorizontalDivider(thickness = MENU_DIVIDER_THICKNESS, color = colors.subtitleText.copy(alpha = 0.25f))
+                }
             }
         }
     }

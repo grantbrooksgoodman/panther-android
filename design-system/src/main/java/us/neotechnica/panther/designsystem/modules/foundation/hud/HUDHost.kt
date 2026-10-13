@@ -9,7 +9,7 @@
 package us.neotechnica.panther.designsystem.modules.foundation.hud
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -49,6 +49,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
+import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Renders the heads-up display requested through [HUDPresenter].
@@ -88,8 +90,8 @@ fun HUDHost() {
         }
 
         AnimatedVisibility(
-            enter = fadeIn(tween(ANIMATION_DURATION_MILLIS)) + scaleIn(tween(ANIMATION_DURATION_MILLIS), ENTER_INITIAL_SCALE),
-            exit = fadeOut(tween(ANIMATION_DURATION_MILLIS)) + scaleOut(tween(ANIMATION_DURATION_MILLIS), EXIT_TARGET_SCALE),
+            enter = fadeIn(hudAnimationSpec()) + scaleIn(hudAnimationSpec(), ENTER_INITIAL_SCALE),
+            exit = fadeOut(hudAnimationSpec()) + scaleOut(hudAnimationSpec(), EXIT_TARGET_SCALE),
             visible = presentation != null,
         ) {
             lastPresentation?.let { HUDCard(it) }
@@ -161,6 +163,9 @@ private fun StatusIcon(
         tint = tint,
     )
 }
+
+// The ease-in with which the HUD presents and dismisses.
+private fun hudAnimationSpec(): FiniteAnimationSpec<Float> = SystemAnimation.easeIn(ANIMATION_DURATION_MILLIS.milliseconds)
 
 private const val ANIMATION_DURATION_MILLIS = 150
 private const val AUTO_DISMISS_BASE_MILLIS = 1250L

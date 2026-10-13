@@ -10,7 +10,7 @@ package us.neotechnica.panther.designsystem.modules.foundation.views
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -41,7 +41,9 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.designsystem.modules.foundation.constants.ForcedUpdateModalPageViewFloats
 import us.neotechnica.panther.designsystem.modules.foundation.models.ConnectionAlert
+import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.subsystem.AppSubsystem
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -49,6 +51,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.localization.models.Localized
 import us.neotechnica.panther.subsystem.modules.localization.models.SubsystemStringKey
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * A container that switches between loading, loaded, and error states
@@ -79,7 +83,7 @@ fun StatefulView(
         label = "StatefulView",
         modifier = modifier.fillMaxSize(),
         targetState = state,
-        transitionSpec = { fadeIn() togetherWith fadeOut() },
+        transitionSpec = { fadeIn(stateTransitionAnimationSpec()) togetherWith fadeOut(stateTransitionAnimationSpec()) },
     ) { target ->
         when (target) {
             is ViewState.Error -> FailurePage(target.exception, exceptionRetryHandler)
@@ -108,7 +112,7 @@ private fun ProgressPage() {
                 .background(colors.background),
     ) {
         AnimatedVisibility(
-            enter = fadeIn(tween(PROGRESS_SPINNER_FADE_MILLIS)),
+            enter = fadeIn(SystemAnimation.easeIn(PROGRESS_SPINNER_FADE_MILLIS.milliseconds)),
             exit = fadeOut(),
             visible = isVisible,
         ) {
@@ -170,6 +174,10 @@ private fun FailurePage(
         }
     }
 }
+
+// The ease-in with which the view fades between states.
+private fun stateTransitionAnimationSpec(): FiniteAnimationSpec<Float> =
+    SystemAnimation.easeIn(ForcedUpdateModalPageViewFloats.TRANSITION_ANIMATION_DURATION.toDouble().seconds)
 
 private const val FAILURE_GLYPH_SIZE = 120
 private const val FAILURE_DESCRIPTOR_SIZE = 22.5f

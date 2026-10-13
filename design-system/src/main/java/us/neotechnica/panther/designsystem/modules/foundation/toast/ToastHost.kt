@@ -10,8 +10,7 @@ package us.neotechnica.panther.designsystem.modules.foundation.toast
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -53,6 +52,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
@@ -61,6 +61,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.SFSymbol
 import us.neotechnica.panther.designsystem.modules.foundation.constants.ToastViewColors
 import us.neotechnica.panther.designsystem.modules.foundation.constants.ToastViewFloats
 import us.neotechnica.panther.designsystem.modules.foundation.constants.ToastViewStrings
+import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
 
@@ -111,8 +112,8 @@ fun ToastHost() {
     ) {
         val fromBottom = appearanceEdge == Toast.AppearanceEdge.BOTTOM
         AnimatedVisibility(
-            enter = slideInVertically { if (fromBottom) it else -it } + fadeIn(),
-            exit = slideOutVertically { if (fromBottom) it else -it } + fadeOut(),
+            enter = slideInVertically(SystemAnimation.spring(IntOffset.VisibilityThreshold)) { if (fromBottom) it else -it },
+            exit = slideOutVertically(SystemAnimation.spring(IntOffset.VisibilityThreshold)) { if (fromBottom) it else -it },
             visible = presented != null,
         ) {
             presented?.let { current ->

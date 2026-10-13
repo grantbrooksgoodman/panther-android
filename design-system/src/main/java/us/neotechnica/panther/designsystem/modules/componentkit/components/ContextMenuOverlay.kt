@@ -36,7 +36,7 @@ import kotlin.math.roundToInt
 internal fun ContextMenuOverlay(
     active: ActiveContextMenu,
     progress: Float,
-    onDismiss: () -> Unit,
+    controller: ContextMenuController,
 ) {
     val density = LocalDensity.current
     var reactionRowWidthPx by remember { mutableIntStateOf(0) }
@@ -55,7 +55,7 @@ internal fun ContextMenuOverlay(
         Modifier
             .background(Color.Black.copy(alpha = scrimAlpha * progress))
             .fillMaxSize()
-            .pointerInput(Unit) { detectTapGestures { onDismiss() } },
+            .pointerInput(Unit) { detectTapGestures { controller.dismiss() } },
     ) {
         val gapPx = with(density) { MENU_GAP.toPx() }
         val reactionGapPx = with(density) { REACTION_ROW_GAP.toPx() }
@@ -70,14 +70,15 @@ internal fun ContextMenuOverlay(
 
         // Shift the whole stack vertically so the reaction row clears the top
         // inset and the menu clears the bottom inset, keeping every item on
-        // screen when the bubble is near an edge.
+        // screen when the bubble is near an edge. The stack moves into place
+        // as the menu appears, and back as it disappears.
         val shiftPx =
             run {
                 val stackTopPx = if (hasReactions) bounds.top - reactionGapPx - reactionRowHeightPx else bounds.top
                 val stackBottomPx = if (hasActions) bubbleBottomPx + gapPx + menuHeightPx else bubbleBottomPx
                 var shift = (bottomLimitPx - stackBottomPx).coerceAtMost(0f)
                 if (stackTopPx + shift < topLimitPx) shift = topLimitPx - stackTopPx
-                shift
+                shift * progress
             }
 
         // Reaction row, above the bubble, aligned to its side.
@@ -100,10 +101,7 @@ internal fun ContextMenuOverlay(
                         transformOrigin = TransformOrigin(originX, 1f)
                     },
             ) {
-                ReactionRow(active.reactionChoices) { choice ->
-                    onDismiss()
-                    choice.onSelect()
-                }
+                ReactionRow(active.reactionChoices) { choice -> controller.select(choice.onSelect) }
             }
         }
 
@@ -142,10 +140,11 @@ internal fun ContextMenuOverlay(
                         transformOrigin = TransformOrigin(originX, 0f)
                     },
             ) {
-                ContextMenuCard(active.actions) { action ->
-                    onDismiss()
-                    action.onSelect()
-                }
+                ContextMenuCard(
+                    actions = active.actions,
+                    highlightedElementIndex = controller.highlightedElementIndex,
+                    onElementPositioned = controller::setElementCoordinates,
+                ) { action -> controller.select(action.onSelect) }
             }
         }
     }

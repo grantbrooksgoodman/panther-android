@@ -147,10 +147,11 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
             }
         }
 
-        if (navState.settings.sheet == SettingsNavigatorState.SheetPaths.InviteQRCode) {
-            PageSheetView(onDismissRequest = { navigation.navigate(Route.Settings(SettingsRoute.Sheet(null))) }) {
-                InviteQRCodePageView()
-            }
+        PageSheetView(
+            isPresented = navState.settings.sheet == SettingsNavigatorState.SheetPaths.InviteQRCode,
+            onDismissRequest = { navigation.navigate(Route.Settings(SettingsRoute.Sheet(null))) },
+        ) {
+            InviteQRCodePageView()
         }
     }
 }

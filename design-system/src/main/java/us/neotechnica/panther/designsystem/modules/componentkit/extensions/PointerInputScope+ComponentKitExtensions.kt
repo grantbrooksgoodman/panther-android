@@ -17,6 +17,8 @@ import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.isOutOfBounds
 import kotlinx.coroutines.withTimeoutOrNull
+import us.neotechnica.panther.designsystem.modules.componentkit.models.GestureRecognizerState
+import kotlin.time.Duration
 
 /**
  * Detects taps, double taps, and long presses on a message bubble.
@@ -37,23 +39,34 @@ import kotlinx.coroutines.withTimeoutOrNull
  * non-`null`, a single tap is reported only once the double-tap
  * timeout passes without a second press.
  *
+ * A long press is continuous, like a `UILongPressGestureRecognizer`:
+ * it begins once the press is held for [minimumPressDuration], and
+ * from then on [onLongPress] is told each time the held pointer
+ * moves – wherever it moves, on or off the bubble – and when the
+ * pointer lifts or the gesture is cancelled. Every event of a long
+ * press is consumed, so nothing beneath it scrolls or swipes.
+ *
+ * @param minimumPressDuration How long a press must be held to begin
+ *   a long press.
  * @param onDoubleTap The action performed on a double tap, given the
  *   second release's position, or `null` to report every tap at
  *   once.
- * @param onLongPress The action performed on a long press, given the
- *   press position, or `null` to ignore long presses.
+ * @param onLongPress The action performed as a long press begins,
+ *   changes, ends, or is cancelled, given the gesture's state and the
+ *   pointer's position, or `null` to ignore long presses.
  * @param onTap The action performed on a tap, given the release
  *   position, or `null` to ignore taps.
  */
 internal suspend fun PointerInputScope.detectMessageTapGestures(
+    minimumPressDuration: Duration,
     onDoubleTap: ((Offset) -> Unit)? = null,
-    onLongPress: ((Offset) -> Unit)? = null,
+    onLongPress: ((GestureRecognizerState, Offset) -> Unit)? = null,
     onTap: ((Offset) -> Unit)? = null,
 ) = awaitEachGesture {
     val down = awaitFirstDown(requireUnconsumed = false)
     down.consume()
     val firstUp =
-        when (val result = awaitReleaseOrLongPress(down, onLongPress)) {
+        when (val result = awaitReleaseOrLongPress(down, minimumPressDuration, onLongPress)) {
             is PressResult.Released -> result.up
             PressResult.LongPressed, PressResult.Cancelled -> return@awaitEachGesture
         }
@@ -73,7 +86,7 @@ internal suspend fun PointerInputScope.detectMessageTapGestures(
     // A second press that lifts in time is a double tap; one that is
     // cancelled leaves the first tap standing; one that is held is a
     // long press alone.
-    when (val result = awaitReleaseOrLongPress(secondDown, onLongPress)) {
+    when (val result = awaitReleaseOrLongPress(secondDown, minimumPressDuration, onLongPress)) {
         is PressResult.Released -> {
             result.up.consume()
             onDoubleTap(result.up.position)
@@ -99,22 +112,47 @@ private sealed interface PressResult {
 }
 
 // Waits for the press to lift or cancel or – when a long-press action
-// is given – to hold for the long-press timeout, in which case the
-// action runs and the rest of the gesture is consumed.
+// is given – to hold for the minimum press duration, in which case the
+// long press begins and is tracked until its pointer lifts.
 private suspend fun AwaitPointerEventScope.awaitReleaseOrLongPress(
     down: PointerInputChange,
-    onLongPress: ((Offset) -> Unit)?,
+    minimumPressDuration: Duration,
+    onLongPress: ((GestureRecognizerState, Offset) -> Unit)?,
 ): PressResult {
     if (onLongPress == null) return awaitReleaseOrCancellation(down)
     val result =
-        withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+        withTimeoutOrNull(minimumPressDuration.inWholeMilliseconds) {
             awaitReleaseOrCancellation(down)
         }
     if (result != null) return result
 
-    onLongPress(down.position)
-    consumeUntilUp()
+    onLongPress(GestureRecognizerState.BEGAN, down.position)
+    trackLongPress(down, onLongPress)
     return PressResult.LongPressed
+}
+
+// Reports each movement of a long press's pointer, then its release
+// – or its cancellation, which arrives as a release already
+// consumed – consuming every event along the way.
+private suspend fun AwaitPointerEventScope.trackLongPress(
+    down: PointerInputChange,
+    onLongPress: (GestureRecognizerState, Offset) -> Unit,
+) {
+    var position = down.position
+    while (true) {
+        val event = awaitPointerEvent()
+        val change = event.changes.firstOrNull { it.id == down.id } ?: event.changes.first()
+        if (event.changes.none { it.pressed }) {
+            val state = if (change.isConsumed) GestureRecognizerState.CANCELLED else GestureRecognizerState.ENDED
+            event.changes.forEach { it.consume() }
+            return onLongPress(state, change.position)
+        }
+
+        event.changes.forEach { it.consume() }
+        if (change.position == position) continue
+        position = change.position
+        onLongPress(GestureRecognizerState.CHANGED, position)
+    }
 }
 
 // Waits for every pointer to lift, cancelling if a pointer leaves the
@@ -148,11 +186,3 @@ private suspend fun AwaitPointerEventScope.awaitSecondDown(firstUp: PointerInput
         } while (change.uptimeMillis < minimumUptime)
         change
     }
-
-// Consumes every event until no pointer is pressed.
-private suspend fun AwaitPointerEventScope.consumeUntilUp() {
-    do {
-        val event = awaitPointerEvent()
-        event.changes.forEach { it.consume() }
-    } while (event.changes.any { it.pressed })
-}
