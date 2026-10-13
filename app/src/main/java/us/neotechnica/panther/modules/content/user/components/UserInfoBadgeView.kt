@@ -15,6 +15,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -24,11 +25,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
@@ -69,6 +72,7 @@ fun UserInfoBadgeView(
     val bodyColor = if (isDarkModeActive) BadgeColors.bodyDarkForeground else BadgeColors.bodyLightForeground
 
     val context = LocalContext.current
+    val density = LocalDensity.current
     val flagImage =
         remember(user.phoneNumber.regionCode, user.languageCode) {
             RegionDetailService.image(RegionDetailService.QueryStrategy.RegionCode(user.phoneNumber.regionCode))
@@ -81,6 +85,7 @@ fun UserInfoBadgeView(
             Modifier
                 .widthIn(max = BadgeFloats.bodyMaxWidth)
                 .heightIn(max = BadgeFloats.bodyMaxHeight)
+                .fillMaxSize()
                 .clip(RoundedCornerShape(BadgeFloats.bodyCornerRadius))
                 .background(bodyColor)
                 .then(if (action != null) Modifier.clickable(onClick = action) else Modifier),
@@ -91,13 +96,18 @@ fun UserInfoBadgeView(
         ) {
             // The label's frame is narrower than its glyphs, so the text is
             // drawn unclipped and centred over the frame as SwiftUI does.
+            // The opacity modulates each draw rather than compositing
+            // offscreen, which would clip the shadow to the text bounds.
             Box(
                 contentAlignment = Alignment.Center,
                 modifier =
                     Modifier
                         .size(width = BadgeFloats.labelViewTextFrameWidth, height = BadgeFloats.labelViewTextFrameHeight)
                         .wrapContentSize(unbounded = true)
-                        .alpha(BadgeFloats.LABEL_VIEW_TEXT_OPACITY),
+                        .graphicsLayer {
+                            alpha = BadgeFloats.LABEL_VIEW_TEXT_OPACITY
+                            compositingStrategy = CompositingStrategy.ModulateAlpha
+                        },
             ) {
                 Material3Text(
                     text = user.languageCode.uppercase(),
@@ -110,7 +120,7 @@ fun UserInfoBadgeView(
                             shadow =
                                 Shadow(
                                     color = BadgeColors.labelViewTextShadow,
-                                    blurRadius = BadgeFloats.LABEL_VIEW_TEXT_SHADOW_RADIUS,
+                                    blurRadius = with(density) { BadgeFloats.labelViewTextShadowRadius.toPx() },
                                 ),
                         ),
                 )

@@ -8,21 +8,23 @@
 
 package us.neotechnica.panther.modules.content.user.views.newchatpageview
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -35,13 +37,16 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.Color
 import us.neotechnica.panther.bundle.isNewChatPageDoneToolbarButtonEnabled
 import us.neotechnica.panther.bundle.messageOutboxDidChange
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.MessageInputBar
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.foundation.components.HeaderView
+import us.neotechnica.panther.designsystem.modules.foundation.components.PageSheetView
 import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardService
+import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.content.user.components.ContactPairCellView
@@ -51,6 +56,8 @@ import us.neotechnica.panther.modules.content.user.components.RegisterContentPic
 import us.neotechnica.panther.modules.content.user.components.anyOutboxSending
 import us.neotechnica.panther.modules.content.user.components.rememberRegisteredDeliveryProgressIndicatorService
 import us.neotechnica.panther.modules.content.user.constants.ContactSelectorPageViewFloats
+import us.neotechnica.panther.modules.content.user.constants.NewChatPageViewColors
+import us.neotechnica.panther.modules.content.user.services.InputBarConfigService
 import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.content.user.services.recipientbar.RecipientBarLayoutService
@@ -118,8 +125,12 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
         }
     }
 
-    Box(modifier = modifier.fillMaxSize().background(colors.background)) {
-        Column(modifier = Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
+    // The page is dismissed only with its navigation bar button; the
+    // system back gesture is ignored.
+    BackHandler {}
+
+    Box(modifier = modifier.fillMaxSize().background(pageBackgroundColor())) {
+        Column(modifier = Modifier.fillMaxSize().navigationBarsPadding().imePadding()) {
             Box {
                 NewChatPageHeader(state = state, onDone = { viewModel.send(Action.DoneToolbarButtonTapped) })
                 DeliveryProgressView(
@@ -164,16 +175,14 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
                     onAttach = { MediaActionHandlerService.attachMediaButtonTapped() },
                     isSendEnabled = selectedContactPairs.isNotEmpty() && !isTextFieldFirstResponder && state.inputText.isNotBlank(),
                     isAttachEnabled = !isTextFieldFirstResponder,
+                    images = InputBarConfigService.images(),
                     focusRequester = inputBarFocusRequester,
                 )
             }
         }
 
         if (navState.chat.sheet == ChatNavigatorState.SheetPaths.ContactSelector) {
-            ModalBottomSheet(
-                onDismissRequest = { navigation.navigate(Route.Chat(ChatRoute.Sheet(null))) },
-                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            ) {
+            PageSheetView(onDismissRequest = { navigation.navigate(Route.Chat(ChatRoute.Sheet(null))) }) {
                 ContactSelectorPageView(entryPoint = ContactSelectorPageView.EntryPoint.NEW_CHAT_PAGE_VIEW)
             }
         }
@@ -226,6 +235,7 @@ private fun NewChatPageHeader(
             HeaderView.Attributes(
                 showsDivider = state.shouldUseBoldDoneToolbarButton,
                 sizeClass = HeaderView.SizeClass.Sheet,
+                windowInsets = WindowInsets.statusBars,
             ),
     )
 }
@@ -282,3 +292,15 @@ private fun buildNewChatViewModel(): ViewModel<NewChatPageReducer.State, NewChat
         }.observing(DependencyValues.current.sharedStates.isNewChatPageDoneToolbarButtonEnabled.changes) {
             Action.IsDoneToolbarButtonEnabledChanged(it)
         }
+
+// MARK: - Auxiliary
+
+// In dark mode, the chat area and input bar sit on dark gray rather than
+// the default black background.
+@Composable
+private fun pageBackgroundColor(): Color =
+    if (ThemeService.isDarkModeActive(isSystemInDarkTheme())) {
+        NewChatPageViewColors.darkBackground
+    } else {
+        LocalPantherColors.current.background
+    }

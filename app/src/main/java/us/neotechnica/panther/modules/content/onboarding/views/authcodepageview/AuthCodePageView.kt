@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.content.onboarding.views.authcodepageview
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,6 +26,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
+import us.neotechnica.panther.designsystem.modules.foundation.constants.StackFloats
 import us.neotechnica.panther.designsystem.modules.foundation.modifiers.Swipe
 import us.neotechnica.panther.designsystem.modules.foundation.modifiers.onSwipe
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
@@ -65,6 +67,7 @@ fun AuthCodePageView(modifier: Modifier = Modifier) {
 
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(StackFloats.defaultSpacing),
                 modifier = Modifier.fillMaxWidth().padding(bottom = Floats.innerVStackBottomPadding),
             ) {
                 Components.Text(

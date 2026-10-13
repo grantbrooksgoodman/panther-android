@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -53,10 +54,12 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import us.neotechnica.panther.R
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
@@ -169,9 +172,10 @@ fun RecipientBar(modifier: Modifier = Modifier) {
                 modifier = Modifier.weight(1f).padding(start = LayoutFloats.textFieldXOriginIncrement),
             )
 
-            Components.Symbol(
-                LayoutStrings.SELECT_CONTACT_BUTTON_IMAGE_SYSTEM_NAME,
-                foregroundColor = if (isSelectContactButtonEnabled) colors.accent else colors.disabled,
+            Icon(
+                painter = painterResource(R.drawable.plus_circle),
+                contentDescription = null,
+                tint = if (isSelectContactButtonEnabled) colors.navigationBarButton else colors.disabled,
                 modifier =
                     Modifier
                         .padding(start = LayoutFloats.selectContactButtonMinXDecrement)
@@ -245,9 +249,14 @@ private fun ContactViews(
             enabled = isUserInteractionEnabled,
             singleLine = true,
             textStyle = Font.system.textStyle.copy(color = colors.titleText),
-            cursorBrush = SolidColor(colors.accent),
+            cursorBrush = SolidColor(colors.navigationBarButton),
             keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Text, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { scope.launch { service.actionHandler.textFieldShouldReturn(textFieldText) } }),
+            // The field is as tall as a contact view; its text is centered
+            // vertically within that height.
+            decorationBox = { innerTextField ->
+                Box(contentAlignment = Alignment.CenterStart) { innerTextField() }
+            },
             modifier =
                 Modifier
                     .defaultMinSize(minWidth = TEXT_FIELD_MIN_WIDTH)

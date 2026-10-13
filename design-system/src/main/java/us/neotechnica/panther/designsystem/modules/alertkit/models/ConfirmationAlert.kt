@@ -8,7 +8,6 @@
 
 package us.neotechnica.panther.designsystem.modules.alertkit.models
 
-import kotlinx.coroutines.suspendCancellableCoroutine
 import us.neotechnica.panther.designsystem.modules.alertkit.AlertKit
 import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.firstOutput
@@ -121,25 +120,18 @@ class ConfirmationAlert(
      * @return `true` if the user confirms; otherwise, `false`.
      */
     suspend fun present(): Boolean =
-        suspendCancellableCoroutine { continuation ->
-            val guard = ContinuationGuard(continuation, fallbackValue = false)
-
-            AlertPresenter.present(
-                PresentedAlert.Confirmation(
-                    title = title,
-                    message = message,
-                    cancelAction = Action(cancelButtonTitle, style = cancelButtonStyle) {},
-                    confirmAction = Action(confirmButtonTitle, style = confirmButtonStyle) {},
-                    messageAttributes = messageAttributes,
-                    titleAttributes = titleAttributes,
-                ) { result ->
-                    guard.resume(result)
-                    AlertPresenter.dismiss()
-                },
-                onDisplaced = { guard.fallback() },
-            )
-
-            continuation.invokeOnCancellation { AlertPresenter.dismiss() }
+        AlertPresenter.presentAwaitingResult(fallbackValue = false) { guard ->
+            PresentedAlert.Confirmation(
+                title = title,
+                message = message,
+                cancelAction = Action(cancelButtonTitle, style = cancelButtonStyle) {},
+                confirmAction = Action(confirmButtonTitle, style = confirmButtonStyle) {},
+                messageAttributes = messageAttributes,
+                titleAttributes = titleAttributes,
+            ) { result ->
+                guard.resume(result)
+                AlertPresenter.dismiss()
+            }
         }
 
     /**

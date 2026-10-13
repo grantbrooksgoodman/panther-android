@@ -234,7 +234,6 @@ object ChatPageViewServiceStrings {
 
         object Layout {
             const val RECIPIENT_BAR_SEMANTIC_TAG = "RECIPIENT_BAR"
-            const val SELECT_CONTACT_BUTTON_IMAGE_SYSTEM_NAME = "plus.circle"
             const val SELECT_CONTACT_BUTTON_SEMANTIC_TAG = "SELECT_CONTACT_BUTTON"
 
             const val TABLE_VIEW_SEMANTIC_TAG = "TABLE_VIEW"

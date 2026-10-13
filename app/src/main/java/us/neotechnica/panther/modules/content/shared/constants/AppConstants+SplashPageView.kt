@@ -33,6 +33,12 @@ object SplashPageViewFloats {
 object SplashPageViewColors {
     val imageDarkForeground = Color(0xFFF8F8F8)
 
+    /** The progress bar's track color in dark mode. */
+    val progressBarDarkTrackTint = Color(0xFF2C2C2E)
+
+    /** The progress bar's track color in light mode. */
+    val progressBarLightTrackTint = Color(0xFFE5E5EA)
+
     val progressBarTint: Color
         @Composable get() = LocalPantherColors.current.titleText
 }

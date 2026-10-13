@@ -10,6 +10,7 @@ package us.neotechnica.panther.modules.content.user.views.chatinfopageview
 
 import android.content.Context
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,16 +18,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -53,10 +56,12 @@ import androidx.core.content.FileProvider
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.chatInfoPageLoadingStateUpdated
 import us.neotechnica.panther.bundle.currentConversationActivityChanged
+import us.neotechnica.panther.bundle.currentConversationMetadataChanged
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
-import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
+import us.neotechnica.panther.designsystem.modules.foundation.components.HeaderView
+import us.neotechnica.panther.designsystem.modules.foundation.extensions.doneButton
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
@@ -86,7 +91,6 @@ import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.Dep
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
-import us.neotechnica.panther.subsystem.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
@@ -105,10 +109,8 @@ private typealias Strings = ChatInfoPageViewConstants
  * For a group: a large avatar, the conversation title, a rename
  * action, an expandable participants card, and a leave action. A
  * participant row opens a contact card on tap and swipes to remove the
- * participant; a long press removes a saved device contact through the
- * contact sheet, while a number that is not a saved contact offers
- * removal from the sheet its tap already opens. For a one-to-one
- * conversation: the other participant's contact card.
+ * participant. For a one-to-one conversation: the other participant's
+ * contact card.
  *
  * @param conversationIDKey The identifier key of the conversation.
  * @param modifier The modifier for this view.
@@ -131,50 +133,34 @@ fun ChatInfoPageView(
 
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
-    val conversation = state.conversation
     var previewIndex by remember { mutableStateOf<Int?>(null) }
     val showMediaSegment = state.mediaItems.isNotEmpty() && state.segmentedControlSelectionIndex == 1
     val presentContactCard = rememberContactCardPresenter()
-    val singleParticipant = conversation?.takeUnless { state.isGroup }?.let { state.chatParticipants.firstOrNull() }
 
     GroupPhotoCaptureEffect(state.photoCaptureRequest, viewModel)
 
+    // The page is dismissed only with its navigation bar button; the
+    // system back gesture is ignored.
+    BackHandler {}
+
     Box(modifier = modifier.fillMaxSize().background(colors.groupedContentBackground)) {
         StatefulView(state = state.viewState) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .systemBarsPadding()
-                        .verticalScroll(rememberScrollState()),
-            ) {
-                ChatInfoHeader(
-                    conversation = conversation,
-                    title = state.chatTitleLabelText,
-                    isGroup = state.isGroup,
-                    onDone = { viewModel.send(ChatInfoPageReducer.Action.DoneHeaderItemTapped) },
-                    onContactTap =
-                        singleParticipant?.firstUser?.let { user ->
-                            { presentContactCard.onTap(user.phoneNumber, user.displayName, null) }
-                        },
+            Column(modifier = Modifier.fillMaxSize().navigationBarsPadding()) {
+                HeaderView(
+                    rightItem =
+                        HeaderView.PeripheralButtonType.doneButton(
+                            action = { viewModel.send(ChatInfoPageReducer.Action.DoneHeaderItemTapped) },
+                            foregroundColor = colors.navigationBarButton,
+                        ),
+                    attributes = HeaderView.Attributes(windowInsets = WindowInsets.statusBars),
                 )
-
-                if (state.isGroup && conversation != null) {
-                    GroupContent(
-                        state = state,
-                        viewModel = viewModel,
-                        showMediaSegment = showMediaSegment,
-                        presentContactCard = presentContactCard,
-                        onPreviewIndexChange = { previewIndex = it },
-                    )
-                } else if (singleParticipant != null) {
-                    SingleContactCard(singleParticipant) {
-                        singleParticipant.firstUser?.let { presentContactCard.onTap(it.phoneNumber, it.displayName, null) }
-                    }
-                }
-
-                Spacer(modifier = Modifier.padding(bottom = Floats.bottomSpacerPadding))
+                ChatInfoContent(
+                    state = state,
+                    viewModel = viewModel,
+                    showMediaSegment = showMediaSegment,
+                    presentContactCard = presentContactCard,
+                    onPreviewIndexChange = { previewIndex = it },
+                )
             }
         }
 
@@ -189,6 +175,57 @@ fun ChatInfoPageView(
         }
 
         ChatInfoContactSelectorHost()
+    }
+}
+
+// MARK: - Content
+
+// The conversation's avatar, title, and participants or contact card,
+// scrolling beneath the navigation bar.
+@Composable
+private fun ColumnScope.ChatInfoContent(
+    state: ChatInfoPageReducer.State,
+    viewModel: ViewModel<ChatInfoPageReducer.State, ChatInfoPageReducer.Action>,
+    showMediaSegment: Boolean,
+    presentContactCard: ContactCardPresenter,
+    onPreviewIndexChange: (Int?) -> Unit,
+) {
+    val conversation = state.conversation
+    val singleParticipant = conversation?.takeUnless { state.isGroup }?.let { state.chatParticipants.firstOrNull() }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier =
+            Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+    ) {
+        ChatInfoHeader(
+            conversation = conversation,
+            title = state.chatTitleLabelText,
+            isGroup = state.isGroup,
+            onContactTap =
+                singleParticipant?.firstUser?.let { user ->
+                    { presentContactCard.onTap(user.phoneNumber, user.displayName) }
+                },
+        )
+
+        if (state.isGroup && conversation != null) {
+            GroupContent(
+                state = state,
+                viewModel = viewModel,
+                showMediaSegment = showMediaSegment,
+                presentContactCard = presentContactCard,
+                onPreviewIndexChange = onPreviewIndexChange,
+            )
+        } else if (singleParticipant != null) {
+            SingleContactCard(singleParticipant) {
+                singleParticipant.firstUser?.let { presentContactCard.onTap(it.phoneNumber, it.displayName) }
+            }
+        }
+
+        Spacer(modifier = Modifier.padding(bottom = Floats.bottomSpacerPadding))
     }
 }
 
@@ -238,20 +275,7 @@ private fun GroupContent(
             showsRemoveUserSwipeAction = state.showsRemoveUserSwipeAction,
             onToggle = { viewModel.send(ChatInfoPageReducer.Action.ChatInfoCellTapped) },
             onAddContact = { viewModel.send(ChatInfoPageReducer.Action.AddContactButtonTapped) },
-            onParticipantTap = { participant ->
-                val removeFromConversation: (() -> Unit)? =
-                    if (state.showsRemoveUserSwipeAction) {
-                        { viewModel.send(ChatInfoPageReducer.Action.RemoveUserButtonTapped(participant)) }
-                    } else {
-                        null
-                    }
-                presentContactCard.onTap(participant.firstUser?.phoneNumber, participant.displayName, removeFromConversation)
-            },
-            onParticipantLongPress = { participant ->
-                presentContactCard.onLongPress(participant.firstUser?.phoneNumber, participant.displayName) {
-                    viewModel.send(ChatInfoPageReducer.Action.RemoveUserButtonTapped(participant))
-                }
-            },
+            onParticipantTap = { presentContactCard.onTap(it.firstUser?.phoneNumber, it.displayName) },
             onUserInfoBadgeTapped = { viewModel.send(ChatInfoPageReducer.Action.UserInfoBadgeTapped(it.firstUser)) },
             onRemove = { viewModel.send(ChatInfoPageReducer.Action.RemoveUserButtonTapped(it)) },
         )
@@ -272,30 +296,9 @@ private fun ChatInfoHeader(
     conversation: Conversation?,
     title: String,
     isGroup: Boolean,
-    onDone: () -> Unit,
     onContactTap: (() -> Unit)?,
 ) {
     val colors = LocalPantherColors.current
-    Row(
-        horizontalArrangement = Arrangement.End,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(
-                    start = Floats.headerHorizontalPadding,
-                    end = Floats.headerHorizontalPadding,
-                    top = Floats.headerTopPadding,
-                ),
-    ) {
-        CircleChipButton(
-            systemName = "checkmark",
-            contentDescription = LocalizedStringKey.Done.localized(LocalizationSource.SUBSYSTEM),
-            onClick = onDone,
-            tint = colors.titleText,
-            glyphSize = Floats.doneButtonGlyphSize,
-        )
-    }
-
     val contactTapModifier = if (onContactTap != null) Modifier.clickable(onClick = onContactTap) else Modifier
 
     AvatarImageView(
@@ -374,7 +377,7 @@ private fun SegmentedControl(
                     Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(Floats.segmentCornerRadius))
-                        .background(if (isSelected) (if (isDarkMode) Color.Gray else Colors.segmentedControlTrack) else Color.Transparent)
+                        .background(if (isSelected) (if (isDarkMode) Color.Gray else Color.White) else Color.Transparent)
                         .clickable { onSelect(index) }
                         .padding(vertical = Floats.segmentVerticalPadding),
             ) {
@@ -418,7 +421,6 @@ private fun ParticipantsCard(
     onToggle: () -> Unit,
     onAddContact: () -> Unit,
     onParticipantTap: (ChatParticipant) -> Unit,
-    onParticipantLongPress: (ChatParticipant) -> Unit,
     onUserInfoBadgeTapped: (ChatParticipant) -> Unit,
     onRemove: (ChatParticipant) -> Unit,
 ) {
@@ -440,12 +442,6 @@ private fun ParticipantsCard(
                     onRemove =
                         if (showsRemoveUserSwipeAction) {
                             { onRemove(participant) }
-                        } else {
-                            null
-                        },
-                    onLongPress =
-                        if (showsRemoveUserSwipeAction) {
-                            { onParticipantLongPress(participant) }
                         } else {
                             null
                         },
@@ -569,6 +565,8 @@ private fun buildChatInfoViewModel(): ViewModel<ChatInfoPageReducer.State, ChatI
         .observing(DependencyValues.current.sharedEvents.chatInfoPageLoadingStateUpdated.events) {
             ChatInfoPageReducer.Action.LoadingStateUpdated
         }.observing(DependencyValues.current.sharedEvents.currentConversationActivityChanged.events) {
+            ChatInfoPageReducer.Action.ViewAppeared
+        }.observing(DependencyValues.current.sharedEvents.currentConversationMetadataChanged.events) {
             ChatInfoPageReducer.Action.CurrentConversationMetadataChanged
         }.observing(MessageDeliveryService.isSendingMessage) {
             ChatInfoPageReducer.Action.IsSendingMessageChanged(it)

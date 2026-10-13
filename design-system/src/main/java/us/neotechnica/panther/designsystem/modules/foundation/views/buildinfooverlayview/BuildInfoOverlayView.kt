@@ -39,6 +39,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.FontType
 import us.neotechnica.panther.designsystem.modules.foundation.constants.BuildInfoOverlayViewColors
 import us.neotechnica.panther.designsystem.modules.foundation.constants.BuildInfoOverlayViewFloats
 import us.neotechnica.panther.designsystem.modules.foundation.constants.BuildInfoOverlayViewStrings
+import us.neotechnica.panther.designsystem.modules.foundation.constants.StackFloats
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 
 // MARK: - Type Aliases
@@ -119,7 +120,7 @@ private fun BuildInfoButton(
     Row(
         horizontalArrangement =
             Arrangement.spacedBy(
-                (DEFAULT_STACK_SPACING + Floats.DEVELOPER_MODE_INDICATOR_TRAILING_PADDING).dp,
+                StackFloats.defaultSpacing + Floats.DEVELOPER_MODE_INDICATOR_TRAILING_PADDING.dp,
             ),
         verticalAlignment = Alignment.CenterVertically,
         modifier =
@@ -208,4 +209,3 @@ private fun StatsView(
 }
 
 private const val DEFAULT_ANIMATION_DURATION_MILLISECONDS = 350f
-private const val DEFAULT_STACK_SPACING = 8f

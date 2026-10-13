@@ -14,17 +14,20 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import us.neotechnica.panther.R
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
@@ -33,7 +36,6 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceStrings
-import us.neotechnica.panther.modules.content.user.constants.ChatPageViewStrings
 import us.neotechnica.panther.modules.content.user.constants.UserContentExtensionsFloats
 import us.neotechnica.panther.modules.networking.message.models.AudioFile
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.durationString
@@ -43,7 +45,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.extensions.durationSt
 private typealias AudioItemFloats = UserContentExtensionsFloats.AudioItem
 private typealias AudioDisplayColors = ChatPageViewColors.MessagesDisplayDelegate
 private typealias AudioDisplayFloats = ChatPageViewFloats.MessagesDisplayDelegate
-private typealias AudioDisplayStrings = ChatPageViewStrings.MessagesDisplayDelegate
 
 /**
  * An audio message bubble: a play/stop button, a playback-progress bar,
@@ -106,16 +107,17 @@ fun AudioMessageBubble(
                         onClick = onPlay,
                     ).semantics { contentDescription = if (isPlaying) "Stop" else "Play" },
         ) {
-            Components.Symbol(
-                if (isPlaying) AudioDisplayStrings.STOP_IMAGE_SYSTEM_NAME else AudioDisplayStrings.PLAY_IMAGE_SYSTEM_NAME,
-                foregroundColor = accentColor,
-                modifier = Modifier.size(GLYPH_SIZE),
+            Icon(
+                painter = painterResource(if (isPlaying) R.drawable.stop else R.drawable.play),
+                contentDescription = null,
+                tint = accentColor,
+                modifier = Modifier.fillMaxSize(),
             )
         }
 
-        LinearProgressIndicator(
+        Components.ProgressView(
             progress = { if (duration > 0f) progress.coerceIn(0f, 1f) else 0f },
-            color = accentColor,
+            foregroundColor = accentColor,
             trackColor = trackColor,
             modifier = Modifier.weight(1f),
         )
@@ -124,7 +126,6 @@ fun AudioMessageBubble(
     }
 }
 
-private val GLYPH_SIZE = 18.dp
 private val HORIZONTAL_PADDING = 8.dp
 private val PLAY_BUTTON_SIZE = 25.dp
 private val SPACING = 6.dp

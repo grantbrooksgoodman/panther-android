@@ -299,13 +299,14 @@ internal open class BaseTranslator(
     // MARK: - Companion
 
     companion object {
+        internal const val MOBILE_USER_AGENT =
+            "Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 (KHTML, like Gecko) " +
+                "Chrome/131.0.0.0 Mobile Safari/537.36"
+
         private const val EVALUATION_BACKOFF_MILLIS = 100L
         private const val EVALUATION_THRESHOLD_MILLIS = 10_000L
         private const val NAVIGATION_TIMEOUT_MILLIS = 10_000L
         private const val PREWARM_UNLOAD_DELAY_MILLIS = 2_000L
-        private const val MOBILE_USER_AGENT =
-            "Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 (KHTML, like Gecko) " +
-                "Chrome/131.0.0.0 Mobile Safari/537.36"
 
         /**
          * Warms the DNS and TLS sessions for the given platforms'

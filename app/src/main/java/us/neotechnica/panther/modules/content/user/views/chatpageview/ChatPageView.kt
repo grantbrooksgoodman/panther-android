@@ -49,6 +49,7 @@ import us.neotechnica.panther.modules.content.user.dependencies.inputBarService
 import us.neotechnica.panther.modules.content.user.models.ContextMenuInteraction
 import us.neotechnica.panther.modules.content.user.services.ChatPageStateService
 import us.neotechnica.panther.modules.content.user.services.DeliveryProgressIndicatorService
+import us.neotechnica.panther.modules.content.user.services.InputBarConfigService
 import us.neotechnica.panther.modules.content.user.services.InputBarService
 import us.neotechnica.panther.modules.content.user.services.MediaMessagePreviewService
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
@@ -236,6 +237,7 @@ private fun ChatInputBar(
         onAttach = { inputBarService.actionHandler.didPressAttachMediaButton() },
         isSendEnabled = isSendButtonEnabled,
         isAttachEnabled = isAttachMediaButtonEnabled,
+        images = InputBarConfigService.images(),
         onFocusChanged = { inputBarService.setIsFirstResponder(it) },
         modifier = Modifier.alpha(alpha),
     )

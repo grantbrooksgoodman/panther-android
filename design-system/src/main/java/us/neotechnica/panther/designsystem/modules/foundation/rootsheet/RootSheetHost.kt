@@ -9,12 +9,10 @@
 package us.neotechnica.panther.designsystem.modules.foundation.rootsheet
 
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SheetValue
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import us.neotechnica.panther.designsystem.modules.foundation.components.PageSheetView
 
 /**
  * Renders the currently presented [RootSheets] sheet as a modal bottom
@@ -32,15 +30,9 @@ fun RootSheetHost() {
     val sheet by RootSheets.sheet.collectAsState()
     val currentSheet = sheet ?: return
 
-    ModalBottomSheet(
-        onDismissRequest = { if (!currentSheet.interactiveDismissDisabled) RootSheets.dismiss() },
-        sheetState =
-            rememberModalBottomSheetState(
-                skipPartiallyExpanded = true,
-                confirmValueChange = { value ->
-                    !(currentSheet.interactiveDismissDisabled && value == SheetValue.Hidden)
-                },
-            ),
+    PageSheetView(
+        onDismissRequest = { RootSheets.dismiss() },
+        isInteractiveDismissDisabled = currentSheet.interactiveDismissDisabled,
     ) {
         currentSheet.content()
     }

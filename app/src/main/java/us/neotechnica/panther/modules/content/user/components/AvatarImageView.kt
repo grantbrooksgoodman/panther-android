@@ -21,8 +21,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.toRect
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -66,41 +73,91 @@ fun AvatarImageView(
     isRedacted: Boolean = false,
 ) {
     val resolvedSize = size ?: DpSize(AvatarFloats.FRAME_WIDTH.dp, AvatarFloats.FRAME_HEIGHT.dp)
+
+    // The badge is offset from the avatar's center and drawn outside
+    // the avatar's corner clip.
     Box(
-        modifier =
-            modifier
-                .size(resolvedSize)
-                .clip(RoundedCornerShape(AvatarFloats.CORNER_RADIUS.dp)),
+        contentAlignment = Alignment.Center,
+        modifier = modifier.size(resolvedSize),
     ) {
-        if (isRedacted) {
-            Components.Symbol(
-                AvatarStrings.DEFAULT_IMAGE_SYSTEM_NAME,
-                foregroundColor = AvatarColors.IMAGE_FOREGROUND,
-                usesIntrinsicSize = false,
-                modifier = Modifier.fillMaxSize().clip(CircleShape),
-            )
-        } else if (image != null) {
+        Box(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(AvatarFloats.CORNER_RADIUS.dp))) {
+            AvatarContent(image, badgeCount, isRedacted)
+        }
+
+        if (badgeCount > 1) BadgeView(badgeCount)
+    }
+}
+
+// The avatar's image, or its placeholder symbol.
+@Composable
+private fun AvatarContent(
+    image: ImageBitmap?,
+    badgeCount: Int,
+    isRedacted: Boolean,
+) {
+    when {
+        isRedacted -> DefaultPlaceholderView()
+
+        image != null ->
             Image(
                 bitmap = image,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize().clip(CircleShape),
             )
-        } else {
-            Components.Symbol(
-                if (badgeCount < 2 && badgeCount != -1) {
-                    AvatarStrings.DEFAULT_IMAGE_SYSTEM_NAME
-                } else {
-                    AvatarStrings.BADGE_IMAGE_SYSTEM_NAME
-                },
-                foregroundColor = AvatarColors.IMAGE_FOREGROUND,
-                usesIntrinsicSize = false,
-                modifier = Modifier.fillMaxSize().clip(CircleShape),
-            )
-        }
 
-        if (badgeCount > 1) BadgeView(badgeCount)
+        badgeCount < 2 && badgeCount != -1 -> DefaultPlaceholderView()
+
+        else -> BadgePlaceholderView()
     }
+}
+
+// The group placeholder: a circle filling the frame with the symbol's
+// glyph cut out of it, so the background shows through the glyph.
+@Composable
+private fun BadgePlaceholderView() {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                .clip(CircleShape)
+                .background(AvatarColors.IMAGE_FOREGROUND),
+    ) {
+        Components.Symbol(
+            AvatarStrings.BADGE_IMAGE_SYSTEM_NAME.removeSuffix(CIRCLE_FILL_SUFFIX),
+            foregroundColor = Color.Black,
+            usesIntrinsicSize = false,
+            modifier =
+                Modifier
+                    .fillMaxSize(AvatarFloats.BADGE_IMAGE_GLYPH_FRACTION)
+                    .drawWithContent {
+                        drawContext.canvas.saveLayer(size.toRect(), Paint().apply { blendMode = BlendMode.DstOut })
+                        drawContent()
+                        drawContext.canvas.restore()
+                    },
+        )
+    }
+}
+
+// The single-person placeholder. The symbol's circle spans only part
+// of its glyph box, so the symbol is scaled for the circle to fill the
+// frame.
+@Composable
+private fun DefaultPlaceholderView() {
+    Components.Symbol(
+        AvatarStrings.DEFAULT_IMAGE_SYSTEM_NAME,
+        foregroundColor = AvatarColors.IMAGE_FOREGROUND,
+        usesIntrinsicSize = false,
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX = AvatarFloats.DEFAULT_IMAGE_SCALE
+                    scaleY = AvatarFloats.DEFAULT_IMAGE_SCALE
+                },
+    )
 }
 
 // MARK: - Badge
@@ -132,3 +189,4 @@ private fun BadgeView(badgeCount: Int) {
 }
 
 private const val BADGE_SHADOW_ELEVATION_DIVISOR = 4
+private const val CIRCLE_FILL_SUFFIX = ".circle.fill"

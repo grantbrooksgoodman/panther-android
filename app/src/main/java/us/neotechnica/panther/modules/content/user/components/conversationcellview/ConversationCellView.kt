@@ -10,17 +10,16 @@ package us.neotechnica.panther.modules.content.user.components.conversationcellv
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.AnchoredDraggableState
 import androidx.compose.foundation.gestures.DraggableAnchors
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.anchoredDraggable
+import androidx.compose.foundation.gestures.animateTo
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,26 +27,32 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.conversationsPageReappeared
 import us.neotechnica.panther.bundle.conversationsSearchQuery
 import us.neotechnica.panther.bundle.reloadingConversationIDKeys
@@ -59,6 +64,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMe
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.componentkit.models.TextFit
+import us.neotechnica.panther.designsystem.modules.foundation.constants.StackFloats
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.user.components.AvatarImageView
@@ -128,8 +134,17 @@ fun ConversationCellView(
             )
         }
     val swipeOffset = draggableState.offset.takeIf { !it.isNaN() } ?: 0f
+    val cellBounds = remember { mutableStateOf(Rect.Zero) }
 
-    Box(modifier = modifier.fillMaxWidth().height(CellFloats.frameHeight)) {
+    SwipeCoordinationEffect(draggableState, cellBounds)
+
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(CellFloats.frameHeight + CellFloats.rowVerticalPadding * 2)
+                .onGloballyPositioned { cellBounds.value = it.boundsInRoot() },
+    ) {
         SwipeActionButtons(
             state = state,
             swipeOffset = swipeOffset,
@@ -178,6 +193,39 @@ fun ConversationCellView(
     }
 }
 
+// Reports the cell's revealed swipe actions to the page's coordinator,
+// which closes them when the page is touched outside them.
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun SwipeCoordinationEffect(
+    draggableState: AnchoredDraggableState<SwipeAnchor>,
+    cellBounds: State<Rect>,
+) {
+    val coordinator = LocalConversationCellSwipeCoordinator.current ?: return
+    val id = remember { Any() }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(draggableState.settledValue) {
+        if (draggableState.settledValue == SwipeAnchor.SETTLED) return@LaunchedEffect coordinator.cellClosed(id)
+        coordinator.cellOpened(
+            id = id,
+            bounds = { cellBounds.value },
+            actionBounds = {
+                val bounds = cellBounds.value
+                val offset = draggableState.offset.takeIf { !it.isNaN() } ?: 0f
+                if (offset > 0f) {
+                    Rect(bounds.left, bounds.top, bounds.left + offset, bounds.bottom)
+                } else {
+                    Rect(bounds.right + offset, bounds.top, bounds.right, bounds.bottom)
+                }
+            },
+            close = { scope.launch { draggableState.animateTo(SwipeAnchor.SETTLED) } },
+        )
+    }
+
+    DisposableEffect(coordinator) { onDispose { coordinator.cellClosed(id) } }
+}
+
 /**
  * Builds a conversation cell view model for the conversation with the
  * given ID key.
@@ -215,66 +263,6 @@ fun buildConversationCellViewModel(
         ConversationCellReducer.Action.SessionStoreDidChange(it)
     }
 
-// MARK: - Swipe Action Buttons
-
-@Composable
-private fun SwipeActionButtons(
-    state: ConversationCellReducer.State,
-    swipeOffset: Float,
-    onBlock: () -> Unit,
-    onReport: () -> Unit,
-    onDelete: () -> Unit,
-) {
-    Row(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
-        if (swipeOffset > 0f) {
-            SwipeActionButton(
-                systemName = CellStrings.BLOCK_USERS_BUTTON_IMAGE_SYSTEM_NAME,
-                tint = CellColors.blockUsersButtonImageTint,
-                contentDescription = state.blockUsersButtonText,
-                onClick = onBlock,
-            )
-            SwipeActionButton(
-                systemName = CellStrings.REPORT_USERS_BUTTON_IMAGE_SYSTEM_NAME,
-                tint = CellColors.reportUsersButtonImageTint,
-                contentDescription = state.reportUsersButtonText,
-                onClick = onReport,
-            )
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        if (swipeOffset < 0f) {
-            SwipeActionButton(
-                systemName = CellStrings.DELETE_CONVERSATION_BUTTON_IMAGE_SYSTEM_NAME,
-                tint = CellColors.deleteConversationButtonImageTint,
-                contentDescription = state.deleteConversationButtonText,
-                onClick = onDelete,
-            )
-        }
-    }
-}
-
-@Composable
-private fun SwipeActionButton(
-    systemName: String,
-    tint: Color,
-    contentDescription: String,
-    onClick: () -> Unit,
-) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier =
-            Modifier
-                .width(CellFloats.swipeActionButtonWidth)
-                .fillMaxHeight()
-                .background(tint)
-                .clickable(onClick = onClick)
-                .semantics { this.contentDescription = contentDescription },
-    ) {
-        Components.Symbol(systemName, foregroundColor = Color.White)
-    }
-}
-
 // MARK: - Cell View
 
 @Composable
@@ -283,28 +271,32 @@ private fun CellView(
     onUserInfoBadgeTapped: () -> Unit,
 ) {
     val colors = LocalPantherColors.current
-    val isDarkModeActive = ThemeService.isDarkModeActive(isSystemInDarkTheme())
     val cellViewData = state.cellViewData
     val isShowingRedactedContent = state.isShowingRedactedContent
     val contentAlpha = if (isShowingRedactedContent) REDACTED_CONTENT_ALPHA else 1f
 
     Row(
+        horizontalArrangement = Arrangement.spacedBy(StackFloats.defaultSpacing),
         verticalAlignment = Alignment.CenterVertically,
         modifier =
             Modifier
                 .fillMaxWidth()
+                .padding(vertical = CellFloats.rowVerticalPadding)
                 .height(CellFloats.frameHeight)
                 .padding(start = CellFloats.rowStartPadding, end = CellFloats.rowEndPadding),
     ) {
+        // The indicator takes no layout width; it draws to the leading
+        // side of the avatar.
         Box(modifier = Modifier.width(0.dp)) {
             Box(
                 modifier =
                     Modifier
+                        .wrapContentWidth(align = Alignment.Start, unbounded = true)
                         .offset(x = CellFloats.unreadIndicatorViewXOffset, y = CellFloats.unreadIndicatorViewYOffset)
                         .size(width = CellFloats.unreadIndicatorViewFrameWidth, height = CellFloats.unreadIndicatorViewFrameHeight)
+                        .alpha(if (cellViewData.isShowingUnreadIndicator && !isShowingRedactedContent) 1f else 0f)
                         .clip(CircleShape)
-                        .background(CellColors.unreadIndicatorViewForeground)
-                        .alpha(if (cellViewData.isShowingUnreadIndicator && !isShowingRedactedContent) 1f else 0f),
+                        .background(CellColors.unreadIndicatorViewForeground),
             )
         }
 
@@ -315,11 +307,17 @@ private fun CellView(
             modifier = Modifier.padding(top = CellFloats.avatarImageViewTopPadding),
         )
 
-        Spacer(modifier = Modifier.width(CellFloats.avatarContentSpacing))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+        // The title row takes the height the subtitle leaves.
+        Column(
+            verticalArrangement = Arrangement.spacedBy(StackFloats.defaultSpacing),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(StackFloats.defaultSpacing),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f),
+                ) {
                     Components.FittedText(
                         cellViewData.titleLabelText,
                         foregroundColor = colors.titleText,
@@ -349,28 +347,7 @@ private fun CellView(
                     }
                 }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(CellFloats.chevronImageAndDateLabelHStackSpacing),
-                ) {
-                    Components.Text(
-                        state.dateLabelText,
-                        foregroundColor = colors.subtitleText,
-                        font = Font.system(FontScale.Custom(CellFloats.DATE_LABEL_SYSTEM_FONT_SIZE)),
-                        modifier = Modifier.padding(end = CellFloats.dateLabelPaddingTrailing).alpha(contentAlpha),
-                    )
-
-                    Components.Symbol(
-                        CellStrings.CHEVRON_IMAGE_SYSTEM_NAME,
-                        foregroundColor = state.chevronImageForegroundColor(colors.titleText, isDarkModeActive),
-                        weight = FontWeight.SemiBold,
-                        usesIntrinsicSize = false,
-                        modifier =
-                            Modifier
-                                .size(width = CellFloats.chevronImageFrameMaxWidth, height = CellFloats.chevronImageFrameMaxHeight)
-                                .alpha(if (isShowingRedactedContent) 0f else 1f),
-                    )
-                }
+                DateLabelAndChevronView(state)
             }
 
             Material3Text(
@@ -389,5 +366,49 @@ private fun CellView(
     }
 }
 
+@Composable
+private fun DateLabelAndChevronView(state: ConversationCellReducer.State) {
+    val colors = LocalPantherColors.current
+    val isDarkModeActive = ThemeService.isDarkModeActive(isSystemInDarkTheme())
+    val isShowingRedactedContent = state.isShowingRedactedContent
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(CellFloats.chevronImageAndDateLabelHStackSpacing),
+    ) {
+        Components.Text(
+            state.dateLabelText,
+            foregroundColor = colors.subtitleText,
+            font = Font.system(FontScale.Custom(CellFloats.DATE_LABEL_SYSTEM_FONT_SIZE)),
+            modifier =
+                Modifier
+                    .padding(end = CellFloats.dateLabelPaddingTrailing)
+                    .alpha(if (isShowingRedactedContent) REDACTED_CONTENT_ALPHA else 1f),
+        )
+
+        // The glyph spans half of its viewport's height, so it is drawn
+        // unclipped at twice the frame to fill the frame.
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier =
+                Modifier
+                    .size(width = CellFloats.chevronImageFrameMaxWidth, height = CellFloats.chevronImageFrameMaxHeight)
+                    .alpha(if (isShowingRedactedContent) 0f else 1f),
+        ) {
+            Components.Symbol(
+                CellStrings.CHEVRON_IMAGE_SYSTEM_NAME,
+                foregroundColor = state.chevronImageForegroundColor(colors.titleText, isDarkModeActive),
+                weight = FontWeight.SemiBold,
+                usesIntrinsicSize = false,
+                modifier =
+                    Modifier
+                        .wrapContentSize(unbounded = true)
+                        .size(CellFloats.chevronImageFrameMaxHeight * CHEVRON_GLYPH_VIEWPORT_SCALE),
+            )
+        }
+    }
+}
+
+private const val CHEVRON_GLYPH_VIEWPORT_SCALE = 2
 private const val LEADING_SWIPE_ACTION_COUNT = 2
 private const val REDACTED_CONTENT_ALPHA = 0.5f

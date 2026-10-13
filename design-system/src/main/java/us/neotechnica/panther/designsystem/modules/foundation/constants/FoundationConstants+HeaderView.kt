@@ -13,8 +13,8 @@ import androidx.compose.ui.graphics.Color
 // MARK: - Float
 
 object HeaderViewFloats {
-    const val BACK_BUTTON_IMAGE_SIZE_HEIGHT = 20f
-    const val BACK_BUTTON_IMAGE_SIZE_WIDTH = 20f
+    const val BACK_BUTTON_IMAGE_SIZE_HEIGHT = 20.5f
+    const val BACK_BUTTON_IMAGE_SIZE_WIDTH = 12f
 
     const val FULL_SCREEN_COVER_SIZE_CLASS_FRAME_MIN_HEIGHT = 44f
 

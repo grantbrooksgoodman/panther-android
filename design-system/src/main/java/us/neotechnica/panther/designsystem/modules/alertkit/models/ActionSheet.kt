@@ -8,7 +8,6 @@
 
 package us.neotechnica.panther.designsystem.modules.alertkit.models
 
-import kotlinx.coroutines.suspendCancellableCoroutine
 import us.neotechnica.panther.designsystem.modules.alertkit.AlertKit
 import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.applying
@@ -161,36 +160,29 @@ class ActionSheet(
     // MARK: - Auxiliary
 
     private suspend fun presentActions(): Unit =
-        suspendCancellableCoroutine { continuation ->
-            val guard = ContinuationGuard(continuation, fallbackValue = Unit)
-
+        AlertPresenter.presentAwaitingResult(fallbackValue = Unit) { guard ->
             // A cancel-styled action occupies the cancel slot; the automatic
             // cancel button is added only when no action carries that style.
             val cancelAction = actions.firstOrNull { it.style == ActionStyle.CANCEL }
             val displayedActions = actions.filter { it.style != ActionStyle.CANCEL }
-            AlertPresenter.present(
-                PresentedAlert.ActionSheet(
-                    title = title,
-                    message = message,
-                    actions = displayedActions,
-                    cancelButtonTitle = cancelAction?.title ?: cancelButtonTitle,
-                    messageAttributes = messageAttributes,
-                    titleAttributes = titleAttributes,
-                    onSelect = { index ->
-                        displayedActions.getOrNull(index)?.effect?.invoke()
-                        guard.resume(Unit)
-                        AlertPresenter.dismiss()
-                    },
-                    onCancel = {
-                        cancelAction?.effect?.invoke()
-                        guard.resume(Unit)
-                        AlertPresenter.dismiss()
-                    },
-                ),
-                onDisplaced = { guard.fallback() },
+            PresentedAlert.ActionSheet(
+                title = title,
+                message = message,
+                actions = displayedActions,
+                cancelButtonTitle = cancelAction?.title ?: cancelButtonTitle,
+                messageAttributes = messageAttributes,
+                titleAttributes = titleAttributes,
+                onSelect = { index ->
+                    displayedActions.getOrNull(index)?.effect?.invoke()
+                    guard.resume(Unit)
+                    AlertPresenter.dismiss()
+                },
+                onCancel = {
+                    cancelAction?.effect?.invoke()
+                    guard.resume(Unit)
+                    AlertPresenter.dismiss()
+                },
             )
-
-            continuation.invokeOnCancellation { AlertPresenter.dismiss() }
         }
 
     private suspend fun translate(keys: List<TranslationOptionKey>): ActionSheet {

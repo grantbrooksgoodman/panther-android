@@ -223,15 +223,19 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
     }
 
     /**
-     * Whether the chat page is being disposed because a sub-page of the
-     * same conversation – its chat info or a message's reaction details –
-     * was pushed over it, as opposed to the conversation being left.
+     * Whether the chat page is being disposed while its conversation
+     * remains on screen, as opposed to the conversation being left:
+     * either a sub-page of the same conversation – its chat info or a
+     * message's reaction details – was pushed over it, or another chat
+     * page now presents the same conversation, as when the new chat page
+     * hands off to the conversation after its first message is sent.
      */
-    private fun isCoveredBySubPage(conversationIDKey: String): Boolean {
+    private fun isConversationStillPresented(conversationIDKey: String): Boolean {
         val topPath =
             DependencyValues.current.navigation.state.value.userContent.stack
                 .lastOrNull()
         return when (topPath) {
+            is UserContentNavigatorState.SeguePaths.Chat -> topPath.conversationIDKey == conversationIDKey
             is UserContentNavigatorState.SeguePaths.ChatInfo -> topPath.conversationIDKey == conversationIDKey
             else -> false
         }
@@ -273,7 +277,10 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
     // Speech, playback, and alternate content stop on every disappearance;
     // the current-conversation pointer clears only when the page is truly
     // being dismissed – not when covered by a sub-page of the same
-    // conversation, which on Android is a push that disposes the chat.
+    // conversation, which on Android is a push that disposes the chat, nor
+    // when another chat page has taken over the same conversation. The
+    // outgoing page is disposed only after its exit transition, by which
+    // time the incoming page has already set the pointer.
     private fun viewDisappeared(state: State) {
         TextToSpeechService.stopSpeakingIfNeeded()
         AudioMessagePlaybackService.stopPlayback()
@@ -283,7 +290,7 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         DependencyValues.current.inputBarService.textViewDidChange("")
 
         if (state.configuration is ChatPageView.Configuration.Preview) return
-        if (!isCoveredBySubPage(state.conversationIDKey)) {
+        if (!isConversationStillPresented(state.conversationIDKey)) {
             // Flush read receipts for any message that arrived within the
             // mark-read debounce window just before the page was left; the
             // detached flush outlives the view model.

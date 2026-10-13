@@ -9,7 +9,7 @@
 package us.neotechnica.panther.modules.content.user.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,7 +22,10 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,7 +45,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Build
  * Shows the participant's avatar, name, and a user-info badge
  * (tappable only in developer mode), and opens the participant's
  * contact card on a row tap. A non-`null` [onRemove] enables a trailing
- * remove swipe; a non-`null` [onLongPress] handles a long press.
+ * remove swipe.
  *
  * @param participant The participant to display.
  * @param onTap The action performed on a row tap.
@@ -50,8 +53,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Build
  *   badge is tapped in developer mode.
  * @param onRemove The action performed when the row is swiped to remove
  *   the participant, or `null` to disable the remove swipe.
- * @param onLongPress The action performed on a long press, or `null` to
- *   disable it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,29 +61,30 @@ fun ChatParticipantView(
     onTap: () -> Unit,
     onUserInfoBadgeTapped: () -> Unit,
     onRemove: (() -> Unit)?,
-    onLongPress: (() -> Unit)?,
 ) {
     val remove = onRemove
     if (remove == null) {
-        RowContent(participant, onTap, onUserInfoBadgeTapped, onLongPress)
+        RowContent(participant, onTap, onUserInfoBadgeTapped)
         return
     }
 
-    val dismissState =
-        rememberSwipeToDismissBoxState(
-            // Never actually dismiss: the swipe triggers the removal flow
-            // (which presents its own confirmation) and the row snaps back.
-            confirmValueChange = { value ->
-                if (value == SwipeToDismissBoxValue.EndToStart) remove()
-                false
-            },
-        )
+    val dismissState = rememberSwipeToDismissBoxState()
+    val currentRemove by rememberUpdatedState(remove)
+
+    // A swipe that settles dismissed triggers the removal flow once – the
+    // flow presents its own confirmation – and the row then returns to rest.
+    LaunchedEffect(dismissState.settledValue) {
+        if (dismissState.settledValue != SwipeToDismissBoxValue.EndToStart) return@LaunchedEffect
+        currentRemove()
+        dismissState.reset()
+    }
+
     SwipeToDismissBox(
         state = dismissState,
         enableDismissFromStartToEnd = false,
         backgroundContent = { RemoveSwipeBackground() },
     ) {
-        RowContent(participant, onTap, onUserInfoBadgeTapped, onLongPress)
+        RowContent(participant, onTap, onUserInfoBadgeTapped)
     }
 }
 
@@ -93,7 +95,6 @@ private fun RowContent(
     participant: ChatParticipant,
     onTap: () -> Unit,
     onUserInfoBadgeTapped: () -> Unit,
-    onLongPress: (() -> Unit)?,
 ) {
     val colors = LocalPantherColors.current
     Row(
@@ -102,7 +103,7 @@ private fun RowContent(
             Modifier
                 .fillMaxWidth()
                 .background(colors.groupedRowBackground)
-                .combinedClickable(onClick = onTap, onLongClick = onLongPress)
+                .clickable(onClick = onTap)
                 .padding(horizontal = ChatInfoPageViewFloats.cardHorizontalPadding, vertical = ChatInfoPageViewFloats.rowVerticalPadding),
     ) {
         AvatarImageView(

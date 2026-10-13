@@ -36,6 +36,7 @@ import us.neotechnica.panther.R
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
+import us.neotechnica.panther.designsystem.modules.foundation.constants.StackFloats
 import us.neotechnica.panther.designsystem.modules.foundation.modifiers.Swipe
 import us.neotechnica.panther.designsystem.modules.foundation.modifiers.onSwipe
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
@@ -79,7 +80,7 @@ fun SignInPageView(modifier: Modifier = Modifier) {
     StatefulView(state = state.viewState, modifier = modifier) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.spacedBy(StackFloats.defaultSpacing, Alignment.CenterVertically),
             modifier = Modifier.fillMaxSize().onSwipe(Swipe.DOWN) { viewModel.send(SignInPageReducer.Action.DidSwipeDown) },
         ) {
             Image(
@@ -106,7 +107,11 @@ fun SignInPageView(modifier: Modifier = Modifier) {
             )
 
             if (state.configuration == SignInPageReducer.State.Configuration.PHONE_NUMBER) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(StackFloats.defaultSpacing),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
                     RegionMenu(
                         selectedRegionCode = state.selectedRegionCode,
                         onSelectedRegionCodeChange = { viewModel.send(SignInPageReducer.Action.SelectedRegionCodeChanged(it)) },

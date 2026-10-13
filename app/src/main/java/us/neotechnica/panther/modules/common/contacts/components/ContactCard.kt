@@ -10,16 +10,14 @@ package us.neotechnica.panther.modules.common.contacts.components
 
 import android.content.Intent
 import android.provider.ContactsContract
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
+import us.neotechnica.panther.designsystem.modules.foundation.components.PageSheetView
+import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.models.PhoneNumber
@@ -63,8 +63,7 @@ data class ContactCardInfo(
 }
 
 /**
- * Presents a contact card in response to a tap or a long press on a
- * contact.
+ * Presents a contact card in response to a tap on a contact.
  *
  * Obtain an instance with [rememberContactCardPresenter].
  */
@@ -72,16 +71,9 @@ class ContactCardPresenter internal constructor(
     /**
      * Presents the card for a tapped contact: opens the saved device
      * contact, or an in-app sheet offering to add an unknown number to
-     * contacts – and, when a non-`null` remove action is passed, to
-     * remove them from the conversation.
+     * contacts.
      */
-    val onTap: (PhoneNumber?, String?, (() -> Unit)?) -> Unit,
-    /**
-     * Presents the card for a long-pressed contact: for a saved device
-     * contact, an in-app sheet offering only to remove them from the
-     * conversation; a no-op for an unknown number.
-     */
-    val onLongPress: (PhoneNumber?, String?, (() -> Unit)?) -> Unit,
+    val onTap: (PhoneNumber?, String?) -> Unit,
 )
 
 /**
@@ -89,52 +81,28 @@ class ContactCardPresenter internal constructor(
  *
  * A tap on a saved device contact opens the system contact detail
  * through a `ContactsContract` view intent; a tap on an unknown number
- * presents an in-app detail sheet offering to add it to contacts. A long
- * press inverts this: a saved device contact gets the in-app sheet –
- * offering only removal – while an unknown number does nothing.
- *
- * Pass a non-`null` remove-from-conversation action to add a remove
- * button to the in-app sheet.
+ * presents an in-app detail sheet offering to add it to contacts.
  */
 @Composable
 fun rememberContactCardPresenter(): ContactCardPresenter {
     var card by remember { mutableStateOf<ContactCardInfo?>(null) }
-    var showsAddToContacts by remember { mutableStateOf(true) }
-    var removeFromConversation by remember { mutableStateOf<(() -> Unit)?>(null) }
     val context = LocalContext.current
 
     card?.let { info ->
         ContactDetailSheet(
             info = info,
-            showsAddToContacts = showsAddToContacts,
-            onRemoveFromConversation = removeFromConversation,
-            onDismiss = {
-                card = null
-                removeFromConversation = null
-            },
+            onDismiss = { card = null },
         )
     }
 
-    fun lookupUri(phoneNumber: PhoneNumber?) = phoneNumber?.compiledNumberString?.let { ContactService.deviceContactLookupUri(it) }
-
     return ContactCardPresenter(
-        onTap = { phoneNumber, displayName, onRemoveFromConversation ->
-            val uri = lookupUri(phoneNumber)
+        onTap = { phoneNumber, displayName ->
+            val uri = phoneNumber?.compiledNumberString?.let { ContactService.deviceContactLookupUri(it) }
             if (uri != null) {
                 runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             } else {
                 card = ContactCardInfo(displayName = displayName, phoneNumber = phoneNumber)
-                showsAddToContacts = true
-                removeFromConversation = onRemoveFromConversation
             }
-        },
-        onLongPress = { phoneNumber, displayName, onRemoveFromConversation ->
-            if (lookupUri(phoneNumber) != null) {
-                card = ContactCardInfo(displayName = displayName, phoneNumber = phoneNumber)
-                showsAddToContacts = false
-                removeFromConversation = onRemoveFromConversation
-            }
-            // An unknown number has no saved contact to show: do nothing.
         },
     )
 }
@@ -145,21 +113,20 @@ fun rememberContactCardPresenter(): ContactCardPresenter {
 @Composable
 private fun ContactDetailSheet(
     info: ContactCardInfo,
-    showsAddToContacts: Boolean,
-    onRemoveFromConversation: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
     val colors = LocalPantherColors.current
     val context = LocalContext.current
+    val isDarkModeActive = ThemeService.isDarkModeActive(isSystemInDarkTheme())
     val number = info.phoneNumber?.formattedString()
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    PageSheetView(onDismissRequest = onDismiss) {
         Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp)
-                    .padding(bottom = 32.dp),
+                    .padding(vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -172,28 +139,18 @@ private fun ContactDetailSheet(
             if (number != null && number != title) {
                 Components.Text(number, foregroundColor = colors.subtitleText, font = Font.system)
             }
-            if (showsAddToContacts) {
-                Button(
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                    onClick = {
-                        addToContacts(context, info.displayName, number)
-                        onDismiss()
-                    },
-                ) {
-                    Components.Text(ADD_TO_CONTACTS_TITLE, foregroundColor = Color.White, font = Font.systemSemibold())
-                }
-            }
-            onRemoveFromConversation?.let { remove ->
-                Button(
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                    modifier = Modifier.fillMaxWidth().padding(top = if (showsAddToContacts) 0.dp else 12.dp),
-                    onClick = {
-                        onDismiss()
-                        remove()
-                    },
-                ) {
-                    Components.Text(REMOVE_FROM_CONVERSATION_TITLE, foregroundColor = Color.White, font = Font.systemSemibold())
-                }
+            Button(
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                onClick = {
+                    addToContacts(context, info.displayName, number)
+                    onDismiss()
+                },
+            ) {
+                Components.Text(
+                    ADD_TO_CONTACTS_TITLE,
+                    foregroundColor = if (isDarkModeActive) Color.Black else Color.White,
+                    font = Font.systemSemibold()
+                )
             }
         }
     }
@@ -218,4 +175,3 @@ private fun addToContacts(
 
 private val AVATAR_SIZE = 72.dp
 private const val ADD_TO_CONTACTS_TITLE = "Add to Contacts"
-private const val REMOVE_FROM_CONVERSATION_TITLE = "Remove from Conversation"

@@ -8,7 +8,6 @@
 
 package us.neotechnica.panther.modules.content.user.views.contactselectorpageview
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -88,7 +87,6 @@ object ContactSelectorPageView {
             }
         }
         LaunchedEffect(Unit) { viewModel.send(ContactSelectorPageReducer.Action.ViewAppeared) }
-        BackHandler { viewModel.send(ContactSelectorPageReducer.Action.CancelToolbarButtonTapped) }
 
         val state by viewModel.state.collectAsState()
         val colors = LocalPantherColors.current

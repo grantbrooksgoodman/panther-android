@@ -79,7 +79,7 @@ object DefaultAttributeDetectionServiceDelegate : AttributeDetectionServiceDeleg
         fullText: String,
     ) {
         confirmSelection(
-            "Open in ${if (RuntimeStorage.languageCode == "en") "Safari" else "browser"}",
+            "Open in browser",
             message = substring,
             uri = Uri.parse(url),
         )

@@ -52,7 +52,6 @@ internal fun ReactionChipView(chip: ReactionChip) {
         verticalAlignment = Alignment.CenterVertically,
         modifier =
             Modifier
-                .padding(end = ChipFloats.reactionChipSpacing)
                 .clip(RoundedCornerShape(ChipFloats.reactionChipCornerRadius))
                 .background(background)
                 .padding(

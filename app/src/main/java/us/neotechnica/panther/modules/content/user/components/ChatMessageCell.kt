@@ -13,11 +13,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -128,30 +131,19 @@ private fun MessageContent(
     val kind = message.kind
     val reactionChoices = reactionChoicesFor(message, row.reactions, onReact)
     val alignment = if (isOwn) ContextMenuAlignment.TRAILING else ContextMenuAlignment.LEADING
+    val messageLabel = remember { MessageLabel() }
 
     val isSpeakingThisMessage = TextToSpeechService.speakingMessageID == message.id
     val speakingHighlightRange = if (isSpeakingThisMessage) TextToSpeechService.spokenRange else null
     val isMedia = kind is MessageKind.Photo || kind is MessageKind.Video
+    val isText = kind is MessageKind.Text || kind is MessageKind.AttributedText
 
-    val failedPaddingModifier =
-        if (row.isFailed) {
-            Modifier.padding(end = ChatPageViewFloats.MessageFlowLayout.failedIndicatorPaddingRight)
-        } else {
-            Modifier
-        }
     Row(
         horizontalArrangement = if (isOwn) Arrangement.End else Arrangement.Start,
         verticalAlignment = Alignment.Bottom,
         modifier = Modifier.fillMaxWidth(),
     ) {
         if (row.isGroup && !isOwn) SenderAvatar(row)
-        if (row.isFailed) {
-            FailedOutboxIndicator(
-                onTap = { onFailedIndicatorTapped(message.id) },
-                modifier = Modifier.align(Alignment.CenterVertically),
-            )
-        }
-
         MessageContextMenu(
             actions = contextMenuActions(message),
             alignment = alignment,
@@ -159,7 +151,8 @@ private fun MessageContent(
             alignsMenuCardToLeadingEdge = true,
             menuKey = message.id,
             // Tapping anywhere in a failed bubble presents the retry sheet;
-            // tapping a media bubble opens the preview.
+            // tapping a media bubble opens the preview; tapping a text
+            // bubble selects the detected attribute under the touch.
             onTap =
                 when {
                     row.isFailed -> {
@@ -168,17 +161,25 @@ private fun MessageContent(
                     isMedia -> {
                         { MediaMessagePreviewService.didTapImage(message, controller?.isPresenting == true) }
                     }
+                    isText -> messageLabel::handleGesture
                     else -> null
                 },
-            modifier = failedPaddingModifier,
             header = { SenderNameLabel(row) },
         ) {
             MessageKindContent(
                 row = row,
                 kind = kind,
+                label = messageLabel,
                 isSpeaking = isSpeakingThisMessage,
                 highlightRange = speakingHighlightRange,
                 isPresentingContextMenu = controller?.isPresenting == true,
+            )
+        }
+
+        if (row.isFailed) {
+            FailedOutboxIndicator(
+                onTap = { onFailedIndicatorTapped(message.id) },
+                modifier = Modifier.align(Alignment.CenterVertically),
             )
         }
     }
@@ -187,9 +188,11 @@ private fun MessageContent(
 // The bubble for the message's kind: audio, attributed or plain text,
 // photo, or video.
 @Composable
+@Suppress("LongParameterList")
 private fun MessageKindContent(
     row: ChatMessageRowData,
     kind: MessageKind,
+    label: MessageLabel,
     isSpeaking: Boolean,
     highlightRange: IntRange?,
     isPresentingContextMenu: Boolean,
@@ -211,6 +214,7 @@ private fun MessageKindContent(
         is MessageKind.AttributedText ->
             MessageBubble(
                 text = kind.text,
+                label = label,
                 isOwn = isOwn,
                 isItalicized = kind.isItalicized,
                 isSpeaking = isSpeaking,
@@ -218,7 +222,7 @@ private fun MessageKindContent(
             )
 
         is MessageKind.Text ->
-            MessageBubble(text = kind.text, isOwn = isOwn, isItalicized = false)
+            MessageBubble(text = kind.text, label = label, isOwn = isOwn, isItalicized = false)
 
         is MessageKind.Photo, is MessageKind.Video ->
             MediaMessageBubble(
@@ -251,6 +255,9 @@ private fun BottomLabel(
     // received bubbles are indented past the sender avatar column.
     val leadingInset = if (row.isGroup && !isOwn) CellDisplayFloats.avatarSize + CellDisplayFloats.avatarSpacing else 0.dp
 
+    // iOS's text insets span the bubble's tail, ending the label at the
+    // bubble body's edge. The bubble here has no tail, so the label sits
+    // flush with the bubble's leading or trailing edge instead.
     Row(
         horizontalArrangement = if (isOwn) Arrangement.End else Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically,
@@ -259,13 +266,18 @@ private fun BottomLabel(
                 .fillMaxWidth()
                 .padding(
                     top = ChatPageViewFloats.messageOutgoingCellBottomLabelAlignmentTopTextInset,
-                    start = if (isOwn) 0.dp else ChatPageViewFloats.messageOutgoingCellBottomLabelAlignmentRightTextInset + leadingInset,
-                    end = if (isOwn) ChatPageViewFloats.messageOutgoingCellBottomLabelAlignmentRightTextInset else 0.dp,
+                    start = leadingInset,
                 ),
     ) {
-        chips.forEach { chip -> ReactionChipView(chip) }
+        // Chips are spaced only between one another and before the label,
+        // so the outermost chip aligns with the bubble's edge.
+        Row(horizontalArrangement = Arrangement.spacedBy(CellDisplayFloats.reactionChipSpacing)) {
+            chips.forEach { chip -> ReactionChipView(chip) }
+        }
+
         if (label != null) {
             if (chips.isNotEmpty()) {
+                Spacer(modifier = Modifier.width(CellDisplayFloats.reactionChipSpacing))
                 Components.Text(
                     CellDataSourceStrings.BOTTOM_LABEL_COMPONENT_SEPARATOR,
                     foregroundColor = CellDataSourceColors.cellBottomLabelAttributedTextStandardAttributesForeground,

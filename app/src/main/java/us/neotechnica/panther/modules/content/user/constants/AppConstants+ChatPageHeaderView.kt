@@ -29,7 +29,6 @@ object ChatPageHeaderViewFloats {
 
     val backButtonFrameSize: Dp = 30.dp
     val backButtonGlassEffectPadding: Dp = 8.dp
-    val backButtonSymbolFrameSize: Dp = 18.dp
     val backButtonViewHorizontalPadding: Dp = 16.dp
     val backgroundViewHeightIncrement: Dp = 28.dp
 
@@ -58,5 +57,4 @@ object ChatPageHeaderViewColors {
 
 object ChatPageHeaderViewStrings {
     const val AVATAR_VIEW_NAME_LABEL_CHEVRON_SYMBOL_IMAGE_SYSTEM_NAME = "chevron.compact.right"
-    const val BACK_BUTTON_IMAGE_SYSTEM_NAME = "chevron.backward"
 }

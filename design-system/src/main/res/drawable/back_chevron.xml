@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A rounded, open chevron pointing toward the leading edge, drawn at
+     the weight of the system navigation bar back button. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="12dp"
+    android:height="20.5dp"
+    android:autoMirrored="true"
+    android:viewportWidth="12"
+    android:viewportHeight="20.5">
+    <path
+        android:pathData="M10.8,1.2 L1.2,10.25 L10.8,19.3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="2.4"
+        android:strokeColor="#FF000000" />
+</vector>

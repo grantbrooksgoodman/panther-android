@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.views.chatpageview
 
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -19,9 +20,16 @@ import org.junit.Test
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.content.user.dependencies.inputBarService
 import us.neotechnica.panther.modules.content.user.services.AlternateMessageService
+import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.support.MessageDecodeEnvironment
 import us.neotechnica.panther.modules.networking.support.SessionTestEnvironment
+import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
+import us.neotechnica.panther.navigation.Route
+import us.neotechnica.panther.navigation.UserContentNavigatorState
+import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.parity.FixtureJson
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import java.util.Date
 
@@ -44,6 +52,8 @@ class ChatPageReducerTest {
 
     @After
     fun tearDown() {
+        DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
+        ConversationSessionService.setCurrentConversation(null)
         AlternateMessageService.restoreAllAlternateTextMessageIDs()
         AlternateMessageService.restoreAllAudioTranscriptionMessageIDs()
         DependencyValues.current.inputBarService.toggleSendingUI(on = false)
@@ -159,5 +169,35 @@ class ChatPageReducerTest {
 
         assertEquals(state, reducer.reduce(state, ChatPageReducer.Action.HandleSessionStoreChange(change)).state)
         assertNotEquals(state.changeToken, reducer.reduce(state, ChatPageReducer.Action.ReloadRequested).state.changeToken)
+    }
+
+    // MARK: - Disappearance
+
+    @Test
+    fun `disappearing keeps the current conversation while another chat page presents it`() {
+        val conversation = runBlocking { Conversation.decode(FixtureJson.loadObject("conversation.json")) }
+        ConversationSessionService.setCurrentConversation(conversation)
+        DependencyValues.current.navigation.navigate(
+            Route.UserContent(UserContentRoute.Stack(listOf(UserContentNavigatorState.SeguePaths.Chat(conversation.id.key)))),
+        )
+
+        val state =
+            ChatPageReducer.State(
+                conversationIDKey = conversation.id.key,
+                configuration = ChatPageView.Configuration.NewChat,
+            )
+
+        reducer.reduce(state, ChatPageReducer.Action.ViewDisappeared)
+        assertEquals(conversation.id.key, ConversationSessionService.currentConversation?.id?.key)
+    }
+
+    @Test
+    fun `disappearing clears the current conversation once the conversation leaves the screen`() {
+        val conversation = runBlocking { Conversation.decode(FixtureJson.loadObject("conversation.json")) }
+        ConversationSessionService.setCurrentConversation(conversation)
+        DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
+
+        reducer.reduce(ChatPageReducer.State(conversationIDKey = conversation.id.key), ChatPageReducer.Action.ViewDisappeared)
+        assertNull(ConversationSessionService.currentConversation)
     }
 }

@@ -15,8 +15,6 @@ import androidx.compose.ui.unit.dp
 // MARK: - Float
 
 object ConversationCellViewFloats {
-    /** The spacing between the avatar and the text column. */
-    val avatarContentSpacing: Dp = 8.dp
     val avatarImageViewTopPadding: Dp = 10.dp
 
     val chevronImageAndDateLabelHStackSpacing: Dp = 0.dp
@@ -25,7 +23,7 @@ object ConversationCellViewFloats {
     val chevronImageFrameMaxHeight: Dp = 12.dp
 
     /** The leading offset of the long-press menu, aligned with the avatar. */
-    val contextMenuLeadingOffset: Dp = 20.dp
+    val contextMenuLeadingOffset: Dp = 28.dp
 
     val dateLabelPaddingTrailing: Dp = 6.dp
     const val DATE_LABEL_SYSTEM_FONT_SIZE = 14f
@@ -38,10 +36,13 @@ object ConversationCellViewFloats {
     val rowStartPadding: Dp = 20.dp
 
     /** The list row's trailing inset. */
-    val rowEndPadding: Dp = 16.dp
+    val rowEndPadding: Dp = 20.dp
 
-    /** The leading inset of the separator between rows. */
-    val separatorInset: Dp = 78.dp
+    /** The list row's top and bottom inset. */
+    val rowVerticalPadding: Dp = 14.5.dp
+
+    /** The leading inset of the separator between rows, aligned with the title. */
+    val separatorInset: Dp = 86.dp
 
     const val SUBTITLE_LABEL_FOREGROUND_COLOR_ADJUSTMENT_PERCENTAGE = 3f
     const val SUBTITLE_LABEL_LINE_LIMIT = 2
@@ -54,7 +55,7 @@ object ConversationCellViewFloats {
 
     val titleLabelBottomPadding: Dp = 0.01.dp
     const val TITLE_LABEL_MINIMUM_SCALE_FACTOR = 0.01f
-    const val TITLE_LABEL_SYSTEM_FONT_SIZE = 20f
+    const val TITLE_LABEL_SYSTEM_FONT_SIZE = 17f
 
     val unreadIndicatorViewFrameHeight: Dp = 10.dp
     val unreadIndicatorViewFrameWidth: Dp = 10.dp

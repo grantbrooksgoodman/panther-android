@@ -17,22 +17,23 @@ import androidx.compose.ui.unit.dp
 object SettingsPageViewFloats {
     val avatarGlyphSize: Dp = 24.dp
     val avatarSize: Dp = 44.dp
+    val buildInfoButtonImageBottomPadding: Dp = 6.dp
+    val buildInfoButtonImageFrameHeight: Dp = (515f / 20f).dp
+    val buildInfoButtonImageFrameWidth: Dp = (1000f / 20f).dp
     val cardCornerRadius: Dp = 16.dp
     val cardHorizontalMargin: Dp = 16.dp
     val cardPadding: Dp = 16.dp
-    val cardVerticalMargin: Dp = 8.dp
+    val cardVerticalMargin: Dp = 14.dp
     val contactChevronSize: Dp = 18.dp
     val contactCornerRadius: Dp = 28.dp
     val contactNameStartPadding: Dp = 12.dp
+    val contentTopPadding: Dp = 16.dp
     val disclosureChevronSize: Dp = 24.dp
-    val doneButtonGlyphSize: Dp = 20.dp
-    val headerHorizontalPadding: Dp = 16.dp
-    val headerVerticalPadding: Dp = 12.dp
     val iconRowVerticalPadding: Dp = 10.dp
     val iconSize: Dp = 30.dp
     val iconTitleStartPadding: Dp = 12.dp
-    val versionBottomPadding: Dp = 24.dp
-    val versionTopPadding: Dp = 12.dp
+    val versionBottomPadding: Dp = 8.dp
+    val versionTopPadding: Dp = 8.dp
 
     const val CHANGE_LANGUAGE_BUTTON_OVERLAY_FRAME_PERCENT_OF_TOTAL_SIZE = 0.7f
     const val CLEAR_CACHES_BUTTON_OVERLAY_FRAME_PERCENT_OF_TOTAL_SIZE = 0.6f

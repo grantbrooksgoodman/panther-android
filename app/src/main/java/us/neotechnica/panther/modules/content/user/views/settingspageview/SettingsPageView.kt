@@ -8,23 +8,25 @@
 
 package us.neotechnica.panther.modules.content.user.views.settingspageview
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -34,21 +36,26 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpSize
+import us.neotechnica.panther.R
 import us.neotechnica.panther.bundle.traitCollectionChanged
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
-import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
+import us.neotechnica.panther.designsystem.modules.foundation.components.HeaderView
+import us.neotechnica.panther.designsystem.modules.foundation.components.PageSheetView
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.contacts.components.rememberContactCardPresenter
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.content.user.components.AvatarImageView
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewFloats
+import us.neotechnica.panther.modules.content.user.models.BuildInfoButtonStrings
 import us.neotechnica.panther.modules.content.user.services.DeveloperModeListItem
 import us.neotechnica.panther.modules.content.user.views.inviteqrcodepageview.InviteQRCodePageView
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
@@ -100,29 +107,40 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
     val navState by navigation.state.collectAsState()
     val presentContactCard = rememberContactCardPresenter()
 
+    // The page is dismissed only with its navigation bar button; the
+    // system back gesture is ignored.
+    BackHandler {}
+
     Box(modifier = modifier.fillMaxSize().background(colors.groupedContentBackground)) {
         StatefulView(state = state.viewState) {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .systemBarsPadding()
-                        .verticalScroll(rememberScrollState()),
-            ) {
+            Column(modifier = Modifier.fillMaxSize().navigationBarsPadding()) {
                 Header(
                     title = state.navigationTitle,
                     doneText = state.doneToolbarButtonText,
                     onDone = { viewModel.send(SettingsPageReducer.Action.DoneToolbarButtonTapped) },
                 )
 
-                ContactDetailCard(state = state, onTap = { phoneNumber, name -> presentContactCard.onTap(phoneNumber, name, null) })
+                // The header and contact card stay pinned while the grouped
+                // lists beneath them scroll; the build information sits at
+                // the bottom of the page.
+                ContactDetailCard(
+                    state = state,
+                    onTap = { phoneNumber, name -> presentContactCard.onTap(phoneNumber, name) },
+                    modifier = Modifier.padding(top = Floats.contentTopPadding),
+                )
 
-                SettingsActionCards(state = state, send = viewModel::send, navigation = navigation)
-
-                DeveloperModeCards(items = state.developerModeListItems)
+                Column(
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState()),
+                ) {
+                    SettingsActionCards(state = state, send = viewModel::send, navigation = navigation)
+                    DeveloperModeCards(items = state.developerModeListItems)
+                }
 
                 BuildInfoButton(
-                    labelText = state.buildInfoButtonStrings.labelText,
+                    strings = state.buildInfoButtonStrings,
                     onTap = { viewModel.send(SettingsPageReducer.Action.BuildInfoButtonTapped) },
                     onLongPress = { viewModel.send(SettingsPageReducer.Action.LongPressGestureRecognized) },
                 )
@@ -130,10 +148,7 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
         }
 
         if (navState.settings.sheet == SettingsNavigatorState.SheetPaths.InviteQRCode) {
-            ModalBottomSheet(
-                onDismissRequest = { navigation.navigate(Route.Settings(SettingsRoute.Sheet(null))) },
-                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            ) {
+            PageSheetView(onDismissRequest = { navigation.navigate(Route.Settings(SettingsRoute.Sheet(null))) }) {
                 InviteQRCodePageView()
             }
         }
@@ -142,6 +157,8 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
 
 // MARK: - Header
 
+// The navigation bar: the centered title and the trailing Done
+// button, over a background that extends beneath the status bar.
 @Composable
 private fun Header(
     title: String,
@@ -149,27 +166,21 @@ private fun Header(
     onDone: () -> Unit,
 ) {
     val colors = LocalPantherColors.current
-    Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Floats.headerHorizontalPadding, vertical = Floats.headerVerticalPadding),
-    ) {
-        Components.Text(
-            title,
-            foregroundColor = colors.titleText,
-            font = Font.systemBold(FontScale.Large),
-            modifier = Modifier.align(Alignment.Center),
-        )
-        CircleChipButton(
-            systemName = "checkmark",
-            contentDescription = doneText,
-            onClick = onDone,
-            modifier = Modifier.align(Alignment.CenterEnd),
-            tint = colors.titleText,
-            glyphSize = Floats.doneButtonGlyphSize,
-        )
-    }
+
+    HeaderView(
+        centerItem =
+            HeaderView.CenterItemType.Text(
+                HeaderView.TextAttributes(title, foregroundColor = colors.navigationBarTitle),
+            ),
+        rightItem =
+            HeaderView.PeripheralButtonType.Text(
+                HeaderView.TextButtonAttributes(
+                    text = HeaderView.TextAttributes(doneText, foregroundColor = colors.navigationBarButton),
+                    action = onDone,
+                ),
+            ),
+        attributes = HeaderView.Attributes(windowInsets = WindowInsets.statusBars),
+    )
 }
 
 // MARK: - Contact Detail
@@ -178,6 +189,7 @@ private fun Header(
 private fun ContactDetailCard(
     state: SettingsPageReducer.State,
     onTap: (PhoneNumber?, String?) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val colors = LocalPantherColors.current
     val phoneNumber = UserSessionService.currentUser?.phoneNumber
@@ -188,7 +200,7 @@ private fun ContactDetailCard(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
                 .padding(horizontal = Floats.cardHorizontalMargin, vertical = Floats.cardVerticalMargin)
                 .clip(RoundedCornerShape(Floats.contactCornerRadius))
@@ -291,25 +303,45 @@ private fun DeveloperModeCards(items: List<DeveloperModeListItem>?) {
 
 // MARK: - Build Info Button
 
+// The version or copyright notice, preceded in its copyright form by
+// the company logo. Tapping cycles the notice; a long press reveals
+// developer options.
 @Composable
 private fun BuildInfoButton(
-    labelText: String,
+    strings: BuildInfoButtonStrings,
     onTap: () -> Unit,
     onLongPress: () -> Unit,
 ) {
     val colors = LocalPantherColors.current
-    Components.Text(
-        labelText,
-        foregroundColor = colors.subtitleText,
-        font = Font.system(FontScale.Small),
-        textAlign = TextAlign.Center,
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
         modifier =
             Modifier
                 .fillMaxWidth()
                 .pointerInput(Unit) {
                     detectTapGestures(onTap = { onTap() }, onLongPress = { onLongPress() })
                 }.padding(top = Floats.versionTopPadding, bottom = Floats.versionBottomPadding),
-    )
+    ) {
+        if (strings.key == BuildInfoButtonStrings.BuildInfoButtonStringKey.COPYRIGHT) {
+            Image(
+                colorFilter = ColorFilter.tint(colors.titleText),
+                contentDescription = null,
+                modifier =
+                    Modifier
+                        .padding(bottom = Floats.buildInfoButtonImageBottomPadding)
+                        .size(width = Floats.buildInfoButtonImageFrameWidth, height = Floats.buildInfoButtonImageFrameHeight),
+                painter = painterResource(R.drawable.nt_black),
+            )
+        }
+
+        Components.Text(
+            strings.labelText,
+            foregroundColor = colors.subtitleText,
+            font = Font.system(FontScale.Small),
+            textAlign = TextAlign.Center,
+        )
+    }
 }
 
 // MARK: - Cards

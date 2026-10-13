@@ -8,21 +8,27 @@
 
 package us.neotechnica.panther.designsystem.modules.foundation.components
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -120,6 +126,12 @@ object HeaderView {
         val showsDivider: Boolean = true,
         /** The minimum height treatment. */
         val sizeClass: SizeClass = SizeClass.Sheet,
+        /**
+         * The window insets the header's background extends beneath,
+         * with its content inset below them. The default is none; a
+         * header at the top of a page passes `WindowInsets.statusBars`.
+         */
+        val windowInsets: WindowInsets = WindowInsets(0.dp),
     )
 
     /** The appearance of a header image. */
@@ -130,14 +142,20 @@ object HeaderView {
         val foregroundColor: Color? = null,
         /** The image's size, or `null` to fit its space. */
         val size: DpSize? = null,
+        /**
+         * A drawable resource to display in place of the symbol, or
+         * `null` to display the symbol. The drawable is tinted like the
+         * symbol.
+         */
+        @param:DrawableRes val drawableResourceID: Int? = null,
     )
 
     /** The appearance of a header text item. */
     class TextAttributes(
         /** The string to display. */
         val string: String,
-        /** The text's font. */
-        val font: Font = Font.system,
+        /** The text's font. The default is the 17-point semibold system font. */
+        val font: Font = Font.systemSemibold(),
         /** The text's color, or `null` for the themed color. */
         val foregroundColor: Color? = null,
     )
@@ -178,7 +196,7 @@ object HeaderView {
                 Appearance.Themed -> colors.navigationBarBackground
             }
 
-        Column(modifier = Modifier.background(backgroundColor)) {
+        Column(modifier = Modifier.background(backgroundColor).windowInsetsPadding(attributes.windowInsets)) {
             ContentView(leftItem, centerItem, rightItem, attributes)
             if (attributes.showsDivider) {
                 HorizontalDivider(
@@ -327,17 +345,31 @@ private fun PeripheralButton(
     when (buttonType) {
         is HeaderView.PeripheralButtonType.Image -> {
             val imageAttributes = buttonType.attributes.image
-            Components.Button(
-                symbolName = imageAttributes.systemName,
-                foregroundColor =
-                    if (buttonType.attributes.isEnabled) {
-                        imageAttributes.foregroundColor ?: colors.accent
-                    } else {
-                        colors.disabled
-                    },
-                onClick = { if (buttonType.attributes.isEnabled) buttonType.attributes.action() },
-                modifier = imageAttributes.size?.let { Modifier.size(it) } ?: Modifier,
-            )
+            val tint =
+                if (buttonType.attributes.isEnabled) {
+                    imageAttributes.foregroundColor ?: colors.accent
+                } else {
+                    colors.disabled
+                }
+
+            val onClick = { if (buttonType.attributes.isEnabled) buttonType.attributes.action() }
+            val modifier = imageAttributes.size?.let { Modifier.size(it) } ?: Modifier
+            val drawableResourceID = imageAttributes.drawableResourceID
+            if (drawableResourceID == null) {
+                Components.Button(
+                    symbolName = imageAttributes.systemName,
+                    foregroundColor = tint,
+                    onClick = onClick,
+                    modifier = modifier,
+                )
+            } else {
+                Icon(
+                    contentDescription = null,
+                    modifier = modifier.clickable(onClick = onClick),
+                    painter = painterResource(drawableResourceID),
+                    tint = tint,
+                )
+            }
         }
 
         is HeaderView.PeripheralButtonType.Text -> {

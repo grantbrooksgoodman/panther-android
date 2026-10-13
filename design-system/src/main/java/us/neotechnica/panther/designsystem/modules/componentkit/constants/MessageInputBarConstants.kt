@@ -15,32 +15,43 @@ import androidx.compose.ui.unit.dp
 // MARK: - Float
 
 object MessageInputBarFloats {
+    /** The opacity of a button image while the button is disabled. */
+    const val DISABLED_IMAGE_ALPHA = 0.4f
     const val DIVIDER_ALPHA = 0.15f
     const val FIELD_MAX_LINES = 5
+
+    /**
+     * The spacing between the bottom of the text field and the bottom of
+     * the attach and send buttons, centering the buttons on a single line
+     * of text.
+     */
+    val buttonBottomPadding: Dp = 4.dp
 
     val buttonSizeHeight: Dp = 30.dp
     val buttonSizeWidth: Dp = 30.dp
 
     val dividerHeight: Dp = 0.5.dp
     val glyphSize: Dp = 28.dp
-    val horizontalPadding: Dp = 8.dp
+    val horizontalPadding: Dp = 12.dp
 
     val indicatorSize: Dp = 20.dp
     val indicatorStrokeWidth: Dp = 2.dp
 
-    val layerBorderWidth: Dp = 0.5.dp
+    /** The text field's border width: a single-pixel hairline. */
+    val layerBorderWidth: Dp = Dp.Hairline
     val layerCornerRadius: Dp = 15.dp
 
     val leftStackViewFixedSpaceWidth: Dp = 10.dp
     val leftStackViewWidthConstant: Dp = 40.dp
 
-    val sendButtonBottomPadding: Dp = 0.dp
+    /** The spacing between the text field and the bar's trailing padding. */
+    val middleContentViewPaddingRight: Dp = 8.dp
+
     val sendButtonTrailingAnchorConstraintConstantDecrement: Dp = 15.dp
-    val sendButtonTrailingInset: Dp = 2.dp
 
     val textContainerInsetLeft: Dp = 12.dp
     val textContainerInsetRightIncrement: Dp = 10.dp
-    val textContainerInsetVertical: Dp = 6.dp
+    val textContainerInsetVertical: Dp = 9.dp
 
     val verticalPadding: Dp = 6.dp
 }

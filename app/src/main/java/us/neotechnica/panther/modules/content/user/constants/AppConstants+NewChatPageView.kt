@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.constants
 
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -18,6 +19,12 @@ object NewChatPageViewFloats {
     val doneToolbarButtonFrameWidth: Dp = 30.dp
 
     val navigationBarHeightIncrement: Dp = 20.dp
+}
+
+// MARK: - Color
+
+object NewChatPageViewColors {
+    val darkBackground = Color(0xFF1C1C1E)
 }
 
 // MARK: - String

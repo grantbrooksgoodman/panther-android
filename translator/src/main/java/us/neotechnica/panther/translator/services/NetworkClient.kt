@@ -20,12 +20,17 @@ import java.net.URL
  * Serves the Google and
  * Reverso JSON endpoints. Requests run on [Dispatchers.IO] and return
  * the response body, throwing [TranslationError] on a non-200 status.
+ *
+ * Every request carries a browser user agent, which the caller's
+ * headers may override; Google's endpoint rejects the platform's
+ * default `Dalvik` user agent.
  */
 internal object NetworkClient {
     // MARK: - Constants
 
     private const val STATUS_OK = 200
     private const val DEFAULT_TIMEOUT_MILLIS = 5_000
+    private const val USER_AGENT_HEADER_FIELD = "User-Agent"
 
     // MARK: - Methods
 
@@ -40,6 +45,7 @@ internal object NetworkClient {
                     requestMethod = "GET"
                     connectTimeout = timeoutMillis
                     readTimeout = timeoutMillis
+                    setRequestProperty(USER_AGENT_HEADER_FIELD, BaseTranslator.MOBILE_USER_AGENT)
                 }
             connection.readResponse()
         }
@@ -58,6 +64,7 @@ internal object NetworkClient {
                     connectTimeout = timeoutMillis
                     readTimeout = timeoutMillis
                     doOutput = true
+                    setRequestProperty(USER_AGENT_HEADER_FIELD, BaseTranslator.MOBILE_USER_AGENT)
                     for ((key, value) in headers) setRequestProperty(key, value)
                 }
             connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }

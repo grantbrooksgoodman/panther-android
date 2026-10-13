@@ -10,15 +10,18 @@ package us.neotechnica.panther.designsystem.modules.alertkit.services
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.AttributedStringConfig
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ContinuationGuard
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextFieldAttributes
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import kotlin.time.Duration
@@ -110,32 +113,45 @@ sealed interface PresentedAlert {
 /**
  * The single source of truth for the alert currently being presented.
  *
- * Only one alert is presented at a time; presenting another alert
- * queues it until the current one dismisses and no modal display
- * blocks user interaction.
+ * Only one alert is presented at a time. Presenting another alert
+ * queues it; queued alerts are presented in the order they were
+ * requested, each once the current alert dismisses and no modal
+ * display blocks user interaction.
  */
 object AlertPresenter {
+    // MARK: - Types
+
+    private class PendingPresentation(
+        val alert: PresentedAlert,
+        val onDisplaced: (() -> Unit)?,
+    )
+
     // MARK: - Properties
 
     private val mutableActionEnabledOverrides = MutableStateFlow<Map<Int, Boolean>>(emptyMap())
     private val mutableCurrent = MutableStateFlow<PresentedAlert?>(null)
+    private val pendingPresentations = ArrayDeque<PendingPresentation>()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private var onDisplaced: (() -> Unit)? = null
+    private var queueJob: Job? = null
 
     // MARK: - Computed Properties
 
     /** The alert currently requested for presentation, or `null`. */
     val current: StateFlow<PresentedAlert?> = mutableCurrent.asStateFlow()
 
+    /** A Boolean value that indicates whether an alert is presented. */
+    val isPresenting: Boolean
+        get() = mutableCurrent.value != null
+
     internal val actionEnabledOverrides: StateFlow<Map<Int, Boolean>> = mutableActionEnabledOverrides.asStateFlow()
 
     // MARK: - Methods
 
     /**
-     * Requests presentation of the given alert, queueing it while
-     * another alert is presented or a modal display blocks user
-     * interaction.
+     * Requests presentation of the given alert, queueing it behind any
+     * alert already presented or queued.
      *
      * @param alert The alert to present.
      * @param onDisplaced A closure invoked if the alert is dismissed
@@ -146,14 +162,8 @@ object AlertPresenter {
         onDisplaced: (() -> Unit)? = null,
     ) {
         scope.launch {
-            while (HUD.isBlockingUserInteraction || mutableCurrent.value != null) {
-                delay(RETRY_INTERVAL_MILLISECONDS.milliseconds)
-            }
-
-            HUD.hide(after = Duration.ZERO)
-            this@AlertPresenter.onDisplaced = onDisplaced
-            mutableActionEnabledOverrides.value = emptyMap()
-            mutableCurrent.value = alert
+            pendingPresentations.addLast(PendingPresentation(alert, onDisplaced))
+            presentQueuedAlerts()
         }
     }
 
@@ -166,11 +176,74 @@ object AlertPresenter {
         displaced?.invoke()
     }
 
+    /**
+     * Withdraws the given alert: removes it from the queue if it has
+     * not yet been presented, or dismisses it if it is presented.
+     *
+     * @param alert The alert to withdraw.
+     */
+    fun withdraw(alert: PresentedAlert) {
+        scope.launch {
+            if (mutableCurrent.value === alert) {
+                dismiss()
+            } else {
+                pendingPresentations.removeAll { it.alert === alert }
+            }
+        }
+    }
+
+    /**
+     * Presents an alert and suspends until the alert resumes the
+     * continuation guard passed to [alert]: with a value from one of
+     * its actions, or with [fallbackValue] if it is displaced.
+     * Cancelling the coroutine withdraws the alert.
+     *
+     * @param fallbackValue The value returned if the alert is
+     *   displaced.
+     * @param alert Builds the alert to present, resuming the given
+     *   guard from the alert's actions.
+     *
+     * @return The value the guard was resumed with.
+     */
+    internal suspend fun <T> presentAwaitingResult(
+        fallbackValue: T,
+        alert: (ContinuationGuard<T>) -> PresentedAlert,
+    ): T =
+        suspendCancellableCoroutine { continuation ->
+            val guard = ContinuationGuard(continuation, fallbackValue = fallbackValue)
+            val presentedAlert = alert(guard)
+            present(presentedAlert, onDisplaced = { guard.fallback() })
+            continuation.invokeOnCancellation { withdraw(presentedAlert) }
+        }
+
     internal fun setActionEnabled(
         index: Int,
         isEnabled: Boolean,
     ) {
         mutableActionEnabledOverrides.value = mutableActionEnabledOverrides.value + (index to isEnabled)
+    }
+
+    // MARK: - Auxiliary
+
+    // Presents queued alerts in order, one at a time, waiting while an
+    // alert is presented or a modal display blocks user interaction.
+    private fun presentQueuedAlerts() {
+        if (queueJob?.isActive == true) return
+        queueJob =
+            scope.launch {
+                while (pendingPresentations.isNotEmpty()) {
+                    if (HUD.isBlockingUserInteraction || mutableCurrent.value != null) {
+                        delay(RETRY_INTERVAL_MILLISECONDS.milliseconds)
+                        continue
+                    }
+
+                    val pendingPresentation = pendingPresentations.removeFirst()
+                    HUD.hide(after = Duration.ZERO)
+                    onDisplaced = pendingPresentation.onDisplaced
+                    mutableActionEnabledOverrides.value = emptyMap()
+                    mutableCurrent.value = pendingPresentation.alert
+                }
+            }
     }
 }
 

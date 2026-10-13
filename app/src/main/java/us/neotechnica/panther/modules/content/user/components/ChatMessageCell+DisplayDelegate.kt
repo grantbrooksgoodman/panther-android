@@ -21,12 +21,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
@@ -34,6 +37,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.sp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
+import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.services.AttributeDetectionService
@@ -52,8 +57,9 @@ private typealias MessageColors = UserContentExtensionsColors.Message
 private typealias StringFloats = UserContentExtensionsFloats.AnnotatedString
 
 /**
- * The red indicator shown beside a failed outbox message. Tapping it
- * presents an action sheet offering to retry or delete the message.
+ * The red indicator shown to the trailing side of a failed outbox
+ * message. Tapping it presents an action sheet offering to retry or
+ * delete the message.
  *
  * @param onTap The action performed when the indicator is tapped.
  * @param modifier The modifier for this indicator.
@@ -66,7 +72,7 @@ internal fun FailedOutboxIndicator(
     Box(
         modifier =
             modifier
-                .padding(end = ChatPageViewFloats.FailedOutboxIndicator.indicatorButtonSpacing)
+                .padding(start = ChatPageViewFloats.FailedOutboxIndicator.indicatorButtonSpacing)
                 .size(ChatPageViewFloats.FailedOutboxIndicator.indicatorButtonSize)
                 .clickable(onClick = onTap),
         contentAlignment = Alignment.Center,
@@ -90,6 +96,10 @@ internal fun SenderNameLabel(row: ChatMessageRowData) {
     val label = messageTopLabelAttributedText(row) ?: return
     Text(
         text = label,
+        style =
+            Font
+                .system(FontScale.Custom(ChatPageViewFloats.MessagesDataSource.MESSAGE_TOP_LABEL_ATTRIBUTED_TEXT_ATTRIBUTES_FONT_SIZE))
+                .textStyle,
         modifier = Modifier.padding(bottom = ChatPageViewFloats.messageLabelInset),
     )
 }
@@ -132,14 +142,47 @@ internal fun bubbleShape(isOwn: Boolean): Shape =
     )
 
 /**
+ * A text message bubble's label: the label's text layout and position
+ * in the root coordinate space, recorded as the label lays out, so a
+ * tap on the bubble resolves to the character it falls on.
+ */
+internal class MessageLabel {
+    // MARK: - Properties
+
+    var layoutResult: TextLayoutResult? = null
+    var positionInRoot: Offset = Offset.Zero
+
+    // MARK: - Handle Gesture
+
+    /**
+     * Handles a tap at the given location in the root coordinate
+     * space, notifying the attribute detection delegate if the touch
+     * falls on a detected date, link, or phone number.
+     *
+     * @param touchLocation The location of the touch in the root
+     *   coordinate space.
+     */
+    fun handleGesture(touchLocation: Offset) {
+        val layoutResult = layoutResult ?: return
+        val characterIndex = layoutResult.characterIndex(touchLocation - positionInRoot) ?: return
+        AttributeDetectionService.handleGesture(layoutResult.layoutInput.text.text, characterIndex)
+    }
+}
+
+/**
  * A text message bubble.
  *
  * Renders the text at the message cell size with its paragraph line
  * spacing, italicized for alternate content, underlining detected
  * dates, links, and phone numbers, and highlighting the range being
- * spoken aloud in red.
+ * spoken aloud in red. Taps are handled by the enclosing
+ * `MessageContextMenu` through [label], so the detected attributes
+ * install no gesture handling of their own that would consume a long
+ * press.
  *
  * @param text The text to render.
+ * @param label The bubble's label, which records the text layout for
+ *   resolving taps.
  * @param isOwn Whether the message was sent by the current user.
  * @param isItalicized Whether the text renders italicized.
  * @param isSpeaking Whether the message is being spoken aloud.
@@ -150,6 +193,7 @@ internal fun bubbleShape(isOwn: Boolean): Shape =
 @Suppress("LongParameterList")
 internal fun MessageBubble(
     text: String,
+    label: MessageLabel,
     isOwn: Boolean,
     isItalicized: Boolean,
     isSpeaking: Boolean = false,
@@ -186,17 +230,38 @@ internal fun MessageBubble(
                     lineHeight = messageCellLineHeight().sp,
                     fontStyle = if (isItalicized) FontStyle.Italic else FontStyle.Normal,
                 ),
+            onTextLayout = { label.layoutResult = it },
+            modifier = Modifier.onGloballyPositioned { label.positionInRoot = it.positionInRoot() },
         )
     }
 }
 
 // MARK: - Auxiliary
 
+// The index of the character nearest the given location in the
+// layout, or `null` for empty text.
+private fun TextLayoutResult.characterIndex(location: Offset): Int? {
+    val lastIndex = layoutInput.text.length - 1
+    if (lastIndex < 0) return null
+
+    // The nearest cursor offset sits either before or after the nearest
+    // glyph.
+    val offset = getOffsetForPosition(location)
+    return listOf(offset, offset - 1)
+        .filter { it in 0..lastIndex }
+        .minByOrNull { getBoundingBox(it).distanceTo(location) }
+}
+
+// The distance from the rectangle to the given point: zero when the
+// point lies within it.
+private fun Rect.distanceTo(point: Offset): Float =
+    (point - Offset(point.x.coerceIn(left, right), point.y.coerceIn(top, bottom))).getDistance()
+
 private fun messageCellLineHeight(): Float =
     StringFloats.MESSAGE_CELL_STRING_SYSTEM_FONT_SIZE * StringFloats.MESSAGE_CELL_STRING_PARAGRAPH_LINE_SPACING
 
-// The message cell string: the base foreground, detected attributes as
-// underlined links, and the spoken range highlighted.
+// The message cell string: the base foreground, detected attributes
+// underlined in the detector color, and the spoken range highlighted.
 private fun messageCellString(
     text: String,
     foregroundColor: Color,
@@ -210,14 +275,7 @@ private fun messageCellString(
 
         AttributeDetectionService.detectAttributes(text).forEach { attribute ->
             val end = (attribute.range.last + 1).coerceAtMost(text.length)
-            addLink(
-                LinkAnnotation.Clickable(
-                    tag = attribute.range.toString(),
-                    styles = TextLinkStyles(style = SpanStyle(color = detectorColor, textDecoration = TextDecoration.Underline)),
-                ) { AttributeDetectionService.handleSelection(attribute, text) },
-                attribute.range.first,
-                end,
-            )
+            addStyle(SpanStyle(color = detectorColor, textDecoration = TextDecoration.Underline), attribute.range.first, end)
         }
 
         if (!isSpeaking) return@buildAnnotatedString

@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
@@ -289,6 +290,36 @@ object Components {
             contentDescription = null,
             modifier = modifier,
             tint = foregroundColor,
+        )
+    }
+
+    // MARK: - Progress View
+
+    /**
+     * Displays a continuous linear progress bar: a rounded track with
+     * no gap between the progress and the track, and no stop indicator
+     * at the track's end.
+     *
+     * @param progress Returns the fraction completed, from `0` through
+     *   `1`.
+     * @param foregroundColor The color of the completed portion.
+     * @param trackColor The color of the track.
+     * @param modifier The modifier for this component.
+     */
+    @Composable
+    fun ProgressView(
+        progress: () -> Float,
+        foregroundColor: Color,
+        trackColor: Color,
+        modifier: Modifier = Modifier,
+    ) {
+        LinearProgressIndicator(
+            progress = progress,
+            color = foregroundColor,
+            trackColor = trackColor,
+            gapSize = 0.dp,
+            drawStopIndicator = {},
+            modifier = modifier,
         )
     }
 

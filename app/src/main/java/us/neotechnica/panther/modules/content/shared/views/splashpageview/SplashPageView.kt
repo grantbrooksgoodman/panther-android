@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -42,6 +41,7 @@ import kotlinx.coroutines.delay
 import us.neotechnica.panther.R
 import us.neotechnica.panther.bundle.Application
 import us.neotechnica.panther.bundle.networkActivityOccurred
+import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.designsystem.modules.theming.views.ThemedView
@@ -173,9 +173,15 @@ private fun ProgressBar(
     }
 
     ThemedView {
-        LinearProgressIndicator(
+        Components.ProgressView(
             progress = { animatedProgress },
-            color = Colors.progressBarTint,
+            foregroundColor = Colors.progressBarTint,
+            trackColor =
+                if (ThemeService.isDarkModeActive(isSystemInDarkTheme())) {
+                    Colors.progressBarDarkTrackTint
+                } else {
+                    Colors.progressBarLightTrackTint
+                },
             modifier =
                 Modifier
                     .fillMaxWidth()

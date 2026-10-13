@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -28,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -35,8 +37,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.zIndex
 import us.neotechnica.panther.bundle.sessionStoreDidChange
+import us.neotechnica.panther.designsystem.R
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
-import us.neotechnica.panther.designsystem.modules.componentkit.components.CircleChipButton
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
@@ -107,16 +109,26 @@ internal fun buildChatPageHeaderViewModel(
 
 // MARK: - Back Button
 
+// A plain back chevron at the leading edge of its tap target.
 @Composable
 private fun BackButton(onClick: () -> Unit) {
-    CircleChipButton(
-        systemName = Strings.BACK_BUTTON_IMAGE_SYSTEM_NAME,
-        contentDescription = "Back",
-        onClick = onClick,
-        modifier = Modifier.size(Floats.backButtonFrameSize),
-        tint = LocalPantherColors.current.titleText,
-        glyphSize = Floats.backButtonSymbolFrameSize,
-    )
+    Box(
+        contentAlignment = Alignment.CenterStart,
+        modifier =
+            Modifier
+                .size(Floats.backButtonFrameSize)
+                .clickable(
+                    indication = null,
+                    interactionSource = null,
+                    onClick = onClick,
+                ),
+    ) {
+        Icon(
+            contentDescription = "Back",
+            painter = painterResource(R.drawable.back_chevron),
+            tint = LocalPantherColors.current.navigationBarButton,
+        )
+    }
 }
 
 // MARK: - Chat Info Button

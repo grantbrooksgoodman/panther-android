@@ -15,6 +15,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.interfaces.LoggerDoma
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.LoggerPresentationDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import java.io.File
@@ -335,18 +336,16 @@ object Logger {
     ) {
         if (filter == Filter.ExceptionsOnly || filter == Filter.ReportableExceptionsOnly) return
 
-        val frame = callerFrame()
-        val fileName = frame?.fileName ?: "Unknown"
-        (filter as? Filter.ByFileNames)?.let { if (!it.fileNames.contains(fileName)) return }
+        val metadata = ExceptionMetadata()
+        (filter as? Filter.ByFileNames)?.let { if (!it.fileNames.contains(metadata.fileName)) return }
 
-        val sender = frame?.className?.substringAfterLast('.')?.substringBefore('$') ?: "Unknown"
-        val functionName = (frame?.methodName ?: "Unknown").substringBefore("(")
-        val header = "----- $fileName | ${domain.rawValue.camelCaseToHumanReadable.uppercase()} | ${timestamp()} -----"
+        val header = "----- ${metadata.fileName} | ${domain.rawValue.camelCaseToHumanReadable.uppercase()} | ${timestamp()} -----"
         val footer = "-".repeat(header.length)
 
+        val functionName = metadata.function.substringBefore("(")
         write(
             "\n$header\n" +
-                "$sender.$functionName() [${frame?.lineNumber ?: 0}]${elapsedTime()}\n" +
+                "${metadata.sender}.$functionName() [${metadata.line}]${elapsedTime()}\n" +
                 "$message\n" +
                 "$footer\n",
             domain = domain,
@@ -415,15 +414,6 @@ object Logger {
             }
         return lines.joinToString("\n")
     }
-
-    // Resolves the first stack frame outside the logger and foundation
-    // models, so a logged message is attributed to its true call site.
-    private fun callerFrame(): StackTraceElement? =
-        Thread.currentThread().stackTrace.firstOrNull {
-            !it.className.startsWith("java.lang.Thread") &&
-                !it.className.startsWith("us.neotechnica.panther.subsystem.modules.foundation.models") &&
-                it.className != Logger::class.java.name
-        }
 
     private const val MILLIS_PER_SECOND = 1000L
 }

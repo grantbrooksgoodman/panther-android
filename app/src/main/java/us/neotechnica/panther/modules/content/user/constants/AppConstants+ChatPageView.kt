@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.dp
 object ChatPageViewFloats {
     val messageLabelInset: Dp = 4.dp
 
-    val messageOutgoingCellBottomLabelAlignmentRightTextInset: Dp = 10.dp
     val messageOutgoingCellBottomLabelAlignmentTopTextInset: Dp = 2.dp
 
     val textCellMessageLabelLeftTextInset: Dp = 15.dp
@@ -26,10 +25,6 @@ object ChatPageViewFloats {
     object FailedOutboxIndicator {
         val indicatorButtonSize: Dp = 22.dp
         val indicatorButtonSpacing: Dp = 6.dp
-    }
-
-    object MessageFlowLayout {
-        val failedIndicatorPaddingRight: Dp = 28.dp
     }
 
     object MessagesDataSource {
@@ -148,7 +143,5 @@ object ChatPageViewStrings {
 
     object MessagesDisplayDelegate {
         const val AVATAR_VIEW_IMAGE_SYSTEM_NAME = "person.crop.circle.fill"
-        const val PLAY_IMAGE_SYSTEM_NAME = "play.fill"
-        const val STOP_IMAGE_SYSTEM_NAME = "stop.fill"
     }
 }

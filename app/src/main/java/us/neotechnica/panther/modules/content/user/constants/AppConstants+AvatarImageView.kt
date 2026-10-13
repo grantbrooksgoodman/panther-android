@@ -13,6 +13,9 @@ import androidx.compose.ui.graphics.Color
 // MARK: - Float
 
 object AvatarImageViewFloats {
+    /** The fraction of the frame spanned by the group placeholder's cut-out glyph. */
+    const val BADGE_IMAGE_GLYPH_FRACTION = 0.73f
+
     const val BADGE_VIEW_CORNER_RADIUS = 8f
     const val BADGE_VIEW_LABEL_SYSTEM_FONT_SIZE = 14f
     const val BADGE_VIEW_SHADOW_RADIUS = 20f
@@ -25,6 +28,9 @@ object AvatarImageViewFloats {
 
     const val CORNER_RADIUS = 10f
 
+    /** The scale at which the default placeholder symbol's circle fills the frame. */
+    const val DEFAULT_IMAGE_SCALE = 1.2f
+
     const val FRAME_HEIGHT = 50f
     const val FRAME_WIDTH = 50f
 }
@@ -36,7 +42,7 @@ object AvatarImageViewColors {
     val BADGE_VIEW_LIGHT_FOREGROUND = Color(0xFFE5E5EA)
 
     val BADGE_VIEW_LABEL_SHADOW = Color.Black
-    val IMAGE_FOREGROUND = Color.Gray
+    val IMAGE_FOREGROUND = Color(0xFF8E8E93)
 }
 
 // MARK: - String

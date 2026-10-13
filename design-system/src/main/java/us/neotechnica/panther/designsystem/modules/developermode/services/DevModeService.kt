@@ -20,6 +20,7 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationAlert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextFieldAttributes
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAlert
+import us.neotechnica.panther.designsystem.modules.alertkit.services.AlertPresenter
 import us.neotechnica.panther.designsystem.modules.developermode.interfaces.DevModeAppActionDelegate
 import us.neotechnica.panther.designsystem.modules.developermode.models.DevModeAction
 import us.neotechnica.panther.designsystem.modules.developermode.models.DevModeSubsystemActions
@@ -185,10 +186,12 @@ object DevModeService {
      *
      * When the app-domain list contains actions, the sheet first offers a
      * choice between the app and subsystem domains. When the list is
-     * empty, the subsystem-domain actions are shown directly.
+     * empty, the subsystem-domain actions are shown directly. The sheet
+     * is not presented while another alert is presented.
      */
     fun presentActionSheet() {
         scope.launch {
+            if (AlertPresenter.isPresenting) return@launch
             if (appActions.wrappedValue.isEmpty()) return@launch presentActionSheet(ActionDomain.SUBSYSTEM)
 
             val actions =

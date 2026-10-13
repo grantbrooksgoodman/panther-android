@@ -26,10 +26,17 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Panther">
+        <!-- The activity handles appearance and size changes itself;
+             recreating it would re-run the signed-in session's
+             first-appearance work, including network requests. Large
+             screens ignore the portrait lock, so rotation counts as a
+             size change there. -->
         <activity
             android:name=".MainActivity"
+            android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
             android:exported="true"
             android:label="@string/app_name"
+            android:screenOrientation="portrait"
             android:theme="@style/Theme.Panther"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>

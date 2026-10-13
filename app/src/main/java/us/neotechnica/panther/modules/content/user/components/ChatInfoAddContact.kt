@@ -18,8 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -28,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.designsystem.modules.foundation.components.PageSheetView
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewColors
@@ -63,7 +62,7 @@ fun AddContactButton(
         } else {
             ChatInfoPageViewColors.addContactButtonCircleLightForeground
         }
-    val contentColor = if (isEnabled) colors.accent else colors.disabled
+    val contentColor = if (isEnabled) colors.navigationBarButton else colors.disabled
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
@@ -111,10 +110,7 @@ fun ChatInfoContactSelectorHost() {
     val navigation = remember { DependencyValues.current.navigation }
     val navState by navigation.state.collectAsState()
     if (navState.chat.sheet == ChatNavigatorState.SheetPaths.ContactSelector) {
-        ModalBottomSheet(
-            onDismissRequest = { navigation.navigate(Route.Chat(ChatRoute.Sheet(null))) },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        ) {
+        PageSheetView(onDismissRequest = { navigation.navigate(Route.Chat(ChatRoute.Sheet(null))) }) {
             ContactSelectorPageView(entryPoint = ContactSelectorPageView.EntryPoint.CHAT_INFO_PAGE_VIEW)
         }
     }

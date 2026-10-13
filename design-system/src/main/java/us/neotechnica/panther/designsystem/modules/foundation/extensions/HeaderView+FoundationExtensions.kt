@@ -11,6 +11,7 @@ package us.neotechnica.panther.designsystem.modules.foundation.extensions
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import us.neotechnica.panther.designsystem.R
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.components.HeaderView
@@ -20,7 +21,8 @@ import us.neotechnica.panther.subsystem.modules.localization.models.Localized
 import us.neotechnica.panther.subsystem.modules.localization.models.SubsystemStringKey
 
 /**
- * Returns a back button showing the standard back chevron.
+ * Returns a back button showing the standard navigation bar back
+ * chevron.
  *
  * @param foregroundColor The chevron's tint, or `null` for the
  *   theme's accent color.
@@ -40,6 +42,7 @@ fun HeaderView.PeripheralButtonType.Companion.backButton(
                 HeaderView.ImageAttributes(
                     systemName = HeaderViewStrings.BACK_BUTTON_IMAGE_SYSTEM_NAME,
                     foregroundColor = foregroundColor,
+                    drawableResourceID = R.drawable.back_chevron,
                     size =
                         DpSize(
                             HeaderViewFloats.BACK_BUTTON_IMAGE_SIZE_WIDTH.dp,

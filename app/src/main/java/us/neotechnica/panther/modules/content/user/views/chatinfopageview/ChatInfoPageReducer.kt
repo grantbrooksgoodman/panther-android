@@ -69,6 +69,8 @@ import java.util.UUID
  * - Changing the conversation's name or photo and adding or removing a
  *   participant are performed through [ChatInfoPageViewService]. When
  *   metadata changes, the page reloads and notifies observers.
+ * - When a participant is added or removed, the page shows its
+ *   progress page and reloads as it does on appearance.
  */
 class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReducer.Action> {
     // MARK: - Types
@@ -82,6 +84,8 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
     // MARK: - Action
 
     sealed interface Action {
+        data object ViewAppeared : Action
+
         data class ViewFirstAppeared(
             val conversationIDKey: String,
         ) : Action
@@ -254,19 +258,10 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         action: Action,
     ): ReduceResult<State, Action> =
         when (action) {
-            is Action.ViewFirstAppeared -> {
-                val conversation = SessionStore.getConversation(action.conversationIDKey)
-                ChatInfoPageViewService.viewAppeared()
-                ReduceResult(
-                    state.copy(
-                        conversationIDKey = action.conversationIDKey,
-                        conversation = conversation,
-                        mediaItems = buildMediaItems(conversation),
-                        viewState = ViewState.Loading,
-                    ),
-                    Effect.merge(resolveEffect(), getChatParticipantsEffect()),
-                )
-            }
+            Action.ViewAppeared -> reduceViewAppeared(state)
+
+            is Action.ViewFirstAppeared ->
+                reduceViewAppeared(state.copy(conversationIDKey = action.conversationIDKey))
 
             Action.ViewDisappeared -> ReduceResult(state)
 
@@ -389,6 +384,23 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
                 ReduceResult(state)
             }
         }
+
+    // MARK: - View Appeared
+
+    // Loads the conversation and its participants, showing the progress
+    // page until the participants return.
+    private fun reduceViewAppeared(state: State): ReduceResult<State, Action> {
+        val conversation = SessionStore.getConversation(state.conversationIDKey)
+        ChatInfoPageViewService.viewAppeared()
+        return ReduceResult(
+            state.copy(
+                conversation = conversation,
+                mediaItems = buildMediaItems(conversation),
+                viewState = ViewState.Loading,
+            ),
+            Effect.merge(resolveEffect(), getChatParticipantsEffect()),
+        )
+    }
 
     // MARK: - Change Metadata
 

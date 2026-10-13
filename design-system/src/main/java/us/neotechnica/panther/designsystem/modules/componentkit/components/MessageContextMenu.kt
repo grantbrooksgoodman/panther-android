@@ -8,7 +8,6 @@
 
 package us.neotechnica.panther.designsystem.modules.componentkit.components
 
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
@@ -21,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.R
+import us.neotechnica.panther.designsystem.modules.componentkit.extensions.detectMessageTapGestures
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAction
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAlignment
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ReactionChoice
@@ -56,9 +57,11 @@ import us.neotechnica.panther.designsystem.modules.foundation.services.SoundPlay
  *   the reaction row's leading edge) is aligned, so a full-width row can
  *   line its menu text up with an inner element such as an avatar rather
  *   than the screen edge.
- * @param onTap The action performed on a single tap, or `null` when the
- *   bubble has none. Handling it here (rather than a `clickable` inside
- *   [content]) keeps the tap from consuming the long-press and double-tap.
+ * @param onTap The action performed on a single tap, given the tap's
+ *   location in the root coordinate space, or `null` when the bubble
+ *   has none. Handling it here (rather than a `clickable` inside
+ *   [content]) keeps the tap from consuming the long-press and
+ *   double-tap.
  * @param modifier The modifier for the wrapper.
  * @param content The message bubble.
  */
@@ -73,7 +76,7 @@ fun MessageContextMenu(
     menuLeadingOffset: Dp = 0.dp,
     alignsMenuCardToLeadingEdge: Boolean = false,
     menuKey: String? = null,
-    onTap: (() -> Unit)? = null,
+    onTap: ((Offset) -> Unit)? = null,
     modifier: Modifier = Modifier,
     header: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
@@ -148,10 +151,10 @@ fun MessageContextMenu(
                 .onGloballyPositioned { coordinates ->
                     anchorBounds = Rect(coordinates.positionInRoot(), coordinates.size.toSize())
                 }.pointerInput(controller, handlesTap, hasDoubleTapDefault) {
-                    detectTapGestures(
+                    detectMessageTapGestures(
                         onTap =
                             if (handlesTap) {
-                                { currentOnTap?.invoke() }
+                                { position -> currentOnTap?.invoke(anchorBounds.topLeft + position) }
                             } else {
                                 null
                             },

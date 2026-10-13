@@ -19,12 +19,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -34,6 +39,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -56,7 +62,9 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.shared.components.SearchBar
+import us.neotechnica.panther.modules.content.user.components.conversationcellview.ConversationCellSwipeCoordinator
 import us.neotechnica.panther.modules.content.user.components.conversationcellview.ConversationCellView
+import us.neotechnica.panther.modules.content.user.components.conversationcellview.LocalConversationCellSwipeCoordinator
 import us.neotechnica.panther.modules.content.user.components.conversationcellview.buildConversationCellViewModel
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewFloats
 import us.neotechnica.panther.modules.content.user.constants.ConversationsPageViewColors
@@ -93,32 +101,41 @@ fun ConversationsPageView(
 ) {
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
+    val swipeCoordinator = remember { ConversationCellSwipeCoordinator() }
 
-    ContextMenuHost(modifier = modifier) {
-        StatefulView(state = state.viewState) {
-            // The host fills the screen so the cell context menu's scrim covers
-            // the system bars; the list content insets itself below them here.
-            Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
-                Toolbar(state = state, viewModel = viewModel)
+    ContextMenuHost(modifier = modifier.then(swipeCoordinator.dismissalModifier())) {
+        CompositionLocalProvider(LocalConversationCellSwipeCoordinator provides swipeCoordinator) {
+            StatefulView(state = state.viewState) {
+                // The host fills the screen so the cell context menu's scrim covers
+                // the system bars; the content insets itself below the status bar
+                // here, and the list scrolls beneath the navigation bar.
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
+                ) {
+                    Toolbar(state = state, viewModel = viewModel)
 
-                Components.Text(
-                    state.strings.value(ConversationsPageViewStrings.navigationTitle),
-                    foregroundColor = colors.titleText,
-                    font = Font.systemBold(FontScale.Large),
-                    modifier = Modifier.padding(horizontal = Floats.titleHorizontalPadding, vertical = Floats.titleVerticalPadding),
-                )
+                    Components.Text(
+                        state.strings.value(ConversationsPageViewStrings.navigationTitle),
+                        foregroundColor = colors.titleText,
+                        font = Font.systemBold(FontScale.Large),
+                        modifier = Modifier.padding(horizontal = Floats.titleHorizontalPadding, vertical = Floats.titleVerticalPadding),
+                    )
 
-                SearchBar(
-                    query = state.searchQuery,
-                    onQueryChange = { viewModel.send(ConversationsPageReducer.Action.SearchQueryChanged(it)) },
-                    backgroundColor = colors.background,
-                    placeholderText = LocalizedStringKey.Search.localized(),
-                    onFocusChanged = { viewModel.send(ConversationsPageReducer.Action.IsSearchingChanged(it)) },
-                )
+                    SearchBar(
+                        query = state.searchQuery,
+                        onQueryChange = { viewModel.send(ConversationsPageReducer.Action.SearchQueryChanged(it)) },
+                        backgroundColor = colors.background,
+                        placeholderText = LocalizedStringKey.Search.localized(),
+                        onFocusChanged = { viewModel.send(ConversationsPageReducer.Action.IsSearchingChanged(it)) },
+                    )
 
-                Spacer(modifier = Modifier.height(Floats.searchBottomSpacing))
+                    Spacer(modifier = Modifier.height(Floats.searchBottomSpacing))
 
-                ConversationList(state = state, listState = listState, viewModel = viewModel)
+                    ConversationList(state = state, listState = listState, viewModel = viewModel)
+                }
             }
         }
     }
@@ -149,8 +166,6 @@ private fun ConversationList(
     listState: LazyListState,
     viewModel: ViewModel<ConversationsPageReducer.State, ConversationsPageReducer.Action>,
 ) {
-    val colors = LocalPantherColors.current
-
     // Arm pull-to-refresh only when a scroll gesture begins with the
     // list already at its top. This keeps scrolling back up to the top
     // from converting into a refresh once the top is reached mid-drag.
@@ -183,13 +198,11 @@ private fun ConversationList(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
+            contentPadding = WindowInsets.systemBars.only(WindowInsetsSides.Bottom).asPaddingValues(),
             verticalArrangement = Arrangement.Top,
         ) {
             item {
-                HorizontalDivider(
-                    color = colors.groupedContentBackground,
-                    modifier = Modifier.padding(start = ConversationCellViewFloats.separatorInset),
-                )
+                RowSeparator()
             }
             items(conversations, key = { it.id.key }) { conversation ->
                 key(conversation.id.key) {
@@ -199,10 +212,7 @@ private fun ConversationList(
                         }
                     ConversationCellView(viewModel = cellViewModel)
                 }
-                HorizontalDivider(
-                    color = colors.groupedContentBackground,
-                    modifier = Modifier.padding(start = ConversationCellViewFloats.separatorInset),
-                )
+                RowSeparator()
             }
         }
 
@@ -213,6 +223,19 @@ private fun ConversationList(
             modifier = Modifier.align(Alignment.TopCenter),
         )
     }
+}
+
+// The separator between rows, inset to align with the cell's title.
+@Composable
+private fun RowSeparator() {
+    HorizontalDivider(
+        color = LocalPantherColors.current.groupedContentBackground,
+        modifier =
+            Modifier.padding(
+                start = ConversationCellViewFloats.separatorInset,
+                end = ConversationCellViewFloats.rowEndPadding,
+            ),
+    )
 }
 
 // MARK: - Toolbar

@@ -29,7 +29,7 @@ object UserInfoBadgeViewFloats {
     val labelViewTextFrameWidth: Dp = 20.dp
 
     const val LABEL_VIEW_TEXT_OPACITY = 0.8f
-    const val LABEL_VIEW_TEXT_SHADOW_RADIUS = 20f
+    val labelViewTextShadowRadius: Dp = 20.dp
 }
 
 // MARK: - Color

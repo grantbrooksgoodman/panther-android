@@ -33,3 +33,7 @@ internal fun String.attributed(config: AttributedStringConfig): AnnotatedString 
             }
         }
     }
+
+// Applies the attributed-string configuration to the sanitized text.
+internal fun String.styled(config: AttributedStringConfig?): AnnotatedString =
+    config?.let { sanitized.attributed(it) } ?: AnnotatedString(sanitized)

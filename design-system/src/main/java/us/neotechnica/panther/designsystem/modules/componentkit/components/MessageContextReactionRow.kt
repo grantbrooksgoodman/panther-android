@@ -14,9 +14,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,7 +28,11 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ReactionChoice
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 
-/** The row of reaction options shown above a lifted message bubble. */
+/**
+ * The row of reaction options shown above a lifted message bubble: a
+ * capsule as tall as its reaction buttons, so that a selected
+ * reaction's circle fills the capsule's height.
+ */
 @Composable
 internal fun ReactionRow(
     choices: List<ReactionChoice>,
@@ -38,14 +41,12 @@ internal fun ReactionRow(
     val colors = LocalPantherColors.current
 
     val containerColor =
-        (if (isSystemInDarkTheme()) SYSTEM_GRAY3_DARK else SYSTEM_GRAY3_LIGHT)
+        (if (isSystemInDarkTheme()) SYSTEM_GRAY3_DARK else SYSTEM_GRAY5_LIGHT)
             .copy(alpha = REACTION_ROW_BACKGROUND_ALPHA)
     Row(
         Modifier
-            .clip(RoundedCornerShape(REACTION_ROW_CORNER_RADIUS))
-            .background(containerColor)
-            .padding(start = REACTION_ROW_LEADING_INSET)
-            .padding(REACTION_ROW_PADDING),
+            .clip(CircleShape)
+            .background(containerColor),
         horizontalArrangement = Arrangement.spacedBy(REACTION_ROW_SPACING),
     ) {
         choices.forEach { choice ->
@@ -54,7 +55,7 @@ internal fun ReactionRow(
                 modifier =
                     Modifier
                         .size(REACTION_BUTTON_SIZE)
-                        .clip(RoundedCornerShape(REACTION_BUTTON_CORNER_RADIUS))
+                        .clip(CircleShape)
                         .background(if (choice.isSelected) choice.selectedColor else Color.Transparent)
                         .clickable { onSelect(choice) },
             ) {
@@ -68,13 +69,9 @@ internal fun ReactionRow(
     }
 }
 
-private val REACTION_BUTTON_CORNER_RADIUS = 17.5.dp
 private val REACTION_BUTTON_SIZE = 35.dp
 private const val REACTION_EMOJI_FONT_SIZE = 15f
 private const val REACTION_ROW_BACKGROUND_ALPHA = 0.8f
-private val REACTION_ROW_CORNER_RADIUS = 5.dp
-private val REACTION_ROW_LEADING_INSET = 10.dp
-private val REACTION_ROW_PADDING = 6.dp
 private val REACTION_ROW_SPACING = 8.dp
 private val SYSTEM_GRAY3_DARK = Color(0xFF48484A)
-private val SYSTEM_GRAY3_LIGHT = Color(0xFFC7C7CC)
+private val SYSTEM_GRAY5_LIGHT = Color(0xFFE5E5EA)

@@ -8,7 +8,6 @@
 
 package us.neotechnica.panther.designsystem.modules.alertkit.models
 
-import kotlinx.coroutines.suspendCancellableCoroutine
 import us.neotechnica.panther.designsystem.modules.alertkit.AlertKit
 import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.applying
@@ -124,25 +123,18 @@ class Alert(
      * running that action's effect.
      */
     suspend fun present(): Unit =
-        suspendCancellableCoroutine { continuation ->
-            val guard = ContinuationGuard(continuation, fallbackValue = Unit)
-
-            AlertPresenter.present(
-                PresentedAlert.Standard(
-                    title = title,
-                    message = message,
-                    actions = actions,
-                    messageAttributes = messageAttributes,
-                    titleAttributes = titleAttributes,
-                ) { index ->
-                    actions.getOrNull(index)?.effect?.invoke()
-                    guard.resume(Unit)
-                    AlertPresenter.dismiss()
-                },
-                onDisplaced = { guard.fallback() },
-            )
-
-            continuation.invokeOnCancellation { AlertPresenter.dismiss() }
+        AlertPresenter.presentAwaitingResult(fallbackValue = Unit) { guard ->
+            PresentedAlert.Standard(
+                title = title,
+                message = message,
+                actions = actions,
+                messageAttributes = messageAttributes,
+                titleAttributes = titleAttributes,
+            ) { index ->
+                actions.getOrNull(index)?.effect?.invoke()
+                guard.resume(Unit)
+                AlertPresenter.dismiss()
+            }
         }
 
     /**

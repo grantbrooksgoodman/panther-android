@@ -35,9 +35,6 @@ object ChatInfoPageViewFloats {
     val chevronBoxSize: Dp = 24.dp
     val chevronBoxStartPadding: Dp = 8.dp
     val chevronGlyphSize: Dp = 16.dp
-    val doneButtonGlyphSize: Dp = 20.dp
-    val headerHorizontalPadding: Dp = 16.dp
-    val headerTopPadding: Dp = 12.dp
     val languageBadgeCornerRadius: Dp = 4.dp
     val languageBadgeHorizontalPadding: Dp = 6.dp
     val languageBadgeStartPadding: Dp = 8.dp

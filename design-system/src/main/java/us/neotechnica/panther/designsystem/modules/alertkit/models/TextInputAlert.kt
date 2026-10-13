@@ -8,7 +8,6 @@
 
 package us.neotechnica.panther.designsystem.modules.alertkit.models
 
-import kotlinx.coroutines.suspendCancellableCoroutine
 import us.neotechnica.panther.designsystem.modules.alertkit.AlertKit
 import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.firstOutput
@@ -154,29 +153,22 @@ class TextInputAlert(
      * @return The entered text on confirmation, or `null` on cancel.
      */
     suspend fun present(): String? =
-        suspendCancellableCoroutine { continuation ->
-            val guard = ContinuationGuard<String?>(continuation, fallbackValue = null)
-
-            AlertPresenter.present(
-                PresentedAlert.TextInput(
-                    title = title,
-                    message = message,
-                    attributes = attributes,
-                    cancelButtonTitle = cancelButtonTitle,
-                    cancelButtonStyle = cancelButtonStyle,
-                    confirmButtonTitle = confirmButtonTitle,
-                    confirmButtonStyle = confirmButtonStyle,
-                    messageAttributes = messageAttributes,
-                    titleAttributes = titleAttributes,
-                    onTextFieldChange = onTextFieldChangeHandler,
-                ) { result ->
-                    guard.resume(result)
-                    AlertPresenter.dismiss()
-                },
-                onDisplaced = { guard.fallback() },
-            )
-
-            continuation.invokeOnCancellation { AlertPresenter.dismiss() }
+        AlertPresenter.presentAwaitingResult<String?>(fallbackValue = null) { guard ->
+            PresentedAlert.TextInput(
+                title = title,
+                message = message,
+                attributes = attributes,
+                cancelButtonTitle = cancelButtonTitle,
+                cancelButtonStyle = cancelButtonStyle,
+                confirmButtonTitle = confirmButtonTitle,
+                confirmButtonStyle = confirmButtonStyle,
+                messageAttributes = messageAttributes,
+                titleAttributes = titleAttributes,
+                onTextFieldChange = onTextFieldChangeHandler,
+            ) { result ->
+                guard.resume(result)
+                AlertPresenter.dismiss()
+            }
         }
 
     /**

@@ -8,13 +8,16 @@
 
 package us.neotechnica.panther.designsystem.modules.componentkit.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -25,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,13 +38,16 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.constants.MessageInputBarColors
 import us.neotechnica.panther.designsystem.modules.componentkit.constants.MessageInputBarFloats
 import us.neotechnica.panther.designsystem.modules.componentkit.constants.MessageInputBarStrings
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
+import us.neotechnica.panther.designsystem.modules.componentkit.models.MessageInputBarImages
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 
 // MARK: - Constants Accessors
@@ -64,6 +71,8 @@ private typealias Strings = MessageInputBarStrings
  * @param onAttach Invoked when the leading attach button is tapped.
  * @param isSendEnabled Whether the send button responds to taps.
  * @param isAttachEnabled Whether the attach button responds to taps.
+ * @param images The images the attach and send buttons display, or
+ *   `null` to show the buttons' symbols.
  * @param focusRequester A requester that can give the text field
  *   focus, or `null`.
  * @param onFocusChanged Invoked as the text field gains or loses
@@ -81,6 +90,7 @@ fun MessageInputBar(
     onAttach: () -> Unit,
     isSendEnabled: Boolean = true,
     isAttachEnabled: Boolean = true,
+    images: MessageInputBarImages? = null,
     focusRequester: FocusRequester? = null,
     onFocusChanged: ((Boolean) -> Unit)? = null,
     modifier: Modifier = Modifier,
@@ -103,7 +113,11 @@ fun MessageInputBar(
         ) {
             // The left stack: the attach button and a fixed space.
             Box(
-                modifier = Modifier.width(Floats.leftStackViewWidthConstant).heightIn(min = Floats.buttonSizeHeight),
+                modifier =
+                    Modifier
+                        .width(Floats.leftStackViewWidthConstant)
+                        .heightIn(min = Floats.buttonSizeHeight)
+                        .padding(bottom = Floats.buttonBottomPadding),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 InputBarButton(
@@ -112,6 +126,8 @@ fun MessageInputBar(
                     onClick = onAttach,
                     description = Strings.ATTACH_MEDIA_BUTTON_CONTENT_DESCRIPTION,
                     enabled = canAttach,
+                    image = images?.attachMediaButton,
+                    highlightedImage = images?.attachMediaButtonHighlighted,
                 )
             }
 
@@ -120,6 +136,7 @@ fun MessageInputBar(
                 modifier =
                     Modifier
                         .weight(1f)
+                        .padding(end = Floats.middleContentViewPaddingRight)
                         .heightIn(min = Floats.buttonSizeHeight)
                         .clip(RoundedCornerShape(Floats.layerCornerRadius))
                         .border(
@@ -147,7 +164,7 @@ fun MessageInputBar(
                         value = text,
                         onValueChange = onTextChange,
                         textStyle = Font.system.textStyle.copy(color = colors.titleText),
-                        cursorBrush = SolidColor(if (isSending) Colors.inputTextViewAlternateTint else colors.accent),
+                        cursorBrush = SolidColor(if (isSending) Colors.inputTextViewAlternateTint else colors.navigationBarButton),
                         maxLines = Floats.FIELD_MAX_LINES,
                         modifier =
                             Modifier
@@ -164,10 +181,12 @@ fun MessageInputBar(
                     description = Strings.SEND_BUTTON_CONTENT_DESCRIPTION,
                     enabled = canSend,
                     isLoading = isSending,
+                    image = images?.sendButton,
+                    highlightedImage = images?.sendButtonHighlighted,
                     modifier =
                         Modifier
                             .align(Alignment.BottomEnd)
-                            .padding(end = Floats.sendButtonTrailingInset, bottom = Floats.sendButtonBottomPadding),
+                            .padding(end = sendButtonTrailingInset, bottom = Floats.buttonBottomPadding),
                 )
             }
         }
@@ -183,15 +202,20 @@ private fun InputBarButton(
     description: String,
     enabled: Boolean = true,
     isLoading: Boolean = false,
+    image: Painter? = null,
+    highlightedImage: Painter? = null,
     modifier: Modifier = Modifier,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
     Box(
         contentAlignment = Alignment.Center,
         modifier =
             modifier
                 .size(Floats.buttonSizeWidth, Floats.buttonSizeHeight)
                 .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
+                    interactionSource = interactionSource,
                     indication = null,
                     enabled = enabled && !isLoading,
                     onClick = onClick,
@@ -203,8 +227,25 @@ private fun InputBarButton(
                 strokeWidth = Floats.indicatorStrokeWidth,
                 modifier = Modifier.size(Floats.indicatorSize),
             )
+        } else if (image != null) {
+            Image(
+                painter = if (isPressed) highlightedImage ?: image else image,
+                contentDescription = null,
+                alpha = if (enabled) 1f else Floats.DISABLED_IMAGE_ALPHA,
+                modifier = Modifier.fillMaxSize(),
+            )
         } else {
             Components.Symbol(symbol, foregroundColor = glyphColor, modifier = Modifier.size(Floats.glyphSize))
         }
     }
 }
+
+// The send button's inset from the text field's trailing edge. The
+// button's trailing edge sits its width less the decrement inside the
+// bar's content edge, which lies the middle content padding beyond the
+// field.
+private val sendButtonTrailingInset: Dp
+    get() =
+        Floats.buttonSizeWidth -
+            Floats.sendButtonTrailingAnchorConstraintConstantDecrement -
+            Floats.middleContentViewPaddingRight

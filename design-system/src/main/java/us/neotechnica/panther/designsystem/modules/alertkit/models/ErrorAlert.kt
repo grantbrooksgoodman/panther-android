@@ -8,7 +8,6 @@
 
 package us.neotechnica.panther.designsystem.modules.alertkit.models
 
-import kotlinx.coroutines.suspendCancellableCoroutine
 import us.neotechnica.panther.designsystem.modules.alertkit.AlertKit
 import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.firstOutput
@@ -83,38 +82,32 @@ class ErrorAlert(
      * Presents the error alert and suspends until the user dismisses it.
      */
     suspend fun present(): Unit =
-        suspendCancellableCoroutine { continuation ->
-            val guard = ContinuationGuard(continuation, fallbackValue = Unit)
+        AlertPresenter.presentAwaitingResult(fallbackValue = Unit) { guard ->
             val showsReportAction =
                 exception.isReportable &&
                     !Logger.reportsErrorsAutomatically &&
                     AlertKitConfig.reportDelegate != null
 
-            AlertPresenter.present(
-                PresentedAlert.ErrorContent(
-                    title = if (showsReportAction) null else errorDescription,
-                    message = if (showsReportAction) errorDescription else "\n${exception.id}",
-                    dismissButtonTitle = dismissButtonTitle,
-                    sendReportButtonTitle = if (showsReportAction) sendErrorReportButtonTitle else null,
-                    onDismiss = {
-                        guard.resume(Unit)
-                        AlertPresenter.dismiss()
+            PresentedAlert.ErrorContent(
+                title = if (showsReportAction) null else errorDescription,
+                message = if (showsReportAction) errorDescription else "\n${exception.id}",
+                dismissButtonTitle = dismissButtonTitle,
+                sendReportButtonTitle = if (showsReportAction) sendErrorReportButtonTitle else null,
+                onDismiss = {
+                    guard.resume(Unit)
+                    AlertPresenter.dismiss()
+                },
+                onSendReport =
+                    if (showsReportAction) {
+                        {
+                            AlertKitConfig.reportDelegate?.fileReport(exception)
+                            guard.resume(Unit)
+                            AlertPresenter.dismiss()
+                        }
+                    } else {
+                        null
                     },
-                    onSendReport =
-                        if (showsReportAction) {
-                            {
-                                AlertKitConfig.reportDelegate?.fileReport(exception)
-                                guard.resume(Unit)
-                                AlertPresenter.dismiss()
-                            }
-                        } else {
-                            null
-                        },
-                ),
-                onDisplaced = { guard.fallback() },
             )
-
-            continuation.invokeOnCancellation { AlertPresenter.dismiss() }
         }
 
     /**
