@@ -15,9 +15,9 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import us.neotechnica.panther.bundle.contactAccessDenied
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
-import us.neotechnica.panther.modules.common.extensions.contactAccessDenied
-import us.neotechnica.panther.modules.common.services.PermissionService
+import us.neotechnica.panther.modules.common.services.sources.PermissionService
 import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata

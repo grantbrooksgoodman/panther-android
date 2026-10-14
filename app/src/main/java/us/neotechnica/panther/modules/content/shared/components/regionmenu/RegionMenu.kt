@@ -45,9 +45,9 @@ import us.neotechnica.panther.designsystem.modules.foundation.constants.GroupedL
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.designsystem.modules.theming.views.ThemedView
-import us.neotechnica.panther.modules.common.services.HapticsService
-import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.modules.common.services.sources.HapticsService
+import us.neotechnica.panther.modules.common.services.sources.RegionDetailService
 import us.neotechnica.panther.modules.content.shared.components.SearchBarInView
 import us.neotechnica.panther.modules.content.shared.constants.RegionMenuColors
 import us.neotechnica.panther.modules.content.shared.constants.RegionMenuFloats

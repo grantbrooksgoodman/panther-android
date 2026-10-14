@@ -10,7 +10,7 @@ package us.neotechnica.panther.modules.content.user.components
 
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAction
 import us.neotechnica.panther.modules.content.user.dependencies.contextMenuActionHandlerService
-import us.neotechnica.panther.modules.networking.message.models.Message
+import us.neotechnica.panther.modules.networking.sources.message.models.Message
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 
 /**

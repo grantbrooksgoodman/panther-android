@@ -8,7 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.dependencies
 
-import us.neotechnica.panther.modules.content.user.services.ContextMenuActionHandlerService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.contextmenu.sources.ContextMenuActionHandlerService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.interfaces.DependencyKey
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 

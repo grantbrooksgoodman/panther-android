@@ -14,8 +14,8 @@ import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.models.NumberPair
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
-import us.neotechnica.panther.modules.content.user.services.recipientbar.RecipientBarService
-import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.recipientbar.RecipientBarService
+import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 

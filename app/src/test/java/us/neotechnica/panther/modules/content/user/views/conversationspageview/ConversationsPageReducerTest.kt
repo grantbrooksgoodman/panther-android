@@ -16,7 +16,7 @@ import org.junit.Before
 import org.junit.Test
 import us.neotechnica.panther.bundle.conversationsSearchQuery
 import us.neotechnica.panther.modules.content.user.constants.ConversationsPageViewFloats
-import us.neotechnica.panther.modules.networking.support.MessageDecodeEnvironment
+import us.neotechnica.panther.modules.networking.sources.support.MessageDecodeEnvironment
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.RootNavigatorState
 import us.neotechnica.panther.navigation.RootRoute

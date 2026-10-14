@@ -50,8 +50,8 @@ import us.neotechnica.panther.designsystem.modules.foundation.extensions.doneBut
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.common.contacts.components.rememberContactCardPresenter
 import us.neotechnica.panther.modules.content.user.components.ContactDetailView
+import us.neotechnica.panther.modules.content.user.components.rememberContactCardPresenter
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewFloats
 import us.neotechnica.panther.modules.content.user.models.BuildInfoButtonStrings
 import us.neotechnica.panther.modules.content.user.views.inviteqrcodepageview.InviteQRCodePageView

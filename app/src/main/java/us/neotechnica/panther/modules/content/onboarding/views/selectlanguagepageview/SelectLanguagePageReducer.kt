@@ -14,7 +14,7 @@ import us.neotechnica.panther.bundle.navigators.OnboardingNavigatorState
 import us.neotechnica.panther.bundle.navigators.OnboardingRoute
 import us.neotechnica.panther.bundle.regionDetailService
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
-import us.neotechnica.panther.modules.content.onboarding.components.InstructionViewStrings
+import us.neotechnica.panther.modules.content.onboarding.components.instructionview.InstructionViewStrings
 import us.neotechnica.panther.modules.content.onboarding.dependencies.onboardingService
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
 import us.neotechnica.panther.navigation.Navigation

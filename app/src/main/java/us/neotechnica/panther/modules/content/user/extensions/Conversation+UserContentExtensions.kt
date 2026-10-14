@@ -8,14 +8,14 @@
 
 package us.neotechnica.panther.modules.content.user.extensions
 
+import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.modules.common.constants.CommonConstants
 import us.neotechnica.panther.modules.content.user.models.MediaItemViewData
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
-import us.neotechnica.panther.modules.networking.conversation.models.ConversationMetadata
-import us.neotechnica.panther.modules.networking.conversation.models.Participant
-import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.sources.conversation.models.ConversationID
+import us.neotechnica.panther.modules.networking.sources.conversation.models.ConversationMetadata
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Participant
+import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty

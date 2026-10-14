@@ -8,7 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.views.conversationspageview
 
-import us.neotechnica.panther.bundle.Application
+import us.neotechnica.panther.Application
 import us.neotechnica.panther.bundle.conversationsPageReappeared
 import us.neotechnica.panther.bundle.conversationsSearchQuery
 import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
@@ -19,7 +19,7 @@ import us.neotechnica.panther.modules.content.user.extensions.filteredAndSorted
 import us.neotechnica.panther.modules.content.user.extensions.isMock
 import us.neotechnica.panther.modules.content.user.extensions.isVisibleForCurrentUser
 import us.neotechnica.panther.modules.content.user.extensions.queried
-import us.neotechnica.panther.modules.networking.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.RootNavigatorState

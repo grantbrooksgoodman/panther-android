@@ -8,9 +8,10 @@
 
 package us.neotechnica.panther.modules.session.state.services
 
-import us.neotechnica.panther.bundle.messageOutbox
 import us.neotechnica.panther.bundle.messageOutboxDidChange
 import us.neotechnica.panther.bundle.outbox
+import us.neotechnica.panther.modules.networking.sources.common.extensions.SessionStoreStorageKey
+import us.neotechnica.panther.modules.networking.sources.common.extensions.sessionStore
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
@@ -201,7 +202,8 @@ object MessageOutboxService {
     // MARK: - Auxiliary
 
     private fun emit() {
-        DependencyValues.current.sharedEvents.messageOutboxDidChange.send()
+        DependencyValues.current.sharedEvents.messageOutboxDidChange
+            .send()
     }
 
     private fun garbageCollectPayloadFiles() {
@@ -246,7 +248,7 @@ object MessageOutboxService {
 
             val decoded =
                 Persistent
-                    .archive(PersistentStorageKey.messageOutbox) { it }
+                    .archive(PersistentStorageKey.sessionStore(SessionStoreStorageKey.MESSAGE_OUTBOX)) { it }
                     ?.mapNotNull { runCatching { decodeEntry(it) }.getOrNull() }
             if (decoded != null) {
                 // Reconcile: any entry still marked SENDING at launch
@@ -276,16 +278,17 @@ object MessageOutboxService {
         // The outbox previously persisted as a preferences string; move
         // any such payload into the file-backed archive once, then clear
         // the string so later launches load only from the archive.
-        val legacyArchive = Persistent.string(PersistentStorageKey.messageOutbox) ?: return
+        val messageOutboxKey = PersistentStorageKey.sessionStore(SessionStoreStorageKey.MESSAGE_OUTBOX)
+        val legacyArchive = Persistent.string(messageOutboxKey) ?: return
         runCatching { decodeOutboxArchive(legacyArchive) }.getOrNull()?.let { decoded ->
-            Persistent.setArchive(PersistentStorageKey.messageOutbox, decoded.map { encodeEntry(it) })
+            Persistent.setArchive(messageOutboxKey, decoded.map { encodeEntry(it) })
         }
-        Persistent.setString(PersistentStorageKey.messageOutbox, null)
+        Persistent.setString(messageOutboxKey, null)
     }
 
     private fun persistArchive() {
         Persistent.setArchive(
-            PersistentStorageKey.messageOutbox,
+            PersistentStorageKey.sessionStore(SessionStoreStorageKey.MESSAGE_OUTBOX),
             entries.wrappedValue.values.map { encodeEntry(it) },
         )
     }
@@ -304,7 +307,6 @@ object MessageOutboxService {
 
         Logger.log("Removed payload file $fileName for entry ${entry.id}.", domain = LoggerDomain.outbox)
     }
-
 }
 
 // MARK: - File

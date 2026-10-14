@@ -31,8 +31,8 @@ import us.neotechnica.panther.modules.content.user.dependencies.SettingsPageView
 import us.neotechnica.panther.modules.content.user.extensions.withUser
 import us.neotechnica.panther.modules.content.user.models.BuildInfoButtonStrings
 import us.neotechnica.panther.modules.content.user.services.SettingsPageViewService
-import us.neotechnica.panther.modules.networking.support.MessageDecodeEnvironment
-import us.neotechnica.panther.modules.networking.support.SessionTestEnvironment
+import us.neotechnica.panther.modules.networking.sources.support.MessageDecodeEnvironment
+import us.neotechnica.panther.modules.networking.sources.support.SessionTestEnvironment
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyScopes
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues

@@ -14,17 +14,17 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import us.neotechnica.panther.modules.common.services.CommonPropertyLists
-import us.neotechnica.panther.modules.common.services.RegionDetailService
+import us.neotechnica.panther.modules.common.services.sources.CommonPropertyLists
+import us.neotechnica.panther.modules.common.services.sources.RegionDetailService
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewStrings
 import us.neotechnica.panther.modules.content.user.extensions.empty
 import us.neotechnica.panther.modules.content.user.extensions.isRelevant
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewDataCache
-import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.networking.conversation.models.Participant
-import us.neotechnica.panther.modules.networking.support.MessageDecodeEnvironment
-import us.neotechnica.panther.modules.networking.support.SessionTestEnvironment
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Participant
+import us.neotechnica.panther.modules.networking.sources.support.MessageDecodeEnvironment
+import us.neotechnica.panther.modules.networking.sources.support.SessionTestEnvironment
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 

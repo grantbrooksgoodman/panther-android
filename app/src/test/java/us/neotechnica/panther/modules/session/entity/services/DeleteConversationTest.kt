@@ -13,8 +13,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import us.neotechnica.panther.modules.networking.support.MessageDecodeEnvironment
-import us.neotechnica.panther.modules.networking.support.SessionTestEnvironment
+import us.neotechnica.panther.modules.networking.sources.support.MessageDecodeEnvironment
+import us.neotechnica.panther.modules.networking.sources.support.SessionTestEnvironment
 
 /**
  * Exercises forced conversation deletion: participant tokens, the

@@ -22,12 +22,12 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
-import us.neotechnica.panther.modules.networking.support.MessageDecodeEnvironment
-import us.neotechnica.panther.modules.networking.support.SessionTestEnvironment
-import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.networking.user.services.UserService
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.sources.conversation.models.ConversationID
+import us.neotechnica.panther.modules.networking.sources.support.MessageDecodeEnvironment
+import us.neotechnica.panther.modules.networking.sources.support.SessionTestEnvironment
+import us.neotechnica.panther.modules.networking.sources.user.models.User
+import us.neotechnica.panther.modules.networking.sources.user.services.UserService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 
 /**

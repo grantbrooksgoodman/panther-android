@@ -13,6 +13,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
 import us.neotechnica.panther.modules.common.constants.CommonConstants
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewStrings
@@ -20,11 +21,10 @@ import us.neotechnica.panther.modules.content.user.constants.SystemMessageCellFl
 import us.neotechnica.panther.modules.content.user.dependencies.chatPageViewService
 import us.neotechnica.panther.modules.content.user.dependencies.contextMenuActionHandlerService
 import us.neotechnica.panther.modules.content.user.models.MessageKind
-import us.neotechnica.panther.modules.content.user.services.AlternateMessageService
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.networking.message.models.HostedContentType
-import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.AlternateMessageService
+import us.neotechnica.panther.modules.networking.sources.message.models.HostedContentType
+import us.neotechnica.panther.modules.networking.sources.message.models.Message
+import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.networking.modules.translation.extensions.system
@@ -47,7 +47,7 @@ val Message.isFromCurrentUser: Boolean
  * A Boolean value that indicates whether the message is an outbox
  * message whose delivery failed.
  */
-val Message.isFailedOutboxMessage: Boolean // NIT: Unused on Android.
+val Message.isFailedOutboxMessage: Boolean
     get() {
         if (!isOutboxMessage) return false
         val outbox = DependencyValues.current.clientSession.outbox
@@ -241,7 +241,7 @@ val Message.attributedSystemString: AnnotatedString?
  * A Boolean value that indicates whether this message's audio is
  * currently playing.
  */
-val Message.isPlayingMessage: Boolean // NIT: Unused on Android.
+val Message.isPlayingMessage: Boolean
     get() {
         if (!contentType.isAudio || audioComponent == null) return false
         val playingMessageID = DependencyValues.current.chatPageViewService.audioMessagePlayback.playingMessageID ?: return false
@@ -252,7 +252,7 @@ val Message.isPlayingMessage: Boolean // NIT: Unused on Android.
  * A Boolean value that indicates whether this message is currently
  * being spoken aloud.
  */
-val Message.isSpeakingMessage: Boolean // NIT: Unused on Android.
+val Message.isSpeakingMessage: Boolean
     get() {
         val speakingMessage = DependencyValues.current.contextMenuActionHandlerService.speakingMessage ?: return false
         return speakingMessage.id == id

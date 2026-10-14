@@ -8,7 +8,7 @@
 
 package us.neotechnica.panther.modules.session.state.models
 
-import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
+import us.neotechnica.panther.modules.networking.sources.conversation.models.ConversationID
 import java.util.Date
 import kotlin.math.abs
 

@@ -395,32 +395,36 @@ object Logger {
     /**
      * Logs a plain-text message.
      *
-     * The entry includes the caller's file, function, and line number
-     * alongside the message text.
+     * The entry includes the file, function, and line number of the
+     * caller – or of [metadata], when given – alongside the message
+     * text.
      *
      * @param message The message to log.
      * @param domain The domain to log to. Defaults to the general
      *   domain.
      * @param with The alert to present after logging, or `null` to log
      *   silently.
+     * @param metadata The source location to attribute the message to,
+     *   or `null` to attribute it to the caller.
      */
     fun log(
         message: String,
         domain: LoggerDomain = LoggerDomain.general,
         with: AlertType? = null,
+        metadata: ExceptionMetadata? = null,
     ) {
         if (filter == Filter.ExceptionsOnly || filter == Filter.ReportableExceptionsOnly) return
 
-        val metadata = ExceptionMetadata()
-        (filter as? Filter.ByFileNames)?.let { if (!it.fileNames.contains(metadata.fileName)) return }
+        val sourceMetadata = metadata ?: ExceptionMetadata()
+        (filter as? Filter.ByFileNames)?.let { if (!it.fileNames.contains(sourceMetadata.fileName)) return }
 
-        val header = "----- ${metadata.fileName} | ${domain.rawValue.camelCaseToHumanReadable.uppercase()} | ${timestamp()} -----"
+        val header = "----- ${sourceMetadata.fileName} | ${domain.rawValue.camelCaseToHumanReadable.uppercase()} | ${timestamp()} -----"
         val footer = "-".repeat(header.length)
 
-        val functionName = metadata.function.substringBefore("(")
+        val functionName = sourceMetadata.function.substringBefore("(")
         write(
             "\n$header\n" +
-                "${metadata.sender}.$functionName() [${metadata.line}]${elapsedTime()}\n" +
+                "${sourceMetadata.sender}.$functionName() [${sourceMetadata.line}]${elapsedTime()}\n" +
                 "$message\n" +
                 "$footer\n",
             domain = domain,

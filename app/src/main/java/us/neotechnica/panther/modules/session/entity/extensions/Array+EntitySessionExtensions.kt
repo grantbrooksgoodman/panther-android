@@ -9,8 +9,8 @@
 package us.neotechnica.panther.modules.session.entity.extensions
 
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
-import us.neotechnica.panther.modules.networking.conversation.models.ReactionMetadata
-import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.networking.sources.conversation.models.ReactionMetadata
+import us.neotechnica.panther.modules.networking.sources.user.models.User
 
 /**
  * Returns the reaction metadata with the current user's reactions to

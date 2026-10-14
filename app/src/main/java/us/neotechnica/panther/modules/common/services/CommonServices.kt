@@ -8,7 +8,24 @@
 
 package us.neotechnica.panther.modules.common.services
 
-import us.neotechnica.panther.modules.common.contacts.services.ContactService
+import us.neotechnica.panther.modules.common.services.sources.AccountDeletionService
+import us.neotechnica.panther.modules.common.services.sources.AnalyticsService
+import us.neotechnica.panther.modules.common.services.sources.CommonPropertyLists
+import us.neotechnica.panther.modules.common.services.sources.ConnectionStatusService
+import us.neotechnica.panther.modules.common.services.sources.HapticsService
+import us.neotechnica.panther.modules.common.services.sources.InviteService
+import us.neotechnica.panther.modules.common.services.sources.MetadataService
+import us.neotechnica.panther.modules.common.services.sources.NetworkActivityIndicatorService
+import us.neotechnica.panther.modules.common.services.sources.NotificationService
+import us.neotechnica.panther.modules.common.services.sources.PermissionService
+import us.neotechnica.panther.modules.common.services.sources.PhoneNumberService
+import us.neotechnica.panther.modules.common.services.sources.PushTokenService
+import us.neotechnica.panther.modules.common.services.sources.RegionDetailService
+import us.neotechnica.panther.modules.common.services.sources.RemoteCacheService
+import us.neotechnica.panther.modules.common.services.sources.ReviewService
+import us.neotechnica.panther.modules.common.services.sources.UpdateService
+import us.neotechnica.panther.modules.common.services.sources.audio.AudioService
+import us.neotechnica.panther.modules.common.services.sources.contacts.ContactService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.interfaces.DependencyKey
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 

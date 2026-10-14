@@ -33,11 +33,11 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.extensions.darker
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.common.models.AudioFile
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceStrings
 import us.neotechnica.panther.modules.content.user.constants.UserContentExtensionsFloats
-import us.neotechnica.panther.modules.networking.message.models.AudioFile
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.durationString
 
 // MARK: - Constants Accessors

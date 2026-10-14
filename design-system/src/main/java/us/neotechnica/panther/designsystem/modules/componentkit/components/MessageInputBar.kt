@@ -69,10 +69,14 @@ private typealias Strings = MessageInputBarStrings
  * @param onTextChange Invoked as the text changes.
  * @param onSend Invoked when the send button is tapped.
  * @param onAttach Invoked when the leading attach button is tapped.
+ * @param attachMediaButtonSymbol The name of the symbol the attach
+ *   button shows when no [images] are given.
+ * @param sendButtonSymbol The name of the symbol the send button shows
+ *   when no [images] are given.
  * @param isSendEnabled Whether the send button responds to taps.
  * @param isAttachEnabled Whether the attach button responds to taps.
  * @param images The images the attach and send buttons display, or
- *   `null` to show the buttons' symbols.
+ *   `null` to show [attachMediaButtonSymbol] and [sendButtonSymbol].
  * @param focusRequester A requester that can give the text field
  *   focus, or `null`.
  * @param onFocusChanged Invoked as the text field gains or loses
@@ -88,6 +92,8 @@ fun MessageInputBar(
     onTextChange: (String) -> Unit,
     onSend: () -> Unit,
     onAttach: () -> Unit,
+    attachMediaButtonSymbol: String,
+    sendButtonSymbol: String,
     isSendEnabled: Boolean = true,
     isAttachEnabled: Boolean = true,
     images: MessageInputBarImages? = null,
@@ -121,7 +127,7 @@ fun MessageInputBar(
                 contentAlignment = Alignment.CenterStart,
             ) {
                 InputBarButton(
-                    symbol = Strings.ATTACH_MEDIA_BUTTON_IMAGE_SYSTEM_NAME,
+                    symbol = attachMediaButtonSymbol,
                     glyphColor = if (canAttach) colors.accent else colors.disabled,
                     onClick = onAttach,
                     description = Strings.ATTACH_MEDIA_BUTTON_CONTENT_DESCRIPTION,
@@ -175,7 +181,7 @@ fun MessageInputBar(
                 }
 
                 InputBarButton(
-                    symbol = Strings.SEND_BUTTON_IMAGE_SYSTEM_NAME,
+                    symbol = sendButtonSymbol,
                     glyphColor = if (canSend || isSending) colors.accent else colors.disabled,
                     onClick = onSend,
                     description = Strings.SEND_BUTTON_CONTENT_DESCRIPTION,

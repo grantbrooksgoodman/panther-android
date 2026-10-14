@@ -13,10 +13,10 @@ import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.modules.content.user.extensions.ignoredConversationIDKeys
 import us.neotechnica.panther.modules.content.user.extensions.isConsentMessage
 import us.neotechnica.panther.modules.content.user.extensions.isVisibleForCurrentUser
-import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpdatableKey
-import us.neotechnica.panther.modules.networking.user.remotelyupdatable.update
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.sources.user.models.User
+import us.neotechnica.panther.modules.networking.sources.user.remotelyupdatable.UserUpdatableKey
+import us.neotechnica.panther.modules.networking.sources.user.remotelyupdatable.update
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList

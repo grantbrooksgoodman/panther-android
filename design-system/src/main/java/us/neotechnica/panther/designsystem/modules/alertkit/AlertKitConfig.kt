@@ -59,7 +59,7 @@ object AlertKitConfig {
     /**
      * The configuration that controls translation timeout behavior.
      *
-     * The default waits 10 seconds and falls back to the original
+     * Translations wait 10 seconds and fall back to the original
      * untranslated strings on timeout.
      */
     var translationTimeoutConfig: TranslationTimeoutConfig =
@@ -113,15 +113,6 @@ object AlertKitConfig {
      */
     fun overrideTranslationHUDConfig(translationHUDConfig: HUDConfig) {
         this.translationHUDConfig = translationHUDConfig
-    }
-
-    /**
-     * Overrides the translation timeout configuration.
-     *
-     * @param translationTimeoutConfig The timeout configuration to use.
-     */
-    fun overrideTranslationTimeoutConfig(translationTimeoutConfig: TranslationTimeoutConfig) { // NIT: Unused on Android.
-        this.translationTimeoutConfig = translationTimeoutConfig
     }
 
     /**

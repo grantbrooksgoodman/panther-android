@@ -11,7 +11,7 @@ package us.neotechnica.panther.modules.session
 import us.neotechnica.panther.bundle.clientSession
 import us.neotechnica.panther.bundle.currentUserID
 import us.neotechnica.panther.bundle.users
-import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.session.entity.interfaces.DeliveryProgressIndicator
 import us.neotechnica.panther.modules.session.entity.models.EntitySession
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService

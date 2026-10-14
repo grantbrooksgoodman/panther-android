@@ -10,7 +10,8 @@ package us.neotechnica.panther.modules.content.user.models
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import us.neotechnica.panther.bundle.Application
+import us.neotechnica.panther.Application
+import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
 import us.neotechnica.panther.modules.content.user.extensions.contactPair
 import us.neotechnica.panther.modules.content.user.extensions.filteringSystemMessages
@@ -21,12 +22,11 @@ import us.neotechnica.panther.modules.content.user.extensions.isMock
 import us.neotechnica.panther.modules.content.user.extensions.textContains
 import us.neotechnica.panther.modules.content.user.extensions.withMessagesOffsetFromCurrentUserAdditionDate
 import us.neotechnica.panther.modules.content.user.extensions.withMessagesSortedByAscendingSentDate
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.networking.conversation.models.Activity
-import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
-import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Activity
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.sources.conversation.models.ConversationID
+import us.neotechnica.panther.modules.networking.sources.message.models.Message
+import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
@@ -356,7 +356,7 @@ object ConversationCellViewDataCache {
 // MARK: - Auxiliary
 
 // The decoded metadata image, resolved once per view data build.
-private val us.neotechnica.panther.modules.networking.conversation.models.ConversationMetadata.image: Bitmap?
+private val us.neotechnica.panther.modules.networking.sources.conversation.models.ConversationMetadata.image: Bitmap?
     get() {
         val data = imageData ?: return null
         return runCatching { BitmapFactory.decodeByteArray(data, 0, data.size) }.getOrNull()

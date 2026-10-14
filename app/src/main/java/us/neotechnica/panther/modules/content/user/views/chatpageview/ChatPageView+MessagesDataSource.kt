@@ -54,14 +54,14 @@ import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceFloats
 import us.neotechnica.panther.modules.content.user.extensions.contactPair
 import us.neotechnica.panther.modules.content.user.extensions.displayName
+import us.neotechnica.panther.modules.content.user.extensions.isFailedOutboxMessage
 import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.content.user.extensions.isOutboxMessage
 import us.neotechnica.panther.modules.content.user.extensions.systemLocalized
-import us.neotechnica.panther.modules.content.user.services.ChatPageViewService
-import us.neotechnica.panther.modules.networking.conversation.models.Reaction
-import us.neotechnica.panther.modules.networking.message.models.Message
+import us.neotechnica.panther.modules.content.user.services.chatpageview.ChatPageViewService
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Reaction
+import us.neotechnica.panther.modules.networking.sources.message.models.Message
 import us.neotechnica.panther.modules.session.clientSession
-import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 
 // MARK: - Constants Accessors
@@ -266,11 +266,7 @@ internal fun MessageList(
         itemsIndexed(messages, key = { _, message -> message.id }) { index, displayedMessage ->
             // System rows render the activity's localized description.
             val message = displayedMessage.systemLocalized
-            val isFailed =
-                message.isOutboxMessage &&
-                    DependencyValues.current.clientSession.outbox
-                        .entry(message.id)
-                        ?.state == OutboxEntry.State.FAILED
+            val isFailed = message.isFailedOutboxMessage
 
             val previousMessage = messages.getOrNull(index - 1)
             val showSender = isGroup && !message.isFromCurrentUser

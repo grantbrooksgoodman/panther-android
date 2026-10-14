@@ -36,6 +36,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.TextFit
@@ -44,7 +45,6 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.modules.content.shared.constants.SearchBarColors
 import us.neotechnica.panther.modules.content.shared.constants.SearchBarFloats
 import us.neotechnica.panther.modules.content.shared.constants.SearchBarStrings
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import kotlin.math.roundToInt
 

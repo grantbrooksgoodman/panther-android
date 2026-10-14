@@ -59,15 +59,6 @@ object ChatPageHeaderViewFloats {
 
     /** The vertical padding of the content view. */
     val contentViewVerticalPadding: Dp = 4.dp
-
-    // NIT: Unused on Android.
-
-    /** The background blur opacity for the active theme. */
-    fun backgroundViewBlurOpacity(isDarkModeActive: Boolean): Float =
-        if (isDarkModeActive) DARK_BACKGROUND_VIEW_BLUR_OPACITY else LIGHT_BACKGROUND_VIEW_BLUR_OPACITY
-
-    private const val DARK_BACKGROUND_VIEW_BLUR_OPACITY = 0.6f
-    private const val LIGHT_BACKGROUND_VIEW_BLUR_OPACITY = 0.7f
 }
 
 // MARK: - Color

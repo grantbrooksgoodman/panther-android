@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.views.reactiondetailspageview
 
+import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.designsystem.modules.foundation.components.ListRowView
 import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheets
 import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardService
@@ -15,8 +16,7 @@ import us.neotechnica.panther.modules.content.user.extensions.alphabeticallySort
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.content.user.extensions.uniquedByID
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage

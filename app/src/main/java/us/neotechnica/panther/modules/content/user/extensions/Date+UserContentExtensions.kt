@@ -13,9 +13,9 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.modules.content.user.constants.UserContentExtensionsFloats
 import us.neotechnica.panther.modules.content.user.constants.UserContentExtensionsStrings
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.weekdayString
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.localization.models.LocalizationSource

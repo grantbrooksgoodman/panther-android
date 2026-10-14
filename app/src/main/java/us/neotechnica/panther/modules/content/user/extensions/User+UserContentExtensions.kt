@@ -11,10 +11,10 @@ package us.neotechnica.panther.modules.content.user.extensions
 import us.neotechnica.panther.bundle.currentUserID
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.services.commonServices
-import us.neotechnica.panther.modules.networking.user.models.DeviceID
-import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpdatableKey
-import us.neotechnica.panther.modules.networking.user.remotelyupdatable.update
+import us.neotechnica.panther.modules.networking.sources.user.models.DeviceID
+import us.neotechnica.panther.modules.networking.sources.user.models.User
+import us.neotechnica.panther.modules.networking.sources.user.remotelyupdatable.UserUpdatableKey
+import us.neotechnica.panther.modules.networking.sources.user.remotelyupdatable.update
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty

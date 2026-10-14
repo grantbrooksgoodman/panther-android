@@ -31,7 +31,7 @@ import us.neotechnica.panther.designsystem.modules.foundation.modifiers.Swipe
 import us.neotechnica.panther.designsystem.modules.foundation.modifiers.onSwipe
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.content.onboarding.components.InstructionView
+import us.neotechnica.panther.modules.content.onboarding.components.instructionview.InstructionView
 import us.neotechnica.panther.modules.content.onboarding.constants.VerifyNumberPageViewColors
 import us.neotechnica.panther.modules.content.onboarding.constants.VerifyNumberPageViewFloats
 import us.neotechnica.panther.modules.content.shared.components.PhoneNumberTextField

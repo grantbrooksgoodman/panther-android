@@ -102,12 +102,6 @@ object MessageInputBarStrings {
     /** The accessibility description of the attach media button. */
     const val ATTACH_MEDIA_BUTTON_CONTENT_DESCRIPTION = "Attach media"
 
-    /** The system name of the attach media button image. */
-    const val ATTACH_MEDIA_BUTTON_IMAGE_SYSTEM_NAME = "plus"
-
     /** The accessibility description of the send button. */
     const val SEND_BUTTON_CONTENT_DESCRIPTION = "Send"
-
-    /** The system name of the send button image. */
-    const val SEND_BUTTON_IMAGE_SYSTEM_NAME = "arrow.up.circle.fill"
 }

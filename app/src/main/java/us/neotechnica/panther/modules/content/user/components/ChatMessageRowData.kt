@@ -9,8 +9,8 @@
 package us.neotechnica.panther.modules.content.user.components
 
 import androidx.compose.ui.graphics.ImageBitmap
-import us.neotechnica.panther.modules.networking.conversation.models.Reaction
-import us.neotechnica.panther.modules.networking.message.models.Message
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Reaction
+import us.neotechnica.panther.modules.networking.sources.message.models.Message
 
 /**
  * The display inputs for a single chat row.

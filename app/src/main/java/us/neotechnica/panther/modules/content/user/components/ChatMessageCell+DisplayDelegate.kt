@@ -41,7 +41,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.common.services.AttributeDetectionService
+import us.neotechnica.panther.modules.common.services.sources.AttributeDetectionService
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewStrings

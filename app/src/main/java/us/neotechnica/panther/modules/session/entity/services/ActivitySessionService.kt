@@ -10,16 +10,16 @@ package us.neotechnica.panther.modules.session.entity.services
 
 import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
-import us.neotechnica.panther.modules.networking.conversation.models.Activity
-import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
-import us.neotechnica.panther.modules.networking.conversation.models.MessageRecipientConsentAcknowledgementData
-import us.neotechnica.panther.modules.networking.conversation.models.Participant
-import us.neotechnica.panther.modules.networking.conversation.models.PenPalsSharingData
-import us.neotechnica.panther.modules.networking.conversation.remotelyupdatable.ConversationUpdatableKey
-import us.neotechnica.panther.modules.networking.conversation.remotelyupdatable.updateValues
-import us.neotechnica.panther.modules.networking.conversation.services.ConversationService
-import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Activity
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.sources.conversation.models.ConversationID
+import us.neotechnica.panther.modules.networking.sources.conversation.models.MessageRecipientConsentAcknowledgementData
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Participant
+import us.neotechnica.panther.modules.networking.sources.conversation.models.PenPalsSharingData
+import us.neotechnica.panther.modules.networking.sources.conversation.remotelyupdatable.ConversationUpdatableKey
+import us.neotechnica.panther.modules.networking.sources.conversation.remotelyupdatable.updateValues
+import us.neotechnica.panther.modules.networking.sources.conversation.services.ConversationService
+import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath

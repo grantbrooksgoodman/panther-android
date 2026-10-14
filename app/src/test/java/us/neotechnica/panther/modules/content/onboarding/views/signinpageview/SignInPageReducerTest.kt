@@ -17,8 +17,8 @@ import org.junit.Test
 import us.neotechnica.panther.bundle.navigators.OnboardingNavigatorState
 import us.neotechnica.panther.bundle.navigators.OnboardingRoute
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
-import us.neotechnica.panther.modules.common.services.CommonPropertyLists
-import us.neotechnica.panther.modules.common.services.RegionDetailService
+import us.neotechnica.panther.modules.common.services.sources.CommonPropertyLists
+import us.neotechnica.panther.modules.common.services.sources.RegionDetailService
 import us.neotechnica.panther.modules.content.onboarding.dependencies.onboardingService
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.RootNavigatorState

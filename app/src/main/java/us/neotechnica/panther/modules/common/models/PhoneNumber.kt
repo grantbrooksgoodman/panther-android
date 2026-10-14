@@ -10,8 +10,8 @@ package us.neotechnica.panther.modules.common.models
 
 import com.google.i18n.phonenumbers.NumberParseException
 import com.google.i18n.phonenumbers.PhoneNumberUtil
-import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.modules.common.services.sources.RegionDetailService
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.common.interfaces.Serializable

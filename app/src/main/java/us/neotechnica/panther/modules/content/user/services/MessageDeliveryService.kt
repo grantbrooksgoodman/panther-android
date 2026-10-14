@@ -13,26 +13,29 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
 import us.neotechnica.panther.modules.common.models.ContactPair
-import us.neotechnica.panther.modules.common.services.AnalyticsService
-import us.neotechnica.panther.modules.common.services.HapticsService
+import us.neotechnica.panther.modules.common.models.MediaFile
 import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.modules.common.services.sources.AnalyticsService
+import us.neotechnica.panther.modules.common.services.sources.HapticsService
 import us.neotechnica.panther.modules.content.user.extensions.drainEffects
 import us.neotechnica.panther.modules.content.user.extensions.isMock
 import us.neotechnica.panther.modules.content.user.extensions.uniquedByID
 import us.neotechnica.panther.modules.content.user.extensions.users
 import us.neotechnica.panther.modules.content.user.models.ContextMenuInteraction
 import us.neotechnica.panther.modules.content.user.models.MessageDeliveryServiceEffectID
-import us.neotechnica.panther.modules.content.user.services.recipientbar.RecipientBarService
-import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.networking.message.models.MediaFile
-import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.recipientbar.RecipientBarService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.recipientbar.sources.RecipientBarLayoutService
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.entity.services.MessageSessionService
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
+import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -90,6 +93,16 @@ object MessageDeliveryService {
     private val isPenPalsConversation: Boolean
         get() = conversation?.metadata?.isPenPalsConversation == true
 
+    // The recipient bar's layout service while the new chat page is
+    // presented, or `null` otherwise.
+    private val recipientBarLayoutService: RecipientBarLayoutService?
+        get() {
+            val isNewChatPagePresented =
+                DependencyValues.current.navigation.state.value.userContent.stack
+                    .lastOrNull() == UserContentNavigatorState.SeguePaths.NewChat
+            return if (isNewChatPagePresented) RecipientBarService.layout else null
+        }
+
     private val selectedContactPairs: List<ContactPair>
         get() = RecipientBarService.contactSelectionUI.selectedContactPairs.value
 
@@ -142,6 +155,11 @@ object MessageDeliveryService {
 
         hapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
 
+        // On the new chat page, the recipient bar and the done button stay
+        // disabled until the page receives the sent message or the send
+        // throws.
+        recipientBarLayoutService?.setIsUserInteractionEnabled(false)
+
         val currentConversation = conversation
         val currentUser = userSession.currentUser
         var outboxEntryID: String? = null
@@ -185,6 +203,7 @@ object MessageDeliveryService {
                 outbox.markFailed(id)
                 Logger.log(exception)
             } else {
+                recipientBarLayoutService?.setIsUserInteractionEnabled(true)
                 throw exception
             }
         } finally {
@@ -205,6 +224,11 @@ object MessageDeliveryService {
         if (recipients.isEmpty()) return
 
         hapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
+
+        // On the new chat page, the recipient bar and the done button stay
+        // disabled until the page receives the sent message or the send
+        // throws.
+        recipientBarLayoutService?.setIsUserInteractionEnabled(false)
 
         val currentConversation = conversation
         val currentUser = userSession.currentUser
@@ -254,6 +278,7 @@ object MessageDeliveryService {
                 outbox.markFailed(id)
                 Logger.log(exception)
             } else {
+                recipientBarLayoutService?.setIsUserInteractionEnabled(true)
                 throw exception
             }
         } finally {

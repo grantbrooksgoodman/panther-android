@@ -8,14 +8,14 @@
 
 package us.neotechnica.panther.modules.content.user.views.newchatpageview
 
+import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
 import us.neotechnica.panther.bundle.navigators.UserContentRoute
-import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.modules.common.services.sources.AnalyticsService
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
-import us.neotechnica.panther.modules.content.user.services.recipientbar.RecipientBarService
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.recipientbar.RecipientBarService
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.navigation.RootNavigationService.Route
@@ -192,6 +192,7 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
     // MARK: - Auxiliary
 
     private fun reduceFirstMessageSent(state: State): ReduceResult<State, Action> {
+        RecipientBarService.layout.removeFromSuperview()
         val currentConversation = conversationSession.currentConversation ?: return ReduceResult(state)
         val titleLabelText = ConversationCellViewData(currentConversation)?.titleLabelText ?: return ReduceResult(state)
 

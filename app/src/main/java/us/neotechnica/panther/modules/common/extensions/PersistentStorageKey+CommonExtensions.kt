@@ -21,7 +21,6 @@ enum class ApplicationStorageKey(
 enum class BreadcrumbsCaptureServiceStorageKey(
     val rawValue: String,
 ) {
-    BREADCRUMBS_CAPTURE_FREQUENCY("breadcrumbsCaptureFrequency"), // NIT: Unused on Android.
     BREADCRUMBS_CAPTURE_HISTORY("breadcrumbsCaptureHistory"),
 }
 
@@ -70,7 +69,7 @@ enum class ReviewServiceStorageKey(
 enum class UpdateServiceStorageKey(
     val rawValue: String,
 ) {
-    BUILD_NUMBER_WHEN_LAST_FORCED_TO_UPDATE("buildNumberWhenLastForcedToUpdate"), // NIT: Unused on Android.
-    FIRST_POSTPONED_UPDATE("firstPostponedUpdate"), // NIT: Unused on Android.
-    RELAUNCHES_SINCE_LAST_POSTPONED_UPDATE("relaunchesSinceLastPostponedUpdate"), // NIT: Unused on Android.
+    BUILD_NUMBER_WHEN_LAST_FORCED_TO_UPDATE("buildNumberWhenLastForcedToUpdate"),
+    FIRST_POSTPONED_UPDATE("firstPostponedUpdate"),
+    RELAUNCHES_SINCE_LAST_POSTPONED_UPDATE("relaunchesSinceLastPostponedUpdate"),
 }

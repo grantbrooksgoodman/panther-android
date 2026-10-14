@@ -30,16 +30,16 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
+import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.common.models.MediaFile
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
 import us.neotechnica.panther.modules.content.user.constants.MediaMessageBubbleColors
 import us.neotechnica.panther.modules.content.user.constants.MediaMessageBubbleFloats
 import us.neotechnica.panther.modules.content.user.constants.UserContentExtensionsStrings
-import us.neotechnica.panther.modules.content.user.services.MediaMessagePreviewService
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.networking.message.models.MediaFile
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.MediaMessagePreviewService
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 
 /**

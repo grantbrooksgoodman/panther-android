@@ -8,9 +8,9 @@
 
 package us.neotechnica.panther.modules.content.user.extensions
 
-import us.neotechnica.panther.modules.common.contacts.services.ContactService
-import us.neotechnica.panther.modules.common.services.PermissionService
 import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.modules.common.services.sources.PermissionService
+import us.neotechnica.panther.modules.common.services.sources.contacts.ContactService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 
 // MARK: - Properties

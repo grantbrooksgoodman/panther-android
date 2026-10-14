@@ -26,9 +26,9 @@ import us.neotechnica.panther.designsystem.modules.developermode.interfaces.DevM
 import us.neotechnica.panther.designsystem.modules.developermode.models.DevModeAction
 import us.neotechnica.panther.designsystem.modules.developermode.services.DevModeService
 import us.neotechnica.panther.modules.common.models.PhoneNumber
-import us.neotechnica.panther.modules.networking.support.MessageDecodeEnvironment
-import us.neotechnica.panther.modules.networking.support.SessionTestEnvironment
-import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.networking.sources.support.MessageDecodeEnvironment
+import us.neotechnica.panther.modules.networking.sources.support.SessionTestEnvironment
+import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 
 /**

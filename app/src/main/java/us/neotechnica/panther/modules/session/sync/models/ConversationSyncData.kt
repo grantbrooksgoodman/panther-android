@@ -9,8 +9,8 @@
 package us.neotechnica.panther.modules.session.sync.models
 
 import us.neotechnica.panther.modules.content.user.extensions.filteringSystemMessages
-import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.networking.message.models.Message
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.sources.message.models.Message
 
 /**
  * A snapshot of a conversation's in-progress synchronization state.

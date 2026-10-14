@@ -8,10 +8,10 @@
 
 package us.neotechnica.panther.modules.content.shared.components.invitelanguagepickerview
 
+import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheets
-import us.neotechnica.panther.modules.common.services.InviteService
 import us.neotechnica.panther.modules.common.services.commonServices
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.common.services.sources.InviteService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities

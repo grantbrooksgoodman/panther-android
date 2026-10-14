@@ -31,8 +31,8 @@ import us.neotechnica.panther.designsystem.modules.foundation.components.HeaderV
 import us.neotechnica.panther.designsystem.modules.foundation.extensions.backButton
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.content.onboarding.components.InstructionView
 import us.neotechnica.panther.modules.content.onboarding.components.WheelPicker
+import us.neotechnica.panther.modules.content.onboarding.components.instructionview.InstructionView
 import us.neotechnica.panther.modules.content.user.constants.ChangeLanguagePageViewFloats
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation

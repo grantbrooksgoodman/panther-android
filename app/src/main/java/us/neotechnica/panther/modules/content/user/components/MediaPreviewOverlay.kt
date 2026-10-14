@@ -45,11 +45,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.FileProvider
+import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.modules.common.models.MediaFile
 import us.neotechnica.panther.modules.content.user.constants.MediaPreviewOverlayColors
 import us.neotechnica.panther.modules.content.user.constants.MediaPreviewOverlayFloats
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 
 /**

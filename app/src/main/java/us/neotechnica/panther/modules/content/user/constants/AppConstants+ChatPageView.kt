@@ -161,17 +161,6 @@ object ChatPageViewFloats {
         /** The drag distance that fully reveals the timestamps. */
         val revealDistance: Dp = 80.dp
     }
-
-    // NIT: Unused on Android.
-
-    /** The values of the text view delegate. */
-    object UITextViewDelegate {
-        /** The delay, in milliseconds, before the buttons' enabled state updates. */
-        const val SET_BUTTONS_IS_ENABLED_DELAY_MILLISECONDS = 100L
-
-        /** The delay, in milliseconds, before the label representation toggles. */
-        const val TOGGLE_LABEL_REPRESENTATION_DELAY_MILLISECONDS = 10L
-    }
 }
 
 // MARK: - Color

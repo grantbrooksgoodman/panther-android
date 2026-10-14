@@ -28,8 +28,8 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.constants.StackFloats
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.content.onboarding.components.InstructionView
 import us.neotechnica.panther.modules.content.onboarding.components.StatusIndicatorButton
+import us.neotechnica.panther.modules.content.onboarding.components.instructionview.InstructionView
 import us.neotechnica.panther.modules.content.onboarding.constants.PermissionsViewFloats
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel

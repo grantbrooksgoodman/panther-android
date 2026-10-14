@@ -26,16 +26,3 @@ interface TranslatedLabelStrings {
     val defaultOutputMap: List<TranslationOutputMap>
         get() = keyPairs.map { it.defaultOutputMap }
 }
-
-// NIT: Unused on Android.
-
-/**
- * A single translatable label-string key.
- *
- * The [alternate] supplies a pre-processed variant to translate in
- * place of the raw key text, when one is needed.
- */
-interface TranslatedLabelStringKey {
-    /** An optional pre-processed variant to translate. */
-    val alternate: String?
-}

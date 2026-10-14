@@ -23,7 +23,7 @@ import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceColors
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceFloats
-import us.neotechnica.panther.modules.content.user.services.DeliveryProgressIndicatorService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.DeliveryProgressIndicatorService
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues

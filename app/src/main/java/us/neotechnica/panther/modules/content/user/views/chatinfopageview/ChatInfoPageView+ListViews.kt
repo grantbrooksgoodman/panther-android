@@ -35,8 +35,8 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.componentkit.models.SFSymbol
 import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.common.contacts.components.ContactCardPresenter
 import us.neotechnica.panther.modules.content.user.components.ChatParticipantView
+import us.neotechnica.panther.modules.content.user.components.ContactCardPresenter
 import us.neotechnica.panther.modules.content.user.components.MediaItemView
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewFloats
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel

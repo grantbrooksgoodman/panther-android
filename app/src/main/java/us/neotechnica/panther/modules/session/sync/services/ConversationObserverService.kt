@@ -18,8 +18,8 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.conversationObserver
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
-import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.modules.common.dependencies.networking

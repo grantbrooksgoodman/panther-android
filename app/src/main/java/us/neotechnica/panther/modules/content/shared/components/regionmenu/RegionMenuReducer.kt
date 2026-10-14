@@ -12,10 +12,10 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.ui.platform.AndroidUiDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import us.neotechnica.panther.modules.common.services.RegionDetailService
+import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.modules.common.services.sources.RegionDetailService
 import us.neotechnica.panther.modules.content.shared.constants.RegionMenuFloats
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect

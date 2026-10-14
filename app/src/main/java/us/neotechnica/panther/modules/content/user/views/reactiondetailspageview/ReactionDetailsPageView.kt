@@ -30,7 +30,7 @@ import us.neotechnica.panther.modules.content.user.components.SquareIconImage
 import us.neotechnica.panther.modules.content.user.constants.ReactionDetailsPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.ReactionDetailsPageViewFloats
 import us.neotechnica.panther.modules.content.user.models.SquareIconViewConfiguration
-import us.neotechnica.panther.modules.networking.conversation.models.Reaction
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Reaction
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents

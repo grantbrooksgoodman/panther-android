@@ -8,8 +8,8 @@
 
 package us.neotechnica.panther.modules.content.user.models
 
-import us.neotechnica.panther.modules.networking.message.models.AudioFile
-import us.neotechnica.panther.modules.networking.message.models.MediaFile
+import us.neotechnica.panther.modules.common.models.AudioFile
+import us.neotechnica.panther.modules.common.models.MediaFile
 
 /**
  * A message's content, as represented for display in the message list.

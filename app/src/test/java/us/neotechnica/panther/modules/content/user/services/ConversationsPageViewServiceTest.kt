@@ -27,11 +27,11 @@ import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import us.neotechnica.panther.bundle.currentConversationMetadataChanged
-import us.neotechnica.panther.modules.common.extensions.mismatchedHashAndCallingCode
-import us.neotechnica.panther.modules.common.services.PermissionService
-import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.networking.support.MessageDecodeEnvironment
-import us.neotechnica.panther.modules.networking.support.SessionTestEnvironment
+import us.neotechnica.panther.bundle.mismatchedHashAndCallingCode
+import us.neotechnica.panther.modules.common.services.sources.PermissionService
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.sources.support.MessageDecodeEnvironment
+import us.neotechnica.panther.modules.networking.sources.support.SessionTestEnvironment
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception

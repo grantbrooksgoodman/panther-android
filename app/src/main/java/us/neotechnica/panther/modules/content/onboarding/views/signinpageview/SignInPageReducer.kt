@@ -15,13 +15,13 @@ import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardService
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.common.models.PhoneNumber
-import us.neotechnica.panther.modules.common.services.AnalyticsService
-import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.modules.common.services.sources.AnalyticsService
+import us.neotechnica.panther.modules.common.services.sources.RegionDetailService
 import us.neotechnica.panther.modules.content.onboarding.dependencies.onboardingService
 import us.neotechnica.panther.modules.content.onboarding.extensions.verifyPhoneNumber
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
-import us.neotechnica.panther.modules.networking.user.services.UserService
+import us.neotechnica.panther.modules.networking.sources.user.services.UserService
 import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.RootNavigatorState

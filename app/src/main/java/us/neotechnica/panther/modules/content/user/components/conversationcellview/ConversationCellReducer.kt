@@ -9,12 +9,13 @@
 package us.neotechnica.panther.modules.content.user.components.conversationcellview
 
 import androidx.compose.ui.graphics.Color
+import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
 import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.designsystem.modules.foundation.extensions.darker
 import us.neotechnica.panther.designsystem.modules.foundation.extensions.lighter
-import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.modules.common.services.sources.AnalyticsService
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewFloats
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewStrings
 import us.neotechnica.panther.modules.content.user.extensions.empty
@@ -23,8 +24,7 @@ import us.neotechnica.panther.modules.content.user.extensions.isRelevant
 import us.neotechnica.panther.modules.content.user.extensions.textContains
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.content.user.services.ConversationCellViewService
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.networking.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange

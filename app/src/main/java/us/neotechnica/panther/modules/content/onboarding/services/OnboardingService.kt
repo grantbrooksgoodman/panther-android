@@ -15,10 +15,10 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.designsystem.modules.foundation.extensions.cancelAction
 import us.neotechnica.panther.modules.common.models.PhoneNumber
-import us.neotechnica.panther.modules.common.services.AnalyticsService
-import us.neotechnica.panther.modules.common.services.PushTokenService
 import us.neotechnica.panther.modules.common.services.commonServices
-import us.neotechnica.panther.modules.networking.user.services.UserService
+import us.neotechnica.panther.modules.common.services.sources.AnalyticsService
+import us.neotechnica.panther.modules.common.services.sources.PushTokenService
+import us.neotechnica.panther.modules.networking.sources.user.services.UserService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata

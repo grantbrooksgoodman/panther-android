@@ -10,7 +10,7 @@ package us.neotechnica.panther.modules.content.user.models
 
 import android.graphics.Bitmap
 import us.neotechnica.panther.modules.common.models.ContactPair
-import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.networking.sources.user.models.User
 
 /**
  * A participant in a conversation, prepared for display.

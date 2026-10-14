@@ -23,9 +23,9 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.ReactionC
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
-import us.neotechnica.panther.modules.networking.conversation.models.Reaction
-import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Reaction
+import us.neotechnica.panther.modules.networking.sources.message.models.Message
+import us.neotechnica.panther.modules.networking.sources.user.models.User
 
 // MARK: - Constants Accessors
 

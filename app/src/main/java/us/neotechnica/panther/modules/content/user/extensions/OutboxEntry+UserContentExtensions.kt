@@ -9,13 +9,13 @@
 package us.neotechnica.panther.modules.content.user.extensions
 
 import us.neotechnica.panther.modules.common.extensions.shortened
+import us.neotechnica.panther.modules.common.models.AudioFile
 import us.neotechnica.panther.modules.common.models.AudioFileExtension
-import us.neotechnica.panther.modules.networking.message.models.AudioFile
-import us.neotechnica.panther.modules.networking.message.models.AudioMessageReference
-import us.neotechnica.panther.modules.networking.message.models.HostedContentType
-import us.neotechnica.panther.modules.networking.message.models.MediaFile
-import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.modules.networking.message.models.RichMessageContent
+import us.neotechnica.panther.modules.common.models.MediaFile
+import us.neotechnica.panther.modules.networking.sources.message.models.AudioMessageReference
+import us.neotechnica.panther.modules.networking.sources.message.models.HostedContentType
+import us.neotechnica.panther.modules.networking.sources.message.models.Message
+import us.neotechnica.panther.modules.networking.sources.message.models.RichMessageContent
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.networking.modules.translation.extensions.reference

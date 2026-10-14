@@ -14,14 +14,10 @@ import kotlin.time.Duration
  * A configuration that controls how AlertKit handles translation
  * timeouts.
  *
- * Use [TranslationTimeoutConfig] to specify how long to wait for
- * translations and what to do when they time out:
- *
- * ```kotlin
- * AlertKitConfig.overrideTranslationTimeoutConfig(
- *     TranslationTimeoutConfig(5.seconds, returnsInputsOnFailure = true),
- * )
- * ```
+ * A [TranslationTimeoutConfig] specifies how long to wait for
+ * translations and what to do when they time out. AlertKit passes
+ * [AlertKitConfig.translationTimeoutConfig][us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig.translationTimeoutConfig]
+ * to its translation delegate with each request.
  *
  * @property duration The maximum duration to wait for a translation
  *   to complete.

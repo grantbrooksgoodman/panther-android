@@ -8,7 +8,7 @@
 
 package us.neotechnica.panther.modules.common.dependencies
 
-import us.neotechnica.panther.modules.common.contacts.services.ContactNameService
+import us.neotechnica.panther.modules.common.services.sources.contacts.ContactNameService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.interfaces.DependencyKey
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 

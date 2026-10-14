@@ -12,8 +12,8 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import us.neotechnica.panther.modules.common.services.CommonPropertyLists
-import us.neotechnica.panther.modules.common.services.RegionDetailService
+import us.neotechnica.panther.modules.common.services.sources.CommonPropertyLists
+import us.neotechnica.panther.modules.common.services.sources.RegionDetailService
 
 class PhoneNumberTest {
     // MARK: - Setup

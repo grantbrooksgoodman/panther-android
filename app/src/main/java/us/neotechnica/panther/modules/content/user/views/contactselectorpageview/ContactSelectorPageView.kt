@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
@@ -42,7 +43,6 @@ import us.neotechnica.panther.modules.content.shared.components.SearchBarInView
 import us.neotechnica.panther.modules.content.user.components.ContactPairListView
 import us.neotechnica.panther.modules.content.user.constants.ContactSelectorPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.ContactSelectorPageViewFloats
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 

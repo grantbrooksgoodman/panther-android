@@ -18,7 +18,6 @@ import us.neotechnica.panther.bundle.conversationCellViewData
 import us.neotechnica.panther.bundle.readReceipt
 import us.neotechnica.panther.bundle.sessionStoreDidChange
 import us.neotechnica.panther.bundle.uiCacheInvalidation
-import us.neotechnica.panther.modules.common.constants.NotificationExtensionConstants
 import us.neotechnica.panther.modules.content.user.extensions.UserDisplayNameCache
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewDataCache
@@ -26,6 +25,7 @@ import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
+import us.neotechnica.panther.notificationextension.NotificationExtensionConstants
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.CacheDomain

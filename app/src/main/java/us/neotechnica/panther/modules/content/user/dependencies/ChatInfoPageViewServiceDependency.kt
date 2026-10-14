@@ -8,7 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.dependencies
 
-import us.neotechnica.panther.modules.content.user.services.ChatInfoPageViewService
+import us.neotechnica.panther.modules.content.user.services.chatinfopageview.ChatInfoPageViewService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.interfaces.DependencyKey
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 

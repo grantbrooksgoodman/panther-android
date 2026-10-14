@@ -26,10 +26,10 @@ import org.junit.Test
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.services.AlertPresenter
 import us.neotechnica.panther.designsystem.modules.alertkit.services.PresentedAlert
-import us.neotechnica.panther.modules.networking.support.MessageDecodeEnvironment
-import us.neotechnica.panther.modules.networking.support.SessionTestEnvironment
-import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpdatableKey
+import us.neotechnica.panther.modules.networking.sources.support.MessageDecodeEnvironment
+import us.neotechnica.panther.modules.networking.sources.support.SessionTestEnvironment
+import us.neotechnica.panther.modules.networking.sources.user.models.User
+import us.neotechnica.panther.modules.networking.sources.user.remotelyupdatable.UserUpdatableKey
 import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 

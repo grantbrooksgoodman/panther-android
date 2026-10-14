@@ -39,11 +39,11 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.models.FlagImage
-import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.modules.common.services.sources.RegionDetailService
 import us.neotechnica.panther.modules.content.user.constants.UserInfoBadgeViewColors
 import us.neotechnica.panther.modules.content.user.constants.UserInfoBadgeViewFloats
-import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import androidx.compose.material3.Text as Material3Text
 

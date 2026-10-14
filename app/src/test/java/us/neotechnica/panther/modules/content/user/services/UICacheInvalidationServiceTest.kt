@@ -14,15 +14,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
-import us.neotechnica.panther.modules.common.constants.NotificationExtensionConstants
-import us.neotechnica.panther.modules.common.services.CommonPropertyLists
-import us.neotechnica.panther.modules.common.services.RegionDetailService
+import us.neotechnica.panther.modules.common.services.sources.CommonPropertyLists
+import us.neotechnica.panther.modules.common.services.sources.RegionDetailService
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewDataCache
-import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.networking.conversation.models.ConversationMetadata
-import us.neotechnica.panther.modules.networking.support.MessageDecodeEnvironment
-import us.neotechnica.panther.modules.networking.support.SessionTestEnvironment
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.sources.conversation.models.ConversationMetadata
+import us.neotechnica.panther.modules.networking.sources.support.MessageDecodeEnvironment
+import us.neotechnica.panther.modules.networking.sources.support.SessionTestEnvironment
 import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.notificationextension.NotificationExtensionConstants
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 

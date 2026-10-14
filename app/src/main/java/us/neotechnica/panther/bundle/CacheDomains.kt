@@ -8,21 +8,21 @@
 
 package us.neotechnica.panther.bundle
 
+import us.neotechnica.panther.modules.common.models.AudioFileDurationCache
 import us.neotechnica.panther.modules.common.models.ContactImageCache
-import us.neotechnica.panther.modules.common.services.CommonPropertyLists
-import us.neotechnica.panther.modules.common.services.TextToSpeechServiceCache
 import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.modules.common.services.sources.CommonPropertyLists
+import us.neotechnica.panther.modules.common.services.sources.audio.TextToSpeechServiceCache
 import us.neotechnica.panther.modules.content.user.dependencies.chatInfoPageViewService
 import us.neotechnica.panther.modules.content.user.dependencies.settingsPageViewService
 import us.neotechnica.panther.modules.content.user.extensions.UserDisplayNameCache
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewDataCache
 import us.neotechnica.panther.modules.content.user.models.QueriedContactPairCache
 import us.neotechnica.panther.modules.content.user.models.QueriedConversationCache
-import us.neotechnica.panther.modules.content.user.services.MediaMessagePreviewService
-import us.neotechnica.panther.modules.networking.conversation.models.ActivityDescriptionCache
-import us.neotechnica.panther.modules.networking.message.models.AudioFileDurationCache
-import us.neotechnica.panther.modules.networking.message.models.ReadReceiptCache
-import us.neotechnica.panther.modules.networking.user.services.UserService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.MediaMessagePreviewService
+import us.neotechnica.panther.modules.networking.sources.conversation.models.ActivityDescriptionCache
+import us.neotechnica.panther.modules.networking.sources.message.models.ReadReceiptCache
+import us.neotechnica.panther.modules.networking.sources.user.services.UserService
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues

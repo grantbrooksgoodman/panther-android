@@ -8,9 +8,10 @@
 
 package us.neotechnica.panther.modules.content.user.views.contactselectorpageview
 
+import us.neotechnica.panther.bundle.LocalizedStringKey
+import us.neotechnica.panther.bundle.noUsersWithPhoneNumber
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.common.extensions.compiledNumberStrings
-import us.neotechnica.panther.modules.common.extensions.noUsersWithPhoneNumber
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.common.services.commonServices
@@ -21,8 +22,7 @@ import us.neotechnica.panther.modules.content.user.extensions.tableViewSectionTi
 import us.neotechnica.panther.modules.content.user.extensions.users
 import us.neotechnica.panther.modules.content.user.extensions.withUser
 import us.neotechnica.panther.modules.content.user.services.ContactSelectorPageViewService
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.translation.extensions.value

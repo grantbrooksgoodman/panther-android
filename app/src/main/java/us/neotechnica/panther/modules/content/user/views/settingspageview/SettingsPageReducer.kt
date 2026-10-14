@@ -11,6 +11,7 @@ package us.neotechnica.panther.modules.content.user.views.settingspageview
 import android.graphics.Bitmap
 import androidx.annotation.DrawableRes
 import us.neotechnica.panther.R
+import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.bundle.traitCollectionChanged
 import us.neotechnica.panther.designsystem.modules.foundation.components.ListRowView
@@ -19,7 +20,6 @@ import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.content.user.dependencies.settingsPageViewService
 import us.neotechnica.panther.modules.content.user.models.BuildInfoButtonStrings
 import us.neotechnica.panther.modules.content.user.services.SettingsPageViewService
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.navigation.RootNavigationService.Route

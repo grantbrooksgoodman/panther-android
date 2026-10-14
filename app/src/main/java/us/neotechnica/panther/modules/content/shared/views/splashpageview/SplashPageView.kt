@@ -36,15 +36,15 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import kotlinx.coroutines.delay
+import us.neotechnica.panther.Application
 import us.neotechnica.panther.R
-import us.neotechnica.panther.bundle.Application
 import us.neotechnica.panther.bundle.networkActivityOccurred
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.designsystem.modules.theming.views.ThemedView
-import us.neotechnica.panther.modules.content.shared.components.GIFImageView
+import us.neotechnica.panther.modules.content.shared.components.gifimageview.GIFImageView
 import us.neotechnica.panther.modules.content.shared.constants.SplashPageViewColors
 import us.neotechnica.panther.modules.content.shared.constants.SplashPageViewFloats
 import us.neotechnica.panther.modules.content.shared.constants.SplashPageViewStrings

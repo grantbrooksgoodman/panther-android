@@ -17,11 +17,11 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
+import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.bundle.navigators.OnboardingNavigatorState
 import us.neotechnica.panther.bundle.navigators.OnboardingRoute
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.content.onboarding.dependencies.onboardingService
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues

@@ -12,15 +12,15 @@ import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.content.user.models.QueriedContactPairCache
 import us.neotechnica.panther.modules.content.user.models.QueriedConversationCache
-import us.neotechnica.panther.modules.networking.common.extensions.sortedByLatestMessageSentDate
-import us.neotechnica.panther.modules.networking.common.extensions.uniquedByID
-import us.neotechnica.panther.modules.networking.common.extensions.visibleForCurrentUser
-import us.neotechnica.panther.modules.networking.conversation.models.Activity
-import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.networking.conversation.models.MessageRecipientConsentAcknowledgementData
-import us.neotechnica.panther.modules.networking.conversation.models.Participant
-import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.networking.sources.common.extensions.sortedByLatestMessageSentDate
+import us.neotechnica.panther.modules.networking.sources.common.extensions.uniquedByID
+import us.neotechnica.panther.modules.networking.sources.common.extensions.visibleForCurrentUser
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Activity
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.sources.conversation.models.MessageRecipientConsentAcknowledgementData
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Participant
+import us.neotechnica.panther.modules.networking.sources.message.models.Message
+import us.neotechnica.panther.modules.networking.sources.user.models.User
 
 // MARK: - ContactPair
 

@@ -8,16 +8,16 @@
 
 package us.neotechnica.panther.modules.session.state.extensions
 
+import us.neotechnica.panther.modules.common.models.AudioFile
 import us.neotechnica.panther.modules.common.models.AudioFileExtension
+import us.neotechnica.panther.modules.common.models.MediaFile
 import us.neotechnica.panther.modules.common.models.MediaFileExtension
-import us.neotechnica.panther.modules.networking.common.extensions.stringList
-import us.neotechnica.panther.modules.networking.message.models.AudioFile
-import us.neotechnica.panther.modules.networking.message.models.AudioMessageReference
-import us.neotechnica.panther.modules.networking.message.models.HostedContentType
-import us.neotechnica.panther.modules.networking.message.models.MediaFile
-import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.modules.networking.message.models.ReadReceipt
-import us.neotechnica.panther.modules.networking.message.models.RichMessageContent
+import us.neotechnica.panther.modules.networking.sources.common.extensions.stringList
+import us.neotechnica.panther.modules.networking.sources.message.models.AudioMessageReference
+import us.neotechnica.panther.modules.networking.sources.message.models.HostedContentType
+import us.neotechnica.panther.modules.networking.sources.message.models.Message
+import us.neotechnica.panther.modules.networking.sources.message.models.ReadReceipt
+import us.neotechnica.panther.modules.networking.sources.message.models.RichMessageContent
 import us.neotechnica.panther.networking.modules.translation.models.TranslationReference
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestampDateFormatter

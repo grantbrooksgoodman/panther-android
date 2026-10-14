@@ -16,6 +16,7 @@ import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import us.neotechnica.panther.R
+import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
 import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.designsystem.modules.foundation.components.GroupedListView
@@ -25,7 +26,6 @@ import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewCol
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewConstants
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewFloats
 import us.neotechnica.panther.modules.content.user.models.SquareIconViewConfiguration
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.networking.modules.translation.extensions.value

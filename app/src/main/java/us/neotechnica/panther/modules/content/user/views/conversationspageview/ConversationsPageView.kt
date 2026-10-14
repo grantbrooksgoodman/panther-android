@@ -42,6 +42,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
+import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.bundle.sessionStoreDidChange
 import us.neotechnica.panther.bundle.traitCollectionChanged
 import us.neotechnica.panther.bundle.updatedContactPairArchive
@@ -60,7 +61,6 @@ import us.neotechnica.panther.modules.content.user.constants.ConversationCellVie
 import us.neotechnica.panther.modules.content.user.constants.ConversationsPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.ConversationsPageViewConstants
 import us.neotechnica.panther.modules.content.user.constants.ConversationsPageViewFloats
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.localization.models.localized

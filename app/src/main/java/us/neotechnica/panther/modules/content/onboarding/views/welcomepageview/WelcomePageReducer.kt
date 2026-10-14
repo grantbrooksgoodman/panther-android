@@ -8,16 +8,16 @@
 
 package us.neotechnica.panther.modules.content.onboarding.views.welcomepageview
 
+import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.bundle.navigators.OnboardingNavigatorState
 import us.neotechnica.panther.bundle.navigators.OnboardingRoute
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.designsystem.modules.theming.models.Themes
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
-import us.neotechnica.panther.modules.common.services.NotificationService
 import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.modules.common.services.sources.NotificationService
 import us.neotechnica.panther.modules.content.onboarding.dependencies.onboardingService
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation

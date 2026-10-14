@@ -8,8 +8,8 @@
 
 package us.neotechnica.panther.modules.content.user.extensions
 
-import us.neotechnica.panther.modules.networking.conversation.models.Activity
-import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Activity
+import us.neotechnica.panther.modules.networking.sources.user.models.User
 
 /**
  * A Boolean value that indicates whether the action added the

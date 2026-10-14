@@ -12,8 +12,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import us.neotechnica.panther.bundle.messages
 import us.neotechnica.panther.bundle.outbox
-import us.neotechnica.panther.modules.networking.message.models.MediaFile
-import us.neotechnica.panther.modules.networking.user.services.UserService
+import us.neotechnica.panther.modules.common.models.MediaFile
+import us.neotechnica.panther.modules.networking.sources.user.services.UserService
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
@@ -74,8 +74,8 @@ suspend fun MessageOutboxService.retry(entryID: String) {
 
 private suspend fun sendPayload(
     entry: OutboxEntry,
-    conversation: us.neotechnica.panther.modules.networking.conversation.models.Conversation,
-    recipients: List<us.neotechnica.panther.modules.networking.user.models.User>,
+    conversation: us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation,
+    recipients: List<us.neotechnica.panther.modules.networking.sources.user.models.User>,
 ) {
     when (val payload = entry.payload) {
         is OutboxEntry.Payload.Audio ->

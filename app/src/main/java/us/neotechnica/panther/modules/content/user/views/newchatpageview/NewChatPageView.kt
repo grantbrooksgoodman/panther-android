@@ -48,17 +48,17 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.content.user.components.ContactPairListView
 import us.neotechnica.panther.modules.content.user.components.DeliveryProgressView
-import us.neotechnica.panther.modules.content.user.components.RecipientBar
-import us.neotechnica.panther.modules.content.user.components.RegisterContentPickerLaunchers
 import us.neotechnica.panther.modules.content.user.components.anyOutboxSending
+import us.neotechnica.panther.modules.content.user.components.contentpickerview.RegisterContentPickerLaunchers
+import us.neotechnica.panther.modules.content.user.components.recipientbar.RecipientBar
 import us.neotechnica.panther.modules.content.user.components.rememberRegisteredDeliveryProgressIndicatorService
 import us.neotechnica.panther.modules.content.user.constants.NewChatPageViewColors
-import us.neotechnica.panther.modules.content.user.services.InputBarConfigService
-import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
-import us.neotechnica.panther.modules.content.user.services.recipientbar.RecipientBarLayoutService
-import us.neotechnica.panther.modules.content.user.services.recipientbar.RecipientBarService
-import us.neotechnica.panther.modules.content.user.services.recipientbar.RecipientBarTableViewService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.MediaActionHandlerService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.inputbar.sources.InputBarConfigService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.recipientbar.RecipientBarService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.recipientbar.sources.RecipientBarLayoutService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.recipientbar.sources.RecipientBarTableViewService
 import us.neotechnica.panther.modules.content.user.views.chatpageview.ChatPageView
 import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageView
 import us.neotechnica.panther.modules.content.user.views.newchatpageview.NewChatPageReducer.Action
@@ -166,6 +166,8 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
                     onTextChange = { viewModel.send(Action.InputChanged(it)) },
                     onSend = { viewModel.send(Action.SendTapped) },
                     onAttach = { MediaActionHandlerService.attachMediaButtonTapped() },
+                    attachMediaButtonSymbol = InputBarConfigService.attachMediaButtonImage(),
+                    sendButtonSymbol = InputBarConfigService.sendButtonImage(),
                     isSendEnabled = selectedContactPairs.isNotEmpty() && !isTextFieldFirstResponder && state.inputText.isNotBlank(),
                     isAttachEnabled = !isTextFieldFirstResponder,
                     images = InputBarConfigService.images(),

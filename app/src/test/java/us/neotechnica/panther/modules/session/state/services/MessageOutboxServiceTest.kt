@@ -15,8 +15,9 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import us.neotechnica.panther.bundle.messageOutbox
 import us.neotechnica.panther.modules.common.models.MediaFileExtension
+import us.neotechnica.panther.modules.networking.sources.common.extensions.SessionStoreStorageKey
+import us.neotechnica.panther.modules.networking.sources.common.extensions.sessionStore
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
@@ -41,7 +42,7 @@ class MessageOutboxServiceTest {
     @Test
     fun `decodes legacy text entry`() {
         Persistent.setString(
-            PersistentStorageKey.messageOutbox,
+            PersistentStorageKey.sessionStore(SessionStoreStorageKey.MESSAGE_OUTBOX),
             """[{"id":"outbox-1","conversationIDKey":"c1","fromAccountID":"u1","recipientUserIDs":["u2"],""" +
                 """"text":"hello","mediaRelativePath":null,"isPenPalsConversation":false,"createdDate":1000,""" +
                 """"attemptCount":1,"lastAttemptDate":null,"reservedRemoteID":null,"state":"failed"}]""",
@@ -57,7 +58,7 @@ class MessageOutboxServiceTest {
     @Test
     fun `decodes legacy media entry`() {
         Persistent.setString(
-            PersistentStorageKey.messageOutbox,
+            PersistentStorageKey.sessionStore(SessionStoreStorageKey.MESSAGE_OUTBOX),
             """[{"id":"outbox-2","conversationIDKey":"c1","fromAccountID":"u1","recipientUserIDs":["u2"],""" +
                 """"text":"","mediaRelativePath":"media/image.jpeg","isPenPalsConversation":false,"createdDate":1000,""" +
                 """"attemptCount":1,"lastAttemptDate":null,"reservedRemoteID":null,"state":"failed"}]""",
@@ -102,14 +103,14 @@ class MessageOutboxServiceTest {
     @Test
     fun `migrates legacy archive to file store and clears the string`() {
         Persistent.setString(
-            PersistentStorageKey.messageOutbox,
+            PersistentStorageKey.sessionStore(SessionStoreStorageKey.MESSAGE_OUTBOX),
             """[{"id":"outbox-4","conversationIDKey":"c1","fromAccountID":"u1","recipientUserIDs":["u2"],""" +
                 """"text":"migrated","mediaRelativePath":null,"isPenPalsConversation":false,"createdDate":1000,""" +
                 """"attemptCount":1,"lastAttemptDate":null,"reservedRemoteID":null,"state":"failed"}]""",
         )
         MessageOutboxService.reloadForTesting()
 
-        assertNull(Persistent.string(PersistentStorageKey.messageOutbox))
+        assertNull(Persistent.string(PersistentStorageKey.sessionStore(SessionStoreStorageKey.MESSAGE_OUTBOX)))
         val entry = MessageOutboxService.entry("outbox-4")
         assertNotNull(entry)
         assertTrue(entry!!.payload is OutboxEntry.Payload.Text)

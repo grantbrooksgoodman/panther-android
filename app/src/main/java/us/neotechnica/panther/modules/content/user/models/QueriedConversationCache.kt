@@ -8,7 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.models
 
-import us.neotechnica.panther.modules.networking.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 
 /**

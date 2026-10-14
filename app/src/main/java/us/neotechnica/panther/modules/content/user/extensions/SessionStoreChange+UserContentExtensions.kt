@@ -8,7 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.extensions
 
-import us.neotechnica.panther.modules.networking.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
 
 /**

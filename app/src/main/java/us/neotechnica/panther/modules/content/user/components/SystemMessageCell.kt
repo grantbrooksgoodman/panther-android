@@ -25,7 +25,7 @@ import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.modules.content.user.constants.SystemMessageCellColors
 import us.neotechnica.panther.modules.content.user.constants.SystemMessageCellFloats
 import us.neotechnica.panther.modules.content.user.extensions.attributedSystemString
-import us.neotechnica.panther.modules.networking.message.models.Message
+import us.neotechnica.panther.modules.networking.sources.message.models.Message
 
 // MARK: - Constants Accessors
 

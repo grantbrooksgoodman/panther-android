@@ -13,9 +13,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
-import us.neotechnica.panther.modules.content.user.services.ReadReceiptService
-import us.neotechnica.panther.modules.networking.conversation.models.Reaction
-import us.neotechnica.panther.modules.networking.message.models.Message
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.ReadReceiptService
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Reaction
+import us.neotechnica.panther.modules.networking.sources.message.models.Message
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.models.ReactionSessionServiceEffectID
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues

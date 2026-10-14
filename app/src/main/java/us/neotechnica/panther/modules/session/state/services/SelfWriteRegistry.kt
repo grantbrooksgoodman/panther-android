@@ -8,7 +8,7 @@
 
 package us.neotechnica.panther.modules.session.state.services
 
-import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
+import us.neotechnica.panther.modules.networking.sources.conversation.models.ConversationID
 import us.neotechnica.panther.modules.session.state.models.SelfWriteRecord
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 

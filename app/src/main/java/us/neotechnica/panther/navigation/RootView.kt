@@ -33,7 +33,7 @@ import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnima
 import us.neotechnica.panther.modules.content.onboarding.views.OnboardingContainerView
 import us.neotechnica.panther.modules.content.shared.views.splashpageview.SplashPageReducer
 import us.neotechnica.panther.modules.content.shared.views.splashpageview.SplashPageView
-import us.neotechnica.panther.modules.content.user.views.UserContentContainerView
+import us.neotechnica.panther.modules.content.user.views.usercontentcontainerview.UserContentContainerView
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents

@@ -10,7 +10,7 @@ package us.neotechnica.panther.modules.content.user.views.changelanguagepageview
 
 import us.neotechnica.panther.bundle.traitCollectionChanged
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
-import us.neotechnica.panther.modules.content.onboarding.components.InstructionViewStrings
+import us.neotechnica.panther.modules.content.onboarding.components.instructionview.InstructionViewStrings
 import us.neotechnica.panther.modules.content.user.dependencies.changeLanguagePageViewService
 import us.neotechnica.panther.modules.content.user.dependencies.settingsPageViewService
 import us.neotechnica.panther.modules.content.user.services.ChangeLanguagePageViewService

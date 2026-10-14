@@ -15,6 +15,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
+import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewStrings
@@ -23,10 +24,9 @@ import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.content.user.extensions.isMock
 import us.neotechnica.panther.modules.content.user.extensions.isOutboxMessage
-import us.neotechnica.panther.modules.content.user.services.AlternateMessageService
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.AlternateMessageService
+import us.neotechnica.panther.modules.networking.sources.message.models.Message
+import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.formattedShortString
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.languageExonym
 import us.neotechnica.panther.subsystem.modules.localization.models.localized

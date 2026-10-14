@@ -39,13 +39,15 @@ import us.neotechnica.panther.modules.content.user.constants.ChatPageViewStrings
 import us.neotechnica.panther.modules.content.user.constants.UserContentExtensionsColors
 import us.neotechnica.panther.modules.content.user.dependencies.chatPageViewService
 import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
+import us.neotechnica.panther.modules.content.user.extensions.isPlayingMessage
+import us.neotechnica.panther.modules.content.user.extensions.isSpeakingMessage
 import us.neotechnica.panther.modules.content.user.extensions.isSystemMessage
 import us.neotechnica.panther.modules.content.user.extensions.kind
 import us.neotechnica.panther.modules.content.user.models.MessageKind
-import us.neotechnica.panther.modules.content.user.services.AudioMessagePlaybackService
-import us.neotechnica.panther.modules.content.user.services.MediaMessagePreviewService
-import us.neotechnica.panther.modules.networking.conversation.models.Reaction
-import us.neotechnica.panther.modules.networking.message.models.Message
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.AudioMessagePlaybackService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.MediaMessagePreviewService
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Reaction
+import us.neotechnica.panther.modules.networking.sources.message.models.Message
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 
 // MARK: - Constants Accessors
@@ -140,7 +142,7 @@ private fun MessageContent(
     val alignment = if (isOwn) ContextMenuAlignment.TRAILING else ContextMenuAlignment.LEADING
     val messageLabel = remember { MessageLabel() }
 
-    val isSpeakingThisMessage = DependencyValues.current.commonServices.audio.textToSpeech.speakingMessageID == message.id
+    val isSpeakingThisMessage = message.isSpeakingMessage
     val speakingHighlightRange = if (isSpeakingThisMessage) DependencyValues.current.commonServices.audio.textToSpeech.spokenRange else null
     val isMedia = kind is MessageKind.Photo || kind is MessageKind.Video
     val isText = kind is MessageKind.Text || kind is MessageKind.AttributedText
@@ -206,7 +208,7 @@ private fun MessageKindContent(
 ) {
     val message = row.message
     val isOwn = message.isFromCurrentUser
-    val isPlayingThisMessage = audioMessagePlaybackService.playingMessageID == message.id
+    val isPlayingThisMessage = message.isPlayingMessage
 
     when (kind) {
         is MessageKind.Audio ->

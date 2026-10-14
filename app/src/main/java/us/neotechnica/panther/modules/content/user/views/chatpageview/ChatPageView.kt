@@ -33,6 +33,7 @@ import androidx.compose.ui.focus.FocusRequester
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.bundle.messageOutboxDidChange
 import us.neotechnica.panther.bundle.sessionStoreDidChange
 import us.neotechnica.panther.designsystem.modules.componentkit.components.ContextMenuHost
@@ -41,26 +42,25 @@ import us.neotechnica.panther.designsystem.modules.componentkit.components.Messa
 import us.neotechnica.panther.designsystem.modules.foundation.components.LocalPageHasAppeared
 import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
-import us.neotechnica.panther.modules.common.models.ConnectionStatusServiceEffectID
-import us.neotechnica.panther.modules.common.services.ConnectionStatusService
 import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.modules.common.services.sources.ConnectionStatusService
 import us.neotechnica.panther.modules.content.user.components.DeliveryProgressView
 import us.neotechnica.panther.modules.content.user.components.MediaPreviewOverlay
-import us.neotechnica.panther.modules.content.user.components.RegisterContentPickerLaunchers
 import us.neotechnica.panther.modules.content.user.components.anyOutboxSending
 import us.neotechnica.panther.modules.content.user.components.chatpageheaderview.ChatPageHeaderView
+import us.neotechnica.panther.modules.content.user.components.contentpickerview.RegisterContentPickerLaunchers
 import us.neotechnica.panther.modules.content.user.components.rememberRegisteredDeliveryProgressIndicatorService
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceFloats
 import us.neotechnica.panther.modules.content.user.dependencies.inputBarService
+import us.neotechnica.panther.modules.content.user.models.ConnectionStatusServiceEffectID
 import us.neotechnica.panther.modules.content.user.models.ContextMenuInteraction
 import us.neotechnica.panther.modules.content.user.services.ChatPageStateService
-import us.neotechnica.panther.modules.content.user.services.DeliveryProgressIndicatorService
-import us.neotechnica.panther.modules.content.user.services.InputBarConfigService
-import us.neotechnica.panther.modules.content.user.services.InputBarService
-import us.neotechnica.panther.modules.content.user.services.MediaMessagePreviewService
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
-import us.neotechnica.panther.modules.content.user.services.SearchInteractionService
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.DeliveryProgressIndicatorService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.MediaMessagePreviewService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.SearchInteractionService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.inputbar.InputBarService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.inputbar.sources.InputBarConfigService
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
@@ -261,6 +261,8 @@ private fun ChatInputBar(
         onTextChange = { viewModel.send(ChatPageReducer.Action.TextViewDidChange(it)) },
         onSend = { viewModel.send(ChatPageReducer.Action.DidPressSendButton) },
         onAttach = { inputBarService.actionHandler.didPressAttachMediaButton() },
+        attachMediaButtonSymbol = InputBarConfigService.attachMediaButtonImage(),
+        sendButtonSymbol = InputBarConfigService.sendButtonImage(),
         isSendEnabled = isSendButtonEnabled,
         isAttachEnabled = isAttachMediaButtonEnabled,
         images = InputBarConfigService.images(),

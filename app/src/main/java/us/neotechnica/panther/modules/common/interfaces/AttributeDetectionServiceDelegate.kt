@@ -13,12 +13,12 @@ import java.util.Date
 /**
  * The interface used to handle taps on attributes detected in text.
  *
- * [AttributeDetectionService][us.neotechnica.panther.modules.common.services.AttributeDetectionService]
+ * [AttributeDetectionService][us.neotechnica.panther.modules.common.services.sources.AttributeDetectionService]
  * detects dates, links, and phone numbers in a message's text and
  * notifies its delegate when the user taps one. Register your own
  * conformance with `registerDelegate` to customize how selections are
  * handled; otherwise,
- * [DefaultAttributeDetectionServiceDelegate][us.neotechnica.panther.modules.common.services.DefaultAttributeDetectionServiceDelegate]
+ * [DefaultAttributeDetectionServiceDelegate][us.neotechnica.panther.modules.common.services.sources.DefaultAttributeDetectionServiceDelegate]
  * is used.
  */
 interface AttributeDetectionServiceDelegate {

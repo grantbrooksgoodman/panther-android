@@ -8,14 +8,14 @@
 
 package us.neotechnica.panther.modules.content.onboarding.views.permissionpageview
 
+import us.neotechnica.panther.bundle.contactAccessDenied
 import us.neotechnica.panther.bundle.navigators.OnboardingRoute
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
-import us.neotechnica.panther.modules.common.contacts.services.ContactService
-import us.neotechnica.panther.modules.common.extensions.contactAccessDenied
-import us.neotechnica.panther.modules.common.services.PermissionService
 import us.neotechnica.panther.modules.common.services.commonServices
-import us.neotechnica.panther.modules.content.onboarding.components.InstructionViewStrings
+import us.neotechnica.panther.modules.common.services.sources.PermissionService
+import us.neotechnica.panther.modules.common.services.sources.contacts.ContactService
+import us.neotechnica.panther.modules.content.onboarding.components.instructionview.InstructionViewStrings
 import us.neotechnica.panther.modules.content.onboarding.dependencies.onboardingService
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
 import us.neotechnica.panther.navigation.Navigation

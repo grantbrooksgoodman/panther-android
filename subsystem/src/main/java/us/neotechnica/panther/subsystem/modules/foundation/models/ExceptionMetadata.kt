@@ -73,6 +73,25 @@ class ExceptionMetadata private constructor(
      */
     constructor(sender: Any) : this(sender, callSiteFrame())
 
+    /**
+     * Creates metadata for the given source location.
+     *
+     * Use this constructor to attribute an entry to a location that
+     * another component reports – such as a message received through a
+     * logger delegate – rather than to the current call site.
+     *
+     * @param sender The object or type that produced the entry.
+     * @param fileName The source file the entry originated from.
+     * @param function The function the entry originated from.
+     * @param line The line the entry originated from.
+     */
+    constructor(
+        sender: Any,
+        fileName: String,
+        function: String,
+        line: Int,
+    ) : this(sender, StackTraceElement(sender.javaClass.name, function, fileName, line))
+
     // Derives the sender from the type that declares the call site,
     // for log entries that are not given a sender of their own.
     internal constructor() : this(null, callSiteFrame())

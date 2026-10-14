@@ -35,6 +35,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.MessageContextMenu
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAction
@@ -44,16 +45,15 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.constants.StackFloats
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.common.services.DocumentExportService
+import us.neotechnica.panther.modules.common.services.sources.DocumentExportService
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewFloats
 import us.neotechnica.panther.modules.content.user.constants.MediaItemViewColors
 import us.neotechnica.panther.modules.content.user.constants.MediaItemViewFloats
 import us.neotechnica.panther.modules.content.user.constants.MediaItemViewStrings
 import us.neotechnica.panther.modules.content.user.constants.UserContentExtensionsStrings
 import us.neotechnica.panther.modules.content.user.models.MediaItemViewData
-import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
-import us.neotechnica.panther.modules.content.user.services.saveMedia
-import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.MediaActionHandlerService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.saveMedia
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
