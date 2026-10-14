@@ -102,7 +102,6 @@ object ChatPageViewServiceFloats {
 
             const val CONTACT_LABEL_SYSTEM_FONT_SIZE = 16f
             const val CONTACT_VIEW_MAXIMUM_WIDTH_DIVISOR = 2
-            const val LABEL_REPRESENTATION_ANIMATION_DURATION_MILLISECONDS = 300
             const val SELECTED_CONTACT_PAIRS_MAXIMUM = 10
             const val SUBLEVEL_COUNT = 10
         }

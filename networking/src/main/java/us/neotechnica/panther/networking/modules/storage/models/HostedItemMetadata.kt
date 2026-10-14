@@ -77,15 +77,18 @@ data class HostedItemMetadata(
 
     // MARK: - As StorageMetadata
 
-    internal fun asStorageMetadata(): FirebaseStorageMetadata =
-        FirebaseStorageMetadata
-            .Builder()
-            .apply {
-                setCacheControl(cacheControl)
-                setContentDisposition(contentDisposition)
-                setContentEncoding(contentEncoding)
-                setContentLanguage(contentLanguage)
-                setContentType(contentType)
-                customValues?.forEach { (key, value) -> setCustomMetadata(key, value) }
-            }.build()
+    // Sets only the values that are present, since the builder sends every
+    // value that is set – even an empty or null one, which hosted storage
+    // rejects for some fields. The builder is not used as a receiver: its
+    // getters share these properties' names and would shadow them.
+    internal fun asStorageMetadata(): FirebaseStorageMetadata {
+        val builder = FirebaseStorageMetadata.Builder()
+        cacheControl?.let { builder.setCacheControl(it) }
+        contentDisposition?.let { builder.setContentDisposition(it) }
+        contentEncoding?.let { builder.setContentEncoding(it) }
+        contentLanguage?.let { builder.setContentLanguage(it) }
+        contentType?.let { builder.setContentType(it) }
+        customValues?.forEach { (key, value) -> builder.setCustomMetadata(key, value) }
+        return builder.build()
+    }
 }

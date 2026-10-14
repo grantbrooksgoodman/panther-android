@@ -9,15 +9,6 @@
 package us.neotechnica.panther.modules.content.shared.constants
 
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-
-// MARK: - Float
-
-object InviteLanguagePickerViewFloats {
-    val listViewCellHorizontalPadding: Dp = 16.dp
-    val listViewCellVerticalPadding: Dp = 12.dp
-}
 
 // MARK: - Color
 

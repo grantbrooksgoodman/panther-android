@@ -21,10 +21,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -151,15 +151,21 @@ fun RecipientBar(modifier: Modifier = Modifier) {
     ) {
         Border(borderColor)
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().heightIn(min = LayoutFloats.frameHeight),
-        ) {
+        // The bar grows a row at a time to fit its contact views, which keep
+        // the inset from its edges that centering the first row in the bar's
+        // initial height gives them. The "To:" label and the select contact
+        // button stay centered on the first row, as on iOS.
+        Row(modifier = Modifier.fillMaxWidth()) {
             Components.Text(
                 LocalizedStringKey.To.localized(),
                 foregroundColor = LayoutColors.toLabelText,
                 font = Font.system(FontScale.Custom(LayoutFloats.TO_LABEL_FONT_SIZE)),
-                modifier = Modifier.padding(start = LayoutFloats.toLabelXOrigin).testTag(LayoutStrings.TO_LABEL_SEMANTIC_TAG),
+                modifier =
+                    Modifier
+                        .padding(start = LayoutFloats.toLabelXOrigin)
+                        .height(LayoutFloats.frameHeight)
+                        .wrapContentHeight()
+                        .testTag(LayoutStrings.TO_LABEL_SEMANTIC_TAG),
             )
 
             ContactViews(
@@ -169,7 +175,11 @@ fun RecipientBar(modifier: Modifier = Modifier) {
                 isUserInteractionEnabled = isUserInteractionEnabled,
                 textFieldText = textFieldText,
                 focusRequester = focusRequester,
-                modifier = Modifier.weight(1f).padding(start = LayoutFloats.textFieldXOriginIncrement),
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .padding(start = LayoutFloats.textFieldXOriginIncrement)
+                        .padding(vertical = (LayoutFloats.frameHeight - SelectionFloats.contactViewFrameHeight) / 2),
             )
 
             Icon(
@@ -180,6 +190,8 @@ fun RecipientBar(modifier: Modifier = Modifier) {
                     Modifier
                         .padding(start = LayoutFloats.selectContactButtonMinXDecrement)
                         .padding(end = LayoutFloats.selectContactButtonXOriginDecrement)
+                        .height(LayoutFloats.frameHeight)
+                        .wrapContentHeight()
                         .size(width = LayoutFloats.selectContactButtonFrameWidth, height = LayoutFloats.selectContactButtonFrameHeight)
                         .testTag(LayoutStrings.SELECT_CONTACT_BUTTON_SEMANTIC_TAG)
                         .clickable(enabled = isSelectContactButtonEnabled && isUserInteractionEnabled) {

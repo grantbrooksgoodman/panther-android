@@ -16,13 +16,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
@@ -40,7 +36,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import us.neotechnica.panther.bundle.isNewChatPageDoneToolbarButtonEnabled
 import us.neotechnica.panther.bundle.messageOutboxDidChange
-import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.MessageInputBar
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.foundation.components.HeaderView
@@ -49,13 +44,12 @@ import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardS
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.models.ContactPair
-import us.neotechnica.panther.modules.content.user.components.ContactPairCellView
+import us.neotechnica.panther.modules.content.user.components.ContactPairListView
 import us.neotechnica.panther.modules.content.user.components.DeliveryProgressView
 import us.neotechnica.panther.modules.content.user.components.RecipientBar
 import us.neotechnica.panther.modules.content.user.components.RegisterContentPickerLaunchers
 import us.neotechnica.panther.modules.content.user.components.anyOutboxSending
 import us.neotechnica.panther.modules.content.user.components.rememberRegisteredDeliveryProgressIndicatorService
-import us.neotechnica.panther.modules.content.user.constants.ContactSelectorPageViewFloats
 import us.neotechnica.panther.modules.content.user.constants.NewChatPageViewColors
 import us.neotechnica.panther.modules.content.user.services.InputBarConfigService
 import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
@@ -71,7 +65,6 @@ import us.neotechnica.panther.navigation.ChatRoute
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
-import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedStates
@@ -184,6 +177,7 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
         PageSheetView(
             isPresented = navState.chat.sheet == ChatNavigatorState.SheetPaths.ContactSelector,
             onDismissRequest = { navigation.navigate(Route.Chat(ChatRoute.Sheet(null))) },
+            ignoresBottomSafeArea = true,
         ) {
             ContactSelectorPageView(entryPoint = ContactSelectorPageView.EntryPoint.NEW_CHAT_PAGE_VIEW)
         }
@@ -243,45 +237,28 @@ private fun NewChatPageHeader(
 
 // MARK: - Suggestions Table
 
+// The recipient bar's suggestions, laid out as the contact selector's
+// list is.
 @Composable
 private fun SuggestionsTableView(
     sections: List<RecipientBarTableViewService.TableViewSection>,
     onContactPairSelected: (ContactPair) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = LocalPantherColors.current
     val listState = rememberLazyListState()
+    val contactPairsByLetter = remember(sections) { sections.associate { it.letter to it.contactPairs } }
 
     // Dismiss the keyboard once the contact list starts scrolling.
     LaunchedEffect(listState) {
         snapshotFlow { listState.isScrollInProgress }.collect { if (it) KeyboardService.resignFirstResponders() }
     }
 
-    LazyColumn(state = listState, modifier = modifier) {
-        sections.forEach { section ->
-            item(key = "section-${section.letter}") {
-                Components.Text(
-                    section.letter,
-                    foregroundColor = colors.titleText,
-                    modifier =
-                        Modifier.padding(
-                            horizontal = ContactSelectorPageViewFloats.listViewRowHorizontalPadding,
-                            vertical = ContactSelectorPageViewFloats.listViewSectionHeaderVerticalPadding,
-                        ),
-                )
-            }
-            items(section.contactPairs, key = { it.contact.encodedHash }) { contactPair ->
-                ContactPairCellView(
-                    contactPair = contactPair,
-                    modifier =
-                        Modifier
-                            .heightIn(min = ContactSelectorPageViewFloats.listViewDefaultMinListRowHeight)
-                            .padding(horizontal = ContactSelectorPageViewFloats.listViewRowHorizontalPadding),
-                    action = { onContactPairSelected(contactPair) },
-                )
-            }
-        }
-    }
+    ContactPairListView(
+        sections = contactPairsByLetter,
+        onSelect = onContactPairSelected,
+        modifier = modifier,
+        state = listState,
+    )
 }
 
 private fun buildNewChatViewModel(): ViewModel<NewChatPageReducer.State, NewChatPageReducer.Action> =

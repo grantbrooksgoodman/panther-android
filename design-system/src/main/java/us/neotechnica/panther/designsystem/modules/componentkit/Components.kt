@@ -250,9 +250,9 @@ object Components {
      * @param secondaryForegroundColor The fill of the circle behind
      *   a `.circle.fill` symbol's glyph, or `null` for a single-tone
      *   symbol.
-     * @param weight The stroke weight to request. Accepted for
-     *   signature compatibility; vector symbols carry no weight
-     *   axis.
+     * @param weight The weight to request, or `null` for the regular
+     *   weight. An SF Symbol renders in the weight where that weight
+     *   is bundled; a Material symbol has no weight.
      * @param usesIntrinsicSize Whether the symbol renders at its
      *   intrinsic size rather than scaling to its bounds. The
      *   default is `true`.
@@ -268,6 +268,28 @@ object Components {
         usesIntrinsicSize: Boolean = true,
     ) {
         if (secondaryForegroundColor != null && systemName.endsWith(CIRCLE_FILL_SUFFIX)) {
+            if (SFSymbol.resolvesToSFSymbol(systemName)) {
+                // A two-tone SF Symbol: the symbol in the secondary color,
+                // its glyph cut out over a disc in the foreground color.
+                Box(contentAlignment = Alignment.Center, modifier = modifier) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxSize(TWO_TONE_GLYPH_BACKING_FRACTION)
+                                .clip(CircleShape)
+                                .background(foregroundColor),
+                    )
+                    Icon(
+                        imageVector = SFSymbol.imageVector(systemName),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        tint = secondaryForegroundColor,
+                    )
+                }
+
+                return
+            }
+
             // A two-tone circle symbol: the glyph in the foreground color
             // over a circle in the secondary color.
             Box(
@@ -286,7 +308,7 @@ object Components {
         }
 
         Icon(
-            imageVector = SFSymbol.imageVector(systemName),
+            imageVector = SFSymbol.imageVector(systemName, weight),
             contentDescription = null,
             modifier = modifier,
             tint = foregroundColor,
@@ -330,6 +352,11 @@ object Components {
 }
 
 private const val CIRCLE_FILL_SUFFIX = ".circle.fill"
+
+// The fraction of a two-tone SF Symbol's circle covered by the disc
+// behind its cut-out glyph: wide enough to fill the glyph, and inset
+// enough that no foreground color fringes the circle's edge.
+private const val TWO_TONE_GLYPH_BACKING_FRACTION = 0.8f
 private const val TWO_TONE_GLYPH_FRACTION = 0.6f
 
 private const val CAPSULE_DISABLED_ALPHA = 0.5f

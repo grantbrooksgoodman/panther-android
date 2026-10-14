@@ -26,14 +26,16 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Panther">
-        <!-- The activity handles appearance and size changes itself;
-             recreating it would re-run the signed-in session's
-             first-appearance work, including network requests. Large
-             screens ignore the portrait lock, so rotation counts as a
-             size change there. -->
+        <!-- The activity handles appearance, size, text size, display
+             size, and input device changes itself; recreating it would
+             re-run the signed-in session's first-appearance work,
+             including network requests, where iOS reloads nothing.
+             Large screens ignore the portrait lock, so rotation counts
+             as a size change there. A language change still recreates
+             the activity, as iOS relaunches the app for one. -->
         <activity
             android:name=".MainActivity"
-            android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+            android:configChanges="colorMode|density|fontScale|fontWeightAdjustment|keyboard|keyboardHidden|mcc|mnc|navigation|orientation|screenLayout|screenSize|smallestScreenSize|touchscreen|uiMode"
             android:exported="true"
             android:label="@string/app_name"
             android:screenOrientation="portrait"

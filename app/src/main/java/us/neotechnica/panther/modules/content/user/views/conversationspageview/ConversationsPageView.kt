@@ -8,9 +8,11 @@
 
 package us.neotechnica.panther.modules.content.user.views.conversationspageview
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -25,9 +27,9 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -52,6 +54,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalFocusManager
 import us.neotechnica.panther.bundle.sessionStoreDidChange
 import us.neotechnica.panther.bundle.traitCollectionChanged
 import us.neotechnica.panther.bundle.updatedContactPairArchive
@@ -59,6 +63,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.ContextMenuHost
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
+import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.shared.components.SearchBar
@@ -76,6 +81,7 @@ import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.Dep
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
+import kotlin.math.roundToInt
 
 // MARK: - Constants Accessors
 
@@ -88,8 +94,17 @@ private typealias Floats = ConversationsPageViewFloats
  * conversations live from the session store, with search and
  * pull-to-refresh.
  *
+ * Tapping the search bar begins a search: the toolbar and title
+ * collapse, leaving the search bar and its Cancel button at the top of
+ * the page. The search lasts until the user taps Cancel, which clears
+ * the query and dismisses the keyboard. The system back gesture ends a
+ * search the same way while the page is uncovered.
+ *
  * @param viewModel The conversations page view model.
  * @param listState The list's scroll state.
+ * @param isCovered A Boolean value that indicates whether a pushed
+ *   page covers this page. While it is covered, the system back
+ *   gesture is left to the navigation stack, even during a search.
  * @param modifier The modifier for this view.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -97,11 +112,29 @@ private typealias Floats = ConversationsPageViewFloats
 fun ConversationsPageView(
     viewModel: ViewModel<ConversationsPageReducer.State, ConversationsPageReducer.Action>,
     listState: LazyListState,
+    isCovered: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
+    val focusManager = LocalFocusManager.current
     val swipeCoordinator = remember { ConversationCellSwipeCoordinator() }
+    val endSearch: () -> Unit = {
+        viewModel.send(ConversationsPageReducer.Action.SearchQueryChanged(""))
+        viewModel.send(ConversationsPageReducer.Action.IsSearchingChanged(false))
+    }
+
+    BackHandler(enabled = state.isSearching && !isCovered) {
+        focusManager.clearFocus()
+        endSearch()
+    }
+
+    // A page pushed over the list – a chat opened from the search results,
+    // say – resigns the search bar's first responder, dismissing the
+    // keyboard. The search itself stays active for the user's return.
+    LaunchedEffect(isCovered) {
+        if (isCovered && state.isSearching) focusManager.clearFocus()
+    }
 
     ContextMenuHost(modifier = modifier.then(swipeCoordinator.dismissalModifier())) {
         CompositionLocalProvider(LocalConversationCellSwipeCoordinator provides swipeCoordinator) {
@@ -115,24 +148,37 @@ fun ConversationsPageView(
                             .fillMaxSize()
                             .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
                 ) {
-                    Toolbar(state = state, viewModel = viewModel)
-
-                    Components.Text(
-                        state.strings.value(ConversationsPageViewStrings.navigationTitle),
-                        foregroundColor = colors.titleText,
-                        font = Font.systemBold(FontScale.Large),
-                        modifier = Modifier.padding(horizontal = Floats.titleHorizontalPadding, vertical = Floats.titleVerticalPadding),
-                    )
-
-                    SearchBar(
-                        query = state.searchQuery,
-                        onQueryChange = { viewModel.send(ConversationsPageReducer.Action.SearchQueryChanged(it)) },
-                        backgroundColor = colors.background,
-                        placeholderText = LocalizedStringKey.Search.localized(),
-                        onFocusChanged = { viewModel.send(ConversationsPageReducer.Action.IsSearchingChanged(it)) },
-                    )
-
-                    Spacer(modifier = Modifier.height(Floats.searchBottomSpacing))
+                    Header(
+                        isSearching = state.isSearching,
+                        toolbar = { Toolbar(state = state, viewModel = viewModel) },
+                        title = {
+                            Components.Text(
+                                state.strings.value(ConversationsPageViewStrings.navigationTitle),
+                                foregroundColor = colors.titleText,
+                                font = Font.systemBold(FontScale.Large),
+                                modifier =
+                                    Modifier.padding(
+                                        horizontal = Floats.titleHorizontalPadding,
+                                        vertical = Floats.titleVerticalPadding,
+                                    ),
+                            )
+                        },
+                    ) {
+                        // A search begins when the field gains focus and lasts until
+                        // the user taps Cancel or goes back, whether or not the keyboard
+                        // is shown.
+                        SearchBar(
+                            query = state.searchQuery,
+                            onQueryChange = { viewModel.send(ConversationsPageReducer.Action.SearchQueryChanged(it)) },
+                            backgroundColor = colors.background,
+                            placeholderText = LocalizedStringKey.Search.localized(),
+                            onFocusChanged = { isFocused ->
+                                if (isFocused) viewModel.send(ConversationsPageReducer.Action.IsSearchingChanged(true))
+                            },
+                            showsCancelButton = state.isSearching,
+                            onCancel = endSearch,
+                        )
+                    }
 
                     ConversationList(state = state, listState = listState, viewModel = viewModel)
                 }
@@ -198,7 +244,8 @@ private fun ConversationList(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = WindowInsets.systemBars.only(WindowInsetsSides.Bottom).asPaddingValues(),
+            // Search results scroll clear of the keyboard, as a SwiftUI list's do.
+            contentPadding = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues(),
             verticalArrangement = Arrangement.Top,
         ) {
             item {
@@ -236,6 +283,58 @@ private fun RowSeparator() {
                 end = ConversationCellViewFloats.rowEndPadding,
             ),
     )
+}
+
+// MARK: - Header
+
+// The toolbar, title, and search bar. As a search begins, the toolbar
+// fades in place and the title fades as it rides up with the search
+// bar, until the search bar rests at the top of the page; as the
+// search ends, the motion reverses.
+@Composable
+private fun Header(
+    isSearching: Boolean,
+    toolbar: @Composable () -> Unit,
+    title: @Composable () -> Unit,
+    searchBar: @Composable () -> Unit,
+) {
+    val searchTransitionFraction =
+        animateFloatAsState(
+            targetValue = if (isSearching) 1f else 0f,
+            animationSpec = SystemAnimation.searchTransition(),
+            label = SEARCH_TRANSITION_ANIMATION_LABEL,
+        )
+    val toolbarAndTitleAlpha =
+        animateFloatAsState(
+            targetValue = if (isSearching) 0f else 1f,
+            animationSpec = SystemAnimation.searchTransitionFade(isBeginning = isSearching),
+            label = SEARCH_TRANSITION_FADE_ANIMATION_LABEL,
+        )
+
+    Layout(contents = listOf(toolbar, title, searchBar)) { (toolbarMeasurables, titleMeasurables, searchBarMeasurables), constraints ->
+        val looseConstraints = constraints.copy(minHeight = 0)
+        val toolbarPlaceable = toolbarMeasurables.first().measure(looseConstraints)
+        val titlePlaceable = titleMeasurables.first().measure(looseConstraints)
+        val searchBarPlaceable = searchBarMeasurables.first().measure(looseConstraints)
+
+        val fraction = searchTransitionFraction.value
+        val collapsedHeight = ((toolbarPlaceable.height + titlePlaceable.height) * fraction).roundToInt()
+        val searchBarY =
+            toolbarPlaceable.height + titlePlaceable.height - collapsedHeight + (Floats.searchTopSpacing.toPx() * fraction).roundToInt()
+        val bottomSpacing = (Floats.searchBottomSpacing.toPx() * (1f - fraction)).roundToInt()
+
+        layout(constraints.maxWidth, searchBarY + searchBarPlaceable.height + bottomSpacing) {
+            // Once faded out, the toolbar and title are left unplaced so that
+            // they neither draw nor receive taps beneath the search bar.
+            val alpha = toolbarAndTitleAlpha.value
+            if (alpha > 0f) {
+                toolbarPlaceable.placeWithLayer(0, 0) { this.alpha = alpha }
+                titlePlaceable.placeWithLayer(0, toolbarPlaceable.height - collapsedHeight) { this.alpha = alpha }
+            }
+
+            searchBarPlaceable.place(0, searchBarY)
+        }
+    }
 }
 
 // MARK: - Toolbar
@@ -345,3 +444,5 @@ private fun ToolbarButton(
 
 private const val COMPOSE_ANIMATION_LABEL = "ComposeToolbarButton"
 private const val MILLISECONDS_PER_SECOND = 1000f
+private const val SEARCH_TRANSITION_ANIMATION_LABEL = "ConversationsPageSearchTransition"
+private const val SEARCH_TRANSITION_FADE_ANIMATION_LABEL = "ConversationsPageSearchTransitionFade"

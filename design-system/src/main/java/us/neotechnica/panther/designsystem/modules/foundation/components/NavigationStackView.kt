@@ -19,8 +19,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -46,6 +49,10 @@ private typealias Floats = SystemAnimationFloats
  * fraction of its width toward the leading edge and dims; the incoming
  * page casts a shadow along its leading edge. A pop reverses the
  * motion. Both run on UIKit's navigation spring.
+ *
+ * While [SystemAnimation.usesAppleAnimations] is `false`, the pages
+ * instead slide past one another at their full width, without dimming
+ * or a shadow, on the navigation transition's Android counterpart.
  *
  * Pass [isRootPersistent] to keep [root] composed beneath the stack
  * for its whole lifetime – so that its state survives pushes – rather
@@ -110,6 +117,7 @@ fun <T : Any> NavigationStackView(
                     transitionSpec = { SystemAnimation.navigationTransition() },
                 ) { state -> if (state == EnterExitState.Visible) 1f else 0f }
             val isEntering = transition.targetState == EnterExitState.Visible
+            val hasAppeared = remember(transition) { derivedStateOf { transition.currentState == EnterExitState.Visible } }
 
             if (page == null && isRootPersistent) {
                 SideEffect { rootPresence.value = presence }
@@ -127,11 +135,24 @@ fun <T : Any> NavigationStackView(
                             isPush = isPush,
                         ).background(colors.background),
             ) {
-                if (page == null) root(Modifier.fillMaxSize()) else destination(page)
+                CompositionLocalProvider(LocalPageHasAppeared provides hasAppeared) {
+                    if (page == null) root(Modifier.fillMaxSize()) else destination(page)
+                }
             }
         }
     }
 }
+
+/**
+ * Whether the page has finished appearing – the counterpart of UIKit's
+ * `viewDidAppear(_:)`.
+ *
+ * Within a [NavigationStackView], a pushed page's value becomes `true`
+ * once the push that presents it settles; the page at the top of the
+ * stack when it is first composed has appeared from the start. Outside
+ * a navigation stack, the value is always `true`.
+ */
+val LocalPageHasAppeared = compositionLocalOf<State<Boolean>> { mutableStateOf(true) }
 
 // MARK: - Auxiliary
 
@@ -163,22 +184,26 @@ private class NavigationTransition(
 // gone. The moving page – the incoming page of a push or the outgoing
 // page of a pop – slides its full width and casts a fading shadow along
 // its leading edge; the page beneath it slides a fraction of its width
-// and dims.
+// and dims. Without iOS animations, both pages slide their full width,
+// undecorated.
 private fun Modifier.navigationTransition(
     presence: () -> Float,
     isMovingPage: Boolean,
     isPush: Boolean,
-): Modifier =
-    graphicsLayer {
+): Modifier {
+    val usesAppleAnimations = SystemAnimation.usesAppleAnimations
+    val parallaxFraction = if (usesAppleAnimations) Floats.NAVIGATION_PARALLAX_FRACTION else 1f
+    return graphicsLayer {
         val hiddenFraction = 1f - presence()
         translationX =
             if (isMovingPage) {
                 size.width * hiddenFraction
             } else {
-                -Floats.NAVIGATION_PARALLAX_FRACTION * size.width * hiddenFraction
+                -parallaxFraction * size.width * hiddenFraction
             }
     }.drawWithContent {
         drawContent()
+        if (!usesAppleAnimations) return@drawWithContent
         val hiddenFraction = 1f - presence()
         if (!isMovingPage) {
             if (hiddenFraction > 0f) drawRect(Color.Black, alpha = Floats.NAVIGATION_DIMMING_ALPHA * hiddenFraction)
@@ -205,6 +230,7 @@ private fun Modifier.navigationTransition(
             topLeft = Offset(-shadowWidth, 0f),
         )
     }
+}
 
 private const val ANIMATION_LABEL = "NavigationStackView"
 private const val PRESENCE_ANIMATION_LABEL = "NavigationStackViewPresence"

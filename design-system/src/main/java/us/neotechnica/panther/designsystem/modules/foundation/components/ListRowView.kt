@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
@@ -280,6 +281,7 @@ private fun LabelView(
                     Components.Symbol(
                         ListRowStrings.CHEVRON_IMAGE_SYSTEM_NAME,
                         foregroundColor = if (configuration.isEnabled) colors.subtitleText else colors.disabled,
+                        weight = FontWeight.SemiBold,
                         usesIntrinsicSize = false,
                         modifier =
                             Modifier.sizeIn(

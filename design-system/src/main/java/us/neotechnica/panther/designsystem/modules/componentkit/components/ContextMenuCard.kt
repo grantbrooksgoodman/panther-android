@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAction
@@ -70,11 +72,21 @@ internal fun ContextMenuCard(
                         font = Font.system,
                         modifier = Modifier.weight(1f),
                     )
-                    Components.Symbol(
-                        action.systemImageName,
-                        foregroundColor = contentColor,
-                        modifier = Modifier.size(MENU_ICON_SIZE),
-                    )
+                    val imageResourceID = action.imageResourceID
+                    if (imageResourceID != null) {
+                        Icon(
+                            painter = painterResource(imageResourceID),
+                            contentDescription = null,
+                            modifier = Modifier.size(MENU_ICON_SIZE),
+                            tint = contentColor,
+                        )
+                    } else {
+                        Components.Symbol(
+                            action.systemImageName,
+                            foregroundColor = contentColor,
+                            modifier = Modifier.size(MENU_ICON_SIZE),
+                        )
+                    }
                 }
 
                 if (index != actions.lastIndex) {

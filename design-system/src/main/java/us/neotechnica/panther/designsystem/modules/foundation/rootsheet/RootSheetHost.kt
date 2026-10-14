@@ -31,6 +31,7 @@ fun RootSheetHost() {
         item = sheet,
         onDismissRequest = { RootSheets.dismiss() },
         isInteractiveDismissDisabled = sheet?.interactiveDismissDisabled == true,
+        ignoresBottomSafeArea = sheet?.ignoresBottomSafeArea == true,
     ) { presentedSheet ->
         presentedSheet.content()
     }

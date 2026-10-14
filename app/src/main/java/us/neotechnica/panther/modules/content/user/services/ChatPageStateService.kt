@@ -9,6 +9,7 @@
 package us.neotechnica.panther.modules.content.user.services
 
 import us.neotechnica.panther.bundle.chatPageState
+import us.neotechnica.panther.modules.content.user.extensions.drainEffects
 import us.neotechnica.panther.modules.content.user.models.ChatPageStateServiceEffectID
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
@@ -77,7 +78,7 @@ object ChatPageStateService {
 
     private fun didSetIsPresented() {
         val registry = if (isPresented) uponIsPresentedChangedToTrue else uponIsPresentedChangedToFalse
-        val effects = drainEffects(registry)
+        val effects = registry.drainEffects()
         if (effects.isEmpty()) return
 
         Logger.log(
@@ -87,13 +88,4 @@ object ChatPageStateService {
         )
         effects.values.forEach { it() }
     }
-
-    private fun drainEffects(
-        effects: LockIsolated<Map<ChatPageStateServiceEffectID, () -> Unit>>,
-    ): Map<ChatPageStateServiceEffectID, () -> Unit> =
-        effects.withValue { ref ->
-            val drained = ref.value
-            if (drained.isNotEmpty()) ref.value = emptyMap()
-            drained
-        }
 }

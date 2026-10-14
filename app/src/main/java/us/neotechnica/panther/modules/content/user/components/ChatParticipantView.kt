@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.DpSize
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.designsystem.modules.componentkit.components.DisclosureIndicator
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewColors
@@ -128,11 +129,7 @@ private fun RowContent(
             }
         }
         Spacer(modifier = Modifier.weight(1f))
-        Components.Symbol(
-            "chevron.forward",
-            foregroundColor = colors.subtitleText,
-            modifier = Modifier.size(ChatInfoPageViewFloats.chevronGlyphSize),
-        )
+        DisclosureIndicator(foregroundColor = colors.subtitleText)
     }
 }
 

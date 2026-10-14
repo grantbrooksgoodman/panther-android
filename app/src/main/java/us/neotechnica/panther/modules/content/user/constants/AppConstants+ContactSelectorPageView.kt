@@ -17,9 +17,6 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 // MARK: - Float
 
 object ContactSelectorPageViewFloats {
-    val listViewDefaultMinListRowHeight: Dp = 44.dp
-    val listViewRowHorizontalPadding: Dp = 20.dp
-    val listViewSectionHeaderVerticalPadding: Dp = 6.dp
     val noResultsLabelHorizontalPadding: Dp = 10.dp
 
     const val CANCEL_TOOLBAR_BUTTON_SYSTEM_FONT_SIZE = 17f
@@ -28,6 +25,8 @@ object ContactSelectorPageViewFloats {
 // MARK: - Color
 
 object ContactSelectorPageViewColors {
+    val listViewDarkBackground = Color(0xFF1C1C1E)
+    val listViewLightBackground = Color.White
     val noResultsLabelAlternateForeground = Color(0xFF007AFF)
     val tintedGlassToolbarButtonForeground = Color.White
 

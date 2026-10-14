@@ -24,6 +24,7 @@ import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.common.models.GuardedOperation
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -35,6 +36,10 @@ class Auth : AuthDelegate {
     // MARK: - Properties
 
     private val firebaseAuth by lazy { FirebaseAuth.getInstance() }
+
+    // The token with which to request another code for each phone number
+    // sent one, keyed by the number in E.164 format.
+    private val resendingTokens = ConcurrentHashMap<String, PhoneAuthProvider.ForceResendingToken>()
 
     // MARK: - AuthDelegate Conformance
 
@@ -99,6 +104,10 @@ class Auth : AuthDelegate {
 
     // MARK: - Auxiliary
 
+    // Each request sends a new code, as on iOS. A repeated request for a
+    // number already sent a code passes that code's resending token:
+    // without it, Firebase ignores any request for the number until the
+    // earlier one times out, reporting neither a code nor a failure.
     private suspend fun requestVerificationID(
         activity: Activity,
         formattedNumber: String,
@@ -110,6 +119,13 @@ class Auth : AuthDelegate {
                         verificationID: String,
                         token: PhoneAuthProvider.ForceResendingToken,
                     ) {
+                        resendingTokens[formattedNumber] = token
+                        if (continuation.isActive) continuation.resume(verificationID)
+                    }
+
+                    // Should a request still go unanswered, the wait ends once
+                    // the code's auto-retrieval window closes, rather than never.
+                    override fun onCodeAutoRetrievalTimeOut(verificationID: String) {
                         if (continuation.isActive) continuation.resume(verificationID)
                     }
 
@@ -124,15 +140,16 @@ class Auth : AuthDelegate {
                     }
                 }
 
-            PhoneAuthProvider.verifyPhoneNumber(
+            val options =
                 PhoneAuthOptions
                     .newBuilder(firebaseAuth)
                     .setPhoneNumber(formattedNumber)
                     .setTimeout(VERIFICATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                     .setActivity(activity)
                     .setCallbacks(callbacks)
-                    .build(),
-            )
+
+            resendingTokens[formattedNumber]?.let { options.setForceResendingToken(it) }
+            PhoneAuthProvider.verifyPhoneNumber(options.build())
         }
 
     private suspend fun signInOrLink(credential: PhoneAuthCredential): String {

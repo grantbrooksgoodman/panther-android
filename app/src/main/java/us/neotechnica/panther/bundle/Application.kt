@@ -13,8 +13,11 @@ import us.neotechnica.panther.BuildConfig
 import us.neotechnica.panther.bundle.developermode.AppDevModeActions
 import us.neotechnica.panther.designsystem.modules.alertkit.dependencies.alertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.HUDConfig
+import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
+import us.neotechnica.panther.designsystem.modules.componentkit.models.SFSymbol
 import us.neotechnica.panther.designsystem.modules.developermode.services.DevModeService
 import us.neotechnica.panther.designsystem.modules.foundation.extensions.registerBuildInfoOverlayDotIndicatorColorDelegate
+import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheets
 import us.neotechnica.panther.designsystem.modules.foundation.services.ReportDelegate
@@ -131,9 +134,10 @@ object Application {
     /**
      * Performs one-time application setup at launch.
      *
-     * Registers the subsystem delegates, configures build metadata,
-     * starts the networking framework, prewarms the database and
-     * storage connections, and selects the first-run environment.
+     * Selects the app's styling, registers the subsystem
+     * delegates, configures build metadata, starts the networking
+     * framework, prewarms the database and storage connections, and
+     * selects the first-run environment.
      * Call this method exactly once, before any other subsystem API
      * is used.
      *
@@ -142,6 +146,9 @@ object Application {
      */
     fun initialize(context: Context) {
         appContext = context.applicationContext
+        Font.usesSanFrancisco = USE_IOS_STYLING
+        SFSymbol.usesSFSymbols = USE_IOS_STYLING
+        SystemAnimation.usesAppleAnimations = USE_IOS_STYLING
 
         initializeServices(context)
         registerDelegates()
@@ -387,4 +394,10 @@ object Application {
     private const val FINAL_NAME = "Hello"
     private const val APP_STORE_BUILD_NUMBER = 0
     private const val MILLIS_PER_SECOND = 1_000L
+
+    // Whether the app is styled as on iOS: animations with iOS's timing
+    // and style, the San Francisco font, and real SF Symbols. Set this
+    // to `false` to use Android's default animations, the Inter font,
+    // and Material Symbols instead.
+    private const val USE_IOS_STYLING = true
 }

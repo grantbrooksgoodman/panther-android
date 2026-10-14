@@ -24,16 +24,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.messageOutboxDidChange
 import us.neotechnica.panther.bundle.sessionStoreDidChange
 import us.neotechnica.panther.designsystem.modules.componentkit.components.ContextMenuHost
 import us.neotechnica.panther.designsystem.modules.componentkit.components.LocalContextMenuController
 import us.neotechnica.panther.designsystem.modules.componentkit.components.MessageInputBar
+import us.neotechnica.panther.designsystem.modules.foundation.components.LocalPageHasAppeared
 import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.modules.common.models.ConnectionStatusServiceEffectID
@@ -253,10 +256,14 @@ private fun ChatInputBar(
 @Composable
 private fun FocusedMessageInteractionEffect(focusedMessageID: String?) {
     val controller = LocalContextMenuController.current
+    val hasAppeared = LocalPageHasAppeared.current
     val scope = rememberCoroutineScope()
     LaunchedEffect(controller, focusedMessageID) {
         if (controller == null || focusedMessageID == null) return@LaunchedEffect
         scope.launch {
+            // As on iOS, the message is focused only once the page has
+            // finished appearing, so it lifts out of a page at rest.
+            snapshotFlow { hasAppeared.value }.first { it }
             delay(PageFloats.TRIGGER_FOCUSED_MESSAGE_CELL_INTERACTION_DELAY_MILLISECONDS)
             SearchInteractionService(focusedMessageID) { controller.present(it) }
                 .triggerFocusedMessageCellInteractionIfNeeded()

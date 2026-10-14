@@ -26,6 +26,12 @@ class RootSheet(
      * sheet can only be dismissed programmatically.
      */
     val interactiveDismissDisabled: Boolean = false,
+    /**
+     * Whether the content extends past the bottom safe area, beneath
+     * the navigation bar and keyboard, rather than ending above it.
+     * Content that ignores it insets itself.
+     */
+    val ignoresBottomSafeArea: Boolean = false,
     /** The composable content to present as a sheet. */
     val content: @Composable () -> Unit,
 ) {

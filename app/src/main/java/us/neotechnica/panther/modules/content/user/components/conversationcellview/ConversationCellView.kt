@@ -12,8 +12,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.AnchoredDraggableState
 import androidx.compose.foundation.gestures.DraggableAnchors
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.anchoredDraggable
 import androidx.compose.foundation.gestures.animateTo
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -64,6 +62,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMe
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAlignment
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
+import us.neotechnica.panther.designsystem.modules.componentkit.models.SFSymbol
 import us.neotechnica.panther.designsystem.modules.componentkit.models.TextFit
 import us.neotechnica.panther.designsystem.modules.foundation.constants.StackFloats
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
@@ -160,7 +159,7 @@ fun ConversationCellView(
                 Modifier
                     .offset { IntOffset(swipeOffset.roundToInt(), 0) }
                     .background(colors.background)
-                    .anchoredDraggable(draggableState, Orientation.Horizontal, enabled = !isShowingRedactedContent),
+                    .swipeActionsDraggable(draggableState, enabled = !isShowingRedactedContent),
         ) {
             // The cell's menu stands in for SwiftUI's `contextMenu`, so it
             // keeps the system long-press timeout rather than the shorter
@@ -392,8 +391,10 @@ private fun DateLabelAndChevronView(state: ConversationCellReducer.State) {
                     .alpha(if (isShowingRedactedContent) REDACTED_CONTENT_ALPHA else 1f),
         )
 
-        // The glyph spans half of its viewport's height, so it is drawn
-        // unclipped at twice the frame to fill the frame.
+        // A Material chevron spans half of its viewport's height, so it is
+        // drawn unclipped at twice the frame to fill the frame; an SF Symbol
+        // fills its frame.
+        val chevronScale = if (SFSymbol.resolvesToSFSymbol(CellStrings.CHEVRON_IMAGE_SYSTEM_NAME)) 1 else CHEVRON_GLYPH_VIEWPORT_SCALE
         Box(
             contentAlignment = Alignment.Center,
             modifier =
@@ -409,7 +410,7 @@ private fun DateLabelAndChevronView(state: ConversationCellReducer.State) {
                 modifier =
                     Modifier
                         .wrapContentSize(unbounded = true)
-                        .size(CellFloats.chevronImageFrameMaxHeight * CHEVRON_GLYPH_VIEWPORT_SCALE),
+                        .size(CellFloats.chevronImageFrameMaxHeight * chevronScale),
             )
         }
     }

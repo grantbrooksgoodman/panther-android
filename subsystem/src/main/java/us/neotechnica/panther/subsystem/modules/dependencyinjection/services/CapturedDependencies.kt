@@ -53,23 +53,4 @@ class CapturedDependencies internal constructor() {
         val element = DependencyValues.threadLocalValues.asContextElement(captured)
         return withContext(element) { operation() }
     }
-
-    /**
-     * Restores the captured dependency scope for the duration of
-     * a synchronous operation.
-     *
-     * @param operation The synchronous work to perform with the
-     *   captured dependencies.
-     *
-     * @return The value returned by `operation`.
-     */
-    fun <T> withValueSync(operation: () -> T): T {
-        val previous = DependencyValues.threadLocalValues.get()
-        DependencyValues.threadLocalValues.set(captured)
-        return try {
-            operation()
-        } finally {
-            DependencyValues.threadLocalValues.set(previous)
-        }
-    }
 }

@@ -51,10 +51,8 @@ object ToastViewFloats {
 // MARK: - Color
 
 object ToastViewColors {
-    val BANNER_SHADOW = Color.Black
     val CAPSULE_MESSAGE_LABEL_FOREGROUND = Color.Gray
     val CAPSULE_OVERLAY_STROKE = Color.Gray
-    val CAPSULE_SHADOW = Color.Black
     val DEFAULT_ERROR = Color(0xFFFF3B30)
     val DEFAULT_INFO = Color(0xFF007AFF)
     val DEFAULT_SUCCESS = Color(0xFF34C759)

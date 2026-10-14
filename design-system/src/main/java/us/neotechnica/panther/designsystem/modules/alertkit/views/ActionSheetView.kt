@@ -79,8 +79,8 @@ internal fun ActionSheetView(alert: PresentedAlert.ActionSheet) {
         onDimmingViewTapped = { state.dismiss(alert.onCancel) },
     ) { transition ->
         transition.AnimatedVisibility(
-            enter = slideInVertically(SystemAnimation.alertTransition(IntOffset.VisibilityThreshold)) { it },
-            exit = slideOutVertically(SystemAnimation.alertTransition(IntOffset.VisibilityThreshold)) { it },
+            enter = slideInVertically(SystemAnimation.alertPresentation(IntOffset.VisibilityThreshold)) { it },
+            exit = slideOutVertically(SystemAnimation.alertDismissal(IntOffset.VisibilityThreshold)) { it },
             modifier =
                 Modifier
                     .align(Alignment.BottomCenter)

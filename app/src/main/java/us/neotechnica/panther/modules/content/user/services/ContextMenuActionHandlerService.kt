@@ -18,6 +18,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import us.neotechnica.panther.R
 import us.neotechnica.panther.bundle.reactionDetailsPageView
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAction
@@ -89,6 +90,8 @@ class ContextMenuActionHandlerService(
      *   given message displays its audio transcription.
      * @property isSpeaking Returns whether speech synthesis is in
      *   progress.
+     * @property isTextToSpeechSupported Returns whether the device has
+     *   a voice installed for the given language code.
      * @property matchConfidence Returns the confidence that the given
      *   text is in the given language.
      * @property presentExportController Presents the document export
@@ -102,7 +105,8 @@ class ContextMenuActionHandlerService(
      * @property scope The scope on which asynchronous actions run.
      * @property showSuccessHUD Shows the success HUD.
      * @property speak Speaks the given text in the given language for
-     *   the given message identifier.
+     *   the given message identifier, returning whether the utterance
+     *   was queued.
      * @property stopPlayback Stops audio message playback.
      * @property stopSpeakingIfNeeded Stops speech synthesis if in
      *   progress.
@@ -118,6 +122,7 @@ class ContextMenuActionHandlerService(
         val isDisplayingAlternateText: (Message) -> Boolean = { AlternateMessageService.isDisplayingAlternateText(it) },
         val isDisplayingAudioTranscription: (Message) -> Boolean = { AlternateMessageService.isDisplayingAudioTranscription(it) },
         val isSpeaking: () -> Boolean = { TextToSpeechService.isSpeaking },
+        val isTextToSpeechSupported: (String) -> Boolean = { TextToSpeechService.isTextToSpeechSupported(it) },
         val matchConfidence: suspend (String, String) -> Float = { text, languageCode ->
             LanguageRecognitionService.shared.matchConfidence(text, languageCode)
         },
@@ -127,7 +132,7 @@ class ContextMenuActionHandlerService(
         val saveMedia: suspend (MediaFile) -> Unit = { MediaActionHandlerService.saveMedia(it) },
         val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main),
         val showSuccessHUD: () -> Unit = { HUD.showSuccess() },
-        val speak: (String, String, String) -> Unit = { text, languageCode, messageID ->
+        val speak: (String, String, String) -> Boolean = { text, languageCode, messageID ->
             TextToSpeechService.speak(text, languageCode, messageID)
         },
         val stopPlayback: () -> Unit = { AudioMessagePlaybackService.stopPlayback() },
@@ -156,8 +161,9 @@ class ContextMenuActionHandlerService(
      * offer to view the transcription or audio, copy the transcription,
      * and speak it aloud; text messages offer to copy or speak the
      * text, view an alternate translation, and report the translation.
-     * A reaction details action is added for any message that has
-     * reactions.
+     * Speaking is offered only when the device has a voice installed
+     * for the message's language. A reaction details action is added
+     * for any message that has reactions.
      *
      * @param message The message to build the menu for.
      *
@@ -252,25 +258,25 @@ class ContextMenuActionHandlerService(
 
             dependencies.stopPlayback()
 
-            val isDisplayingAlternateText = dependencies.isDisplayingAlternateText(message)
-            val languagePair = message.translation?.languagePair ?: LanguagePair.system
-            val currentUserUtteranceLanguageCode = if (isDisplayingAlternateText) languagePair.to else languagePair.from
-            val notCurrentUserUtteranceLanguageCode = if (isDisplayingAlternateText) languagePair.from else languagePair.to
+            val (currentUserUtteranceLanguageCode, notCurrentUserUtteranceLanguageCode) = utteranceLanguageCodes(message)
+            var utteranceLanguageCode = utteranceLanguageCode(message)
+            val alternateUtteranceLanguageCode =
+                listOf(currentUserUtteranceLanguageCode, notCurrentUserUtteranceLanguageCode)
+                    .firstOrNull { it != utteranceLanguageCode } ?: utteranceLanguageCode
 
-            var utteranceLanguageCode =
-                if (message.isFromCurrentUser) currentUserUtteranceLanguageCode else notCurrentUserUtteranceLanguageCode
+            // The menu offers Speak only for a language with an installed
+            // voice, so the language switches only to another such language.
             val threshold = ContextMenuFloats.LANGUAGE_RECOGNITION_MATCH_CONFIDENCE_THRESHOLD
             if (dependencies.matchConfidence(messageLabelText, utteranceLanguageCode) <= threshold &&
                 dependencies.matchConfidence(messageLabelText, notCurrentUserUtteranceLanguageCode) >= threshold &&
-                processed(message.translation?.input?.value) == processed(message.translation?.output)
+                processed(message.translation?.input?.value) == processed(message.translation?.output) &&
+                dependencies.isTextToSpeechSupported(alternateUtteranceLanguageCode)
             ) {
-                utteranceLanguageCode =
-                    listOf(currentUserUtteranceLanguageCode, notCurrentUserUtteranceLanguageCode)
-                        .firstOrNull { it != utteranceLanguageCode } ?: utteranceLanguageCode
+                utteranceLanguageCode = alternateUtteranceLanguageCode
             }
 
+            if (!dependencies.speak(messageLabelText, utteranceLanguageCode, message.id)) return@launch
             speakingMessage = message
-            dependencies.speak(messageLabelText, utteranceLanguageCode, message.id)
         }
     }
 
@@ -297,7 +303,7 @@ class ContextMenuActionHandlerService(
         }
 
         val isSpeaking = dependencies.isSpeaking()
-        if (isSpeaking || (isDisplayingAudioTranscription && message.isFromCurrentUser)) {
+        if (isSpeaking || (isDisplayingAudioTranscription && message.isFromCurrentUser && isSpeakable(message))) {
             actions.add(
                 ContextMenuAction(
                     title = (if (isSpeaking) LocalizedStringKey.StopSpeaking else LocalizedStringKey.Speak).localized(),
@@ -345,6 +351,7 @@ class ContextMenuActionHandlerService(
         return ContextMenuAction(
             title = actionTitleKey.localized(),
             systemImageName = ContextMenuStrings.VIEW_ALTERNATE_ACTION_IMAGE_SYSTEM_NAME,
+            imageResourceID = R.drawable.view_alternate,
         ) { handleAction(ContextMenuStrings.VIEW_ALTERNATE_ACTION_IDENTIFIER_RAW_VALUE, message) }
     }
 
@@ -379,11 +386,16 @@ class ContextMenuActionHandlerService(
                     title = LocalizedStringKey.Copy.localized(),
                     systemImageName = ContextMenuStrings.COPY_ACTION_IMAGE_SYSTEM_NAME,
                 ) { handleAction(ContextMenuStrings.COPY_ACTION_IDENTIFIER_RAW_VALUE, message) },
+            )
+
+        if (isSpeaking || isSpeakable(message)) {
+            actions.add(
                 ContextMenuAction(
                     title = (if (isSpeaking) LocalizedStringKey.StopSpeaking else LocalizedStringKey.Speak).localized(),
                     systemImageName = speakActionImage,
                 ) { handleAction(ContextMenuStrings.SPEAK_ACTION_IDENTIFIER_RAW_VALUE, message) },
             )
+        }
 
         val translation = message.translation
         val containsLetters = translation?.input?.value?.containsLetters == true || translation?.output?.sanitized?.containsLetters == true
@@ -427,7 +439,27 @@ class ContextMenuActionHandlerService(
             metadata = ExceptionMetadata(this),
         )
 
+    // Whether the device has a voice installed for the language in which
+    // the given message is spoken.
+    private fun isSpeakable(message: Message): Boolean = dependencies.isTextToSpeechSupported(utteranceLanguageCode(message))
+
     private fun processed(string: String?): String = string?.lowercasedTrimmingWhitespaceAndNewlines?.sanitized ?: ""
+
+    // The language in which the given message is spoken before language
+    // recognition is consulted: the sender's side of its language pair.
+    private fun utteranceLanguageCode(message: Message): String {
+        val (currentUserUtteranceLanguageCode, notCurrentUserUtteranceLanguageCode) = utteranceLanguageCodes(message)
+        return if (message.isFromCurrentUser) currentUserUtteranceLanguageCode else notCurrentUserUtteranceLanguageCode
+    }
+
+    // The current user's and the other participant's sides of the given
+    // message's language pair, swapped while its alternate text is on
+    // display.
+    private fun utteranceLanguageCodes(message: Message): Pair<String, String> {
+        val languagePair = message.translation?.languagePair ?: LanguagePair.system
+        if (dependencies.isDisplayingAlternateText(message)) return languagePair.to to languagePair.from
+        return languagePair.from to languagePair.to
+    }
 
     private val String.shortCode: String
         get() = "${take(2)}${takeLast(2)}".uppercase()

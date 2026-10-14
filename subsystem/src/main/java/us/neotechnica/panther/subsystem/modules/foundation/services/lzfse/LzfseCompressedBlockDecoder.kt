@@ -12,6 +12,7 @@
 
 package us.neotechnica.panther.subsystem.modules.foundation.services.lzfse
 
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.readUInt32LE
 import java.io.ByteArrayOutputStream
 
 /** Decodes an FSE-compressed LZFSE block (v2; v1 is legacy and unsupported). */
@@ -168,7 +169,7 @@ internal object LzfseCompressedBlockDecoder {
         blockStart: Int,
     ): V2Header {
         if (blockStart + FIXED_HEADER_BYTES > source.size) throw LzfseException("Truncated LZFSE v2 header.")
-        val nRawBytes = readUInt32LE(source, blockStart + 4)
+        val nRawBytes = source.readUInt32LE(blockStart + 4)
         val v0 = readUInt64LE(source, blockStart + 8)
         val v1 = readUInt64LE(source, blockStart + 16)
         val v2 = readUInt64LE(source, blockStart + 24)
@@ -346,17 +347,6 @@ internal object LzfseCompressedBlockDecoder {
         value: Long,
         bits: Int,
     ): Long = if (bits <= 0) 0L else value and ((1L shl bits) - 1)
-
-    private fun readUInt32LE(
-        bytes: ByteArray,
-        offset: Int,
-    ): Int {
-        var result = 0
-        for (index in 0 until UINT32_BYTES) {
-            result = result or ((bytes[offset + index].toInt() and BYTE_MASK) shl (BITS_PER_BYTE * index))
-        }
-        return result
-    }
 
     private fun readUInt64LE(
         bytes: ByteArray,

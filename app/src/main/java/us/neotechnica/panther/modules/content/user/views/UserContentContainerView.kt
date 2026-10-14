@@ -41,9 +41,6 @@ import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.Dep
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 
-// MARK: - Constants Accessors
-
-
 /**
  * Hosts the signed-in user's content: the conversations list at the
  * root, pushing to the chat page and its siblings. The system back
@@ -108,6 +105,7 @@ fun UserContentContainerView(modifier: Modifier = Modifier) {
             ConversationsPageView(
                 viewModel = conversationsViewModel,
                 listState = conversationsListState,
+                isCovered = topPath != null,
                 modifier = rootModifier,
             )
         },
@@ -118,16 +116,15 @@ fun UserContentContainerView(modifier: Modifier = Modifier) {
                     .fillMaxSize()
                     .background(colors.background)
                     .pointerInput(Unit) {
-                        // Consume any touch the pushed page's own content leaves
-                        // unhandled – the navigation-bar and input-bar negative space –
-                        // so it never falls through to the always-composed conversations
-                        // layer behind this opaque page. The page's own widgets still
-                        // receive input first (children run before this parent on the main
-                        // pass); only otherwise-unhandled touches are swallowed here.
+                        // Claim every touch on this opaque page – including the
+                        // navigation-bar and input-bar negative space – so none falls
+                        // through to the always-composed conversations layer behind it;
+                        // hit testing stops at the topmost layer that handles pointer
+                        // input. The touches are left unconsumed: consuming them here, as
+                        // an ancestor of the page's content, would cancel any scroll in
+                        // the page that has yet to pass its touch slop.
                         awaitPointerEventScope {
-                            while (true) {
-                                awaitPointerEvent().changes.forEach { it.consume() }
-                            }
+                            while (true) awaitPointerEvent()
                         }
                     },
         ) {

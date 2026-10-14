@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.content.shared.components
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -28,6 +29,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -35,12 +39,14 @@ import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.TextFit
+import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.shared.constants.SearchBarColors
 import us.neotechnica.panther.modules.content.shared.constants.SearchBarFloats
 import us.neotechnica.panther.modules.content.shared.constants.SearchBarStrings
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
+import kotlin.math.roundToInt
 
 // MARK: - Constants Accessors
 
@@ -51,7 +57,7 @@ private typealias Strings = SearchBarStrings
 /**
  * A search field: a magnifying-glass glyph, a placeholder, a
  * single-line input, and a clear button that appears while the query
- * is non-empty.
+ * is non-empty, optionally followed by a Cancel button.
  *
  * @param query The current query text.
  * @param onQueryChange Invoked as the query changes.
@@ -67,6 +73,14 @@ private typealias Strings = SearchBarStrings
  *   user submits, if any.
  * @param onFocusChanged The handler to run when the field gains or
  *   loses focus, if any.
+ * @param showsCancelButton A Boolean value that indicates whether the
+ *   bar displays a Cancel button beside the field. The button slides
+ *   in from the trailing edge as the field narrows, and slides out as
+ *   the field widens again. The default is `false`.
+ * @param onCancel The handler to run when the user taps the Cancel
+ *   button, if any. Tapping the button dismisses the keyboard before
+ *   the handler runs; the handler is responsible for clearing the
+ *   query and hiding the button.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -80,9 +94,20 @@ fun SearchBar(
     placeholderText: String = LocalizedStringKey.Search.localized(),
     onSubmit: ((String) -> Unit)? = null,
     onFocusChanged: ((Boolean) -> Unit)? = null,
+    showsCancelButton: Boolean = false,
+    onCancel: (() -> Unit)? = null,
 ) {
     val colors = LocalPantherColors.current
-    Row(
+    val focusManager = LocalFocusManager.current
+    val cancelButtonFraction =
+        animateFloatAsState(
+            targetValue = if (showsCancelButton) 1f else 0f,
+            animationSpec = SystemAnimation.searchTransition(),
+            label = CANCEL_BUTTON_ANIMATION_LABEL,
+        )
+
+    CancelButtonLayout(
+        fraction = { cancelButtonFraction.value },
         modifier =
             modifier
                 .fillMaxWidth()
@@ -92,6 +117,18 @@ fun SearchBar(
                     end = Floats.DEFAULT_HORIZONTAL_PADDING.dp,
                     bottom = bottomPadding.dp,
                 ),
+        cancelButton = {
+            Components.Button(
+                text = LocalizedStringKey.Cancel.localized(),
+                foregroundColor = colors.navigationBarButton,
+                onClick = {
+                    if (!showsCancelButton) return@Button
+                    focusManager.clearFocus()
+                    onCancel?.invoke()
+                },
+                modifier = Modifier.graphicsLayer { alpha = cancelButtonFraction.value },
+            )
+        },
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -158,6 +195,36 @@ fun SearchBar(
         }
     }
 }
+
+// Lays out a search field and its Cancel button. The field narrows by
+// the button's width and spacing as the given fraction rises from 0 to
+// 1, and the button rides its trailing edge, out of bounds until the
+// fraction rises.
+@Composable
+private fun CancelButtonLayout(
+    fraction: () -> Float,
+    modifier: Modifier,
+    cancelButton: @Composable () -> Unit,
+    field: @Composable () -> Unit,
+) {
+    Layout(
+        contents = listOf(field, cancelButton),
+        modifier = modifier,
+    ) { (fieldMeasurables, cancelButtonMeasurables), constraints ->
+        val looseConstraints = constraints.copy(minWidth = 0, minHeight = 0)
+        val cancelButtonPlaceable = cancelButtonMeasurables.first().measure(looseConstraints)
+        val spacing = Floats.CANCEL_BUTTON_LEADING_PADDING.dp.roundToPx()
+        val fieldWidth = constraints.maxWidth - ((cancelButtonPlaceable.width + spacing) * fraction()).roundToInt()
+        val fieldPlaceable = fieldMeasurables.first().measure(looseConstraints.copy(maxWidth = fieldWidth.coerceAtLeast(0)))
+        val height = maxOf(fieldPlaceable.height, cancelButtonPlaceable.height)
+        layout(constraints.maxWidth, height) {
+            fieldPlaceable.place(0, (height - fieldPlaceable.height) / 2)
+            cancelButtonPlaceable.place(fieldWidth + spacing, (height - cancelButtonPlaceable.height) / 2)
+        }
+    }
+}
+
+private const val CANCEL_BUTTON_ANIMATION_LABEL = "SearchBarCancelButton"
 
 // MARK: - View Builder
 

@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.designsystem.modules.componentkit.models
 
+import androidx.annotation.DrawableRes
 import androidx.compose.ui.graphics.Color
 
 /**
@@ -37,12 +38,16 @@ data class ReactionChoice(
  * @property systemImageName The SF Symbol name for the action's icon.
  * @property isDestructive Whether the action is destructive (rendered in
  *   red).
+ * @property imageResourceID An image resource for the action's icon,
+ *   drawn as a template in place of the symbol named by
+ *   [systemImageName], or `null` to draw the symbol.
  * @property onSelect The closure to run when the action is chosen.
  */
 data class ContextMenuAction(
     val title: String,
     val systemImageName: String,
     val isDestructive: Boolean = false,
+    @DrawableRes val imageResourceID: Int? = null,
     val onSelect: () -> Unit,
 )
 

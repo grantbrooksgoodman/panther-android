@@ -8,6 +8,9 @@
 
 package us.neotechnica.panther.designsystem.modules.foundation.components
 
+import androidx.compose.animation.core.SpringSpec
+import androidx.compose.animation.core.animate
+import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.gestures.AnchoredDraggableDefaults
 import androidx.compose.foundation.gestures.AnchoredDraggableState
 import androidx.compose.foundation.gestures.DraggableAnchors
@@ -35,6 +38,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -57,6 +61,7 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.designsystem.modules.foundation.constants.PageSheetViewFloats
 import us.neotechnica.panther.designsystem.modules.foundation.constants.SystemAnimationFloats
@@ -74,11 +79,15 @@ private typealias SheetFloats = PageSheetViewFloats
  * while [isPresented] is `true`.
  *
  * The sheet presents and dismisses on UIKit's sheet spring, over
- * content dimmed as iOS dims it. It has no drag handle and rests just
+ * content dimmed as iOS dims it – or, while
+ * [SystemAnimation.usesAppleAnimations] is `false`, on Material's bottom
+ * sheet spring over Material's scrim. It has no drag handle and rests just
  * below the status bar. Swiping the sheet down or tapping the dimmed
  * content dismisses it, unless interactive dismissal is disabled; a
  * scrolling list inside the sheet hands a downward swipe at its top to
- * the sheet. The system back gesture never dismisses the sheet.
+ * the sheet. While the sheet presents or dismisses, it ignores swipes
+ * and taps on the dimmed content. The system back gesture never
+ * dismisses the sheet.
  *
  * When [isPresented] becomes `false`, the sheet animates away before it
  * leaves the composition:
@@ -100,20 +109,28 @@ private typealias SheetFloats = PageSheetViewFloats
  *   whether swipes and taps on the dimmed content are ignored, so that
  *   the sheet can only be dismissed programmatically. The default is
  *   `false`.
+ * @param ignoresBottomSafeArea A Boolean value that indicates whether
+ *   the content extends past the bottom safe area, beneath the
+ *   navigation bar and keyboard, rather than ending above it. Content
+ *   that ignores it insets itself, such as a list that pads its
+ *   content by the bottom safe area. The default is `false`.
  * @param content The content of the sheet.
  */
 @Composable
+@Suppress("LongParameterList")
 fun PageSheetView(
     isPresented: Boolean,
     onDismissRequest: () -> Unit,
     containerColor: Color = LocalPantherColors.current.groupedContentBackground,
     isInteractiveDismissDisabled: Boolean = false,
+    ignoresBottomSafeArea: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) = PageSheetView(
     item = if (isPresented) Unit else null,
     onDismissRequest = onDismissRequest,
     containerColor = containerColor,
     isInteractiveDismissDisabled = isInteractiveDismissDisabled,
+    ignoresBottomSafeArea = ignoresBottomSafeArea,
 ) { content() }
 
 /**
@@ -139,14 +156,21 @@ fun PageSheetView(
  *   whether swipes and taps on the dimmed content are ignored, so that
  *   the sheet can only be dismissed programmatically. The default is
  *   `false`.
+ * @param ignoresBottomSafeArea A Boolean value that indicates whether
+ *   the content extends past the bottom safe area, beneath the
+ *   navigation bar and keyboard, rather than ending above it. Content
+ *   that ignores it insets itself, such as a list that pads its
+ *   content by the bottom safe area. The default is `false`.
  * @param content The content of the sheet for the given item.
  */
 @Composable
+@Suppress("LongParameterList")
 fun <T : Any> PageSheetView(
     item: T?,
     onDismissRequest: () -> Unit,
     containerColor: Color = LocalPantherColors.current.groupedContentBackground,
     isInteractiveDismissDisabled: Boolean = false,
+    ignoresBottomSafeArea: Boolean = false,
     content: @Composable ColumnScope.(T) -> Unit,
 ) {
     // The last presented item keeps the sheet's content in place while
@@ -160,28 +184,28 @@ fun <T : Any> PageSheetView(
     if (shownItem == null || (item == null && hasFinishedDismissing)) return
 
     val sheetState = remember { PageSheetState() }
+    val currentIsPresented by rememberUpdatedState(item != null)
     val currentOnDismissRequest by rememberUpdatedState(onDismissRequest)
 
     LaunchedEffect(sheetState) {
-        // A swipe or a tap on the dimmed content leaves the sheet hidden;
-        // report the dismissal once it settles there.
-        snapshotFlow { sheetState.draggableState.settledValue }.collect { value ->
-            if (value == SheetValue.PRESENTED) sheetState.hasPresented = true
-            if (value == SheetValue.HIDDEN && sheetState.hasPresented && !sheetState.isDismissingProgrammatically) {
-                currentOnDismissRequest()
+        // A swipe or a tap on the dimmed content leaves a presented sheet
+        // hidden; report the dismissal once it settles there.
+        snapshotFlow { sheetState.draggableState.settledValue }
+            .dropWhile { it == SheetValue.HIDDEN }
+            .collect { value ->
+                if (value == SheetValue.HIDDEN && currentIsPresented) currentOnDismissRequest()
             }
-        }
     }
 
     LaunchedEffect(sheetState.hasAnchors, item != null) {
-        if (!sheetState.hasAnchors) {
-            if (item == null) hasFinishedDismissing = true
+        if (item != null) {
+            if (sheetState.hasAnchors) sheetState.present()
             return@LaunchedEffect
         }
 
-        sheetState.isDismissingProgrammatically = item == null
-        if (item != null) return@LaunchedEffect sheetState.present()
-        sheetState.dismiss()
+        // No gesture can interrupt the dismissal, so the sheet leaves the
+        // composition unless it is presented again first.
+        if (sheetState.hasAnchors) sheetState.dismiss()
         presentedItem.value = null
         hasFinishedDismissing = true
     }
@@ -189,7 +213,8 @@ fun <T : Any> PageSheetView(
     PageSheetDialog(
         sheetState = sheetState,
         containerColor = containerColor,
-        isInteractiveDismissDisabled = isInteractiveDismissDisabled,
+        isInteractive = item != null && !isInteractiveDismissDisabled && !sheetState.isTransitioning,
+        ignoresBottomSafeArea = ignoresBottomSafeArea,
     ) { content(shownItem) }
 }
 
@@ -200,16 +225,26 @@ fun <T : Any> PageSheetView(
 private fun PageSheetDialog(
     sheetState: PageSheetState,
     containerColor: Color,
-    isInteractiveDismissDisabled: Boolean,
+    isInteractive: Boolean,
+    ignoresBottomSafeArea: Boolean,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    val currentIsInteractiveDismissDisabled by rememberUpdatedState(isInteractiveDismissDisabled)
+    val currentIsInteractive by rememberUpdatedState(isInteractive)
     val velocityThreshold = with(LocalDensity.current) { SHEET_VELOCITY_THRESHOLD.toPx() }
-    val nestedScrollConnection = remember(sheetState) { PageSheetNestedScrollConnection(sheetState, velocityThreshold) }
+    val dimmingAlpha =
+        if (SystemAnimation.usesAppleAnimations) {
+            SystemAnimationFloats.SHEET_DIMMING_ALPHA
+        } else {
+            SystemAnimationFloats.MATERIAL_SHEET_SCRIM_ALPHA
+        }
+    val nestedScrollConnection =
+        remember(sheetState) {
+            PageSheetNestedScrollConnection(sheetState, velocityThreshold) { currentIsInteractive }
+        }
     val flingBehavior =
         AnchoredDraggableDefaults.flingBehavior(
-            animationSpec = SystemAnimation.sheetTransition(),
+            animationSpec = sheetAnimationSpec,
             positionalThreshold = { distance -> distance / 2f },
             state = sheetState.draggableState,
         )
@@ -232,11 +267,11 @@ private fun PageSheetDialog(
                     Modifier
                         .fillMaxSize()
                         .drawBehind {
-                            drawRect(Color.Black, alpha = SystemAnimationFloats.SHEET_DIMMING_ALPHA * sheetState.presentedFraction)
+                            drawRect(Color.Black, alpha = dimmingAlpha * sheetState.presentedFraction)
                         }.pointerInput(sheetState) {
                             detectTapGestures {
-                                if (currentIsInteractiveDismissDisabled) return@detectTapGestures
-                                scope.launch { sheetState.dismiss() }
+                                if (!currentIsInteractive) return@detectTapGestures
+                                scope.launch { sheetState.hide() }
                             }
                         },
             )
@@ -252,14 +287,12 @@ private fun PageSheetDialog(
                         .fillMaxWidth()
                         .onSizeChanged { sheetState.updateAnchors(it.height.toFloat()) }
                         .offset { IntOffset(0, sheetState.offset.roundToInt()) }
-                        .then(
-                            if (isInteractiveDismissDisabled) {
-                                Modifier
-                            } else {
-                                Modifier
-                                    .nestedScroll(nestedScrollConnection)
-                                    .anchoredDraggable(sheetState.draggableState, Orientation.Vertical, flingBehavior = flingBehavior)
-                            },
+                        .nestedScroll(nestedScrollConnection)
+                        .anchoredDraggable(
+                            enabled = isInteractive,
+                            flingBehavior = flingBehavior,
+                            orientation = Orientation.Vertical,
+                            state = sheetState.draggableState,
                         ),
                 shape = BottomSheetDefaults.ExpandedShape,
                 tonalElevation = BottomSheetDefaults.Elevation,
@@ -269,7 +302,13 @@ private fun PageSheetDialog(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)),
+                            .then(
+                                if (ignoresBottomSafeArea) {
+                                    Modifier
+                                } else {
+                                    Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
+                                },
+                            ),
                 )
             }
         }
@@ -298,10 +337,14 @@ private class PageSheetState {
 
     var hasAnchors by mutableStateOf(false)
         private set
-    var hasPresented = false
-    var isDismissingProgrammatically = false
+    private var transitionCount by mutableIntStateOf(0)
 
     // MARK: - Computed Properties
+
+    // Whether the sheet is animating on behalf of its presentation or
+    // dismissal.
+    val isTransitioning: Boolean
+        get() = transitionCount > 0
 
     // The sheet's offset, placing it offscreen until its height is known.
     val offset: Float
@@ -317,9 +360,13 @@ private class PageSheetState {
 
     // MARK: - Methods
 
-    suspend fun dismiss() = draggableState.animateTo(SheetValue.HIDDEN, SystemAnimation.sheetTransition())
+    suspend fun dismiss() = transition(to = SheetValue.HIDDEN)
 
-    suspend fun present() = draggableState.animateTo(SheetValue.PRESENTED, SystemAnimation.sheetTransition())
+    // Hides the sheet in response to a tap on the dimmed content. A drag
+    // interrupts it.
+    suspend fun hide() = draggableState.animateTo(SheetValue.HIDDEN, sheetAnimationSpec)
+
+    suspend fun present() = transition(to = SheetValue.PRESENTED)
 
     // Settles the sheet after a fling handed off by a scrolling list: a
     // fast enough fling decides the direction; otherwise the sheet returns
@@ -334,17 +381,42 @@ private class PageSheetState {
                 velocity < -velocityThreshold -> SheetValue.PRESENTED
                 else -> draggableState.anchors.closestAnchor(draggableState.requireOffset()) ?: SheetValue.PRESENTED
             }
-        draggableState.animateTo(target, SystemAnimation.sheetTransition())
+        draggableState.animateTo(target, sheetAnimationSpec)
     }
 
+    // Keeps an animation under way headed for the resting position it
+    // was already animating to.
     fun updateAnchors(height: Float) {
         draggableState.updateAnchors(
             DraggableAnchors {
                 SheetValue.PRESENTED at 0f
                 SheetValue.HIDDEN at height
             },
+            draggableState.targetValue,
         )
         hasAnchors = true
+    }
+
+    // Animates the sheet to the given resting position on behalf of its
+    // presentation or dismissal. The animation outranks any gesture, so
+    // a drag or a tap on the dimmed content cannot interrupt it.
+    private suspend fun transition(to: SheetValue) {
+        transitionCount++
+        try {
+            draggableState.anchoredDrag(to, MutatePriority.PreventUserInput) { anchors, target ->
+                val initialOffset = draggableState.offset
+                val targetOffset = anchors.positionOf(target)
+                if (initialOffset.isNaN() || targetOffset.isNaN() || initialOffset == targetOffset) return@anchoredDrag
+                animate(
+                    animationSpec = sheetAnimationSpec,
+                    initialValue = initialOffset,
+                    initialVelocity = draggableState.lastVelocity,
+                    targetValue = targetOffset,
+                ) { value, velocity -> dragTo(value, velocity) }
+            }
+        } finally {
+            transitionCount--
+        }
     }
 }
 
@@ -353,9 +425,11 @@ private class PageSheetState {
 // raises a partly lowered sheet before the list scrolls. A drag that
 // begins while the list can still scroll down stays with the list, even
 // once the list reaches its top – as with a UIKit scroll view in a sheet.
+// While the sheet ignores swipes, the list keeps every drag and fling.
 private class PageSheetNestedScrollConnection(
     private val sheetState: PageSheetState,
     private val velocityThreshold: Float,
+    private val isEnabled: () -> Boolean,
 ) : NestedScrollConnection {
     // MARK: - Properties
 
@@ -369,7 +443,7 @@ private class PageSheetNestedScrollConnection(
         available: Offset,
         source: NestedScrollSource,
     ): Offset {
-        if (available.y >= 0f || source != NestedScrollSource.UserInput) return Offset.Zero
+        if (!isEnabled() || available.y >= 0f || source != NestedScrollSource.UserInput) return Offset.Zero
         return Offset(0f, sheetState.draggableState.dispatchRawDelta(available.y))
     }
 
@@ -378,7 +452,7 @@ private class PageSheetNestedScrollConnection(
         available: Offset,
         source: NestedScrollSource,
     ): Offset {
-        if (source != NestedScrollSource.UserInput) return Offset.Zero
+        if (!isEnabled() || source != NestedScrollSource.UserInput) return Offset.Zero
         val isDraggingSheet = isDraggingSheet ?: (consumed.y == 0f && available.y > 0f).also { this.isDraggingSheet = it }
         if (!isDraggingSheet) return Offset.Zero
         return Offset(0f, sheetState.draggableState.dispatchRawDelta(available.y))
@@ -386,6 +460,7 @@ private class PageSheetNestedScrollConnection(
 
     override suspend fun onPreFling(available: Velocity): Velocity {
         isDraggingSheet = null
+        if (!isEnabled()) return Velocity.Zero
         val draggableState = sheetState.draggableState
         if (available.y >= 0f || draggableState.requireOffset() <= draggableState.anchors.minPosition()) return Velocity.Zero
         sheetState.settle(available.y, velocityThreshold)
@@ -399,6 +474,7 @@ private class PageSheetNestedScrollConnection(
         consumed: Velocity,
         available: Velocity,
     ): Velocity {
+        if (!isEnabled()) return Velocity.Zero
         val draggableState = sheetState.draggableState
         if (draggableState.requireOffset() <= draggableState.anchors.minPosition()) return Velocity.Zero
         sheetState.settle(available.y, velocityThreshold)
@@ -408,6 +484,15 @@ private class PageSheetNestedScrollConnection(
 
 // The fling speed past which a sheet settles in the fling's direction.
 private val SHEET_VELOCITY_THRESHOLD = 125.dp
+
+// The distance, in pixels, from its resting position at which a sheet
+// animation ends.
+private const val SHEET_VISIBILITY_THRESHOLD = 1f
+
+// The spring of every sheet animation, ending once the sheet visibly
+// comes to rest.
+private val sheetAnimationSpec: SpringSpec<Float>
+    get() = SystemAnimation.sheetTransition(SHEET_VISIBILITY_THRESHOLD)
 
 // An offset that keeps a sheet below the screen before its height is known.
 private const val UNMEASURED_OFFSET = 100_000f

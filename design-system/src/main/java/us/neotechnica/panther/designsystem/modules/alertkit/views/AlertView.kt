@@ -97,12 +97,12 @@ internal fun AlertView(
     AlertKitDialog(state = state) { transition ->
         transition.AnimatedVisibility(
             enter =
-                fadeIn(SystemAnimation.alertTransition()) +
+                fadeIn(SystemAnimation.alertPresentation()) +
                     scaleIn(
-                        SystemAnimation.alertTransition(),
+                        SystemAnimation.alertPresentation(),
                         initialScale = AlertFloats.PRESENTATION_INITIAL_SCALE,
                     ),
-            exit = fadeOut(SystemAnimation.alertTransition()),
+            exit = fadeOut(SystemAnimation.alertDismissal()),
             modifier =
                 Modifier
                     .align(Alignment.Center)

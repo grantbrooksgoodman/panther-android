@@ -21,20 +21,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.extensions.detectMessageTapGestures
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAction
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAlignment
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ReactionChoice
+import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Wraps a message bubble so a long press lifts it and presents [actions]
@@ -55,7 +58,9 @@ import kotlin.time.Duration
  *   the dimmed backdrop. Pass `null` when the content paints its own
  *   background, such as a message bubble.
  * @param minimumPressDuration How long a press must be held to present
- *   the menu. The default is the 220-millisecond message bubble press.
+ *   the menu, or `null` for the default: the 220-millisecond message
+ *   bubble press, or the system's long-press timeout while
+ *   [SystemAnimation.usesAppleAnimations] is `false`.
  * @param menuLeadingOffset For [ContextMenuAlignment.LEADING], the inset
  *   from the content's leading edge at which the menu's leading text (and
  *   the reaction row's leading edge) is aligned, so a full-width row can
@@ -77,7 +82,7 @@ fun MessageContextMenu(
     reactionChoices: List<ReactionChoice> = emptyList(),
     liftScale: Float = LIFT_SCALE_BONUS,
     liftedBackground: Color? = null,
-    minimumPressDuration: Duration = GESTURE_PRESS_DURATION,
+    minimumPressDuration: Duration? = null,
     menuLeadingOffset: Dp = 0.dp,
     alignsMenuCardToLeadingEdge: Boolean = false,
     menuKey: String? = null,
@@ -88,7 +93,14 @@ fun MessageContextMenu(
 ) {
     val controller = LocalContextMenuController.current
     val haptics = LocalHapticFeedback.current
-    var anchorBounds by remember { mutableStateOf(Rect.Zero) }
+    var bubbleCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    val originID = remember { Any() }
+    val pressDuration =
+        minimumPressDuration ?: if (SystemAnimation.usesAppleAnimations) {
+            GESTURE_PRESS_DURATION
+        } else {
+            LocalViewConfiguration.current.longPressTimeoutMillis.milliseconds
+        }
 
     // The gesture handler reads these through snapshot state so its
     // pointer-input coroutine can key on the gesture's stable shape (see
@@ -105,9 +117,11 @@ fun MessageContextMenu(
     // actions nor reactions or has not yet been laid out.
     fun activeContextMenu(): ActiveContextMenu? {
         val hasMenu = currentActions.isNotEmpty() || currentReactionChoices.isNotEmpty()
-        if (!hasMenu || anchorBounds == Rect.Zero) return null
+        val liftedBounds = bubbleCoordinates?.let { controller?.boundsInHost(it) }
+        if (!hasMenu || liftedBounds == null) return null
         return ActiveContextMenu(
-            anchorBounds,
+            originID,
+            liftedBounds,
             alignment,
             currentActions,
             currentReactionChoices,
@@ -118,6 +132,10 @@ fun MessageContextMenu(
             currentContent,
         )
     }
+
+    // The position of the bubble's top-leading corner in the root, from
+    // which a pointer position within the bubble is measured.
+    fun bubblePositionInRoot(): Offset = bubbleCoordinates?.takeIf { it.isAttached }?.positionInRoot() ?: Offset.Zero
 
     // Register this menu under its key so it can be opened
     // programmatically (such as focusing a message from search).
@@ -131,8 +149,7 @@ fun MessageContextMenu(
     // Hide the origin bubble while it is the lifted one – until its copy
     // finishes animating back after dismissal – so only the overlay's copy
     // is visible (no double image).
-    val liftedMenu = controller?.displayed
-    val isLifted = liftedMenu != null && liftedMenu.anchorBounds == anchorBounds && anchorBounds != Rect.Zero
+    val isLifted = controller?.displayed?.originID == originID
 
     Column(
         modifier,
@@ -155,14 +172,13 @@ fun MessageContextMenu(
 
         Box(
             Modifier
-                .onGloballyPositioned { coordinates ->
-                    anchorBounds = Rect(coordinates.positionInRoot(), coordinates.size.toSize())
-                }.pointerInput(controller, handlesTap, hasDoubleTapDefault, minimumPressDuration) {
+                .onGloballyPositioned { bubbleCoordinates = it }
+                .pointerInput(controller, handlesTap, hasDoubleTapDefault, pressDuration) {
                     detectMessageTapGestures(
-                        minimumPressDuration = minimumPressDuration,
+                        minimumPressDuration = pressDuration,
                         onTap =
                             if (handlesTap) {
-                                { position -> currentOnTap?.invoke(anchorBounds.topLeft + position) }
+                                { position -> currentOnTap?.invoke(bubblePositionInRoot() + position) }
                             } else {
                                 null
                             },
@@ -184,7 +200,7 @@ fun MessageContextMenu(
                         onLongPress = { state, position ->
                             controller?.beginInteraction(
                                 state,
-                                location = anchorBounds.topLeft + position,
+                                location = bubblePositionInRoot() + position,
                                 dragThreshold = INTERACTION_DRAG_THRESHOLD.toPx(),
                                 menu = ::activeContextMenu,
                             )

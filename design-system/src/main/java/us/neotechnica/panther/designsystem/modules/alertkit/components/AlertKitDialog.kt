@@ -30,8 +30,8 @@ import us.neotechnica.panther.designsystem.modules.foundation.components.DialogW
 import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 
 // A full-screen dialog window that dims the content behind it, fading
-// the dimming view in and out with the given state on UIKit's alert
-// spring. The content animates with the transition it receives; once the state finishes
+// the dimming view in and out with the given state on the alert
+// animations. The content animates with the transition it receives; once the state finishes
 // animating out, the state performs its pending actions. When the
 // composition provides a withdrawal action, the dialog animates out,
 // then performs it.
@@ -61,8 +61,8 @@ internal fun AlertKitDialog(
         DialogWindowEffect(palette.isDarkModeActive)
         Box(modifier = Modifier.fillMaxSize()) {
             transition.AnimatedVisibility(
-                enter = fadeIn(SystemAnimation.alertTransition()),
-                exit = fadeOut(SystemAnimation.alertTransition()),
+                enter = fadeIn(SystemAnimation.alertPresentation()),
+                exit = fadeOut(SystemAnimation.alertDismissal()),
                 visible = { it },
             ) {
                 Box(

@@ -12,6 +12,7 @@
 
 package us.neotechnica.panther.subsystem.modules.foundation.services.lzfse
 
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.readUInt32LE
 import java.io.ByteArrayOutputStream
 
 /** Decodes an LZFSE stream, dispatching each block to its block decoder. */
@@ -34,7 +35,7 @@ internal object LzfseDecoder {
         var offset = 0
 
         while (offset + UINT32_BYTES <= source.size) {
-            val magic = readUInt32LE(source, offset)
+            val magic = source.readUInt32LE(offset)
             offset += UINT32_BYTES
 
             offset =
@@ -62,7 +63,7 @@ internal object LzfseDecoder {
         output: ByteArrayOutputStream,
     ): Int {
         if (offset + UINT32_BYTES > source.size) throw LzfseException("Truncated LZFSE uncompressed block header.")
-        val rawByteCount = readUInt32LE(source, offset)
+        val rawByteCount = source.readUInt32LE(offset)
         val payloadOffset = offset + UINT32_BYTES
         if (rawByteCount < 0 || payloadOffset + rawByteCount > source.size) {
             throw LzfseException("Truncated LZFSE uncompressed block.")
@@ -77,8 +78,8 @@ internal object LzfseDecoder {
         output: ByteArrayOutputStream,
     ): Int {
         if (offset + 2 * UINT32_BYTES > source.size) throw LzfseException("Truncated LZVN block header.")
-        val rawByteCount = readUInt32LE(source, offset)
-        val payloadByteCount = readUInt32LE(source, offset + UINT32_BYTES)
+        val rawByteCount = source.readUInt32LE(offset)
+        val payloadByteCount = source.readUInt32LE(offset + UINT32_BYTES)
         val payloadOffset = offset + 2 * UINT32_BYTES
         if (rawByteCount < 0 || payloadByteCount < 0 || payloadOffset + payloadByteCount > source.size) {
             throw LzfseException("Truncated LZVN block.")
@@ -192,17 +193,6 @@ internal object LzfseDecoder {
         lsb: Int,
         width: Int,
     ): Int = (container ushr lsb) and ((1 shl width) - 1)
-
-    private fun readUInt32LE(
-        bytes: ByteArray,
-        offset: Int,
-    ): Int {
-        var result = 0
-        for (index in 0 until UINT32_BYTES) {
-            result = result or ((bytes[offset + index].toInt() and BYTE_MASK) shl (BITS_PER_BYTE * index))
-        }
-        return result
-    }
 
     // MARK: - Companion
 

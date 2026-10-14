@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.designsystem.modules.componentkit.models.SFSymbol
 import us.neotechnica.panther.designsystem.modules.foundation.components.PageSheetView
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
@@ -63,6 +64,7 @@ fun AddContactButton(
             ChatInfoPageViewColors.addContactButtonCircleLightForeground
         }
     val contentColor = if (isEnabled) colors.navigationBarButton else colors.disabled
+    val usesSFSymbol = SFSymbol.resolvesToSFSymbol(ChatInfoPageViewConstants.ADD_CONTACT_BUTTON_IMAGE_SYSTEM_NAME)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
@@ -86,10 +88,17 @@ fun AddContactButton(
                 ChatInfoPageViewConstants.ADD_CONTACT_BUTTON_IMAGE_SYSTEM_NAME,
                 foregroundColor = contentColor,
                 modifier =
-                    Modifier.size(
-                        width = ChatInfoPageViewFloats.addContactButtonImageWidth,
-                        height = ChatInfoPageViewFloats.addContactButtonImageHeight,
-                    ),
+                    if (usesSFSymbol) {
+                        Modifier.size(
+                            width = ChatInfoPageViewFloats.addContactButtonSymbolImageWidth,
+                            height = ChatInfoPageViewFloats.addContactButtonSymbolImageHeight,
+                        )
+                    } else {
+                        Modifier.size(
+                            width = ChatInfoPageViewFloats.addContactButtonImageWidth,
+                            height = ChatInfoPageViewFloats.addContactButtonImageHeight,
+                        )
+                    },
             )
         }
         Components.Text(
@@ -112,6 +121,7 @@ fun ChatInfoContactSelectorHost() {
     PageSheetView(
         isPresented = navState.chat.sheet == ChatNavigatorState.SheetPaths.ContactSelector,
         onDismissRequest = { navigation.navigate(Route.Chat(ChatRoute.Sheet(null))) },
+        ignoresBottomSafeArea = true,
     ) {
         ContactSelectorPageView(entryPoint = ContactSelectorPageView.EntryPoint.CHAT_INFO_PAGE_VIEW)
     }

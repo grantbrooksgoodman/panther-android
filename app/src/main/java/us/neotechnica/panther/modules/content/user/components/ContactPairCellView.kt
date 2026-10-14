@@ -10,9 +10,11 @@ package us.neotechnica.panther.modules.content.user.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +32,9 @@ import us.neotechnica.panther.modules.content.user.services.ChatPageStateService
 import us.neotechnica.panther.modules.content.user.services.ConversationCellViewService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
+import us.neotechnica.panther.navigation.UserContentNavigatorState
+import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 
@@ -52,6 +57,10 @@ private typealias CellFloats = ContactPairCellViewFloats
  *   cell's name labels include a hidden inspection marker. Accepted
  *   for signature parity; Compose has no inspection marker.
  * @param modifier The modifier for this view.
+ * @param contentPadding The padding between the cell's edges and its
+ *   content. The padding responds to taps along with the content, so
+ *   a list can inset its rows' content while its rows respond to taps
+ *   from edge to edge.
  * @param action The action performed when the user taps the cell, or
  *   `null` to make the cell non-interactive.
  */
@@ -60,6 +69,7 @@ fun ContactPairCellView(
     contactPair: ContactPair,
     @Suppress("UnusedParameter") isInspectable: Boolean = false,
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(),
     action: (() -> Unit)? = null,
 ) {
     val colors = LocalPantherColors.current
@@ -71,7 +81,8 @@ fun ContactPairCellView(
         modifier =
             modifier
                 .fillMaxWidth()
-                .then(if (action != null) Modifier.clickable(enabled = isSelectionEnabled, onClick = action) else Modifier),
+                .then(if (action != null) Modifier.clickable(enabled = isSelectionEnabled, onClick = action) else Modifier)
+                .padding(contentPadding),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -105,9 +116,24 @@ fun ContactPairCellView(
 
 // MARK: - Auxiliary
 
+// Whether the current conversation is on screen: in its chat page or in
+// its chat info page. iOS presents the chat info page as a sheet over the
+// chat page, which stays presented beneath it; Android pushes it in the
+// chat page's place, so the chat page is no longer presented while it
+// shows.
+private val isCurrentConversationPresented: Boolean
+    get() {
+        if (ChatPageStateService.isPresented) return true
+        val topPath =
+            DependencyValues.current.navigation.state.value.userContent.stack
+                .lastOrNull()
+        return topPath is UserContentNavigatorState.SeguePaths.ChatInfo &&
+            topPath.conversationIDKey == ConversationSessionService.currentConversation?.id?.key
+    }
+
 private fun isSelectionEnabled(contactPair: ContactPair): Boolean {
     val participantUserIDs =
-        if (ChatPageStateService.isPresented) {
+        if (isCurrentConversationPresented) {
             ConversationSessionService.currentConversation?.participants?.map { it.userID }
         } else {
             null

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The SF Symbol "play.fill", converted from its SVG export. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="14.5801dp"
+    android:height="16.4062dp"
+    android:viewportWidth="14.5801"
+    android:viewportHeight="16.4062">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M2.11914 16.1523L13.4961 9.50194C14.3066 9.03319 14.5801 8.71092 14.5801 8.20311C14.5801 7.68554 14.3066 7.37304 13.4961 6.90429L2.11914 0.253905C1.8164 0.08789 1.51367 0 1.2207 0C0.55664 0 0 0.45898 0 1.42578L0 14.9805C0 15.9472 0.55664 16.4062 1.2207 16.4062C1.51367 16.4062 1.8164 16.3086 2.11914 16.1523Z" />
+</vector>

@@ -61,11 +61,13 @@ class ContextMenuActionHandlerServiceTest {
     private var matchConfidences = mutableMapOf<String, Float>()
     private var reportedErrorCodes = listOf<String>()
     private var savedMediaFiles = mutableListOf<MediaFile>()
+    private var speakSucceeds = true
     private var spokenUtterances = mutableListOf<Triple<String, String, String>>()
     private var stoppedPlayback = false
     private var stoppedSpeaking = false
     private var successHUDCount = 0
     private var toggles = mutableListOf<Pair<AlternateMessageService.AlternateMessageType, String>>()
+    private var voicelessLanguageCodes = mutableSetOf<String>()
 
     private val service =
         ContextMenuActionHandlerService(
@@ -75,6 +77,7 @@ class ContextMenuActionHandlerServiceTest {
                 currentUser = { currentUser },
                 fileReport = { filedReports.add(it) },
                 isSpeaking = { isSpeaking },
+                isTextToSpeechSupported = { it !in voicelessLanguageCodes },
                 matchConfidence = { _, languageCode -> matchConfidences[languageCode] ?: 1f },
                 presentExportController = {},
                 presentReactionDetails = {},
@@ -82,7 +85,10 @@ class ContextMenuActionHandlerServiceTest {
                 saveMedia = { savedMediaFiles.add(it) },
                 scope = CoroutineScope(Dispatchers.Unconfined),
                 showSuccessHUD = { successHUDCount += 1 },
-                speak = { text, languageCode, messageID -> spokenUtterances.add(Triple(text, languageCode, messageID)) },
+                speak = { text, languageCode, messageID ->
+                    spokenUtterances.add(Triple(text, languageCode, messageID))
+                    speakSucceeds
+                },
                 stopPlayback = { stoppedPlayback = true },
                 stopSpeakingIfNeeded = { stoppedSpeaking = true },
                 toggleAlternate = { type, message -> toggles.add(type to message.id) },
@@ -140,6 +146,25 @@ class ContextMenuActionHandlerServiceTest {
     @Test
     fun `speaking hides the report and alternate actions and swaps the speak title`() {
         isSpeaking = true
+
+        val titles = service.menuForMessage(receivedTextMessage())?.map { it.title }
+
+        assertEquals(listOf("Copy", "Stop speaking"), titles)
+    }
+
+    @Test
+    fun `a message whose language has no installed voice does not offer speak`() {
+        voicelessLanguageCodes += "en"
+
+        val titles = service.menuForMessage(receivedTextMessage())?.map { it.title }
+
+        assertEquals(listOf("Copy", "Report a mistranslation", "View original"), titles)
+    }
+
+    @Test
+    fun `speaking offers stop speaking even without an installed voice`() {
+        isSpeaking = true
+        voicelessLanguageCodes += "en"
 
         val titles = service.menuForMessage(receivedTextMessage())?.map { it.title }
 
@@ -227,6 +252,28 @@ class ContextMenuActionHandlerServiceTest {
         select("Speak", message)
 
         assertEquals("es", spokenUtterances.single().second)
+    }
+
+    @Test
+    fun `speak keeps the sender's language when the matched language has no installed voice`() {
+        val message = ownTextMessage(input = "Taco", output = "Taco")
+        matchConfidences["en"] = 0.1f
+        matchConfidences["es"] = 0.95f
+        voicelessLanguageCodes += "es"
+
+        select("Speak", message)
+
+        assertEquals("en", spokenUtterances.single().second)
+    }
+
+    @Test
+    fun `an utterance that fails to queue marks no message as speaking`() {
+        speakSucceeds = false
+
+        select("Speak", receivedTextMessage())
+
+        assertEquals(1, spokenUtterances.size)
+        assertNull(service.speakingMessage)
     }
 
     @Test

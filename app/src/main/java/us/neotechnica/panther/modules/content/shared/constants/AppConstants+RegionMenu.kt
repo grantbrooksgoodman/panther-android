@@ -30,7 +30,6 @@ object RegionMenuFloats {
     val listViewCellLabelImageFrameWidth: Dp = 40.dp
 
     val listViewCellHorizontalPadding: Dp = 16.dp
-    val listViewCellVerticalPadding: Dp = 12.dp
 
     val selectedCellImageLeadingPadding: Dp = 3.dp
 

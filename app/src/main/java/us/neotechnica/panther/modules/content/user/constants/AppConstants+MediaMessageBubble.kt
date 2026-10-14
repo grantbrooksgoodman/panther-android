@@ -17,9 +17,6 @@ import androidx.compose.ui.unit.dp
 object MediaMessageBubbleFloats {
     val bubbleRadius: Dp = 18.dp
     val bubbleTailRadius: Dp = 4.dp
-    val documentIconSize: Dp = 30.dp
-    val documentPadding: Dp = 12.dp
-    val documentTextStartPadding: Dp = 10.dp
     val imageMaxHeight: Dp = 280.dp
     val imageMaxWidth: Dp = 240.dp
     val missingImageGlyphSize: Dp = 100.dp

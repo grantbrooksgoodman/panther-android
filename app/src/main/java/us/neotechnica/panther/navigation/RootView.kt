@@ -17,6 +17,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -83,7 +84,10 @@ fun RootView(modifier: Modifier = Modifier) {
         },
     ) { modal ->
         when (modal) {
-            RootNavigatorState.ModalPaths.Onboarding -> OnboardingContainerView(Modifier.fillMaxSize().systemBarsPadding())
+            // As in SwiftUI, the keyboard shrinks the onboarding pages' safe
+            // area, moving their centered content up to stay clear of it.
+            RootNavigatorState.ModalPaths.Onboarding ->
+                OnboardingContainerView(Modifier.fillMaxSize().systemBarsPadding().imePadding())
             RootNavigatorState.ModalPaths.Splash ->
                 SplashPageView(
                     viewModel = remember { ViewModel(SplashPageReducer.State(), SplashPageReducer()) },

@@ -186,6 +186,7 @@ private fun ProgressBar(
                 Modifier
                     .fillMaxWidth()
                     .padding(horizontal = Floats.progressBarHorizontalPadding)
+                    .padding(top = Floats.progressBarTopPadding)
                     .alpha(fadeIn.value * if (loadingIndicatorStyle == LoadingIndicatorStyle.BAR) 1f else 0f),
         )
     }

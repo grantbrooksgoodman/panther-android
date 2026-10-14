@@ -80,8 +80,6 @@ object ChatPageViewFloats {
     }
 
     object MessageTimestamp {
-        const val REVEAL_DRAG_THRESHOLD_FRACTION = 0.5f
-
         val labelWidth: Dp = 72.dp
         val revealDistance: Dp = 80.dp
     }

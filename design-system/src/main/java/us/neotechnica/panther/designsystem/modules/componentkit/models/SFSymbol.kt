@@ -58,27 +58,91 @@ import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.font.FontWeight
 
 /**
- * Maps SF Symbol names to their nearest Material Symbol (SF Symbols
- * are unavailable on Android).
+ * Resolves SF Symbol names to images.
  *
- * Unknown names resolve to a warning symbol. Extend the mapping as
- * new symbols are introduced.
+ * A name resolves to the real SF Symbol while [usesSFSymbols] is
+ * `true` and the symbol is bundled. Otherwise, it resolves to its
+ * nearest Material Symbol. Unknown names resolve to a warning symbol.
+ * Extend the mapping as new symbols are introduced.
  */
 object SFSymbol {
+    // MARK: - Types
+
+    /** The size of a symbol relative to the text it accompanies. */
+    enum class Scale {
+        /** A symbol smaller than the text it accompanies. */
+        SMALL,
+
+        /** A symbol sized to the text it accompanies. */
+        MEDIUM,
+    }
+
+    // MARK: - Properties
+
+    /**
+     * A Boolean value that indicates whether names resolve to real SF
+     * Symbols, where bundled, rather than to Material Symbols.
+     *
+     * The default is `true`.
+     *
+     * **Important:** Set this value once at launch, before any content
+     * is composed. Symbols already on screen don't update when it
+     * changes.
+     */
+    var usesSFSymbols = true
+
     // MARK: - Methods
 
     /**
-     * Returns the Material [ImageVector] for the given SF Symbol name,
-     * or a warning symbol if the name is not mapped.
+     * Returns the [ImageVector] for the given SF Symbol name.
+     *
+     * The image is the real SF Symbol while [usesSFSymbols] is `true`
+     * and the symbol is bundled – in the given weight and scale where
+     * that variant is bundled, and in the regular weight and medium
+     * scale otherwise. Failing that, it is the nearest Material Symbol,
+     * which has no weight or scale, or a warning symbol if the name is
+     * not mapped.
      *
      * @param systemName The SF Symbol name.
+     * @param weight The weight of the symbol, or `null` for the regular
+     *   weight.
+     * @param scale The scale of the symbol. The default is
+     *   [Scale.MEDIUM].
      *
      * @return The corresponding image vector.
      */
-    fun imageVector(systemName: String): ImageVector = SYMBOLS[systemName] ?: Icons.Filled.Warning
+    @Composable
+    fun imageVector(
+        systemName: String,
+        weight: FontWeight? = null,
+        scale: Scale = Scale.MEDIUM,
+    ): ImageVector {
+        val drawableID =
+            SFSymbolVariantDrawables[SFSymbolVariant(systemName, weight, scale)] ?: SFSymbolDrawables[systemName]
+        if (usesSFSymbols && drawableID != null) return ImageVector.vectorResource(drawableID)
+        return SYMBOLS[systemName] ?: Icons.Filled.Warning
+    }
+
+    /**
+     * Returns a Boolean value that indicates whether the given name
+     * resolves to a real SF Symbol rather than to a Material Symbol.
+     *
+     * An SF Symbol fills its bounds, while a Material Symbol is drawn
+     * with padding inside them. Use this method to size a symbol whose
+     * layout compensates for that padding.
+     *
+     * @param systemName The SF Symbol name.
+     *
+     * @return `true` if the name resolves to a real SF Symbol;
+     *   otherwise, `false`.
+     */
+    fun resolvesToSFSymbol(systemName: String): Boolean = usesSFSymbols && systemName in SFSymbolDrawables
 
     // MARK: - Companion
 

@@ -9,10 +9,6 @@
 package us.neotechnica.panther.modules.common.services
 
 import android.content.Context
-import android.media.AudioAttributes
-import android.media.AudioFocusRequest
-import android.media.AudioManager
-import android.os.Build
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
@@ -25,24 +21,16 @@ import java.util.Locale
 /**
  * Synthesizes speech from text aloud.
  *
- * Voice lookups and language support checks are cached in memory
- * per language code; clear them through
- * [TextToSpeechServiceCache.clearCache].
+ * Speech uses only voices installed on the device. Voice lookups and
+ * positive language support checks are cached in memory per language
+ * code; clear them through [TextToSpeechServiceCache.clearCache].
  */
 object TextToSpeechService {
     // MARK: - Properties
 
-    private val audioAttributes by lazy {
-        AudioAttributes
-            .Builder()
-            .setUsage(AudioAttributes.USAGE_MEDIA)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-            .build()
-    }
+    private val audioFocus = AudioFocusService { stop() }
 
-    private var audioManager: AudioManager? = null
     private var engine: TextToSpeech? = null
-    private var focusRequest: AudioFocusRequest? = null
     private var isInitialized = false
 
     // Backed by observable snapshot state, driven by the utterance
@@ -73,7 +61,7 @@ object TextToSpeechService {
 
     /** Prepares the service with the application context. */
     fun initialize(context: Context) {
-        audioManager = context.applicationContext.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        audioFocus.initialize(context)
         val engine =
             TextToSpeech(context.applicationContext) { status ->
                 isInitialized = status == TextToSpeech.SUCCESS
@@ -126,28 +114,35 @@ object TextToSpeechService {
      * Speaks [text] aloud with the highest quality voice available for
      * [languageCode], replacing any in-progress utterance.
      *
+     * Nothing is spoken if no voice for the language is installed on
+     * the device; use [isTextToSpeechSupported] to check beforehand.
+     *
      * @param text The text to speak.
      * @param languageCode The language code of the voice with which to speak the text.
      * @param messageID The identifier of the message being spoken.
+     *
+     * @return `true` if the utterance was queued for speaking;
+     *   otherwise, `false`.
      */
     fun speak(
         text: String,
         languageCode: String,
         messageID: String,
-    ) {
-        val engine = engine ?: return
-        if (!isInitialized || text.isBlank()) return
+    ): Boolean {
+        val engine = engine ?: return false
+        if (!isInitialized || text.isBlank()) return false
 
-        val locale = Locale.forLanguageTag(languageCode)
-        val voice = highestQualityVoice(languageCode)
-        if (voice != null) engine.voice = voice else engine.language = locale
+        val voice = highestQualityVoice(languageCode) ?: return false
+        if (engine.setVoice(voice) != TextToSpeech.SUCCESS) return false
 
         speakingMessageIDState = messageID
         spokenRangeState = null
 
         // Request transient audio focus before speaking.
-        requestFocus()
-        engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, UTTERANCE_ID)
+        audioFocus.requestFocus()
+        if (engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, UTTERANCE_ID) == TextToSpeech.SUCCESS) return true
+        endSpeaking()
+        return false
     }
 
     // MARK: - Stop
@@ -170,9 +165,11 @@ object TextToSpeechService {
      * Returns the highest quality voice available for the given
      * language code.
      *
-     * A high-quality on-device voice is preferred; otherwise, the
-     * best available on-device voice for the language is returned.
-     * Results are cached in memory per language code.
+     * Only voices installed on the device are considered: a voice the
+     * speech engine lists but has not downloaded, or one that requires
+     * a network connection, is skipped. A high-quality voice is
+     * preferred; otherwise, the best installed voice for the language
+     * is returned. Results are cached in memory per language code.
      *
      * **Note:** While the speech engine is still initializing, this
      * method returns `null` without caching a result.
@@ -185,13 +182,12 @@ object TextToSpeechService {
     fun highestQualityVoice(languageCode: String): Voice? {
         TextToSpeechServiceCache.voice(languageCode)?.let { return it }
 
-        val voices = loadedVoices(languageCode) ?: return null
-        val onDeviceVoices = voices.filter { !it.isNetworkConnectionRequired }
+        val voices = installedVoices(languageCode) ?: return null
         val voice =
-            onDeviceVoices
+            voices
                 .filter { it.quality >= Voice.QUALITY_HIGH }
                 .maxByOrNull { it.quality }
-                ?: onDeviceVoices.maxByOrNull { it.quality }
+                ?: voices.maxByOrNull { it.quality }
                 ?: return null
 
         TextToSpeechServiceCache.setVoice(voice, languageCode)
@@ -204,9 +200,11 @@ object TextToSpeechService {
      * Returns a Boolean value that indicates whether text to speech
      * is supported for the given language code.
      *
-     * Support is determined by whether any installed voice matches
-     * the given code. Results are cached in memory per language
-     * code.
+     * Text to speech is supported for a language when a voice for it
+     * is installed on the device and requires no network connection;
+     * a voice the speech engine lists but has not downloaded doesn't
+     * count. Only positive results are cached in memory, so a voice
+     * downloaded while the app is running is found on a later call.
      *
      * **Note:** While the speech engine is still initializing, this
      * method returns `false` without caching a result.
@@ -220,26 +218,30 @@ object TextToSpeechService {
     fun isTextToSpeechSupported(languageCode: String): Boolean {
         TextToSpeechServiceCache.supportValue(languageCode)?.let { return it }
 
-        val voices = loadedVoices(languageCode) ?: return false
-        val isTextToSpeechSupported = voices.isNotEmpty()
+        val voices = installedVoices(languageCode) ?: return false
+        if (voices.isEmpty()) return false
 
-        TextToSpeechServiceCache.setSupportValue(isTextToSpeechSupported, languageCode)
-        return isTextToSpeechSupported
+        TextToSpeechServiceCache.setSupportValue(true, languageCode)
+        return true
     }
 
     // MARK: - Auxiliary
 
-    // The installed voices for the given language code, or null while
-    // the speech engine is initializing.
-    private fun loadedVoices(languageCode: String): List<Voice>? {
+    // The voices for the given language code that can speak without
+    // downloading data or connecting to the network, or null while the
+    // speech engine is initializing.
+    private fun installedVoices(languageCode: String): List<Voice>? {
         val engine = engine ?: return null
         if (!isInitialized) return null
 
         val language = Locale.forLanguageTag(languageCode).language
         return runCatching {
             engine.voices
-                ?.filter { it.locale.language.equals(language, ignoreCase = true) }
-                .orEmpty()
+                ?.filter { voice ->
+                    voice.locale.language.equals(language, ignoreCase = true) &&
+                        !voice.isNetworkConnectionRequired &&
+                        voice.features?.contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED) != true
+                }.orEmpty()
         }.getOrNull()
     }
 
@@ -247,27 +249,7 @@ object TextToSpeechService {
         speaking = false
         speakingMessageIDState = null
         spokenRangeState = null
-        abandonFocus()
-    }
-
-    private fun requestFocus() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val manager = audioManager ?: return
-        val request =
-            AudioFocusRequest
-                .Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
-                .setAudioAttributes(audioAttributes)
-                .setOnAudioFocusChangeListener { change -> if (change == AudioManager.AUDIOFOCUS_LOSS) stop() }
-                .build()
-        focusRequest = request
-        manager.requestAudioFocus(request)
-    }
-
-    private fun abandonFocus() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val manager = audioManager ?: return
-        focusRequest?.let { manager.abandonAudioFocusRequest(it) }
-        focusRequest = null
+        audioFocus.abandonFocus()
     }
 
     // MARK: - Companion

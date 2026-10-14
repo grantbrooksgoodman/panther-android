@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The SF Symbol "plus", converted from its SVG export. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="16.1133dp"
+    android:height="16.1133dp"
+    android:viewportWidth="16.1133"
+    android:viewportHeight="16.1133">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M8.93554 15.2441L8.93554 8.92577L15.2441 8.92577C15.7129 8.92577 16.1133 8.53514 16.1133 8.05663C16.1133 7.57812 15.7129 7.17773 15.2441 7.17773L8.93554 7.17773L8.93554 0.869135C8.93554 0.40039 8.53515 0 8.05663 0C7.57812 0 7.18749 0.40039 7.18749 0.869135L7.18749 7.17773L0.86914 7.17773C0.40039 7.17773 0 7.57812 0 8.05663C0 8.53514 0.40039 8.92577 0.86914 8.92577L7.18749 8.92577L7.18749 15.2441C7.18749 15.7129 7.57812 16.1133 8.05663 16.1133C8.53515 16.1133 8.93554 15.7129 8.93554 15.2441Z" />
+</vector>

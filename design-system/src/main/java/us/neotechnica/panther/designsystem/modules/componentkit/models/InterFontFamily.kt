@@ -17,9 +17,9 @@ import androidx.compose.ui.text.font.FontWeight
 import us.neotechnica.panther.designsystem.R
 
 /**
- * The Inter typeface, used as the system font on Android in place of
- * San Francisco (which is licensed for Apple platforms only). Inter is
- * chosen for its close metric compatibility with San Francisco.
+ * The Inter typeface, used as the system font in place of San
+ * Francisco while [Font.usesSanFrancisco] is `false`. Inter is chosen
+ * for its close metric compatibility with San Francisco.
  *
  * The family is backed by two variable fonts (upright and italic); each
  * declared weight selects the corresponding weight axis. On API levels

@@ -15,16 +15,12 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,9 +36,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.foundation.components.HeaderView
+import us.neotechnica.panther.designsystem.modules.foundation.components.LazyGroupedListView
 import us.neotechnica.panther.designsystem.modules.foundation.components.PageSheetView
+import us.neotechnica.panther.designsystem.modules.foundation.constants.GroupedListViewFloats
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.designsystem.modules.theming.views.ThemedView
@@ -133,6 +132,7 @@ fun RegionMenu(
         isPresented = state.isPresented,
         onDismissRequest = { viewModel.send(RegionMenuReducer.Action.RunIsPresentedEffect(false)) },
         containerColor = colors.navigationBarBackground,
+        ignoresBottomSafeArea = true,
     ) {
         RegionPickerView(
             state = state,
@@ -194,45 +194,39 @@ private fun ListView(
 
     LaunchedEffect(Unit) { onListAppeared(listState) }
 
-    LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-        items(regionTitles) { regionTitle ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+    // The dividers begin where the region titles do, past the flags.
+    LazyGroupedListView(
+        regionTitles,
+        state = listState,
+        dividerLeadingPadding =
+            GroupedListViewFloats.ROW_HORIZONTAL_PADDING.dp +
+                Floats.listViewCellLabelImageFrameWidth +
+                Floats.listViewCellHorizontalPadding / 2,
+        onSelect = onRegionTitleSelected,
+    ) { regionTitle ->
+        RegionDetailService.image(RegionDetailService.QueryStrategy.RegionTitle(regionTitle))?.let {
+            Image(
+                painter = painterResource(it.resourceID),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
                 modifier =
                     Modifier
-                        .fillMaxWidth()
-                        .background(colors.groupedRowBackground)
-                        .clickable { onRegionTitleSelected(regionTitle) }
-                        .padding(
-                            horizontal = Floats.listViewCellHorizontalPadding,
-                            vertical = Floats.listViewCellVerticalPadding,
-                        ),
-            ) {
-                RegionDetailService.image(RegionDetailService.QueryStrategy.RegionTitle(regionTitle))?.let {
-                    Image(
-                        painter = painterResource(it.resourceID),
-                        contentDescription = null,
-                        contentScale = ContentScale.Fit,
-                        modifier =
-                            Modifier
-                                .padding(end = Floats.listViewCellHorizontalPadding / 2)
-                                .size(
-                                    width = Floats.listViewCellLabelImageFrameWidth,
-                                    height = Floats.listViewCellLabelImageFrameHeight,
-                                ).clip(RoundedCornerShape(Floats.listViewCellLabelImageCornerRadius)),
-                    )
-                }
+                        .padding(end = Floats.listViewCellHorizontalPadding / 2)
+                        .size(
+                            width = Floats.listViewCellLabelImageFrameWidth,
+                            height = Floats.listViewCellLabelImageFrameHeight,
+                        ).clip(RoundedCornerShape(Floats.listViewCellLabelImageCornerRadius)),
+            )
+        }
 
-                Components.Text(regionTitle, foregroundColor = colors.titleText)
+        Components.Text(regionTitle, foregroundColor = colors.titleText)
 
-                if (regionTitle == selectedRegionTitle) {
-                    Components.Symbol(
-                        Strings.SELECTED_CELL_IMAGE_SYSTEM_NAME,
-                        foregroundColor = Colors.selectedCellImageForeground,
-                        modifier = Modifier.padding(start = Floats.selectedCellImageLeadingPadding),
-                    )
-                }
-            }
+        if (regionTitle == selectedRegionTitle) {
+            Components.Symbol(
+                Strings.SELECTED_CELL_IMAGE_SYSTEM_NAME,
+                foregroundColor = Colors.selectedCellImageForeground,
+                modifier = Modifier.padding(start = Floats.selectedCellImageLeadingPadding),
+            )
         }
     }
 }

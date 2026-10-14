@@ -11,6 +11,7 @@ package us.neotechnica.panther
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
@@ -53,6 +54,15 @@ class MainActivity : ComponentActivity() {
         if (isProcessRestart && intent?.getStringExtra(PendingChatNavigation.CONVERSATION_ID_KEY_EXTRA) == null) {
             PendingChatNavigation.set(Persistent.string(PersistentStorageKey.openConversationIDKey))
         }
+
+        // As on iOS, where leaving the app never closes it, Back with nothing
+        // left to go back to sends the app to the background. Android does
+        // this itself only for a task opened from the home screen; opened any
+        // other way – from a notification, say – the activity would finish,
+        // and reopening the app would rebuild the signed-in session's content.
+        // Registered before the content, every in-app Back handler takes
+        // precedence over it.
+        onBackPressedDispatcher.addCallback(this) { moveTaskToBack(true) }
 
         enableEdgeToEdge()
         setContent {

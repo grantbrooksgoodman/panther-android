@@ -15,7 +15,6 @@ import androidx.compose.ui.unit.dp
 // MARK: - Float
 
 object SettingsPageViewFloats {
-    val avatarGlyphSize: Dp = 24.dp
     val avatarSize: Dp = 44.dp
     val buildInfoButtonImageBottomPadding: Dp = 6.dp
     val buildInfoButtonImageFrameHeight: Dp = (515f / 20f).dp
@@ -25,10 +24,16 @@ object SettingsPageViewFloats {
     val cardPadding: Dp = 16.dp
     val cardVerticalMargin: Dp = 14.dp
     val contactChevronSize: Dp = 18.dp
+
+    /** The size of the contact row's chevron as an SF Symbol, which fills its frame. */
+    val contactChevronSymbolSize: Dp = 15.dp
     val contactCornerRadius: Dp = 28.dp
     val contactNameStartPadding: Dp = 12.dp
     val contentTopPadding: Dp = 16.dp
     val disclosureChevronSize: Dp = 24.dp
+
+    /** The size of a row's disclosure chevron as an SF Symbol, which fills its frame. */
+    val disclosureChevronSymbolSize: Dp = 14.dp
     val iconRowVerticalPadding: Dp = 10.dp
     val iconSize: Dp = 30.dp
     val iconTitleStartPadding: Dp = 12.dp
@@ -82,7 +87,7 @@ object SettingsPageViewConstants {
     const val TOGGLE_DEVELOPER_MODE = "Toggle Developer Mode"
 
     const val BLOCKED_USERS_BUTTON_IMAGE_SYSTEM_NAME = "flag.fill"
-    const val CHANGE_LANGUAGE_BUTTON_IMAGE_SYSTEM_NAME = "globe"
+    const val CHEVRON_IMAGE_SYSTEM_NAME = "chevron.forward"
     const val CLEAR_CACHES_BUTTON_IMAGE_SYSTEM_NAME = "command"
     const val DELETE_ACCOUNT_BUTTON_IMAGE_SYSTEM_NAME = "trash.fill"
     const val INVITE_FRIENDS_BUTTON_IMAGE_SYSTEM_NAME = "location.fill"

@@ -20,7 +20,12 @@ object ChatInfoPageViewFloats {
     val addContactButtonCircleTrailingPadding: Dp = 2.dp
     val addContactButtonImageHeight: Dp = 24.dp
     val addContactButtonImageWidth: Dp = 24.dp
-    val avatarGlyphSize: Dp = 52.dp
+
+    /** The height of the add-contact symbol as an SF Symbol, which fills its frame. */
+    val addContactButtonSymbolImageHeight: Dp = 15.dp
+
+    /** The width of the add-contact symbol as an SF Symbol, which fills its frame. */
+    val addContactButtonSymbolImageWidth: Dp = 15.dp
     val avatarSize: Dp = 100.dp
     val avatarTopPadding: Dp = 20.dp
     val bottomSpacerPadding: Dp = 24.dp
@@ -34,12 +39,14 @@ object ChatInfoPageViewFloats {
     val chevronBoxBorderWidth: Dp = 1.dp
     val chevronBoxSize: Dp = 24.dp
     val chevronBoxStartPadding: Dp = 8.dp
+
+    /**
+     * The size of the participants toggle's circled chevron as an SF
+     * Symbol: its size beside body text.
+     */
+    val chevronCircleSymbolSize: Dp = 16.93.dp
     val chevronGlyphSize: Dp = 16.dp
-    val languageBadgeCornerRadius: Dp = 4.dp
-    val languageBadgeHorizontalPadding: Dp = 6.dp
     val languageBadgeStartPadding: Dp = 8.dp
-    val languageBadgeVerticalPadding: Dp = 2.dp
-    val rowAvatarGlyphSize: Dp = 22.dp
     val rowAvatarSize: Dp = 40.dp
     val rowTextStartPadding: Dp = 12.dp
     val rowVerticalPadding: Dp = 10.dp

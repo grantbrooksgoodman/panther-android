@@ -15,7 +15,6 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
@@ -111,27 +110,52 @@ class WelcomePageReducerTest {
                 WelcomePageReducer.Action.CycleWelcomeLabelText,
             )
 
-        // With English already cycled, only Spanish remains eligible;
-        // either it is chosen, or the random draw repeats English and
-        // the state is left untouched for the next attempt.
-        val state = result.state
-        if (state.cycledLanguageCodes.size == 2) {
-            assertEquals(LocalizedStringKey.WelcomeToHello.localized(languageCode = "es"), state.welcomeLabelText)
-        } else {
-            assertEquals(initialText, state.welcomeLabelText)
-        }
+        // With English already shown, Spanish is the only language left.
+        val spanishText = LocalizedStringKey.WelcomeToHello.localized(languageCode = "es")
+        assertEquals(mapOf("en" to initialText, "es" to spanishText), result.state.cycledLanguageCodes)
+        assertEquals(spanishText, result.state.welcomeLabelText)
         assertNotNull(result.effect)
     }
 
     @Test
-    fun `cycling resets once every supported language has been shown`() {
+    fun `cycling starts over once every supported language has been shown`() {
+        val englishText = LocalizedStringKey.WelcomeToHello.localized(languageCode = "en")
+        val spanishText = LocalizedStringKey.WelcomeToHello.localized(languageCode = "es")
+
         val result =
             reducer.reduce(
-                WelcomePageReducer.State(cycledLanguageCodes = mapOf("en" to "a", "es" to "b")),
+                WelcomePageReducer.State(
+                    welcomeLabelText = englishText,
+                    cycledLanguageCodes = mapOf("en" to englishText, "es" to spanishText),
+                ),
                 WelcomePageReducer.Action.CycleWelcomeLabelText,
             )
 
-        assertTrue(result.state.cycledLanguageCodes.isEmpty())
+        // The label never repeats itself, so Spanish starts the new round.
+        assertEquals(mapOf("es" to spanishText), result.state.cycledLanguageCodes)
+        assertEquals(spanishText, result.state.welcomeLabelText)
+    }
+
+    @Test
+    fun `cycling starts over once the only languages left share a shown message`() {
+        // A language without its own translation shares English's message.
+        RuntimeStorage.languageCodeDictionary = mapOf("en" to "English", "es" to "Spanish", "xx" to "Untranslated")
+        val englishText = LocalizedStringKey.WelcomeToHello.localized(languageCode = "en")
+        val spanishText = LocalizedStringKey.WelcomeToHello.localized(languageCode = "es")
+        assertEquals(englishText, LocalizedStringKey.WelcomeToHello.localized(languageCode = "xx"))
+
+        val result =
+            reducer.reduce(
+                WelcomePageReducer.State(
+                    welcomeLabelText = spanishText,
+                    cycledLanguageCodes = mapOf("en" to englishText, "es" to spanishText),
+                ),
+                WelcomePageReducer.Action.CycleWelcomeLabelText,
+            )
+
+        assertEquals(englishText, result.state.welcomeLabelText)
+        assertEquals(1, result.state.cycledLanguageCodes.size)
+        assertNotNull(result.effect)
     }
 
     @Test

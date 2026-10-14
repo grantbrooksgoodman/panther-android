@@ -28,7 +28,7 @@ object AvatarImageViewFloats {
 
     const val CORNER_RADIUS = 10f
 
-    /** The scale at which the default placeholder symbol's circle fills the frame. */
+    /** The scale at which the default placeholder's Material symbol's circle fills the frame. */
     const val DEFAULT_IMAGE_SCALE = 1.2f
 
     const val FRAME_HEIGHT = 50f

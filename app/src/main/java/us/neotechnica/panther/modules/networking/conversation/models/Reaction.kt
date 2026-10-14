@@ -89,8 +89,6 @@ data class Reaction(
             /** The reaction styles, sorted by display order. */
             val orderedCases: List<Style> = entries.sortedBy { it.orderValue }
 
-            private val emojiCaseMap: Map<String, Style> = entries.associateBy { it.emojiValue }
-
             /**
              * Creates a style from its serialized representation.
              *
@@ -104,16 +102,6 @@ data class Reaction(
                 entries.firstOrNull {
                     it.encodedValue == encodedValue
                 }
-
-            /**
-             * Creates a style from the given emoji.
-             *
-             * @param emojiValue The emoji that represents the style.
-             *
-             * @return The matching style, or `null` if no style uses
-             *   the emoji.
-             */
-            fun fromEmojiValue(emojiValue: String): Style? = emojiCaseMap[emojiValue]
         }
     }
 

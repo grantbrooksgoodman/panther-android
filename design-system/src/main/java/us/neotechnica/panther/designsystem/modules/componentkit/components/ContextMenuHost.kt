@@ -40,20 +40,29 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.toSize
 import us.neotechnica.panther.designsystem.R
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAction
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAlignment
 import us.neotechnica.panther.designsystem.modules.componentkit.models.GestureRecognizerState
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ReactionChoice
+import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import us.neotechnica.panther.designsystem.modules.foundation.services.SoundPlayer
 
 /**
  * A presented context menu: the lifted message bubble and its action
  * menu.
+ *
+ * The anchor bounds are in the host's coordinate space, where the
+ * overlay draws the lifted bubble, so a transform the host shares with
+ * the bubble – the page sliding in as it is pushed – can't move the
+ * lifted bubble away from its origin.
  */
 internal data class ActiveContextMenu(
+    val originID: Any,
     val anchorBounds: Rect,
     val alignment: ContextMenuAlignment,
     val actions: List<ContextMenuAction>,
@@ -85,6 +94,10 @@ class ContextMenuController internal constructor() {
     internal var canBegin: Boolean = true
     internal var hapticFeedback: HapticFeedback? = null
 
+    // The host's layout coordinates, against which lifted bubbles are
+    // measured.
+    internal var hostCoordinates: LayoutCoordinates? = null
+
     /** The index of the menu element under a held long press, or `null`. */
     internal var highlightedElementIndex by mutableStateOf<Int?>(null)
         private set
@@ -106,6 +119,21 @@ class ContextMenuController internal constructor() {
     // it animates away.
     internal val displayed: ActiveContextMenu?
         get() = active ?: lastPresented
+
+    // MARK: - Host Bounds
+
+    /**
+     * Returns the bounds of the given layout in the host's coordinate
+     * space, or `null` when either is detached.
+     *
+     * @param coordinates The layout coordinates of a bubble within the
+     *   host.
+     */
+    internal fun boundsInHost(coordinates: LayoutCoordinates): Rect? {
+        val hostCoordinates = hostCoordinates?.takeIf { it.isAttached } ?: return null
+        if (!coordinates.isAttached) return null
+        return Rect(hostCoordinates.localPositionOf(coordinates, Offset.Zero), coordinates.size.toSize())
+    }
 
     // MARK: - Presentation
 
@@ -287,14 +315,18 @@ fun ContextMenuHost(
 
     // The menu appears and disappears on ContextualMenu's spring. UIKit's
     // initial spring velocity is relative to the distance left to travel,
-    // so a dismissal starts out heading back toward rest.
+    // so a dismissal starts out heading back toward rest. Without iOS
+    // animations, the menu moves on Compose's default spring from rest.
     LaunchedEffect(controller.active) {
+        val usesAppleAnimations = SystemAnimation.usesAppleAnimations
+        val stiffness = if (usesAppleAnimations) PRESENTATION_SPRING_STIFFNESS else Spring.StiffnessMediumLow
+        val initialVelocity = if (usesAppleAnimations) PRESENTATION_SPRING_INITIAL_VELOCITY else 0f
         if (controller.active != null) {
             progress.snapTo(0f)
             progress.animateTo(
                 targetValue = 1f,
-                animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = PRESENTATION_SPRING_STIFFNESS),
-                initialVelocity = PRESENTATION_SPRING_INITIAL_VELOCITY,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = stiffness),
+                initialVelocity = initialVelocity,
             )
             return@LaunchedEffect
         }
@@ -302,8 +334,8 @@ fun ContextMenuHost(
         if (controller.lastPresented == null) return@LaunchedEffect
         progress.animateTo(
             targetValue = 0f,
-            animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = PRESENTATION_SPRING_STIFFNESS),
-            initialVelocity = -PRESENTATION_SPRING_INITIAL_VELOCITY * progress.value,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = stiffness),
+            initialVelocity = -initialVelocity * progress.value,
         )
         controller.lastPresented = null
     }
@@ -324,7 +356,7 @@ fun ContextMenuHost(
             }
     }
 
-    Box(modifier.fillMaxSize()) {
+    Box(modifier.fillMaxSize().onPlaced { controller.hostCoordinates = it }) {
         Box(
             if (usesSoftwareBlur) {
                 Modifier.drawWithContent {

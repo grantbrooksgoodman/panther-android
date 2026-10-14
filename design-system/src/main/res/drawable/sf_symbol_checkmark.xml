@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The SF Symbol "checkmark", converted from its SVG export. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="16.8262dp"
+    android:height="16.6894dp"
+    android:viewportWidth="16.8262"
+    android:viewportHeight="16.6894">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M7.35351 16.1426L16.582 1.61133C16.7578 1.32813 16.8262 1.11329 16.8262 0.888675C16.8262 0.351565 16.4746 0 15.9375 0C15.5469 0 15.332 0.126955 15.0976 0.49805L6.32812 14.4726L1.77734 8.51562C1.5332 8.17382 1.28906 8.03711 0.937499 8.03711C0.380859 8.03711 0 8.41797 0 8.95507C0 9.17968 0.0976561 9.43359 0.283203 9.66796L5.35156 16.123C5.64452 16.5039 5.94726 16.6894 6.36718 16.6894C6.7871 16.6894 7.11913 16.5039 7.35351 16.1426Z" />
+</vector>

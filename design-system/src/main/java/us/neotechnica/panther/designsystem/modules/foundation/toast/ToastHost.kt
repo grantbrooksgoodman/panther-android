@@ -10,7 +10,11 @@ package us.neotechnica.panther.designsystem.modules.foundation.toast
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -111,9 +115,15 @@ fun ToastHost() {
                 .windowInsetsPadding(WindowInsets.statusBars),
     ) {
         val fromBottom = appearanceEdge == Toast.AppearanceEdge.BOTTOM
+        // Without iOS animations, the toast also fades as it slides.
+        val usesAppleAnimations = SystemAnimation.usesAppleAnimations
         AnimatedVisibility(
-            enter = slideInVertically(SystemAnimation.spring(IntOffset.VisibilityThreshold)) { if (fromBottom) it else -it },
-            exit = slideOutVertically(SystemAnimation.spring(IntOffset.VisibilityThreshold)) { if (fromBottom) it else -it },
+            enter =
+                slideInVertically(SystemAnimation.spring(IntOffset.VisibilityThreshold)) { if (fromBottom) it else -it } +
+                    if (usesAppleAnimations) EnterTransition.None else fadeIn(),
+            exit =
+                slideOutVertically(SystemAnimation.spring(IntOffset.VisibilityThreshold)) { if (fromBottom) it else -it } +
+                    if (usesAppleAnimations) ExitTransition.None else fadeOut(),
             visible = presented != null,
         ) {
             presented?.let { current ->
@@ -335,7 +345,7 @@ private val ToastStyle.accentColor: Color?
         }
 
 private val ToastStyle.bannerIcon: ImageVector?
-    get() =
+    @Composable get() =
         when (this) {
             ToastStyle.ERROR -> SFSymbol.imageVector(Strings.BANNER_ERROR_ICON_IMAGE_SYSTEM_NAME)
             ToastStyle.INFO -> SFSymbol.imageVector(Strings.BANNER_INFO_ICON_IMAGE_SYSTEM_NAME)
@@ -345,7 +355,7 @@ private val ToastStyle.bannerIcon: ImageVector?
         }
 
 private val ToastStyle.capsuleIcon: ImageVector?
-    get() =
+    @Composable get() =
         when (this) {
             ToastStyle.ERROR -> SFSymbol.imageVector(Strings.CAPSULE_ERROR_ICON_IMAGE_SYSTEM_NAME)
             ToastStyle.INFO -> SFSymbol.imageVector(Strings.CAPSULE_INFO_ICON_IMAGE_SYSTEM_NAME)

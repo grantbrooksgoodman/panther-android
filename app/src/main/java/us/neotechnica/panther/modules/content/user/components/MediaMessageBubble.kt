@@ -11,7 +11,9 @@ package us.neotechnica.panther.modules.content.user.components
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -67,7 +69,18 @@ fun MediaMessageBubble(
     val shape = bubbleShape(isOwn)
     val pinchModifier =
         Modifier.pointerInput(mediaFile.relativePath) {
-            detectTransformGestures { _, _, zoom, _ -> if (zoom > PINCH_OPEN_ZOOM_THRESHOLD) onPinch() }
+            // Only a pinch's two fingers are tracked, and nothing is consumed,
+            // so a one-finger drag on the bubble still scrolls the message list.
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false)
+                var zoom = 1f
+                do {
+                    val event = awaitPointerEvent()
+                    if (event.changes.count { it.pressed } < 2) continue
+                    zoom *= event.calculateZoom()
+                    if (zoom > PINCH_OPEN_ZOOM_THRESHOLD) return@awaitEachGesture onPinch()
+                } while (event.changes.any { it.pressed })
+            }
         }
 
     val fileExtension = mediaFile.fileExtension

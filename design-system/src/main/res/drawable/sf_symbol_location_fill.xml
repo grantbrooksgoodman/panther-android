@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The SF Symbol "location.fill", converted from its SVG export. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="18.4361dp"
+    android:height="18.3514dp"
+    android:viewportWidth="18.4361"
+    android:viewportHeight="18.3514">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M11.0278 17.4483L18.2446 1.93072C18.8989 0.504941 17.7758 -0.432559 16.4086 0.202206L0.803166 7.43853C-0.446832 8.0147 -0.202692 9.77251 1.29145 9.78228L8.41058 9.81158C8.55706 9.81158 8.60589 9.8604 8.60589 10.0069L8.62542 17.0674C8.62542 18.5225 10.3735 18.8643 11.0278 17.4483Z" />
+</vector>

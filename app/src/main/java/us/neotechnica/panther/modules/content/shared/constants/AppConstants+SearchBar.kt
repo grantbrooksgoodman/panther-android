@@ -13,6 +13,9 @@ import androidx.compose.ui.graphics.Color
 // MARK: - Float
 
 object SearchBarFloats {
+    /** The spacing between the field and the Cancel button. */
+    const val CANCEL_BUTTON_LEADING_PADDING = 11f
+
     const val CLEAR_BUTTON_IMAGE_OPACITY = 1f
 
     const val DEFAULT_BOTTOM_PADDING = 8f

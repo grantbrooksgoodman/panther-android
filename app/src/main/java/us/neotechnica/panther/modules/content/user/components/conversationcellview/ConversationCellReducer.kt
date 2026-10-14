@@ -16,6 +16,7 @@ import us.neotechnica.panther.modules.content.user.constants.ConversationCellVie
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewStrings
 import us.neotechnica.panther.modules.content.user.extensions.empty
 import us.neotechnica.panther.modules.content.user.extensions.isEmpty
+import us.neotechnica.panther.modules.content.user.extensions.isRelevant
 import us.neotechnica.panther.modules.content.user.extensions.textContains
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.content.user.services.ConversationCellViewService
@@ -348,7 +349,7 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
                 }
 
             is Action.SessionStoreDidChange ->
-                if (isRelevantChange(action.change, state.conversation)) {
+                if (action.change.isRelevant(state.conversation)) {
                     ReduceResult(
                         state,
                         Effect
@@ -369,28 +370,6 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
 
     private val reloadDataTaskID: String
         get() = "ConversationCellReducer/$instanceID/reloadData"
-
-    internal fun isRelevantChange(
-        change: SessionStoreChange,
-        conversation: Conversation,
-    ): Boolean =
-        when (change) {
-            is SessionStoreChange.Conversations ->
-                conversation.id.key in change.upsertedIDKeys || conversation.id.key in change.removedIDKeys
-
-            is SessionStoreChange.Messages ->
-                conversation.messageIDs
-                    .toSet()
-                    .intersect(change.upsertedIDs + change.removedIDs)
-                    .isNotEmpty()
-
-            is SessionStoreChange.Users ->
-                conversation.participants
-                    .map { it.userID }
-                    .toSet()
-                    .intersect(change.upsertedIDs + change.removedIDs)
-                    .isNotEmpty()
-        }
 
     private fun reloadCellViewData(
         state: State,

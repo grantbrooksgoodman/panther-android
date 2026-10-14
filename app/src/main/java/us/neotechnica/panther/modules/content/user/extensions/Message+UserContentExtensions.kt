@@ -24,7 +24,6 @@ import us.neotechnica.panther.modules.content.user.services.AudioMessagePlayback
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
 import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.modules.networking.message.models.ReadReceipt
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
@@ -68,10 +67,6 @@ val Message.isMock: Boolean
  */
 val Message.isOutboxMessage: Boolean
     get() = id.startsWith(OutboxEntry.ID_PREFIX)
-
-/** Whether the current user has read the message. */
-val Message.isReadByCurrentUser: Boolean
-    get() = readReceipts?.any { it.userID == User.currentUserID } == true
 
 /**
  * A Boolean value that indicates whether this message acknowledges a
@@ -141,10 +136,6 @@ var Message.Companion.consentRequestMessageID: String?
     }
 
 private val ConsentRequestMessageIDCache = LockIsolated<String?>(null)
-
-/** The other participant's read receipt, if any (for delivery status). */
-val Message.otherParticipantReadReceipt: ReadReceipt?
-    get() = readReceipts?.firstOrNull { it.userID != User.currentUserID }
 
 /**
  * A copy of this system message hydrated with its localized activity

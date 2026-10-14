@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The SF Symbol "chevron.forward", converted from its SVG export. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="9.55077dp"
+    android:height="16.9531dp"
+    android:viewportWidth="9.55077"
+    android:viewportHeight="16.9531">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M1.5332 16.6894L9.26757 9.12109C9.45312 8.93554 9.55077 8.7207 9.55077 8.47656C9.55077 8.23242 9.45312 8.00781 9.26757 7.83203L1.5332 0.253905C1.35742 0.08789 1.14258 0 0.888671 0C0.390625 0 0 0.38086 0 0.88867C0 1.13281 0.0976561 1.35742 0.253906 1.52344L7.36328 8.47656L0.253906 15.4297C0.0976561 15.5957 0 15.8105 0 16.0644C0 16.5722 0.390625 16.9531 0.888671 16.9531C1.14258 16.9531 1.35742 16.8652 1.5332 16.6894Z" />
+</vector>

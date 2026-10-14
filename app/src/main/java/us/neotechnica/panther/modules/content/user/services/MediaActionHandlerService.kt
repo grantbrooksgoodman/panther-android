@@ -205,25 +205,6 @@ object MediaActionHandlerService {
             MediaFile(relativePath, Strings.DEFAULT_VIDEO_NAME, fileExtension)
         }
 
-    // MARK: - Process Document
-
-    /**
-     * Stages the document at [uri], routing image documents through
-     * [processImage] and generating a PDF thumbnail where possible.
-     *
-     * @throws Exception if the file type cannot be determined or the file
-     *   cannot be read.
-     */
-    suspend fun processDocument(uri: Uri): MediaFile =
-        withContext(Dispatchers.IO) {
-            val extension =
-                displayName(uri)?.substringAfterLast('.', "")?.takeIf { it.isNotEmpty() }
-                    ?: throw failure("Failed to determine file type.")
-            val fileExtension = MediaFileExtension.from(extension) ?: throw failure("Failed to determine file type.")
-            if (fileExtension.isImage) return@withContext imageMediaFile(uri)
-            documentMediaFile(uri, fileExtension)
-        }
-
     // MARK: - Compress Image
 
     /**

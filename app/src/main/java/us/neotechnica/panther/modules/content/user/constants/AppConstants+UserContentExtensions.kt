@@ -40,8 +40,6 @@ object UserContentExtensionsFloats {
 
 object UserContentExtensionsColors {
     object Date {
-        val chatPageMessageSeparatorAttributedDateStringBoldAttributesDarkForeground = Color.LightGray
-        val chatPageMessageSeparatorAttributedDateStringBoldAttributesLightForeground = Color(0xFF8E8E93)
         val chatPageMessageSeparatorAttributedDateStringStandardAttributesDarkForeground = Color.LightGray
         val chatPageMessageSeparatorAttributedDateStringStandardAttributesLightForeground = Color(0xFF8E8E93)
     }

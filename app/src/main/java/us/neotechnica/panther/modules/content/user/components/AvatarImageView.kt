@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
+import us.neotechnica.panther.designsystem.modules.componentkit.models.SFSymbol
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.user.constants.AvatarImageViewColors
 import us.neotechnica.panther.modules.content.user.constants.AvatarImageViewFloats
@@ -113,9 +114,20 @@ private fun AvatarContent(
 }
 
 // The group placeholder: a circle filling the frame with the symbol's
-// glyph cut out of it, so the background shows through the glyph.
+// glyph cut out of it, so the background shows through the glyph. The
+// SF Symbol has its glyph cut out already; for a Material symbol, the
+// cut-out is composed.
 @Composable
 private fun BadgePlaceholderView() {
+    if (SFSymbol.resolvesToSFSymbol(AvatarStrings.BADGE_IMAGE_SYSTEM_NAME)) {
+        return Components.Symbol(
+            AvatarStrings.BADGE_IMAGE_SYSTEM_NAME,
+            foregroundColor = AvatarColors.IMAGE_FOREGROUND,
+            usesIntrinsicSize = false,
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+
     Box(
         contentAlignment = Alignment.Center,
         modifier =
@@ -141,11 +153,13 @@ private fun BadgePlaceholderView() {
     }
 }
 
-// The single-person placeholder. The symbol's circle spans only part
-// of its glyph box, so the symbol is scaled for the circle to fill the
-// frame.
+// The single-person placeholder. A Material symbol's circle spans only
+// part of its glyph box, so it is scaled for the circle to fill the
+// frame; an SF Symbol's circle already fills it.
 @Composable
 private fun DefaultPlaceholderView() {
+    val scale =
+        if (SFSymbol.resolvesToSFSymbol(AvatarStrings.DEFAULT_IMAGE_SYSTEM_NAME)) 1f else AvatarFloats.DEFAULT_IMAGE_SCALE
     Components.Symbol(
         AvatarStrings.DEFAULT_IMAGE_SYSTEM_NAME,
         foregroundColor = AvatarColors.IMAGE_FOREGROUND,
@@ -154,8 +168,8 @@ private fun DefaultPlaceholderView() {
             Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    scaleX = AvatarFloats.DEFAULT_IMAGE_SCALE
-                    scaleY = AvatarFloats.DEFAULT_IMAGE_SCALE
+                    scaleX = scale
+                    scaleY = scale
                 },
     )
 }

@@ -18,8 +18,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpSize
+import us.neotechnica.panther.R
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.designsystem.modules.componentkit.models.SFSymbol
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.user.components.SquareIconView
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewColors
@@ -63,10 +66,14 @@ fun ChangeLanguageListItem(
 ) {
     SettingsListRow(
         configuration =
-            symbolConfiguration(
-                Colors.changeLanguageButtonImageBackground,
-                GroupedStrings.CHANGE_LANGUAGE_BUTTON_IMAGE_SYSTEM_NAME,
-                GroupedFloats.CHANGE_LANGUAGE_BUTTON_OVERLAY_FRAME_PERCENT_OF_TOTAL_SIZE,
+            SquareIconViewConfiguration(
+                size = DpSize(SettingsPageViewFloats.iconSize, SettingsPageViewFloats.iconSize),
+                backgroundColor = Colors.changeLanguageButtonImageBackground,
+                overlay =
+                    SquareIconViewConfiguration.OverlayConfiguration.Resource(
+                        resourceID = R.drawable.view_alternate,
+                        framePercentOfTotalSize = GroupedFloats.CHANGE_LANGUAGE_BUTTON_OVERLAY_FRAME_PERCENT_OF_TOTAL_SIZE,
+                    ),
             ),
         title = title,
         showsDisclosure = true,
@@ -197,9 +204,17 @@ fun SettingsListRow(
         )
         if (showsDisclosure) {
             Components.Symbol(
-                "chevron.forward",
+                GroupedStrings.CHEVRON_IMAGE_SYSTEM_NAME,
                 foregroundColor = colors.subtitleText,
-                modifier = Modifier.size(GroupedFloats.disclosureChevronSize),
+                weight = FontWeight.SemiBold,
+                modifier =
+                    Modifier.size(
+                        if (SFSymbol.resolvesToSFSymbol(GroupedStrings.CHEVRON_IMAGE_SYSTEM_NAME)) {
+                            GroupedFloats.disclosureChevronSymbolSize
+                        } else {
+                            GroupedFloats.disclosureChevronSize
+                        },
+                    ),
             )
         }
     }

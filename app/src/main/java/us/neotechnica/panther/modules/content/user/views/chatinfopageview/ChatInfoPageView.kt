@@ -58,8 +58,10 @@ import us.neotechnica.panther.bundle.chatInfoPageLoadingStateUpdated
 import us.neotechnica.panther.bundle.currentConversationActivityChanged
 import us.neotechnica.panther.bundle.currentConversationMetadataChanged
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.designsystem.modules.componentkit.components.DisclosureIndicator
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
+import us.neotechnica.panther.designsystem.modules.componentkit.models.SFSymbol
 import us.neotechnica.panther.designsystem.modules.foundation.components.HeaderView
 import us.neotechnica.panther.designsystem.modules.foundation.extensions.doneButton
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
@@ -342,7 +344,7 @@ private fun SingleContactCard(
         ) {
             Components.Text(number, foregroundColor = colors.titleText, font = Font.systemSemibold())
             Spacer(modifier = Modifier.weight(1f))
-            Components.Symbol("chevron.forward", foregroundColor = colors.subtitleText, modifier = Modifier.size(Floats.chevronGlyphSize))
+            DisclosureIndicator(foregroundColor = colors.subtitleText)
         }
     }
 }
@@ -487,6 +489,21 @@ private fun ParticipantsHeaderRow(
                 modifier = Modifier.padding(top = Floats.subtitleTopPadding),
             )
         }
+        val toggleSystemName = if (isExpanded) "chevron.down.circle" else "chevron.right.circle"
+
+        // An SF Symbol draws its own circle; a Material chevron is drawn
+        // in one.
+        if (SFSymbol.resolvesToSFSymbol(toggleSystemName)) {
+            return@Row Components.Symbol(
+                toggleSystemName,
+                foregroundColor = colors.subtitleText,
+                modifier =
+                    Modifier
+                        .padding(start = Floats.chevronBoxStartPadding)
+                        .size(Floats.chevronCircleSymbolSize),
+            )
+        }
+
         Box(
             contentAlignment = Alignment.Center,
             modifier =
@@ -497,7 +514,7 @@ private fun ParticipantsHeaderRow(
                     .border(Floats.chevronBoxBorderWidth, colors.subtitleText, CircleShape),
         ) {
             Components.Symbol(
-                if (isExpanded) "chevron.down.circle" else "chevron.right.circle",
+                toggleSystemName,
                 foregroundColor = colors.subtitleText,
                 modifier = Modifier.size(Floats.chevronGlyphSize),
             )

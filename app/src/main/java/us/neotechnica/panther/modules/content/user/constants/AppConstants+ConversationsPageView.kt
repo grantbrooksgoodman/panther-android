@@ -37,8 +37,14 @@ object ConversationsPageViewFloats {
      */
     val pullToRefreshThreshold: Dp = 120.dp
 
-    /** The spacing below the search bar. */
+    /** The spacing below the search bar. It closes while a search is under way. */
     val searchBottomSpacing: Dp = 8.dp
+
+    /**
+     * The spacing above the search bar while a search is under way,
+     * once the toolbar and title have collapsed.
+     */
+    val searchTopSpacing: Dp = 8.dp
 
     /** The horizontal inset of the title. */
     val titleHorizontalPadding: Dp = 20.dp

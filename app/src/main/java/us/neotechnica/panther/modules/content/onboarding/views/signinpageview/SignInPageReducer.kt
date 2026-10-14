@@ -17,6 +17,7 @@ import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.services.PhoneNumberService
 import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.content.onboarding.dependencies.onboardingService
+import us.neotechnica.panther.modules.content.onboarding.extensions.verifyPhoneNumber
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
 import us.neotechnica.panther.modules.networking.user.services.UserService
 import us.neotechnica.panther.navigation.Navigation
@@ -38,15 +39,12 @@ import us.neotechnica.panther.subsystem.modules.effect.cancellable
 import us.neotechnica.panther.subsystem.modules.effect.merge
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
-import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
-import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
-import us.neotechnica.panther.translator.Translator
 import kotlin.time.Duration.Companion.milliseconds
 
 // This reducer exceeds the file-length and type-body-length limits.
@@ -509,31 +507,12 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
         }
 
     private fun verifyPhoneNumberEffect(phoneNumber: PhoneNumber): Effect<Action> =
-        Effect.task {
-            // Phone verification needs the foreground activity to host
-            // reCAPTCHA or app-check challenges.
-            val activity =
-                Translator.config.currentActivityProvider?.invoke()
-                    ?: return@task Action.VerifyPhoneNumberFailed(
-                        Exception(
-                            "No current activity for phone verification.",
-                            isReportable = false,
-                            metadata = ExceptionMetadata(this),
-                        ),
-                    )
-
-            try {
-                Action.VerifyPhoneNumberReturned(
-                    Networking.config.authDelegate.verifyPhoneNumber(
-                        activity = activity,
-                        internationalNumber = phoneNumber.compiledNumberString,
-                        languageCode = RuntimeStorage.languageCode,
-                    ),
-                )
-            } catch (exception: Exception) {
-                Action.VerifyPhoneNumberFailed(exception)
-            }
-        }
+        Effect.verifyPhoneNumber(
+            phoneNumber,
+            sender = this,
+            returned = Action::VerifyPhoneNumberReturned,
+            failed = Action::VerifyPhoneNumberFailed,
+        )
 
     // MARK: - Companion
 

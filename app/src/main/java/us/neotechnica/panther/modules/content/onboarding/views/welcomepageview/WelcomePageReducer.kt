@@ -218,34 +218,33 @@ class WelcomePageReducer : Reducer<WelcomePageReducer.State, WelcomePageReducer.
 
     // MARK: - Auxiliary
 
+    // Shows the welcome message in a random language whose message has not
+    // been shown since the last reset, resetting once none remains. A
+    // message several languages share counts as shown for all of them, so
+    // the reset follows the messages left to show, not the languages; every
+    // cycle waits before the next, so the loop never spins.
     private fun reduceCycleWelcomeLabelText(state: State): ReduceResult<State, Action> {
-        if (state.cycledLanguageCodes.size >= state.supportedLanguageCodes.size) {
-            return ReduceResult(state.copy(cycledLanguageCodes = emptyMap()), cycleWelcomeLabelTextEffect())
-        }
+        fun unshownMessages(cycledLanguageCodes: Map<String, String>): List<Pair<String, String>> =
+            state.supportedLanguageCodes
+                .filter { cycledLanguageCodes[it] == null }
+                .map { it to LocalizedStringKey.WelcomeToHello.localized(languageCode = it) }
+                .filter { (_, message) -> message !in cycledLanguageCodes.values && message != state.welcomeLabelText }
 
-        val randomLanguageCode =
-            state.supportedLanguageCodes.randomOrNull()
-                ?: return ReduceResult(state, cycleWelcomeLabelTextEffect())
-
-        val localizedString = LocalizedStringKey.WelcomeToHello.localized(languageCode = randomLanguageCode)
-
-        if (state.cycledLanguageCodes[randomLanguageCode] != null ||
-            state.cycledLanguageCodes.values.contains(localizedString) ||
-            state.welcomeLabelText == localizedString
-        ) {
-            return ReduceResult(state, cycleWelcomeLabelTextEffect())
-        }
+        val cycledLanguageCodes = state.cycledLanguageCodes.takeIf { unshownMessages(it).isNotEmpty() } ?: emptyMap()
+        val (languageCode, message) =
+            unshownMessages(cycledLanguageCodes).randomOrNull()
+                ?: return ReduceResult(state.copy(cycledLanguageCodes = cycledLanguageCodes), cycleWelcomeLabelTextEffect(CYCLE_DELAY))
 
         return ReduceResult(
             state.copy(
-                cycledLanguageCodes = state.cycledLanguageCodes + (randomLanguageCode to localizedString),
-                welcomeLabelText = localizedString,
+                cycledLanguageCodes = cycledLanguageCodes + (languageCode to message),
+                welcomeLabelText = message,
             ),
-            cycleWelcomeLabelTextEffect(delay = CYCLE_DELAY),
+            cycleWelcomeLabelTextEffect(CYCLE_DELAY),
         )
     }
 
-    private fun cycleWelcomeLabelTextEffect(delay: Duration = Duration.ZERO): Effect<Action> =
+    private fun cycleWelcomeLabelTextEffect(delay: Duration): Effect<Action> =
         Effect
             .task<Action>(delay = delay) { Action.CycleWelcomeLabelText }
             .cancellable(TaskID.CYCLE_WELCOME_LABEL_TEXT)

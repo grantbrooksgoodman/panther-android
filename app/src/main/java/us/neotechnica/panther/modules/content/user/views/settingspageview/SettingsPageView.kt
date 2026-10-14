@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpSize
 import us.neotechnica.panther.R
@@ -47,6 +48,7 @@ import us.neotechnica.panther.bundle.traitCollectionChanged
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
+import us.neotechnica.panther.designsystem.modules.componentkit.models.SFSymbol
 import us.neotechnica.panther.designsystem.modules.foundation.components.HeaderView
 import us.neotechnica.panther.designsystem.modules.foundation.components.PageSheetView
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
@@ -54,6 +56,7 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.modules.common.contacts.components.rememberContactCardPresenter
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.content.user.components.AvatarImageView
+import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewConstants
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewFloats
 import us.neotechnica.panther.modules.content.user.models.BuildInfoButtonStrings
 import us.neotechnica.panther.modules.content.user.services.DeveloperModeListItem
@@ -76,6 +79,7 @@ import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 // MARK: - Constants Accessors
 
 private typealias Floats = SettingsPageViewFloats
+private typealias PageStrings = SettingsPageViewConstants
 
 /**
  * The settings page: the current user's contact header followed by
@@ -226,9 +230,17 @@ private fun ContactDetailCard(
         }
         if (subtitle != null) {
             Components.Symbol(
-                "chevron.forward",
+                PageStrings.CHEVRON_IMAGE_SYSTEM_NAME,
                 foregroundColor = colors.subtitleText,
-                modifier = Modifier.size(Floats.contactChevronSize),
+                weight = FontWeight.SemiBold,
+                modifier =
+                    Modifier.size(
+                        if (SFSymbol.resolvesToSFSymbol(PageStrings.CHEVRON_IMAGE_SYSTEM_NAME)) {
+                            Floats.contactChevronSymbolSize
+                        } else {
+                            Floats.contactChevronSize
+                        },
+                    ),
             )
         }
     }

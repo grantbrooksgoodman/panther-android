@@ -16,6 +16,7 @@ import kotlinx.coroutines.withContext
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.services.HapticsService
+import us.neotechnica.panther.modules.content.user.extensions.drainEffects
 import us.neotechnica.panther.modules.content.user.extensions.isMock
 import us.neotechnica.panther.modules.content.user.extensions.uniquedByID
 import us.neotechnica.panther.modules.content.user.extensions.users
@@ -293,7 +294,7 @@ object MessageDeliveryService {
         withContext(Dispatchers.Main) {
             if (isSendingMessage) {
                 ContextMenuInteraction.setCanBegin(false)
-                val effects = drainEffects(uponIsSendingMessageChangedToTrue)
+                val effects = uponIsSendingMessageChangedToTrue.drainEffects()
                 if (effects.isEmpty()) return@withContext
                 Logger.log(
                     Exception(
@@ -306,7 +307,7 @@ object MessageDeliveryService {
                 effects.values.forEach { it() }
             } else {
                 ContextMenuInteraction.setCanBegin(true)
-                val effects = drainEffects(uponIsSendingMessageChangedToFalse)
+                val effects = uponIsSendingMessageChangedToFalse.drainEffects()
                 if (effects.isEmpty()) return@withContext
                 Logger.log(
                     Exception(
@@ -318,14 +319,5 @@ object MessageDeliveryService {
                 )
                 effects.values.forEach { it() }
             }
-        }
-
-    private fun drainEffects(
-        effects: LockIsolated<Map<MessageDeliveryServiceEffectID, () -> Unit>>,
-    ): Map<MessageDeliveryServiceEffectID, () -> Unit> =
-        effects.withValue { ref ->
-            val drained = ref.value
-            if (drained.isNotEmpty()) ref.value = emptyMap()
-            drained
         }
 }

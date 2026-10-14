@@ -9,6 +9,7 @@
 package us.neotechnica.panther.modules.content.user.components.chatpageheaderview
 
 import us.neotechnica.panther.modules.content.user.extensions.empty
+import us.neotechnica.panther.modules.content.user.extensions.isRelevant
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
@@ -96,7 +97,7 @@ class ChatPageHeaderReducer : Reducer<ChatPageHeaderReducer.State, ChatPageHeade
                 ReduceResult(state.copy(viewID = UUID.randomUUID()))
 
             is Action.SessionStoreDidChange ->
-                if (isRelevantChange(action.change, state.conversation)) {
+                if (action.change.isRelevant(state.conversation)) {
                     ReduceResult(
                         state,
                         Effect
@@ -106,30 +107,6 @@ class ChatPageHeaderReducer : Reducer<ChatPageHeaderReducer.State, ChatPageHeade
                 } else {
                     ReduceResult(state)
                 }
-        }
-
-    // MARK: - Auxiliary
-
-    private fun isRelevantChange(
-        change: SessionStoreChange,
-        conversation: Conversation,
-    ): Boolean =
-        when (change) {
-            is SessionStoreChange.Conversations ->
-                conversation.id.key in change.upsertedIDKeys || conversation.id.key in change.removedIDKeys
-
-            is SessionStoreChange.Messages ->
-                conversation.messageIDs
-                    .toSet()
-                    .intersect(change.upsertedIDs + change.removedIDs)
-                    .isNotEmpty()
-
-            is SessionStoreChange.Users ->
-                conversation.participants
-                    .map { it.userID }
-                    .toSet()
-                    .intersect(change.upsertedIDs + change.removedIDs)
-                    .isNotEmpty()
         }
 
     // MARK: - Companion

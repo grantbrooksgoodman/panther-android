@@ -18,6 +18,7 @@ import us.neotechnica.panther.modules.common.services.CommonPropertyLists
 import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewStrings
 import us.neotechnica.panther.modules.content.user.extensions.empty
+import us.neotechnica.panther.modules.content.user.extensions.isRelevant
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewDataCache
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
@@ -64,37 +65,37 @@ class ConversationCellReducerTest {
 
     @Test
     fun `an upsert of the conversation is relevant`() {
-        assertTrue(reducer.isRelevantChange(SessionStoreChange.Conversations(setOf("c1"), emptySet()), conversation))
+        assertTrue(SessionStoreChange.Conversations(setOf("c1"), emptySet()).isRelevant(conversation))
     }
 
     @Test
     fun `a removal of the conversation is relevant`() {
-        assertTrue(reducer.isRelevantChange(SessionStoreChange.Conversations(emptySet(), setOf("c1")), conversation))
+        assertTrue(SessionStoreChange.Conversations(emptySet(), setOf("c1")).isRelevant(conversation))
     }
 
     @Test
     fun `an unrelated conversation change is not relevant`() {
-        assertFalse(reducer.isRelevantChange(SessionStoreChange.Conversations(setOf("other"), emptySet()), conversation))
+        assertFalse(SessionStoreChange.Conversations(setOf("other"), emptySet()).isRelevant(conversation))
     }
 
     @Test
     fun `a change to one of the conversation's messages is relevant`() {
-        assertTrue(reducer.isRelevantChange(SessionStoreChange.Messages(setOf("m2"), emptySet()), conversation))
+        assertTrue(SessionStoreChange.Messages(setOf("m2"), emptySet()).isRelevant(conversation))
     }
 
     @Test
     fun `an unrelated message change is not relevant`() {
-        assertFalse(reducer.isRelevantChange(SessionStoreChange.Messages(setOf("mX"), emptySet()), conversation))
+        assertFalse(SessionStoreChange.Messages(setOf("mX"), emptySet()).isRelevant(conversation))
     }
 
     @Test
     fun `a change to one of the conversation's participants is relevant`() {
-        assertTrue(reducer.isRelevantChange(SessionStoreChange.Users(setOf("u2"), emptySet()), conversation))
+        assertTrue(SessionStoreChange.Users(setOf("u2"), emptySet()).isRelevant(conversation))
     }
 
     @Test
     fun `an unrelated participant change is not relevant`() {
-        assertFalse(reducer.isRelevantChange(SessionStoreChange.Users(setOf("uX"), emptySet()), conversation))
+        assertFalse(SessionStoreChange.Users(setOf("uX"), emptySet()).isRelevant(conversation))
     }
 
     // MARK: - Loading

@@ -43,6 +43,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -103,19 +104,29 @@ private fun StickToBottomEffect(
     // Keyed on the specific growth signals (including the last message's
     // reaction count) so unrelated store churn never cancels the settle loop.
     var previousMessageCount by remember { mutableStateOf(0) }
+    var previousNewestMessageID by remember { mutableStateOf<String?>(null) }
+    val newestMessageID = messages.lastOrNull()?.id
     val lastMessageReactionCount = messages.lastOrNull()?.reactions?.size ?: 0
     LaunchedEffect(
         messages.size,
+        newestMessageID,
         lastMessageReactionCount,
     ) {
         if (messages.isEmpty()) {
             previousMessageCount = 0
+            previousNewestMessageID = null
             return@LaunchedEffect
         }
 
+        // Older messages loading in grow the list without changing its
+        // newest message, so they never count as a message sent.
         val isInitialLoad = previousMessageCount == 0
-        val newestMessageIsOwn = messages.size > previousMessageCount && messages.last().isFromCurrentUser
+        val newestMessageIsOwn =
+            messages.size > previousMessageCount &&
+                newestMessageID != previousNewestMessageID &&
+                messages.last().isFromCurrentUser
         previousMessageCount = messages.size
+        previousNewestMessageID = newestMessageID
 
         // On first load, jump to a message navigated to from search rather
         // than to the bottom, so the highlighted message is visible.
@@ -142,18 +153,17 @@ private fun StickToBottomEffect(
 }
 
 /**
- * Loads older messages when the user drags past the topmost message,
- * and scrolls to the topmost message after a scroll-to-top load.
+ * Loads older messages when the list comes to rest after the user
+ * scrolls toward them, and scrolls to the topmost message after a
+ * scroll-to-top load.
+ *
+ * As on iOS, where older messages load once the list stops
+ * decelerating, a load follows a fling toward older messages –
+ * wherever it comes to rest – or a release after pulling the list past
+ * its topmost message.
  */
 @Composable
 private fun rememberLoadMoreMessagesConnection(listState: LazyListState): NestedScrollConnection {
-    var hasRequestedLoad by remember { mutableStateOf(false) }
-    LaunchedEffect(listState) {
-        listState.interactionSource.interactions.collect { interaction ->
-            if (interaction is DragInteraction.Stop || interaction is DragInteraction.Cancel) hasRequestedLoad = false
-        }
-    }
-
     val didLoadFromScrollToTop by ChatPageViewService.didLoadMoreMessagesFromScrollToTop.collectAsState()
     LaunchedEffect(didLoadFromScrollToTop) {
         if (!didLoadFromScrollToTop) return@LaunchedEffect
@@ -164,19 +174,37 @@ private fun rememberLoadMoreMessagesConnection(listState: LazyListState): Nested
 
     return remember(listState) {
         object : NestedScrollConnection {
+            // Whether the current drag has pulled the list past its topmost
+            // message, and whether the released drag had.
+            private var isPullingPastTop = false
+            private var didReleasePastTop = false
+
             override fun onPostScroll(
                 consumed: Offset,
                 available: Offset,
                 source: NestedScrollSource,
             ): Offset {
-                // An unconsumed downward drag at the very top is the user
-                // pulling for older messages.
-                val isAtTop = listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-                if (source == NestedScrollSource.UserInput && available.y > 0f && isAtTop && !hasRequestedLoad) {
-                    hasRequestedLoad = true
-                    ChatPageViewService.loadMoreMessages(fromScrollToTop = false)
-                }
+                // Only the topmost message leaves a drag toward older messages
+                // unconsumed.
+                if (source == NestedScrollSource.UserInput && available.y > 0f) isPullingPastTop = true
                 return Offset.Zero
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                didReleasePastTop = isPullingPastTop
+                isPullingPastTop = false
+                return Velocity.Zero
+            }
+
+            // Called once the released drag's fling comes to rest – at once,
+            // for a release without velocity.
+            override suspend fun onPostFling(
+                consumed: Velocity,
+                available: Velocity,
+            ): Velocity {
+                val isTowardOlderMessages = (consumed + available).y > 0f || didReleasePastTop
+                if (isTowardOlderMessages) ChatPageViewService.loadMoreMessages(fromScrollToTop = false)
+                return Velocity.Zero
             }
         }
     }

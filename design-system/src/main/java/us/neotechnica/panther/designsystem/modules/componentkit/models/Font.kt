@@ -31,9 +31,9 @@ class Font(
     // MARK: - Computed Properties
 
     /**
-     * The Compose text style for this font. Uses the build's
-     * [SystemFontFamily] — the real San Francisco typeface in debug
-     * builds, Inter in release builds.
+     * The Compose text style for this font, in [SystemFontFamily]:
+     * San Francisco while [usesSanFrancisco] is `true`, and Inter
+     * otherwise.
      */
     val textStyle: TextStyle
         get() =
@@ -69,6 +69,18 @@ class Font(
     // MARK: - Companion
 
     companion object {
+        /**
+         * A Boolean value that indicates whether the system font is San
+         * Francisco rather than Inter.
+         *
+         * The default is `true`.
+         *
+         * **Important:** Set this value once at launch, before any
+         * content is composed. Text already on screen doesn't update
+         * when it changes.
+         */
+        var usesSanFrancisco = true
+
         /** A body-sized regular system font. */
         val system = Font(FontType.System(FontStyle.Regular()), FontScale.Medium)
 

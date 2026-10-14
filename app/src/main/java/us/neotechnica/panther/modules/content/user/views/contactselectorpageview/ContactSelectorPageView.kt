@@ -9,15 +9,20 @@
 package us.neotechnica.panther.modules.content.user.views.contactselectorpageview
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -31,15 +36,13 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.components.HeaderView
 import us.neotechnica.panther.designsystem.modules.foundation.extensions.cancelButton
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
+import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.content.shared.components.SearchBarInView
-import us.neotechnica.panther.modules.content.user.components.ContactPairCellView
+import us.neotechnica.panther.modules.content.user.components.ContactPairListView
 import us.neotechnica.panther.modules.content.user.constants.ContactSelectorPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.ContactSelectorPageViewFloats
-import us.neotechnica.panther.modules.content.user.extensions.alphabeticallySorted
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 
@@ -53,6 +56,9 @@ private typealias Floats = ContactSelectorPageViewFloats
  * phone number to look up its registered user. Presented as a sheet
  * either from the chat info page – to add a participant – or from the
  * new chat page – to choose a recipient.
+ *
+ * The page insets its own content from the navigation bar and keyboard,
+ * so present it in a sheet that ignores the bottom safe area.
  */
 object ContactSelectorPageView {
     // MARK: - Types
@@ -128,57 +134,40 @@ object ContactSelectorPageView {
                     keyboardType = if (entryPoint == EntryPoint.CHAT_INFO_PAGE_VIEW) KeyboardType.Phone else null,
                     placeholderText = state.searchBarPlaceholderText,
                 ) {
-                    Box(modifier = Modifier.fillMaxSize().background(colors.groupedContentBackground)) {
+                    // The page extends beneath the navigation bar and keyboard, as
+                    // the presenting sheet ignores the bottom safe area: the list
+                    // scrolls its last row clear of them, and the no results label
+                    // centers above them.
+                    val isDarkModeActive = ThemeService.isDarkModeActive(isSystemInDarkTheme())
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .background(if (isDarkModeActive) Colors.listViewDarkBackground else Colors.listViewLightBackground),
+                    ) {
                         if (state.queriedContactPairs.isNotEmpty()) {
-                            ListView(
+                            ContactPairListView(
                                 sections = state.sections,
                                 onSelect = { viewModel.send(ContactSelectorPageReducer.Action.SelectedContactPairChanged(it)) },
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues(),
                             )
                         } else {
-                            NoResultsView(
-                                text = state.noResultsLabelText,
-                                onFindUser = { viewModel.send(ContactSelectorPageReducer.Action.FindUserButtonTapped) },
-                                modifier = Modifier.align(Alignment.Center),
-                            )
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier =
+                                    Modifier
+                                        .fillMaxSize()
+                                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)),
+                            ) {
+                                NoResultsView(
+                                    text = state.noResultsLabelText,
+                                    onFindUser = { viewModel.send(ContactSelectorPageReducer.Action.FindUserButtonTapped) },
+                                )
+                            }
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-// MARK: - List View
-
-@Composable
-private fun ListView(
-    sections: Map<String, List<ContactPair>>,
-    onSelect: (ContactPair) -> Unit,
-) {
-    val colors = LocalPantherColors.current
-
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        sections.keys.toList().alphabeticallySorted.forEach { letter ->
-            item(key = "section-$letter") {
-                Components.Text(
-                    letter,
-                    foregroundColor = colors.titleText,
-                    modifier =
-                        Modifier.padding(
-                            horizontal = Floats.listViewRowHorizontalPadding,
-                            vertical = Floats.listViewSectionHeaderVerticalPadding,
-                        ),
-                )
-            }
-            items(sections[letter].orEmpty(), key = { it.contact.encodedHash }) { contactPair ->
-                ContactPairCellView(
-                    contactPair = contactPair,
-                    modifier =
-                        Modifier
-                            .heightIn(min = Floats.listViewDefaultMinListRowHeight)
-                            .padding(horizontal = Floats.listViewRowHorizontalPadding),
-                    action = { onSelect(contactPair) },
-                )
             }
         }
     }

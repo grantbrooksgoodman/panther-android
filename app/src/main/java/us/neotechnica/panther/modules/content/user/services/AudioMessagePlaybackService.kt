@@ -9,11 +9,7 @@
 package us.neotechnica.panther.modules.content.user.services
 
 import android.content.Context
-import android.media.AudioAttributes
-import android.media.AudioFocusRequest
-import android.media.AudioManager
 import android.media.MediaPlayer
-import android.os.Build
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -24,6 +20,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import us.neotechnica.panther.modules.common.services.AudioFocusService
 import us.neotechnica.panther.modules.common.services.HapticsService
 import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceFloats
@@ -47,21 +44,12 @@ private typealias PlaybackFloats = ChatPageViewServiceFloats.AudioMessagePlaybac
 object AudioMessagePlaybackService {
     // MARK: - Properties
 
-    private var appContext: Context? = null
-    private var audioManager: AudioManager? = null
-    private var player: MediaPlayer? = null
-    private var focusRequest: AudioFocusRequest? = null
-    private var progressJob: Job? = null
-
+    private val audioFocus = AudioFocusService { stopPlayback() }
     private val scope = CoroutineScope(Dispatchers.Main)
 
-    private val audioAttributes by lazy {
-        AudioAttributes
-            .Builder()
-            .setUsage(AudioAttributes.USAGE_MEDIA)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-            .build()
-    }
+    private var appContext: Context? = null
+    private var player: MediaPlayer? = null
+    private var progressJob: Job? = null
 
     // Backed by observable snapshot state so audio bubbles reflect the
     // playing message and its progress.
@@ -87,7 +75,7 @@ object AudioMessagePlaybackService {
     /** Prepares the service with the application context. */
     fun initialize(context: Context) {
         appContext = context.applicationContext
-        audioManager = context.applicationContext.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        audioFocus.initialize(context)
     }
 
     // MARK: - Did Tap Play Button
@@ -128,7 +116,7 @@ object AudioMessagePlaybackService {
             it.release()
         }
         player = null
-        abandonFocus()
+        audioFocus.abandonFocus()
         mutablePlayingMessageID = null
         mutableProgress = 0f
     }
@@ -140,11 +128,11 @@ object AudioMessagePlaybackService {
         filePath: String,
     ) {
         stopPlayback()
-        requestFocus()
+        audioFocus.requestFocus()
 
         player =
             MediaPlayer().apply {
-                setAudioAttributes(audioAttributes)
+                setAudioAttributes(audioFocus.audioAttributes)
                 setDataSource(filePath)
                 setOnPreparedListener {
                     start()
@@ -193,26 +181,6 @@ object AudioMessagePlaybackService {
                     delay((PlaybackFloats.PLAYBACK_TIMER_TIME_INTERVAL * MILLISECONDS_PER_SECOND).toLong())
                 }
             }
-    }
-
-    private fun requestFocus() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val manager = audioManager ?: return
-        val request =
-            AudioFocusRequest
-                .Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
-                .setAudioAttributes(audioAttributes)
-                .setOnAudioFocusChangeListener { change -> if (change == AudioManager.AUDIOFOCUS_LOSS) stopPlayback() }
-                .build()
-        focusRequest = request
-        manager.requestAudioFocus(request)
-    }
-
-    private fun abandonFocus() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val manager = audioManager ?: return
-        focusRequest?.let { manager.abandonAudioFocusRequest(it) }
-        focusRequest = null
     }
 
     // MARK: - Companion
