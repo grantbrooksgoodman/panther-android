@@ -18,7 +18,10 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.foundation.extensions.cancelAction
+import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
+import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
+import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.common.visibleForCurrentUser
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.user.models.User
@@ -26,14 +29,17 @@ import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpda
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.updateValues
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.languageExonym
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
-import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
+import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
+import us.neotechnica.panther.subsystem.modules.foundation.models.Timeout
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
-import us.neotechnica.panther.subsystem.modules.localization.services.LocalizedStringResolver
+import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.translator.models.Translation
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * The service that applies the user's language selection from the
@@ -43,8 +49,48 @@ import us.neotechnica.panther.translator.models.Translation
  * language. Applying a language persists it to the current user's
  * remote record and resets the app, which must restart for the change
  * to take effect.
+ *
+ * Resolve the service through
+ * [DependencyValues.changeLanguagePageViewService][us.neotechnica.panther.modules.content.user.dependencies.changeLanguagePageViewService].
+ *
+ * @param dependencies The collaborators the service resolves its work
+ *   through. The default resolves the live services.
  */
-object ChangeLanguagePageViewService {
+class ChangeLanguagePageViewService(
+    private val dependencies: Dependencies = Dependencies(),
+) {
+    // MARK: - Types
+
+    /**
+     * The collaborators the service resolves its work through.
+     *
+     * Each property defaults to the live service; a test replaces the
+     * ones it exercises.
+     */
+    data class Dependencies(
+        val addOverlay: () -> Unit = {
+            Overlay.addOverlay(
+                alpha = OVERLAY_ALPHA,
+                activityIndicator = null,
+                isModal = false,
+            )
+        },
+        val currentUser: () -> User? = { UserSessionService.currentUser },
+        val hideHUD: () -> Unit = { HUD.hide() },
+        val presentActionSheet: suspend (ActionSheet, List<ActionSheet.TranslationOptionKey>) -> Unit = { sheet, translating ->
+            sheet.present(translating = translating)
+        },
+        val reset: () -> Unit = {
+            Application.reset(
+                preserveCurrentUserID = true,
+                onCompletion = ResetCompletionProcedure.EXIT_GRACEFULLY,
+            )
+        },
+        val resolveCurrentUser: suspend () -> Unit = { UserSessionService.resolveCurrentUser(User.DataType.entries.toSet()) },
+        val showProgressHUD: (String) -> Unit = { text -> HUD.showProgress(text = text, isModal = true) },
+        val updateValues: suspend (User, Map<UserUpdatableKey, Any>) -> User = { user, data -> user.updateValues(data) },
+    )
+
     // MARK: - Properties
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -67,36 +113,35 @@ object ChangeLanguagePageViewService {
      */
     fun confirmButtonTapped(selectedLanguageCode: String) {
         scope.launch {
-            val languageName =
-                LocalizedStringResolver.languageDisplayNames()[selectedLanguageCode] ?: selectedLanguageCode.uppercase()
-
             val applyAndExitAction =
                 Action(
                     "Apply & Exit",
                     style = ActionStyle.DESTRUCTIVE_PREFERRED,
                 ) {
                     scope.launch {
-                        runCatching {
+                        try {
                             changeLanguage(selectedLanguageCode)
-                        }.onFailure { Logger.log(it.toException(), with = AlertType.toast) }
+                        } catch (exception: Exception) {
+                            Logger.log(exception, with = AlertType.toast)
+                        }
                     }
                 }
 
-            ActionSheet(
-                title = "Change Language to ⌘$languageName⌘",
-                message = "You must restart the app for this to take effect.",
-                actions =
-                    listOf(
-                        applyAndExitAction,
-                        Action.cancelAction,
-                    ),
-            ).present(
-                translating =
-                    listOf(
-                        ActionSheet.TranslationOptionKey.Actions(listOf(applyAndExitAction)),
-                        ActionSheet.TranslationOptionKey.Message,
-                        ActionSheet.TranslationOptionKey.Title,
-                    ),
+            dependencies.presentActionSheet(
+                ActionSheet(
+                    title = "Change Language to ⌘${selectedLanguageCode.languageExonym ?: selectedLanguageCode.uppercase()}⌘",
+                    message = "You must restart the app for this to take effect.",
+                    actions =
+                        listOf(
+                            applyAndExitAction,
+                            Action.cancelAction,
+                        ),
+                ),
+                listOf(
+                    ActionSheet.TranslationOptionKey.Actions(listOf(applyAndExitAction)),
+                    ActionSheet.TranslationOptionKey.Message,
+                    ActionSheet.TranslationOptionKey.Title,
+                ),
             )
         }
     }
@@ -105,46 +150,59 @@ object ChangeLanguagePageViewService {
 
     private suspend fun changeLanguage(languageCode: String) {
         val currentUser =
-            UserSessionService.currentUser
+            dependencies.currentUser()
                 ?: throw Exception("Current user has not been set.", metadata = ExceptionMetadata(this))
 
-        UserSessionService.resolveCurrentUser(User.DataType.entries.toSet())
+        try {
+            val loadedData = LockIsolated<Boolean?>(null)
+            val timeout =
+                Timeout(after = PROGRESS_HUD_DELAY) {
+                    if (loadedData.wrappedValue == true) return@Timeout
+                    dependencies.addOverlay()
+                    dependencies.showProgressHUD(LocalizedStringKey.SettingLanguage.localized(languageCode = languageCode))
+                }
 
-        val conversations = (UserSessionService.currentUser?.conversations ?: emptyList()).visibleForCurrentUser
-        val outgoingLanguageCode = RuntimeStorage.languageCode
+            dependencies.resolveCurrentUser()
 
-        val hasIncomingMessagesInCurrentLanguage =
-            conversations
-                .filter { conversation ->
-                    !(conversation.users ?: emptyList()).mapNotNull { it.languageCode }.contains(outgoingLanguageCode)
-                }.messageTranslations(fromCurrentUser = false)
-                .map { it.languagePair.to }
-                .contains(outgoingLanguageCode)
+            val conversations = (dependencies.currentUser()?.conversations ?: emptyList()).visibleForCurrentUser
+            val outgoingLanguageCode = RuntimeStorage.languageCode
 
-        val hasOutgoingMessagesInCurrentLanguage =
-            conversations
-                .messageTranslations(fromCurrentUser = true)
-                .map { it.languagePair.from }
-                .contains(outgoingLanguageCode)
+            val hasIncomingMessagesInCurrentLanguage =
+                conversations
+                    .filter { conversation ->
+                        !(conversation.users ?: emptyList()).mapNotNull { it.languageCode }.contains(outgoingLanguageCode)
+                    }.messageTranslations(fromCurrentUser = false)
+                    .map { it.languagePair.to }
+                    .contains(outgoingLanguageCode)
 
-        var newPreviousLanguageCodes = (currentUser.previousLanguageCodes ?: emptyList()).filter { it != languageCode }
-        if (hasIncomingMessagesInCurrentLanguage || hasOutgoingMessagesInCurrentLanguage) {
-            newPreviousLanguageCodes = newPreviousLanguageCodes + outgoingLanguageCode
+            val hasOutgoingMessagesInCurrentLanguage =
+                conversations
+                    .messageTranslations(fromCurrentUser = true)
+                    .map { it.languagePair.from }
+                    .contains(outgoingLanguageCode)
+
+            var newPreviousLanguageCodes = (currentUser.previousLanguageCodes ?: emptyList()).filter { it != languageCode }
+            if (hasIncomingMessagesInCurrentLanguage || hasOutgoingMessagesInCurrentLanguage) {
+                newPreviousLanguageCodes = newPreviousLanguageCodes + outgoingLanguageCode
+            }
+            newPreviousLanguageCodes = newPreviousLanguageCodes.distinct().reversed()
+
+            loadedData.wrappedValue = true
+            timeout.cancel()
+
+            // Both fields land in a single atomic write on the user node.
+            dependencies.updateValues(
+                currentUser,
+                mapOf(
+                    UserUpdatableKey.LANGUAGE_CODE to languageCode,
+                    UserUpdatableKey.PREVIOUS_LANGUAGE_CODES to newPreviousLanguageCodes.ifEmpty { bangQualifiedEmptyList },
+                ),
+            )
+
+            dependencies.reset()
+        } finally {
+            dependencies.hideHUD()
         }
-        newPreviousLanguageCodes = newPreviousLanguageCodes.distinct().reversed()
-
-        currentUser.updateValues(
-            mapOf(
-                UserUpdatableKey.LANGUAGE_CODE to languageCode,
-                UserUpdatableKey.PREVIOUS_LANGUAGE_CODES to newPreviousLanguageCodes.ifEmpty { bangQualifiedEmptyList },
-            ),
-        )
-        CoreUtilities.setLanguageCode(languageCode)
-
-        Application.reset(
-            preserveCurrentUserID = true,
-            onCompletion = ResetCompletionProcedure.EXIT_GRACEFULLY,
-        )
     }
 
     private fun List<Conversation>.messageTranslations(fromCurrentUser: Boolean): List<Translation> =
@@ -153,5 +211,10 @@ object ChangeLanguagePageViewService {
             .flatMap { it.translations ?: emptyList() }
             .distinct()
 
-    private fun Throwable.toException(): Exception = this as? Exception ?: Exception.from(this, ExceptionMetadata(this))
+    // MARK: - Companion
+
+    private companion object {
+        const val OVERLAY_ALPHA = 0.5f
+        val PROGRESS_HUD_DELAY = 1.seconds
+    }
 }

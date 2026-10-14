@@ -13,7 +13,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.Application
-import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationAlert
@@ -24,180 +23,245 @@ import us.neotechnica.panther.modules.common.extensions.clearPreviousLanguageCod
 import us.neotechnica.panther.modules.common.extensions.deleteConversations
 import us.neotechnica.panther.modules.common.extensions.matches
 import us.neotechnica.panther.modules.common.extensions.resetPushTokens
+import us.neotechnica.panther.modules.content.user.extensions.ignoredConversationIDKeys
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
+import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
-import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import kotlin.time.Duration.Companion.seconds
+import us.neotechnica.panther.designsystem.modules.alertkit.models.Action as AlertKitAction
 
 /** The destructive Developer Mode actions grouped under the Danger Zone. */
 object DangerZone {
+    // MARK: - Types
+
+    private enum class Action {
+        CLEAR_PREVIOUS_LANGUAGE_CODES,
+        DELETE_CONVERSATIONS_INVISIBLE_TO_CURRENT_USER,
+        DELETE_CURRENT_USER_CONVERSATIONS,
+        DELETE_GROUP_CHATS_WITHOUT_NAME_OR_PHOTO,
+        DELETE_MRC_CONVERSATIONS,
+        DELETE_ONE_TO_ONE_CONVERSATIONS_WITH_FEWER_THAN_FIVE_MESSAGES,
+        RESET_PUSH_TOKENS,
+        ;
+
+        val confirmationAlertTitle: String
+            get() =
+                when (this) {
+                    CLEAR_PREVIOUS_LANGUAGE_CODES -> "Clear Previous Language Codes"
+                    DELETE_CONVERSATIONS_INVISIBLE_TO_CURRENT_USER -> "Delete Conversations Invisible to Current User"
+                    DELETE_CURRENT_USER_CONVERSATIONS -> "Delete Current User Conversations"
+                    DELETE_GROUP_CHATS_WITHOUT_NAME_OR_PHOTO -> "Delete Group Chats Without Name or Photo"
+                    DELETE_MRC_CONVERSATIONS -> "Delete MRC Conversations"
+                    DELETE_ONE_TO_ONE_CONVERSATIONS_WITH_FEWER_THAN_FIVE_MESSAGES -> "Delete 1:1 Conversations with <5 Messages"
+                    RESET_PUSH_TOKENS -> "Reset Push Tokens"
+                }
+
+        val confirmationAlertMessage: String
+            get() =
+                when (this) {
+                    CLEAR_PREVIOUS_LANGUAGE_CODES ->
+                        "This will clear all previous language code history for the current user.\n\nThis operation cannot be undone."
+
+                    DELETE_CONVERSATIONS_INVISIBLE_TO_CURRENT_USER ->
+                        "This will delete all conversations that are not visible to the current user.\n\nThis operation cannot be undone."
+
+                    DELETE_CURRENT_USER_CONVERSATIONS ->
+                        "This will delete all conversations for the current user.\n\nThis operation cannot be undone."
+
+                    DELETE_GROUP_CHATS_WITHOUT_NAME_OR_PHOTO ->
+                        "This will delete all group chats without a name or photo attached to their metadata." +
+                            "\n\nThis operation cannot be undone."
+
+                    DELETE_MRC_CONVERSATIONS ->
+                        "This will delete all Message Recipient Consent-enabled conversations for the current user." +
+                            "\n\nThis operation cannot be undone."
+
+                    DELETE_ONE_TO_ONE_CONVERSATIONS_WITH_FEWER_THAN_FIVE_MESSAGES ->
+                        "This will delete all 1:1 conversations with fewer than 5 messages.\n\nThis operation cannot be undone."
+
+                    RESET_PUSH_TOKENS ->
+                        "This will remove all push tokens for all users in the " +
+                            "${Networking.config.environment.description.uppercase()} environment." +
+                            "\n\nThis operation cannot be undone."
+                }
+    }
+
     // MARK: - Properties
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     // MARK: - Actions
 
-    val clearPreviousLanguageCodesAction: DevModeAction =
-        DevModeAction(title = "Clear Previous Language Codes", isDestructive = true) {
-            scope.launch {
-                if (!confirm("Clear Previous Language Codes", CLEAR_PREVIOUS_LANGUAGE_CODES_MESSAGE)) return@launch
-                runCatching { CoreUtilities.clearPreviousLanguageCodes() }
-                    .onSuccess { HUD.flash("Cleared Previous Language Codes", HUD.HUDImage.SUCCESS) }
-                    .onFailure { Logger.log(it.toException(), with = AlertType.toast) }
+    /** The action that clears the current user's previous language codes. */
+    val clearPreviousLanguageCodesAction: DevModeAction
+        get() =
+            DevModeAction(title = Action.CLEAR_PREVIOUS_LANGUAGE_CODES.confirmationAlertTitle, isDestructive = true) {
+                performAction(Action.CLEAR_PREVIOUS_LANGUAGE_CODES)
             }
-        }
 
-    val deleteConversationsAction: DevModeAction =
-        DevModeAction(title = "Delete Conversations", isDestructive = true) {
-            scope.launch { presentDeleteConversationsSheet() }
-        }
-
-    val resetPushTokensAction: DevModeAction =
-        DevModeAction(title = "Reset Push Tokens", isDestructive = true) {
-            scope.launch {
-                if (!confirm("Reset Push Tokens", RESET_PUSH_TOKENS_MESSAGE)) return@launch
-                runCatching { CoreUtilities.resetPushTokens() }
-                    .onSuccess { HUD.flash("Reset Push Tokens", HUD.HUDImage.SUCCESS) }
-                    .onFailure { Logger.log(it.toException(), with = AlertType.toast) }
+    /**
+     * The action that presents the conversation deletion sheet, listing
+     * each granularity with the number of conversations it covers.
+     */
+    val deleteConversationsAction: DevModeAction
+        get() =
+            DevModeAction(title = "Delete Conversations", isDestructive = true) {
+                scope.launch { presentDeleteConversationsActionSheet() }
             }
-        }
 
-    val dangerZoneAction: DevModeAction =
-        DevModeAction(title = "Danger Zone", isDestructive = true) {
-            scope.launch {
-                val currentUser = UserSessionService.currentUser
-                val actions = mutableListOf<Action>()
-
-                if (currentUser?.previousLanguageCodes?.isNotEmpty() == true) {
-                    actions.add(clearPreviousLanguageCodesAction.toAction())
-                }
-                if (currentUser?.conversations != null) {
-                    actions.add(deleteConversationsAction.toAction())
-                }
-                actions.add(resetPushTokensAction.toAction())
-
-                ActionSheet(
-                    title = "Danger Zone",
-                    message = "Exercise caution when using these options.",
-                    actions = actions,
-                ).present(translating = emptyList())
+    /** The action that removes every user's push tokens. */
+    val resetPushTokensAction: DevModeAction
+        get() =
+            DevModeAction(title = Action.RESET_PUSH_TOKENS.confirmationAlertTitle, isDestructive = true) {
+                performAction(Action.RESET_PUSH_TOKENS)
             }
-        }
 
-    // MARK: - Auxiliary
+    // MARK: - Delete Conversations
 
-    private suspend fun presentDeleteConversationsSheet() {
-        val conversations = UserSessionService.currentUser?.conversations ?: return
-        val actions = mutableListOf<Action>()
+    private suspend fun presentDeleteConversationsActionSheet() {
+        val currentUser = UserSessionService.currentUser
+        val ignoredConversationIDKeys = SessionStore.ignoredConversationIDKeys
+        val allForCurrentUserCount =
+            ((currentUser?.conversationIDs?.map { it.key } ?: emptyList()) + ignoredConversationIDKeys).distinct().size
 
-        actions.add(
-            Action("All for Current User (${conversations.size})", style = ActionStyle.DESTRUCTIVE) {
-                scope.launch { performDeletion(ConversationDeletionGranularity.ALL_FOR_CURRENT_USER) }
-            },
-        )
+        val actions =
+            mutableListOf(
+                DevModeAction(title = "All for Current User ($allForCurrentUserCount)", isDestructive = true) {
+                    performAction(Action.DELETE_CURRENT_USER_CONVERSATIONS)
+                },
+            )
 
-        val notVisibleCount = conversations.count { it.matches(ConversationDeletionGranularity.NOT_VISIBLE_FOR_CURRENT_USER) }
-        if (notVisibleCount > 0) {
+        val conversations = currentUser?.conversations ?: return
+        val invisibleToCurrentUserCount =
+            (
+                conversations
+                    .filter { it.matches(ConversationDeletionGranularity.NOT_VISIBLE_FOR_CURRENT_USER) }
+                    .map { it.id.key } + ignoredConversationIDKeys
+            ).distinct().size
+        val groupChatsWithoutNameOrPhotoCount =
+            conversations.count { it.matches(ConversationDeletionGranularity.GROUP_CHATS_WITHOUT_NAME_OR_PHOTO) }
+        val messageRecipientConsentEnabledCount =
+            conversations.count { it.matches(ConversationDeletionGranularity.MESSAGE_RECIPIENT_CONSENT_ENABLED) }
+        val oneToOneAndFewerThanFiveMessagesCount =
+            conversations.count { it.matches(ConversationDeletionGranularity.ONE_TO_ONE_AND_FEWER_THAN_FIVE_MESSAGES) }
+
+        if (invisibleToCurrentUserCount > 0) {
             actions.add(
-                Action("Not Visible to Current User ($notVisibleCount)", style = ActionStyle.DESTRUCTIVE) {
-                    scope.launch { performDeletion(ConversationDeletionGranularity.NOT_VISIBLE_FOR_CURRENT_USER) }
+                DevModeAction(title = "Not Visible to Current User ($invisibleToCurrentUserCount)", isDestructive = true) {
+                    performAction(Action.DELETE_CONVERSATIONS_INVISIBLE_TO_CURRENT_USER)
                 },
             )
         }
 
-        val groupCount = conversations.count { it.matches(ConversationDeletionGranularity.GROUP_CHATS_WITHOUT_NAME_OR_PHOTO) }
-        if (groupCount > 0) {
+        if (groupChatsWithoutNameOrPhotoCount > 0) {
             actions.add(
-                Action("Group Chats w/o Name or Photo ($groupCount)", style = ActionStyle.DESTRUCTIVE) {
-                    scope.launch { performDeletion(ConversationDeletionGranularity.GROUP_CHATS_WITHOUT_NAME_OR_PHOTO) }
+                DevModeAction(title = "Group Chats w/o Name or Photo ($groupChatsWithoutNameOrPhotoCount)", isDestructive = true) {
+                    performAction(Action.DELETE_GROUP_CHATS_WITHOUT_NAME_OR_PHOTO)
                 },
             )
         }
 
-        val oneToOneCount = conversations.count { it.matches(ConversationDeletionGranularity.ONE_TO_ONE_AND_FEWER_THAN_FIVE_MESSAGES) }
-        if (oneToOneCount > 0) {
+        if (messageRecipientConsentEnabledCount > 0) {
             actions.add(
-                Action("1:1 Conversations with <5 Messages ($oneToOneCount)", style = ActionStyle.DESTRUCTIVE) {
-                    scope.launch { performDeletion(ConversationDeletionGranularity.ONE_TO_ONE_AND_FEWER_THAN_FIVE_MESSAGES) }
+                DevModeAction(title = "MRC-enabled Conversations ($messageRecipientConsentEnabledCount)", isDestructive = true) {
+                    performAction(Action.DELETE_MRC_CONVERSATIONS)
                 },
+            )
+        }
+
+        if (oneToOneAndFewerThanFiveMessagesCount > 0) {
+            actions.add(
+                DevModeAction(
+                    title = "1:1 Conversations with <5 Messages ($oneToOneAndFewerThanFiveMessagesCount)",
+                    isDestructive = true,
+                ) { performAction(Action.DELETE_ONE_TO_ONE_CONVERSATIONS_WITH_FEWER_THAN_FIVE_MESSAGES) },
             )
         }
 
         ActionSheet(
             title = "Delete Conversations",
             message = "Select the granularity of conversations to delete.",
-            actions = actions,
+            actions =
+                actions.map { devModeAction ->
+                    AlertKitAction(
+                        devModeAction.title,
+                        style = if (devModeAction.isDestructive) ActionStyle.DESTRUCTIVE else ActionStyle.DEFAULT,
+                    ) { devModeAction.perform() }
+                },
         ).present(translating = emptyList())
     }
 
-    private suspend fun performDeletion(granularity: ConversationDeletionGranularity) {
-        if (!confirm(granularity.confirmationTitle, granularity.confirmationMessage)) return
-        try {
-            CoreUtilities.deleteConversations(granularity)
-        } catch (exception: Exception) {
-            Logger.log(exception, with = AlertType.toast)
-            return
-        }
+    // MARK: - Auxiliary
 
-        HUD.flash(image = HUD.HUDImage.SUCCESS)
-        Task.delayed(by = 1.seconds) {
-            Application.reset(
-                preserveCurrentUserID = true,
-                onCompletion = Application.ResetCompletionProcedure.NAVIGATE_TO_SPLASH,
-            )
+    private fun performAction(action: Action) {
+        scope.launch {
+            try {
+                performActionOrThrow(action)
+            } catch (exception: Exception) {
+                Logger.log(exception, with = AlertType.toast)
+            }
         }
     }
 
-    private suspend fun confirm(
-        title: String,
-        message: String,
-    ): Boolean =
-        ConfirmationAlert(
-            title = title,
-            message = message,
-            confirmButtonStyle = ActionStyle.DESTRUCTIVE_PREFERRED,
-        ).present(translating = emptyList())
+    private suspend fun performActionOrThrow(action: Action) {
+        fun showSuccessAndReset() {
+            HUD.flash(image = HUD.HUDImage.SUCCESS)
+            Task.delayed(by = 1.seconds) {
+                Application.reset(
+                    preserveCurrentUserID = true,
+                    onCompletion = Application.ResetCompletionProcedure.NAVIGATE_TO_SPLASH,
+                )
+            }
+        }
 
-    private fun DevModeAction.toAction(): Action =
-        Action(title, style = if (isDestructive) ActionStyle.DESTRUCTIVE else ActionStyle.DEFAULT) { perform() }
+        val confirmed =
+            ConfirmationAlert(
+                title = action.confirmationAlertTitle,
+                message = action.confirmationAlertMessage,
+                confirmButtonStyle = ActionStyle.DESTRUCTIVE_PREFERRED,
+            ).present(translating = emptyList())
+        if (!confirmed) return
 
-    private fun Throwable.toException(): Exception = this as? Exception ?: Exception.from(this, ExceptionMetadata(this))
-
-    private val ConversationDeletionGranularity.confirmationMessage: String
-        get() =
-            when (this) {
-                ConversationDeletionGranularity.ALL_FOR_CURRENT_USER ->
-                    "This will delete all conversations for the current user.\n\nThis operation cannot be undone."
-
-                ConversationDeletionGranularity.GROUP_CHATS_WITHOUT_NAME_OR_PHOTO ->
-                    "This will delete all group chats without a name or photo attached to their metadata." +
-                        "\n\nThis operation cannot be undone."
-
-                ConversationDeletionGranularity.NOT_VISIBLE_FOR_CURRENT_USER ->
-                    "This will delete all conversations that are not visible to the current user." +
-                        "\n\nThis operation cannot be undone."
-
-                ConversationDeletionGranularity.ONE_TO_ONE_AND_FEWER_THAN_FIVE_MESSAGES ->
-                    "This will delete all 1:1 conversations with fewer than 5 messages.\n\nThis operation cannot be undone."
+        when (action) {
+            Action.CLEAR_PREVIOUS_LANGUAGE_CODES -> {
+                CoreUtilities.clearPreviousLanguageCodes()
+                HUD.flash("Cleared Previous Language Codes", HUD.HUDImage.SUCCESS)
             }
 
-    private val ConversationDeletionGranularity.confirmationTitle: String
-        get() =
-            when (this) {
-                ConversationDeletionGranularity.ALL_FOR_CURRENT_USER -> "Delete Current User Conversations"
-                ConversationDeletionGranularity.GROUP_CHATS_WITHOUT_NAME_OR_PHOTO -> "Delete Group Chats Without Name or Photo"
-                ConversationDeletionGranularity.NOT_VISIBLE_FOR_CURRENT_USER -> "Delete Conversations Invisible to Current User"
-                ConversationDeletionGranularity.ONE_TO_ONE_AND_FEWER_THAN_FIVE_MESSAGES -> "Delete 1:1 Conversations with <5 Messages"
+            Action.DELETE_CONVERSATIONS_INVISIBLE_TO_CURRENT_USER -> {
+                CoreUtilities.deleteConversations(ConversationDeletionGranularity.NOT_VISIBLE_FOR_CURRENT_USER)
+                showSuccessAndReset()
             }
 
-    // MARK: - Companion
+            Action.DELETE_CURRENT_USER_CONVERSATIONS -> {
+                CoreUtilities.deleteConversations(ConversationDeletionGranularity.ALL_FOR_CURRENT_USER)
+                showSuccessAndReset()
+            }
 
-    private const val CLEAR_PREVIOUS_LANGUAGE_CODES_MESSAGE =
-        "This will clear all previous language code history for the current user.\n\nThis operation cannot be undone."
-    private const val RESET_PUSH_TOKENS_MESSAGE =
-        "This will remove all push tokens for all users in the current environment.\n\nThis operation cannot be undone."
+            Action.DELETE_GROUP_CHATS_WITHOUT_NAME_OR_PHOTO -> {
+                CoreUtilities.deleteConversations(ConversationDeletionGranularity.GROUP_CHATS_WITHOUT_NAME_OR_PHOTO)
+                showSuccessAndReset()
+            }
+
+            Action.DELETE_MRC_CONVERSATIONS -> {
+                CoreUtilities.deleteConversations(ConversationDeletionGranularity.MESSAGE_RECIPIENT_CONSENT_ENABLED)
+                showSuccessAndReset()
+            }
+
+            Action.DELETE_ONE_TO_ONE_CONVERSATIONS_WITH_FEWER_THAN_FIVE_MESSAGES -> {
+                CoreUtilities.deleteConversations(ConversationDeletionGranularity.ONE_TO_ONE_AND_FEWER_THAN_FIVE_MESSAGES)
+                showSuccessAndReset()
+            }
+
+            Action.RESET_PUSH_TOKENS -> {
+                CoreUtilities.resetPushTokens()
+                HUD.flash("Reset Push Tokens", HUD.HUDImage.SUCCESS)
+            }
+        }
+    }
 }

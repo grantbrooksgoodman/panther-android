@@ -11,6 +11,8 @@ package us.neotechnica.panther.modules.content.user.components
 import android.graphics.BlurMaskFilter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -21,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.painterResource
@@ -65,6 +68,39 @@ fun SquareIconView(
                 .background(configuration.backgroundColor),
     ) {
         OverlayView(configuration)
+    }
+}
+
+// MARK: - Square Icon Image
+
+/**
+ * The icon for the given configuration, scaled to fill the frame it
+ * is placed in.
+ *
+ * Use [SquareIconImage] where a list row or another host sizes the
+ * icon: the icon composes at its configured size and scales down – or
+ * up – uniformly to the smaller of the host's dimensions, keeping its
+ * corner radius and overlay in proportion.
+ *
+ * @param configuration The configuration that describes the icon.
+ * @param modifier The modifier for this view.
+ */
+@Composable
+fun SquareIconImage(
+    configuration: SquareIconViewConfiguration,
+    modifier: Modifier = Modifier,
+) {
+    BoxWithConstraints(contentAlignment = Alignment.Center, modifier = modifier) {
+        val scale = minOf(maxWidth / configuration.size.width, maxHeight / configuration.size.height)
+        SquareIconView(
+            configuration,
+            Modifier
+                .requiredSize(configuration.size)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                },
+        )
     }
 }
 

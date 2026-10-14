@@ -15,12 +15,12 @@ import us.neotechnica.panther.modules.common.services.CommonPropertyLists
 import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.common.services.TextToSpeechServiceCache
 import us.neotechnica.panther.modules.content.user.dependencies.chatInfoPageViewService
+import us.neotechnica.panther.modules.content.user.dependencies.settingsPageViewService
 import us.neotechnica.panther.modules.content.user.extensions.UserDisplayNameCache
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewDataCache
 import us.neotechnica.panther.modules.content.user.models.QueriedContactPairCache
 import us.neotechnica.panther.modules.content.user.models.QueriedConversationCache
 import us.neotechnica.panther.modules.content.user.services.MediaMessagePreviewService
-import us.neotechnica.panther.modules.content.user.services.SettingsPageViewService
 import us.neotechnica.panther.modules.networking.conversation.models.ActivityDescriptionCache
 import us.neotechnica.panther.modules.networking.message.models.AudioFileDurationCache
 import us.neotechnica.panther.modules.networking.message.models.ReadReceiptCache
@@ -130,7 +130,7 @@ val CacheDomain.Companion.regionDetailService: CacheDomain
 
 /** The cache domain for the `settingsPageViewService` cache. */
 val CacheDomain.Companion.settingsPageViewService: CacheDomain
-    get() = CacheDomain("settingsPageViewService") { SettingsPageViewService.clearCache() }
+    get() = CacheDomain("settingsPageViewService") { DependencyValues.current.settingsPageViewService.clearCache() }
 
 /** The cache domain for the `textToSpeechService` cache. */
 val CacheDomain.Companion.textToSpeechService: CacheDomain

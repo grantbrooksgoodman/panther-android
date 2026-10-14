@@ -13,9 +13,11 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.DpSize
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -32,6 +34,7 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationA
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextFieldAttributes
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAlert
 import us.neotechnica.panther.designsystem.modules.developermode.services.DevModeService
+import us.neotechnica.panther.designsystem.modules.foundation.components.ListRowView
 import us.neotechnica.panther.designsystem.modules.foundation.dependencies.reportDelegate
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.modules.common.extensions.ApplicationStorageKey
@@ -43,6 +46,7 @@ import us.neotechnica.panther.modules.common.services.HapticsService
 import us.neotechnica.panther.modules.common.services.InviteService
 import us.neotechnica.panther.modules.common.services.MetadataService
 import us.neotechnica.panther.modules.common.services.NotificationService
+import us.neotechnica.panther.modules.content.user.components.SquareIconImage
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewConstants
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewFloats
@@ -51,6 +55,7 @@ import us.neotechnica.panther.modules.content.user.extensions.contactPair
 import us.neotechnica.panther.modules.content.user.extensions.removeCurrentPushToken
 import us.neotechnica.panther.modules.content.user.models.SquareIconViewConfiguration
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.services.ModerationSessionService
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.navigation.OnboardingRoute
@@ -62,6 +67,7 @@ import us.neotechnica.panther.navigation.SettingsRoute
 import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.languageExonym
 import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -74,7 +80,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
-import us.neotechnica.panther.subsystem.modules.localization.services.LocalizedStringResolver
+import kotlin.system.exitProcess
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 // MARK: - Constants Accessors
@@ -89,27 +96,63 @@ private typealias SettingsStrings = SettingsPageViewConstants
  * The service that handles the settings page's user interactions.
  *
  * Use [SettingsPageViewService] to respond to the settings page's
- * controls – feature switches, account actions, and support options –
- * most of which confirm through alerts before taking effect.
+ * controls – account actions and support options – most of which
+ * confirm through alerts before taking effect.
  *
- * [initialize] must be called once with the application context before
- * the intent-launching handlers.
+ * Resolve the service through
+ * [DependencyValues.settingsPageViewService][us.neotechnica.panther.modules.content.user.dependencies.settingsPageViewService]
+ * and call [initialize] once with the application context before the
+ * intent-launching handlers.
+ *
+ * @param dependencies The collaborators the service resolves its work
+ *   through. The default resolves the live services.
  */
 @Suppress("LargeClass")
-object SettingsPageViewService {
-    // MARK: - Properties
+class SettingsPageViewService(
+    private val dependencies: Dependencies = Dependencies(),
+) {
+    // MARK: - Types
 
-    /** A Boolean value that indicates whether the main settings page is presented. */
-    var isMainPagePresented = true
+    /**
+     * The collaborators the service resolves its work through.
+     *
+     * Each property defaults to the live service; a test replaces the
+     * ones it exercises.
+     */
+    data class Dependencies(
+        val currentUser: () -> User? = { UserSessionService.currentUser },
+        val delayed: (Duration, suspend () -> Unit) -> Unit = { by, operation -> Task.delayed(by, operation) },
+        val dismissSheets: () -> Unit = { Application.dismissSheets() },
+        val isDeveloperModeEnabled: () -> Boolean = { Build.isDeveloperModeEnabled },
+        val logEvent: (AnalyticsEvent) -> Unit = { AnalyticsService.logEvent(it) },
+        val milestone: () -> Build.Milestone = { Build.milestone },
+        val navigate: (Route) -> Unit = { DependencyValues.current.navigation.navigate(it) },
+        val overriddenLanguageCode: () -> String? = { RuntimeStorage.retrieve(StoredItemKey.overriddenLanguageCode) as? String },
+        val promptToToggleDeveloperMode: () -> Unit = { DevModeService.promptToToggle() },
+        val removeCurrentPushToken: suspend (User) -> Unit = { it.removeCurrentPushToken() },
+        val reset: () -> Unit = { Application.reset() },
+        val setBadgeNumber: suspend (Int) -> Unit = { NotificationService.setBadgeNumber(it, updateHostedValue = false) },
+        val stopObservingCurrentUserChanges: () -> Unit = { UserSessionService.stopObservingCurrentUserChanges() },
+    )
+
+    // MARK: - Properties
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private var appContext: Context? = null
     private var cachedCNContactForCurrentUser: ContactPair? = null
 
+    /** A Boolean value that indicates whether the main settings page is presented. */
+    var isMainPagePresented = true
+
     // MARK: - Init
 
-    /** Prepares the service with the application context. */
+    /**
+     * Prepares the service with the application context.
+     *
+     * @param context The context whose application context the service
+     *   keeps.
+     */
     fun initialize(context: Context) {
         appContext = context.applicationContext
     }
@@ -127,9 +170,9 @@ object SettingsPageViewService {
      * Asks the user to confirm clearing all caches, applying it if they
      * accept.
      *
-     * Clearing resets the app – preserving the current user's identifier.
-     * The app must then restart; in developer mode, an in-place reload is
-     * offered instead.
+     * Clearing resets the app – preserving the current user's identifier
+     * – and logs an analytics event. The app must then restart; in
+     * developer mode, an in-place reload is offered instead.
      */
     fun clearCachesButtonTapped() {
         scope.launch {
@@ -137,7 +180,7 @@ object SettingsPageViewService {
                 buildString {
                     append("Are you sure you'd like to clear all caches?\n\n")
                     append("This may fix some issues, but can also temporarily slow down the app while indexes rebuild.")
-                    if (!Build.isDeveloperModeEnabled) append("\n\nYou will need to restart the app for this to take effect.")
+                    if (!dependencies.isDeveloperModeEnabled()) append("\n\nYou will need to restart the app for this to take effect.")
                 }
 
             val confirmed =
@@ -209,9 +252,7 @@ object SettingsPageViewService {
                 }
             val showQRCodeAction =
                 Action(SettingsStrings.SHOW_QR_CODE) {
-                    DependencyValues.current.navigation.navigate(
-                        Route.Settings(SettingsRoute.Sheet(SettingsNavigatorState.SheetPaths.InviteQRCode)),
-                    )
+                    dependencies.navigate(Route.Settings(SettingsRoute.Sheet(SettingsNavigatorState.SheetPaths.InviteQRCode)))
                 }
 
             ActionSheet(
@@ -244,13 +285,14 @@ object SettingsPageViewService {
      *
      * On general-release builds, entering the correct passphrase
      * switches the build milestone to beta; on prerelease builds,
-     * confirmation clears the override. Either change exits the app,
-     * which must restart for the change to take effect.
+     * confirmation clears the override and disables developer mode.
+     * Either change exits the app, which must restart for the change to
+     * take effect.
      */
     fun promptToEnterPrereleaseMode() {
         scope.launch {
             val buildMilestoneKey = PersistentStorageKey.application(ApplicationStorageKey.BUILD_MILESTONE_STRING)
-            if (Build.milestone != Build.Milestone.GENERAL_RELEASE) {
+            if (dependencies.milestone() != Build.Milestone.GENERAL_RELEASE) {
                 val confirmed =
                     ConfirmationAlert(
                         title = ENTER_PRERELEASE_MODE_EXIT_TITLE,
@@ -261,8 +303,8 @@ object SettingsPageViewService {
 
                 if (!confirmed) return@launch
                 Persistent.setString(buildMilestoneKey, null)
-                Application.beginGracefulExit()
-                return@launch
+                Build.setIsDeveloperModeEnabled(false)
+                exitProcess(0)
             }
 
             val input =
@@ -275,7 +317,7 @@ object SettingsPageViewService {
                             keyboardType = KeyboardType.NumberPassword,
                             placeholderText = "••••••",
                         ),
-                    confirmButtonTitle = LocalizedStringKey.Done.localized(),
+                    confirmButtonTitle = "Done",
                 ).present(translating = emptyList())
 
             if (input == null) return@launch
@@ -286,15 +328,14 @@ object SettingsPageViewService {
                     actions =
                         listOf(
                             Action("Try Again", style = ActionStyle.PREFERRED) { promptToEnterPrereleaseMode() },
-                            Action(LocalizedStringKey.Cancel.localized(), style = ActionStyle.CANCEL) {},
+                            Action("Cancel", style = ActionStyle.CANCEL) {},
                         ),
                 ).present(translating = emptyList())
                 return@launch
             }
 
             Persistent.setString(buildMilestoneKey, Build.Milestone.BETA.rawValue)
-            val exitAction =
-                Action(SettingsStrings.EXIT, style = ActionStyle.DESTRUCTIVE_PREFERRED) { Application.beginGracefulExit() }
+            val exitAction = Action(SettingsStrings.EXIT, style = ActionStyle.DESTRUCTIVE_PREFERRED) { exitProcess(0) }
             Alert(
                 message = "Successfully entered Prerelease Mode. You must now restart the app.",
                 actions = listOf(exitAction),
@@ -353,7 +394,7 @@ object SettingsPageViewService {
                 Action(
                     "Sign Out",
                     style = ActionStyle.DESTRUCTIVE_PREFERRED,
-                ) { scope.launch { performSignOut() } }
+                ) { scope.launch { signOut() } }
 
             ActionSheet(
                 actions = listOf(signOutAction),
@@ -374,46 +415,54 @@ object SettingsPageViewService {
      * @return The list row configurations; otherwise, `null` on
      *   general-release builds.
      */
-    fun developerModeListItems(): List<DeveloperModeListItem>? {
-        if (Build.milestone == Build.Milestone.GENERAL_RELEASE) return null
+    fun developerModeListItems(): List<ListRowView.Configuration>? {
+        if (dependencies.milestone() == Build.Milestone.GENERAL_RELEASE) return null
 
-        val items = mutableListOf<DeveloperModeListItem>()
-        val currentUser = UserSessionService.currentUser
-        if (Build.isDeveloperModeEnabled && currentUser != null && currentUser.languageCode != "en") {
-            val languageName =
-                LocalizedStringResolver.languageDisplayNames()[currentUser.languageCode] ?: currentUser.languageCode.uppercase()
+        val items = mutableListOf<ListRowView.Configuration>()
+        val currentUser = dependencies.currentUser()
+        if (dependencies.isDeveloperModeEnabled() && currentUser != null && currentUser.languageCode != "en") {
+            val languageName = currentUser.languageCode.languageExonym ?: currentUser.languageCode.uppercase()
             val restoreLanguageCodeString = "${SettingsStrings.RESTORE_LANGUAGE_CODE_BUTTON_TEXT_PREFIX} $languageName"
             val overrideOrRestore =
-                if (RuntimeStorage.retrieve(StoredItemKey.overriddenLanguageCode) == null) {
+                if (dependencies.overriddenLanguageCode() == null) {
                     SettingsStrings.OVERRIDE_LANGUAGE_CODE_BUTTON_TEXT
                 } else {
                     restoreLanguageCodeString
                 }
 
             items.add(
-                DeveloperModeListItem(
-                    title = overrideOrRestore,
-                    configuration =
-                        squareIconConfiguration(
-                            SettingsColors.overrideLanguageCodeButtonImageBackground,
-                            SettingsStrings.OVERRIDE_LANGUAGE_CODE_BUTTON_IMAGE_SYSTEM_NAME,
-                        ),
-                    action = ::overrideLanguageCodeButtonTapped,
+                ListRowView.Configuration(
+                    ListRowView.Interaction.Button { overrideLanguageCodeButtonTapped() },
+                    innerText = overrideOrRestore,
+                    imageView = {
+                        SquareIconImage(
+                            squareIconConfiguration(
+                                SettingsColors.overrideLanguageCodeButtonImageBackground,
+                                SettingsStrings.OVERRIDE_LANGUAGE_CODE_BUTTON_IMAGE_SYSTEM_NAME,
+                            ),
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    },
                 ),
             )
         }
 
-        if (!Build.isDeveloperModeEnabled) {
+        if (!dependencies.isDeveloperModeEnabled()) {
             items.add(
-                DeveloperModeListItem(
-                    title = SettingsStrings.TOGGLE_DEVELOPER_MODE,
-                    configuration =
-                        squareIconConfiguration(
-                            SettingsColors.toggleDeveloperModeButtonImageBackground,
-                            SettingsStrings.TOGGLE_DEVELOPER_MODE_BUTTON_IMAGE_SYSTEM_NAME,
-                            SettingsFloats.TOGGLE_DEVELOPER_MODE_BUTTON_OVERLAY_FRAME_PERCENT_OF_TOTAL_SIZE,
-                        ),
-                    action = { DevModeService.promptToToggle() },
+                ListRowView.Configuration(
+                    ListRowView.Interaction.Button { dependencies.promptToToggleDeveloperMode() },
+                    innerText = SettingsStrings.TOGGLE_DEVELOPER_MODE_BUTTON_TEXT,
+                    imageView = {
+                        SquareIconImage(
+                            squareIconConfiguration(
+                                SettingsColors.toggleDeveloperModeButtonImageBackground,
+                                SettingsStrings.TOGGLE_DEVELOPER_MODE_BUTTON_IMAGE_SYSTEM_NAME,
+                                SettingsFloats.TOGGLE_DEVELOPER_MODE_BUTTON_OVERLAY_FRAME_PERCENT_OF_TOTAL_SIZE,
+                                FontWeight.Bold,
+                            ),
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    },
                 ),
             )
         }
@@ -438,7 +487,7 @@ object SettingsPageViewService {
         cachedCNContactForCurrentUser?.let { return it }
 
         val currentUser =
-            UserSessionService.currentUser
+            dependencies.currentUser()
                 ?: throw Exception("Current user has not been set.", metadata = ExceptionMetadata(this))
         val contactPair =
             currentUser.contactPair
@@ -458,49 +507,49 @@ object SettingsPageViewService {
     // MARK: - Auxiliary
 
     private fun overrideLanguageCodeButtonTapped() {
-        if (RuntimeStorage.retrieve(StoredItemKey.overriddenLanguageCode) != null) {
-            val currentUser = UserSessionService.currentUser ?: return
-            val languageName =
-                LocalizedStringResolver.languageDisplayNames()[currentUser.languageCode] ?: currentUser.languageCode.uppercase()
+        if (dependencies.overriddenLanguageCode() != null) {
+            val currentUser = dependencies.currentUser() ?: return
+            val languageName = currentUser.languageCode.languageExonym ?: currentUser.languageCode.uppercase()
 
             AlertKitConfig.overrideTargetLanguageCode(currentUser.languageCode)
             RuntimeStorage.remove(StoredItemKey.overriddenLanguageCode)
             HUD.showSuccess(text = "Set to $languageName")
-            Application.dismissSheets()
+            dependencies.dismissSheets()
             return
         }
 
         AlertKitConfig.overrideTargetLanguageCode("en")
         RuntimeStorage.store("en", StoredItemKey.overriddenLanguageCode)
         HUD.showSuccess(text = "Set to English")
-        Application.dismissSheets()
+        dependencies.dismissSheets()
     }
 
     private fun squareIconConfiguration(
         backgroundColor: Color,
         systemName: String,
         framePercentOfTotalSize: Float = SquareIconViewFloats.OVERLAY_FRAME_HEIGHT_MULTIPLIER,
+        weight: FontWeight? = null,
     ): SquareIconViewConfiguration =
         SquareIconViewConfiguration(
-            size = DpSize(SettingsFloats.iconSize, SettingsFloats.iconSize),
             backgroundColor = backgroundColor,
             overlay =
                 SquareIconViewConfiguration.OverlayConfiguration.Symbol(
                     name = systemName,
                     framePercentOfTotalSize = framePercentOfTotalSize,
+                    weight = weight,
                 ),
         )
 
     private suspend fun clearCaches() {
-        UserSessionService.stopObservingCurrentUserChanges()
-        AnalyticsService.logEvent(AnalyticsEvent.CLEAR_CACHES)
+        dependencies.stopObservingCurrentUserChanges()
+        dependencies.logEvent(AnalyticsEvent.CLEAR_CACHES)
         Application.reset(preserveCurrentUserID = true)
 
-        val doneMessage =
-            "Caches have been cleared. ${if (Build.isDeveloperModeEnabled) "" else "You must now restart the app."}"
+        val isDeveloperModeEnabled = dependencies.isDeveloperModeEnabled()
+        val doneMessage = "Caches have been cleared. ${if (isDeveloperModeEnabled) "" else "You must now restart the app."}"
         val exitAction = Action(SettingsStrings.EXIT, style = ActionStyle.DESTRUCTIVE_PREFERRED) { exitGracefully() }
         val actions =
-            if (Build.isDeveloperModeEnabled) {
+            if (isDeveloperModeEnabled) {
                 listOf(Action(SettingsStrings.RELOAD) { reload() }, exitAction)
             } else {
                 listOf(exitAction)
@@ -539,10 +588,9 @@ object SettingsPageViewService {
 
     private fun clearCachesAndExit() {
         scope.launch {
-            runCatching { NotificationService.setBadgeNumber(0, updateHostedValue = false) }
-                .onFailure { Logger.log(it.toException()) }
+            runCatching { dependencies.setBadgeNumber(0) }.onFailure { Logger.log(it.toException()) }
 
-            AnalyticsService.logEvent(AnalyticsEvent.DELETE_ACCOUNT)
+            dependencies.logEvent(AnalyticsEvent.DELETE_ACCOUNT)
             Application.reset(
                 preserveCurrentUserID = false,
                 onCompletion = ResetCompletionProcedure.EXIT_GRACEFULLY,
@@ -550,37 +598,38 @@ object SettingsPageViewService {
         }
     }
 
-    private suspend fun performSignOut() {
-        runCatching { NotificationService.setBadgeNumber(0, updateHostedValue = false) }
-            .onFailure { Logger.log(it.toException()) }
+    // Signs the user out: the badge clears, the push token leaves the
+    // user record, and – whether or not a user was set – the app
+    // resets, the event logs, and onboarding returns after a delay.
+    internal suspend fun signOut() {
+        runCatching { dependencies.setBadgeNumber(0) }.onFailure { Logger.log(it.toException()) }
 
-        UserSessionService.currentUser?.let { currentUser ->
-            UserSessionService.stopObservingCurrentUserChanges()
-            runCatching { currentUser.removeCurrentPushToken() }.onFailure { Logger.log(it.toException()) }
+        try {
+            val currentUser = dependencies.currentUser() ?: return
+            dependencies.stopObservingCurrentUserChanges()
+            runCatching { dependencies.removeCurrentPushToken(currentUser) }.onFailure { Logger.log(it.toException()) }
+        } finally {
+            dependencies.dismissSheets()
+            dependencies.reset()
+            dependencies.logEvent(AnalyticsEvent.LOG_OUT)
+            dependencies.delayed(SettingsFloats.SIGN_OUT_NAVIGATION_DELAY_MILLISECONDS.milliseconds) { returnToOnboarding() }
         }
-
-        Application.dismissSheets()
-        Application.reset()
-        AnalyticsService.logEvent(AnalyticsEvent.LOG_OUT)
-        Task.delayed(by = SIGN_OUT_NAVIGATION_DELAY.milliseconds) { returnToOnboarding() }
     }
 
     private fun exitGracefully() {
-        Application.dismissSheets()
+        dependencies.dismissSheets()
         Application.beginGracefulExit()
     }
 
     private fun reload() {
-        val navigation = DependencyValues.current.navigation
-        navigation.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
-        navigation.navigate(Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.Splash)))
+        dependencies.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
+        dependencies.navigate(Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.Splash)))
     }
 
     private fun returnToOnboarding() {
-        val navigation = DependencyValues.current.navigation
-        navigation.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
-        navigation.navigate(Route.Onboarding(OnboardingRoute.Stack(emptyList())))
-        navigation.navigate(Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.Onboarding)))
+        dependencies.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
+        dependencies.navigate(Route.Onboarding(OnboardingRoute.Stack(emptyList())))
+        dependencies.navigate(Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.Onboarding)))
     }
 
     private fun openURL(url: String) {
@@ -593,17 +642,9 @@ object SettingsPageViewService {
 
     // MARK: - Companion
 
-    private const val CLIPBOARD_LABEL = "Build Info"
-    private const val ENTER_PRERELEASE_MODE_EXIT_TITLE = "Exit Prerelease Mode"
-    private const val ENTER_PRERELEASE_MODE_TITLE = "Enter Prerelease Mode"
-    private const val SIGN_OUT_NAVIGATION_DELAY = 500
+    private companion object {
+        const val CLIPBOARD_LABEL = "Build Info"
+        const val ENTER_PRERELEASE_MODE_EXIT_TITLE = "Exit Prerelease Mode"
+        const val ENTER_PRERELEASE_MODE_TITLE = "Enter Prerelease Mode"
+    }
 }
-
-// MARK: - Developer Mode List Item
-
-/** A developer mode row shown on the settings page. */
-data class DeveloperModeListItem(
-    val title: String,
-    val configuration: SquareIconViewConfiguration,
-    val action: () -> Unit,
-)

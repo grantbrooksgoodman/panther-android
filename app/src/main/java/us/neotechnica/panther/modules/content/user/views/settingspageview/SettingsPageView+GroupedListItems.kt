@@ -8,28 +8,30 @@
 
 package us.neotechnica.panther.modules.content.user.views.settingspageview
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.DpSize
 import us.neotechnica.panther.R
-import us.neotechnica.panther.designsystem.modules.componentkit.Components
-import us.neotechnica.panther.designsystem.modules.componentkit.models.SFSymbol
-import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.content.user.components.SquareIconView
+import us.neotechnica.panther.designsystem.modules.foundation.components.GroupedListView
+import us.neotechnica.panther.designsystem.modules.foundation.components.ListRowView
+import us.neotechnica.panther.modules.content.user.components.SquareIconImage
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewConstants
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewFloats
 import us.neotechnica.panther.modules.content.user.constants.SquareIconViewFloats
 import us.neotechnica.panther.modules.content.user.models.SquareIconViewConfiguration
+import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.navigation.Navigation
+import us.neotechnica.panther.navigation.Route
+import us.neotechnica.panther.navigation.UserContentNavigatorState
+import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.networking.modules.translation.extensions.value
+import us.neotechnica.panther.subsystem.modules.localization.models.localized
 
 // MARK: - Constants Accessors
 
@@ -37,198 +39,201 @@ private typealias Colors = SettingsPageViewColors
 private typealias GroupedFloats = SettingsPageViewFloats
 private typealias GroupedStrings = SettingsPageViewConstants
 
-// MARK: - List Items
+// MARK: - Grouped List Views
 
-/** The list row for the blocked users button. */
+// The page's grouped lists: the app rows, the support rows, the
+// account rows, and – on prerelease builds – the developer rows.
 @Composable
-fun BlockedUsersListItem(
-    title: String,
-    isEnabled: Boolean,
-    onClick: () -> Unit,
+internal fun GroupedListViews(
+    state: SettingsPageReducer.State,
+    send: (SettingsPageReducer.Action) -> Unit,
+    navigation: Navigation,
 ) {
-    SettingsListRow(
-        configuration =
-            symbolConfiguration(
-                Colors.blockedUsersButtonImageBackground,
-                GroupedStrings.BLOCKED_USERS_BUTTON_IMAGE_SYSTEM_NAME,
+    Box(modifier = Modifier.padding(bottom = GroupedFloats.groupedListViewBottomPadding)) {
+        GroupedListView(
+            listOf(
+                inviteFriendsListItem(state, send),
+                leaveReviewListItem(state, send),
+                changeLanguageListItem(state, navigation),
             ),
-        title = title,
-        isEnabled = isEnabled,
-        onClick = onClick,
-    )
-}
-
-/** The list row that navigates to the change language page. */
-@Composable
-fun ChangeLanguageListItem(
-    title: String,
-    onClick: () -> Unit,
-) {
-    SettingsListRow(
-        configuration =
-            SquareIconViewConfiguration(
-                size = DpSize(SettingsPageViewFloats.iconSize, SettingsPageViewFloats.iconSize),
-                backgroundColor = Colors.changeLanguageButtonImageBackground,
-                overlay =
-                    SquareIconViewConfiguration.OverlayConfiguration.Resource(
-                        resourceID = R.drawable.view_alternate,
-                        framePercentOfTotalSize = GroupedFloats.CHANGE_LANGUAGE_BUTTON_OVERLAY_FRAME_PERCENT_OF_TOTAL_SIZE,
-                    ),
-            ),
-        title = title,
-        showsDisclosure = true,
-        onClick = onClick,
-    )
-}
-
-/** The list row for the clear caches button. */
-@Composable
-fun ClearCachesListItem(
-    title: String,
-    onClick: () -> Unit,
-) {
-    SettingsListRow(
-        configuration =
-            symbolConfiguration(
-                Colors.clearCachesButtonImageBackground,
-                GroupedStrings.CLEAR_CACHES_BUTTON_IMAGE_SYSTEM_NAME,
-                GroupedFloats.CLEAR_CACHES_BUTTON_OVERLAY_FRAME_PERCENT_OF_TOTAL_SIZE,
-            ),
-        title = title,
-        onClick = onClick,
-    )
-}
-
-/** The list row for the delete account button. */
-@Composable
-fun DeleteAccountListItem(
-    title: String,
-    onClick: () -> Unit,
-) {
-    SettingsListRow(
-        configuration =
-            symbolConfiguration(
-                Colors.deleteAccountButtonImageBackground,
-                GroupedStrings.DELETE_ACCOUNT_BUTTON_IMAGE_SYSTEM_NAME,
-            ),
-        title = title,
-        onClick = onClick,
-    )
-}
-
-/** The list row for the invite friends button. */
-@Composable
-fun InviteFriendsListItem(
-    title: String,
-    onClick: () -> Unit,
-) {
-    SettingsListRow(
-        configuration =
-            symbolConfiguration(
-                Colors.inviteFriendsButtonImageBackground,
-                GroupedStrings.INVITE_FRIENDS_BUTTON_IMAGE_SYSTEM_NAME,
-            ),
-        title = title,
-        onClick = onClick,
-    )
-}
-
-/** The list row for the leave review button. */
-@Composable
-fun LeaveReviewListItem(
-    title: String,
-    onClick: () -> Unit,
-) {
-    SettingsListRow(
-        configuration = symbolConfiguration(Colors.leaveReviewButtonImageBackground, GroupedStrings.LEAVE_REVIEW_BUTTON_IMAGE_SYSTEM_NAME),
-        title = title,
-        onClick = onClick,
-    )
-}
-
-/** The list row for the send feedback button. */
-@Composable
-fun SendFeedbackListItem(
-    title: String,
-    onClick: () -> Unit,
-) {
-    SettingsListRow(
-        configuration =
-            symbolConfiguration(
-                Colors.sendFeedbackButtonImageBackground,
-                GroupedStrings.SEND_FEEDBACK_BUTTON_IMAGE_SYSTEM_NAME,
-            ),
-        title = title,
-        onClick = onClick,
-    )
-}
-
-/** The list row for the sign out button. */
-@Composable
-fun SignOutListItem(
-    title: String,
-    onClick: () -> Unit,
-) {
-    SettingsListRow(
-        configuration = symbolConfiguration(Colors.signOutButtonImageBackground, GroupedStrings.SIGN_OUT_BUTTON_IMAGE_SYSTEM_NAME),
-        title = title,
-        onClick = onClick,
-    )
-}
-
-// MARK: - Row
-
-/** A grouped-list row with a square icon, a title, and an optional disclosure indicator. */
-@Composable
-fun SettingsListRow(
-    configuration: SquareIconViewConfiguration,
-    title: String,
-    isEnabled: Boolean = true,
-    showsDisclosure: Boolean = false,
-    onClick: () -> Unit,
-) {
-    val colors = LocalPantherColors.current
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .then(if (isEnabled) Modifier.clickable { onClick() } else Modifier)
-                .padding(horizontal = GroupedFloats.cardPadding, vertical = GroupedFloats.iconRowVerticalPadding),
-    ) {
-        SquareIconView(configuration, Modifier.size(GroupedFloats.iconSize))
-        Components.Text(
-            title,
-            foregroundColor = if (isEnabled) colors.titleText else colors.subtitleText,
-            modifier = Modifier.weight(1f).padding(start = GroupedFloats.iconTitleStartPadding),
         )
-        if (showsDisclosure) {
-            Components.Symbol(
-                GroupedStrings.CHEVRON_IMAGE_SYSTEM_NAME,
-                foregroundColor = colors.subtitleText,
-                weight = FontWeight.SemiBold,
-                modifier =
-                    Modifier.size(
-                        if (SFSymbol.resolvesToSFSymbol(GroupedStrings.CHEVRON_IMAGE_SYSTEM_NAME)) {
-                            GroupedFloats.disclosureChevronSymbolSize
-                        } else {
-                            GroupedFloats.disclosureChevronSize
-                        },
-                    ),
+    }
+
+    Box(modifier = Modifier.padding(bottom = GroupedFloats.groupedListViewBottomPadding)) {
+        GroupedListView(
+            listOf(
+                sendFeedbackListItem(send),
+                clearCachesListItem(state, send),
+            ),
+        )
+    }
+
+    key(state.viewID) {
+        Box(modifier = Modifier.padding(bottom = GroupedFloats.groupedListViewBottomPadding)) {
+            GroupedListView(
+                listOf(
+                    blockedUsersListItem(state, send),
+                    deleteAccountListItem(state, send),
+                    signOutListItem(state, send),
+                ),
             )
         }
     }
+
+    state.developerModeListItems?.let { GroupedListView(it) }
 }
 
-/** A hairline divider separating grouped-list rows. */
-@Composable
-fun SettingsRowDivider() {
-    val colors = LocalPantherColors.current
-    HorizontalDivider(
-        color = colors.groupedContentBackground,
-        modifier = Modifier.padding(start = GroupedFloats.cardPadding + GroupedFloats.iconSize + GroupedFloats.iconTitleStartPadding),
+// MARK: - List Items
+
+/** The list row for the blocked users button. */
+internal fun blockedUsersListItem(
+    state: SettingsPageReducer.State,
+    send: (SettingsPageReducer.Action) -> Unit,
+): ListRowView.Configuration =
+    ListRowView.Configuration(
+        ListRowView.Interaction.Button { send(SettingsPageReducer.Action.BlockedUsersButtonTapped) },
+        innerText = state.blockedUsersButtonText,
+        isEnabled = state.isBlockedUsersButtonEnabled,
+        imageView = {
+            SquareIconImage(
+                symbolConfiguration(Colors.blockedUsersButtonImageBackground, GroupedStrings.BLOCKED_USERS_BUTTON_IMAGE_SYSTEM_NAME),
+                modifier = Modifier.fillMaxSize(),
+            )
+        },
     )
-}
+
+/** The list row that navigates to the change language page. */
+internal fun changeLanguageListItem(
+    state: SettingsPageReducer.State,
+    navigation: Navigation,
+): ListRowView.Configuration =
+    ListRowView.Configuration(
+        ListRowView.Interaction.Destination {
+            navigation.navigate(Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePaths.ChangeLanguage)))
+        },
+        innerText = state.strings.value(SettingsPageViewStrings.changeLanguage),
+        imageView = {
+            SquareIconImage(
+                SquareIconViewConfiguration(
+                    backgroundColor = Colors.changeLanguageButtonImageBackground,
+                    overlay =
+                        SquareIconViewConfiguration.OverlayConfiguration.Resource(
+                            resourceID = R.drawable.view_alternate,
+                            foregroundColor = Colors.changeLanguageButtonImageForeground,
+                            framePercentOfTotalSize = GroupedFloats.CHANGE_LANGUAGE_BUTTON_OVERLAY_FRAME_PERCENT_OF_TOTAL_SIZE,
+                            weight = FontWeight.Bold,
+                        ),
+                ),
+                modifier = Modifier.fillMaxSize(),
+            )
+        },
+    )
+
+/** The list row for the clear caches button. */
+internal fun clearCachesListItem(
+    state: SettingsPageReducer.State,
+    send: (SettingsPageReducer.Action) -> Unit,
+): ListRowView.Configuration =
+    ListRowView.Configuration(
+        ListRowView.Interaction.Button { send(SettingsPageReducer.Action.ClearCachesButtonTapped) },
+        innerText = state.strings.value(SettingsPageViewStrings.clearCachesButtonText),
+        imageView = {
+            SquareIconImage(
+                symbolConfiguration(
+                    Colors.clearCachesButtonImageBackground,
+                    GroupedStrings.CLEAR_CACHES_BUTTON_IMAGE_SYSTEM_NAME,
+                    GroupedFloats.CLEAR_CACHES_BUTTON_OVERLAY_FRAME_PERCENT_OF_TOTAL_SIZE,
+                    FontWeight.Bold,
+                ),
+                modifier = Modifier.fillMaxSize(),
+            )
+        },
+    )
+
+/** The list row for the delete account button. */
+internal fun deleteAccountListItem(
+    state: SettingsPageReducer.State,
+    send: (SettingsPageReducer.Action) -> Unit,
+): ListRowView.Configuration =
+    ListRowView.Configuration(
+        ListRowView.Interaction.Button { send(SettingsPageReducer.Action.DeleteAccountButtonTapped) },
+        innerText = state.strings.value(SettingsPageViewStrings.deleteAccountButtonText),
+        imageView = {
+            SquareIconImage(
+                symbolConfiguration(Colors.deleteAccountButtonImageBackground, GroupedStrings.DELETE_ACCOUNT_BUTTON_IMAGE_SYSTEM_NAME),
+                modifier = Modifier.fillMaxSize(),
+            )
+        },
+    )
+
+/** The list row for the invite friends button. */
+internal fun inviteFriendsListItem(
+    state: SettingsPageReducer.State,
+    send: (SettingsPageReducer.Action) -> Unit,
+): ListRowView.Configuration =
+    ListRowView.Configuration(
+        ListRowView.Interaction.Button { send(SettingsPageReducer.Action.InviteFriendsButtonTapped) },
+        innerText = state.strings.value(SettingsPageViewStrings.inviteFriendsButtonText),
+        imageView = {
+            SquareIconImage(
+                symbolConfiguration(Colors.inviteFriendsButtonImageBackground, GroupedStrings.INVITE_FRIENDS_BUTTON_IMAGE_SYSTEM_NAME),
+                modifier = Modifier.fillMaxSize(),
+            )
+        },
+    )
+
+/** The list row for the leave review button. */
+internal fun leaveReviewListItem(
+    state: SettingsPageReducer.State,
+    send: (SettingsPageReducer.Action) -> Unit,
+): ListRowView.Configuration =
+    ListRowView.Configuration(
+        ListRowView.Interaction.Button { send(SettingsPageReducer.Action.LeaveReviewButtonTapped) },
+        innerText = state.strings.value(SettingsPageViewStrings.leaveReviewButtonText),
+        imageView = {
+            SquareIconImage(
+                symbolConfiguration(Colors.leaveReviewButtonImageBackground, GroupedStrings.LEAVE_REVIEW_BUTTON_IMAGE_SYSTEM_NAME),
+                modifier = Modifier.fillMaxSize(),
+            )
+        },
+    )
+
+/** The list row for the send feedback button. */
+internal fun sendFeedbackListItem(send: (SettingsPageReducer.Action) -> Unit): ListRowView.Configuration =
+    ListRowView.Configuration(
+        ListRowView.Interaction.Button { send(SettingsPageReducer.Action.SendFeedbackButtonTapped) },
+        innerText =
+            LocalizedStringKey.SendFeedback
+                .localized()
+                .lowercase()
+                .replaceFirstChar { it.uppercase() },
+        imageView = {
+            SquareIconImage(
+                symbolConfiguration(
+                    Colors.sendFeedbackButtonImageBackground,
+                    GroupedStrings.SEND_FEEDBACK_BUTTON_IMAGE_SYSTEM_NAME,
+                    weight = FontWeight.SemiBold,
+                ),
+                modifier = Modifier.fillMaxSize(),
+            )
+        },
+    )
+
+/** The list row for the sign out button. */
+internal fun signOutListItem(
+    state: SettingsPageReducer.State,
+    send: (SettingsPageReducer.Action) -> Unit,
+): ListRowView.Configuration =
+    ListRowView.Configuration(
+        ListRowView.Interaction.Button { send(SettingsPageReducer.Action.SignOutButtonTapped) },
+        innerText = state.strings.value(SettingsPageViewStrings.signOutButtonText),
+        imageView = {
+            SquareIconImage(
+                symbolConfiguration(Colors.signOutButtonImageBackground, GroupedStrings.SIGN_OUT_BUTTON_IMAGE_SYSTEM_NAME),
+                modifier = Modifier.fillMaxSize(),
+            )
+        },
+    )
 
 // MARK: - Auxiliary
 
@@ -236,13 +241,14 @@ private fun symbolConfiguration(
     backgroundColor: Color,
     systemName: String,
     framePercentOfTotalSize: Float = SquareIconViewFloats.OVERLAY_FRAME_HEIGHT_MULTIPLIER,
+    weight: FontWeight? = null,
 ): SquareIconViewConfiguration =
     SquareIconViewConfiguration(
-        size = DpSize(SettingsPageViewFloats.iconSize, SettingsPageViewFloats.iconSize),
         backgroundColor = backgroundColor,
         overlay =
             SquareIconViewConfiguration.OverlayConfiguration.Symbol(
                 name = systemName,
                 framePercentOfTotalSize = framePercentOfTotalSize,
+                weight = weight,
             ),
     )

@@ -8,91 +8,84 @@
 
 package us.neotechnica.panther.bundle.developermode
 
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import us.neotechnica.panther.bundle.Application
-import us.neotechnica.panther.bundle.userSessionService
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
-import us.neotechnica.panther.designsystem.modules.alertkit.models.TextFieldAttributes
-import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAlert
+import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.developermode.interfaces.DevModeAppActionDelegate
 import us.neotechnica.panther.designsystem.modules.developermode.models.DevModeAction
-import us.neotechnica.panther.modules.session.entity.extensions.UserSessionServiceStorageKey
-import us.neotechnica.panther.navigation.RootNavigatorState
-import us.neotechnica.panther.navigation.RootRoute
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.navigation
-import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
-import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
-import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
-import us.neotechnica.panther.subsystem.modules.shared.models.SharedState
-import us.neotechnica.panther.subsystem.modules.shared.models.isForcedUpdateRequired
+import us.neotechnica.panther.designsystem.modules.developermode.services.DevModeService
+import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 
 /**
  * The delegate that supplies app-specific actions to the Developer Mode
  * menu.
+ *
+ * Define [DevModeAction] instances and include them in [appActions] to
+ * make them available in the Developer Mode action sheet. Developer
+ * Mode actions are available only in prerelease builds; the menu hides
+ * them entirely in general-release builds.
  */
-object AppDevModeActions : DevModeAppActionDelegate {
+object AppActions : DevModeAppActionDelegate {
     // MARK: - Properties
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     // MARK: - Computed Properties
 
+    /** The actions to display in the Developer Mode action sheet. */
     override val appActions: List<DevModeAction>
-        get() = listOf(uiOptionsAction, userOptionsAction, DangerZone.dangerZoneAction)
-
-    private val uiOptionsAction: DevModeAction
         get() =
-            DevModeAction(title = "UI Options") {
+            listOf(
+                UIOptions.uiOptionsAction,
+                UserOptions.userOptionsAction,
+                dangerZoneAction,
+            )
+
+    // MARK: - Methods
+
+    /**
+     * Presents the app-domain Developer Mode action sheet.
+     *
+     * The sheet is the service's app-domain list – [appActions] plus the
+     * actions other modules inserted – followed by a `Back` action that
+     * returns to the Developer Mode menu.
+     */
+    fun presentActionSheet() {
+        DevModeService.presentAppDomainActionSheet()
+    }
+
+    // MARK: - Top-level Actions
+
+    private val dangerZoneAction: DevModeAction
+        get() =
+            DevModeAction(title = "Danger Zone", isDestructive = true) {
                 scope.launch {
+                    val currentUser = UserSessionService.currentUser
+                    val actions = mutableListOf(DangerZone.resetPushTokensAction)
+
+                    if (currentUser?.previousLanguageCodes?.isNotEmpty() == true) {
+                        actions.add(0, DangerZone.clearPreviousLanguageCodesAction)
+                    }
+
+                    if (currentUser?.conversations != null) {
+                        actions.add(minOf(1, actions.size), DangerZone.deleteConversationsAction)
+                    }
+
                     ActionSheet(
-                        title = "UI Options",
-                        actions = listOf(Action("Trigger Forced Update Modal") { triggerForcedUpdateModal() }),
+                        title = "Danger Zone",
+                        message = "Exercise caution when using these options.",
+                        actions =
+                            actions.map { devModeAction ->
+                                Action(
+                                    devModeAction.title,
+                                    style = if (devModeAction.isDestructive) ActionStyle.DESTRUCTIVE else ActionStyle.DEFAULT,
+                                ) { devModeAction.perform() }
+                            },
                     ).present(translating = emptyList())
                 }
             }
-
-    private val userOptionsAction: DevModeAction
-        get() =
-            DevModeAction(title = "User Options") {
-                scope.launch {
-                    ActionSheet(
-                        title = "User Options",
-                        actions = listOf(Action("Set Current User ID") { scope.launch { setCurrentUserID() } }),
-                    ).present(translating = emptyList())
-                }
-            }
-
-    // MARK: - Auxiliary
-
-    private suspend fun setCurrentUserID() {
-        val key = PersistentStorageKey.userSessionService(UserSessionServiceStorageKey.CURRENT_USER_ID)
-        val currentUserID = Persistent.string(key)
-
-        val input =
-            TextInputAlert(
-                message = "Set Current User ID",
-                attributes =
-                    TextFieldAttributes(
-                        capitalizationType = KeyboardCapitalization.None,
-                        correctionType = TextFieldAttributes.CorrectionType.NO,
-                    ),
-                confirmButtonTitle = "Done",
-            ).present(translating = emptyList())
-
-        val enteredInput = input ?: return
-        if (enteredInput != currentUserID) Application.reset()
-
-        Persistent.setString(key, enteredInput)
-        DependencyValues.current.navigation.navigate(Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.Splash)))
-    }
-
-    private fun triggerForcedUpdateModal() {
-        SharedState { it.isForcedUpdateRequired }.wrappedValue = true
-    }
 }

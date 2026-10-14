@@ -152,6 +152,43 @@ object DevModeService {
         }
     }
 
+    /**
+     * Inserts multiple actions starting at the given index.
+     *
+     * The actions appear in the order provided, beginning at [at].
+     *
+     * @param actions The actions to insert.
+     * @param at The position at which to begin inserting.
+     */
+    fun insertActions(
+        actions: List<DevModeAction>,
+        at: Int,
+    ) {
+        actions.reversed().forEach { insertAction(it, at = at) }
+    }
+
+    /**
+     * Inserts an action immediately before an existing action.
+     *
+     * The position is determined by matching the metadata of [before].
+     * If no match is found, the action is not inserted.
+     *
+     * @param action The action to insert.
+     * @param before The action before which to insert.
+     */
+    fun insertActionBefore(
+        action: DevModeAction,
+        before: DevModeAction,
+    ) {
+        appActions.withValue {
+            val index = it.value.indexOfFirst { existing -> existing.metadata(isEqual = before) }
+            if (index < 0) return@withValue
+            val filtered = it.value.filterNot { existing -> existing.metadata(isEqual = action) }.toMutableList()
+            filtered.add(minOf(index, filtered.size), action)
+            it.value = filtered
+        }
+    }
+
     // MARK: - Action Removal
 
     /**
@@ -206,6 +243,19 @@ object DevModeService {
                 actions = actions,
             ).present(translating = emptyList())
         }
+    }
+
+    /**
+     * Presents the app-domain action sheet: the registered app actions
+     * followed by a `Back` action that returns to the Developer Mode
+     * menu.
+     *
+     * Nested app-domain sheets call this from their own `Back` actions
+     * so the full app-domain list – including actions other modules
+     * inserted – is shown again.
+     */
+    fun presentAppDomainActionSheet() {
+        presentActionSheet(ActionDomain.APPLICATION)
     }
 
     private fun presentActionSheet(domain: ActionDomain) {

@@ -119,13 +119,16 @@ object ListRowView {
         /** A leading image for the row, or `null`. */
         val imageView: (@Composable () -> Unit)? = null,
     ) {
+        // The captions move to the group and the group clips the rows
+        // into one rounded mass, so a grouped row has no corners of its
+        // own.
         internal fun strippingMetadata(): Configuration =
             Configuration(
                 interaction = interaction,
                 innerText = innerText,
                 innerTextColor = innerTextColor,
                 isEnabled = isEnabled,
-                cornerRadius = cornerRadius,
+                cornerRadius = 0f,
                 imageView = imageView,
             )
     }

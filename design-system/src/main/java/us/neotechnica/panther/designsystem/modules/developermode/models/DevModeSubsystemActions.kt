@@ -20,6 +20,8 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextFieldAttributes
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAlert
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.languageName
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.lowercasedTrimmingWhitespaceAndNewlines
 import us.neotechnica.panther.subsystem.modules.foundation.models.StoredItemKey
 import us.neotechnica.panther.subsystem.modules.foundation.models.overriddenLanguageCode
 import us.neotechnica.panther.subsystem.modules.foundation.services.BuildInfoOverlay
@@ -62,6 +64,11 @@ object DevModeSubsystemActions {
                             CoreUtilities.eraseDocumentsDirectory()
                             HUD.showSuccess(text = "Erased Documents Directory")
                         }
+                    val eraseTemporaryDirectoryAction =
+                        Action("Erase Temporary Directory") {
+                            CoreUtilities.eraseTemporaryDirectory()
+                            HUD.showSuccess(text = "Erased Temporary Directory")
+                        }
                     val resetPreferencesAction =
                         Action("Reset Preferences") {
                             Persistent.reset()
@@ -71,6 +78,7 @@ object DevModeSubsystemActions {
                         Action("Erase All Content & Settings", style = ActionStyle.DESTRUCTIVE_PREFERRED) {
                             CoreUtilities.clearCaches()
                             CoreUtilities.eraseDocumentsDirectory()
+                            CoreUtilities.eraseTemporaryDirectory()
                             Persistent.reset()
                             HUD.showSuccess()
                         }
@@ -81,6 +89,7 @@ object DevModeSubsystemActions {
                             listOf(
                                 clearCachesAction,
                                 eraseDocumentsDirectoryAction,
+                                eraseTemporaryDirectoryAction,
                                 resetPreferencesAction,
                                 eraseAllAction,
                             ),
@@ -125,9 +134,10 @@ object DevModeSubsystemActions {
         val specifyLanguageCodeAction = Action("Specify Language Code") { scope.launch { presentLanguageCodeTextInputAlert() } }
         val setToRandomLanguageCodeAction =
             Action("Set to Random Language Code") {
-                val languageCode = Locale.getISOLanguages().random()
+                val languageCode = RuntimeStorage.languageCodeDictionary?.keys?.randomOrNull() ?: return@Action
                 setLanguageCode(languageCode)
-                HUD.showSuccess(text = "Set to ${languageName(languageCode)}")
+                val languageName = languageCode.englishLanguageName ?: languageCode.languageName ?: languageCode.uppercase()
+                HUD.showSuccess(text = "Set to $languageName")
             }
 
         ActionSheet(
@@ -149,8 +159,9 @@ object DevModeSubsystemActions {
                     ),
             ).present(translating = emptyList())
 
-        val enteredInput = input?.trim()?.lowercase() ?: return
-        if (enteredInput !in Locale.getISOLanguages()) {
+        val enteredInput = input ?: return
+        val languageCodes = RuntimeStorage.languageCodeDictionary
+        if (languageCodes == null || enteredInput.lowercasedTrimmingWhitespaceAndNewlines !in languageCodes.keys) {
             Alert(
                 title = "Override Language Code",
                 message = "The language code entered was invalid. Please try again.",
@@ -163,7 +174,7 @@ object DevModeSubsystemActions {
             return
         }
 
-        setLanguageCode(enteredInput)
+        setLanguageCode(enteredInput.lowercasedTrimmingWhitespaceAndNewlines)
         HUD.showSuccess()
     }
 
@@ -179,6 +190,8 @@ object DevModeSubsystemActions {
         if (showSuccess) HUD.showSuccess()
     }
 
-    private fun languageName(languageCode: String): String =
-        Locale(languageCode).getDisplayLanguage(Locale.ENGLISH).ifEmpty { languageCode.uppercase() }
+    // The language's name in English, or `null` when the platform has
+    // no name for the code.
+    private val String.englishLanguageName: String?
+        get() = Locale(this).getDisplayLanguage(Locale.ENGLISH).takeIf { it.isNotBlank() && it != this }
 }

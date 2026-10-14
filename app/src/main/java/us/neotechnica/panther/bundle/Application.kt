@@ -10,7 +10,7 @@ package us.neotechnica.panther.bundle
 
 import android.content.Context
 import us.neotechnica.panther.BuildConfig
-import us.neotechnica.panther.bundle.developermode.AppDevModeActions
+import us.neotechnica.panther.bundle.developermode.AppActions
 import us.neotechnica.panther.designsystem.modules.alertkit.dependencies.alertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.HUDConfig
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
@@ -37,10 +37,10 @@ import us.neotechnica.panther.modules.common.services.NetworkActivityIndicatorSe
 import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.common.services.UpdateService
+import us.neotechnica.panther.modules.content.user.dependencies.settingsPageViewService
 import us.neotechnica.panther.modules.content.user.services.AudioMessagePlaybackService
 import us.neotechnica.panther.modules.content.user.services.ContextMenuActionHandlerService
 import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
-import us.neotechnica.panther.modules.content.user.services.SettingsPageViewService
 import us.neotechnica.panther.modules.networking.translation.delegates.LocalTranslationArchiverDelegate
 import us.neotechnica.panther.modules.networking.user.models.DeviceID
 import us.neotechnica.panther.modules.session.entity.extensions.UserSessionServiceStorageKey
@@ -269,7 +269,7 @@ object Application {
         ContactService.initialize(context)
         DeviceID.initialize(context)
         InviteService.initialize(context)
-        SettingsPageViewService.initialize(context)
+        DependencyValues.current.settingsPageViewService.initialize(context)
         TextToSpeechService.initialize(context)
         AudioMessagePlaybackService.initialize(context)
         MediaActionHandlerService.initialize(context)
@@ -287,7 +287,7 @@ object Application {
         AppSubsystem.delegates.registerLoggerDomainSubscriptionDelegate(LoggerDomainSubscription)
         AppSubsystem.delegates.registerPermanentPersistentStorageKeyDelegate(PermanentKeyDelegate)
         AppSubsystem.delegates.registerErrorReportDelegate(ErrorReportingService)
-        DevModeService.registerAppActionDelegate(AppDevModeActions)
+        DevModeService.registerAppActionDelegate(AppActions)
         LocalTranslationArchiverDelegate.registerWithDependencies()
         ReportDelegate.registerWithDependencies()
 

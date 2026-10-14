@@ -12,7 +12,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -20,19 +19,16 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import us.neotechnica.panther.bundle.currentConversationMetadataChanged
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.components.GroupedListView
 import us.neotechnica.panther.designsystem.modules.foundation.components.HeaderView
-import us.neotechnica.panther.designsystem.modules.foundation.constants.ListRowViewFloats
 import us.neotechnica.panther.designsystem.modules.foundation.extensions.doneButton
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.content.user.components.SquareIconView
+import us.neotechnica.panther.modules.content.user.components.SquareIconImage
 import us.neotechnica.panther.modules.content.user.constants.ReactionDetailsPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.ReactionDetailsPageViewFloats
-import us.neotechnica.panther.modules.content.user.constants.SquareIconViewFloats
 import us.neotechnica.panther.modules.content.user.models.SquareIconViewConfiguration
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
@@ -110,30 +106,21 @@ fun ReactionDetailsPageView(
 
 /**
  * The leading icon of a reaction row: the reaction's square icon,
- * drawn at its default size and scaled down to the list row's image
- * frame.
+ * scaled to the list row's image frame.
  *
  * @param style The reaction style the icon represents.
  */
 @Composable
 internal fun ListRowIcon(style: Reaction.Style) {
-    val scale = ListRowViewFloats.IMAGE_FRAME_WIDTH / SquareIconViewFloats.defaultFrameWidth.value
-    SquareIconView(
-        configuration =
-            SquareIconViewConfiguration(
-                backgroundColor = style.squareIconBackgroundColor,
-                overlay =
-                    SquareIconViewConfiguration.OverlayConfiguration.Text(
-                        style.emojiValue,
-                        font = Font.system(FontScale.Custom(Floats.LIST_ROW_ICON_TEXT_FONT_SCALE)),
-                    ),
-            ),
-        modifier =
-            Modifier
-                .requiredSize(SquareIconViewFloats.defaultFrameWidth, SquareIconViewFloats.defaultFrameHeight)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                },
+    SquareIconImage(
+        SquareIconViewConfiguration(
+            backgroundColor = style.squareIconBackgroundColor,
+            overlay =
+                SquareIconViewConfiguration.OverlayConfiguration.Text(
+                    style.emojiValue,
+                    font = Font.system(FontScale.Custom(Floats.LIST_ROW_ICON_TEXT_FONT_SCALE)),
+                ),
+        ),
+        modifier = Modifier.fillMaxSize(),
     )
 }

@@ -15,30 +15,21 @@ import androidx.compose.ui.unit.dp
 // MARK: - Float
 
 object SettingsPageViewFloats {
-    val avatarSize: Dp = 44.dp
     val buildInfoButtonImageBottomPadding: Dp = 6.dp
+
     val buildInfoButtonImageFrameHeight: Dp = (515f / 20f).dp
     val buildInfoButtonImageFrameWidth: Dp = (1000f / 20f).dp
-    val cardCornerRadius: Dp = 16.dp
-    val cardHorizontalMargin: Dp = 16.dp
-    val cardPadding: Dp = 16.dp
-    val cardVerticalMargin: Dp = 14.dp
-    val contactChevronSize: Dp = 18.dp
 
-    /** The size of the contact row's chevron as an SF Symbol, which fills its frame. */
-    val contactChevronSymbolSize: Dp = 15.dp
-    val contactCornerRadius: Dp = 28.dp
-    val contactNameStartPadding: Dp = 12.dp
-    val contentTopPadding: Dp = 16.dp
-    val disclosureChevronSize: Dp = 24.dp
+    val buildInfoButtonLabelBottomPadding: Dp = 8.dp
 
-    /** The size of a row's disclosure chevron as an SF Symbol, which fills its frame. */
-    val disclosureChevronSymbolSize: Dp = 14.dp
-    val iconRowVerticalPadding: Dp = 10.dp
-    val iconSize: Dp = 30.dp
-    val iconTitleStartPadding: Dp = 12.dp
-    val versionBottomPadding: Dp = 8.dp
-    val versionTopPadding: Dp = 8.dp
+    val contactDetailViewBottomPadding: Dp = 20.dp
+    val contactDetailViewHorizontalPadding: Dp = 20.dp
+    val contactDetailViewTopPadding: Dp = 30.dp
+
+    const val SIGN_OUT_NAVIGATION_DELAY_MILLISECONDS = 500L
+
+    val groupedListViewBottomPadding: Dp = 20.dp
+    val groupedListViewHorizontalPadding: Dp = 20.dp
 
     const val CHANGE_LANGUAGE_BUTTON_OVERLAY_FRAME_PERCENT_OF_TOTAL_SIZE = 0.7f
     const val CLEAR_CACHES_BUTTON_OVERLAY_FRAME_PERCENT_OF_TOTAL_SIZE = 0.6f
@@ -50,6 +41,7 @@ object SettingsPageViewFloats {
 object SettingsPageViewColors {
     val blockedUsersButtonImageBackground = Color(0xFF8E8E93)
     val changeLanguageButtonImageBackground = Color(0xFFFF2D55)
+    val changeLanguageButtonImageForeground = Color.White
     val clearCachesButtonImageBackground = Color(0xFF00C7BE)
     val deleteAccountButtonImageBackground = Color(0xFFFF9500)
     val inviteFriendsButtonImageBackground = Color(0xFF007AFF)
@@ -62,6 +54,8 @@ object SettingsPageViewColors {
 
 // MARK: - String
 
+// Non-translated per-screen constants. The `SettingsPageViewStrings`
+// name is reserved for the translated-label-strings object.
 object SettingsPageViewConstants {
     const val ACCOUNT_DELETED_MESSAGE = "Your account has been deleted. You must now restart the app."
     const val BLOCKED_USERS_BUTTON_TEXT = "Blocked users"
@@ -84,10 +78,9 @@ object SettingsPageViewConstants {
     const val SHARE_TO_ANOTHER_APP = "Share to Another App"
     const val SHOW_QR_CODE = "Show QR Code"
     const val SIGN_OUT_BUTTON_TEXT = "Sign out"
-    const val TOGGLE_DEVELOPER_MODE = "Toggle Developer Mode"
+    const val TOGGLE_DEVELOPER_MODE_BUTTON_TEXT = "Toggle Developer Mode"
 
     const val BLOCKED_USERS_BUTTON_IMAGE_SYSTEM_NAME = "flag.fill"
-    const val CHEVRON_IMAGE_SYSTEM_NAME = "chevron.forward"
     const val CLEAR_CACHES_BUTTON_IMAGE_SYSTEM_NAME = "command"
     const val DELETE_ACCOUNT_BUTTON_IMAGE_SYSTEM_NAME = "trash.fill"
     const val INVITE_FRIENDS_BUTTON_IMAGE_SYSTEM_NAME = "location.fill"

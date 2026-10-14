@@ -11,17 +11,18 @@ package us.neotechnica.panther.modules.content.user.views.changelanguagepageview
 import us.neotechnica.panther.bundle.traitCollectionChanged
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.content.onboarding.components.InstructionViewStrings
+import us.neotechnica.panther.modules.content.user.dependencies.changeLanguagePageViewService
+import us.neotechnica.panther.modules.content.user.dependencies.settingsPageViewService
 import us.neotechnica.panther.modules.content.user.services.ChangeLanguagePageViewService
-import us.neotechnica.panther.modules.content.user.services.SettingsPageViewService
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
-import us.neotechnica.panther.subsystem.modules.localization.services.LocalizedStringResolver
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
@@ -77,14 +78,13 @@ class ChangeLanguagePageReducer : Reducer<ChangeLanguagePageReducer.State, Chang
         val strings: List<TranslationOutputMap> = ChangeLanguagePageViewStrings.defaultOutputMap,
         val viewState: ViewState = ViewState.Loading,
     ) {
-        val selectedLanguageCode: String
-            get() =
-                LocalizedStringResolver
-                    .languageDisplayNames()
-                    .entries
-                    .firstOrNull { it.value == selectedLanguageName }
-                    ?.key
+        internal val selectedLanguageCode: String
+            get() {
+                val localizedLanguageCodeDictionary =
+                    CoreUtilities.localizedLanguageCodeDictionary(RuntimeStorage.languageCode) ?: return RuntimeStorage.languageCode
+                return localizedLanguageCodeDictionary.entries.firstOrNull { it.value == selectedLanguageName }?.key
                     ?: RuntimeStorage.languageCode
+            }
     }
 
     // MARK: - Reduce
@@ -95,15 +95,17 @@ class ChangeLanguagePageReducer : Reducer<ChangeLanguagePageReducer.State, Chang
     ): ReduceResult<State, Action> =
         when (action) {
             Action.ViewAppeared -> {
-                SettingsPageViewService.isMainPagePresented = false
-                val displayNames = LocalizedStringResolver.languageDisplayNames()
-                val languages = displayNames.values.sorted()
-                val selected = displayNames[RuntimeStorage.languageCode] ?: languages.firstOrNull() ?: ""
+                DependencyValues.current.settingsPageViewService.isMainPagePresented = false
+                val languageCodeDictionary =
+                    CoreUtilities.localizedLanguageCodeDictionary(RuntimeStorage.languageCode)
+                        ?: return ReduceResult(state.copy(viewState = ViewState.Loading))
+                val languages = languageCodeDictionary.values.sorted()
+                val selectedLanguageName = languageCodeDictionary[RuntimeStorage.languageCode] ?: languages.firstOrNull() ?: ""
                 ReduceResult(
                     state.copy(
                         isConfirmButtonEnabled = false,
                         languages = languages,
-                        selectedLanguageName = selected,
+                        selectedLanguageName = selectedLanguageName,
                         viewState = ViewState.Loading,
                     ),
                     resolveEffect(),
@@ -111,14 +113,14 @@ class ChangeLanguagePageReducer : Reducer<ChangeLanguagePageReducer.State, Chang
             }
 
             Action.ViewDisappeared -> {
-                SettingsPageViewService.isMainPagePresented = true
+                DependencyValues.current.settingsPageViewService.isMainPagePresented = true
                 val sharedEvents = DependencyValues.current.sharedEvents
                 sharedEvents.traitCollectionChanged.send(Unit)
                 ReduceResult(state)
             }
 
             Action.ConfirmButtonTapped -> {
-                ChangeLanguagePageViewService.confirmButtonTapped(state.selectedLanguageCode)
+                DependencyValues.current.changeLanguagePageViewService.confirmButtonTapped(state.selectedLanguageCode)
                 ReduceResult(state)
             }
 

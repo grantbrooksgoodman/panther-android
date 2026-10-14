@@ -8,6 +8,8 @@
 
 package us.neotechnica.panther.designsystem.modules.foundation.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +22,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.constants.GroupedListViewFloats
+import us.neotechnica.panther.designsystem.modules.foundation.constants.ListRowViewColors
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 
 // MARK: - Constants Accessors
@@ -84,9 +87,18 @@ fun GroupedListView(
 
 // MARK: - List
 
+// The group paints the row background itself so the dividers' leading
+// inset does not show the page through.
 @Composable
 private fun ListView(rows: List<ListRowView.Configuration>) {
-    Column(modifier = Modifier.clip(RoundedCornerShape(GroupedListFloats.CORNER_RADIUS.dp))) {
+    val background = if (isSystemInDarkTheme()) ListRowViewColors.DARK_BACKGROUND else ListRowViewColors.LIGHT_BACKGROUND
+
+    Column(
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(GroupedListFloats.CORNER_RADIUS.dp))
+                .background(background),
+    ) {
         rows.forEachIndexed { index, row ->
             ListRowView(row)
             if (index != rows.lastIndex) {
