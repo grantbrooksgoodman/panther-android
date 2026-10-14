@@ -19,8 +19,10 @@ data class SettingsNavigatorState(
 ) : NavigatorState<SettingsNavigatorState.ModalPaths, SettingsNavigatorState.SeguePaths, SettingsNavigatorState.SheetPaths> {
     // MARK: - Types
 
+    /** The full-screen destinations in the settings flow; it presents none. */
     sealed interface ModalPaths : Paths
 
+    /** The push destinations in the settings flow; it pushes none. */
     sealed interface SeguePaths : Paths
 
     /** The sheet destinations presented over the settings flow. */
@@ -32,6 +34,13 @@ data class SettingsNavigatorState(
 
 /** Applies [SettingsRoute]s to the settings flow's navigation state. */
 object SettingsNavigator {
+    /**
+     * Returns the settings flow's state after applying the given
+     * route.
+     *
+     * @param to The route to apply.
+     * @param on The state to apply it to.
+     */
     fun navigate(
         to: SettingsRoute,
         on: SettingsNavigatorState,

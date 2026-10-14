@@ -65,8 +65,7 @@ private typealias ListFloats = ContactPairListViewFloats
 // MARK: - List View
 
 /**
- * A list of contact pairs in alphabetical sections, laid out as an
- * iOS list.
+ * A list of contact pairs in alphabetical sections.
  *
  * Use `ContactPairListView` to offer contact pairs to choose from. Each
  * section is headed by its letter, and a divider ends each header and

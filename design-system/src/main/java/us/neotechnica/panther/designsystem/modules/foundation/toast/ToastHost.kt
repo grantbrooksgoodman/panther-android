@@ -115,7 +115,8 @@ fun ToastHost() {
                 .windowInsetsPadding(WindowInsets.statusBars),
     ) {
         val fromBottom = appearanceEdge == Toast.AppearanceEdge.BOTTOM
-        // Without iOS animations, the toast also fades as it slides.
+        // While system-style animations are disabled, the toast also fades
+        // as it slides.
         val usesAppleAnimations = SystemAnimation.usesAppleAnimations
         AnimatedVisibility(
             enter =

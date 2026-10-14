@@ -69,6 +69,20 @@ class ChangeLanguagePageViewService(
      *
      * Each property defaults to the live service; a test replaces the
      * ones it exercises.
+     *
+     * @property addOverlay Adds the non-modal dimming overlay.
+     * @property currentUser Returns the current user.
+     * @property hideHUD Hides the HUD.
+     * @property presentActionSheet Presents the given action sheet,
+     *   translating the given parts.
+     * @property reset Resets the app, preserving the current user's
+     *   identifier, and exits.
+     * @property resolveCurrentUser Resolves every data type of the
+     *   current user.
+     * @property showProgressHUD Shows the modal progress HUD with the
+     *   given text.
+     * @property updateValues Updates the given user's hosted values
+     *   with the given data, returning the updated user.
      */
     data class Dependencies(
         val addOverlay: () -> Unit = {

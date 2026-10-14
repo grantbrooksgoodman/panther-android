@@ -154,7 +154,7 @@ fun RecipientBar(modifier: Modifier = Modifier) {
         // The bar grows a row at a time to fit its contact views, which keep
         // the inset from its edges that centering the first row in the bar's
         // initial height gives them. The "To:" label and the select contact
-        // button stay centered on the first row, as on iOS.
+        // button stay centered on the first row.
         Row(modifier = Modifier.fillMaxWidth()) {
             Components.Text(
                 LocalizedStringKey.To.localized(),
@@ -289,9 +289,9 @@ private fun ContactViews(
     }
 }
 
-// Mirrors the text field delegate: beginning editing leaves the label
-// representation; ending it restores the representation after a short
-// delay unless the field regained focus.
+// Beginning editing leaves the label representation; ending it
+// restores the representation after a short delay unless the field
+// regained focus.
 private fun textFieldFocusChanged(isFocused: Boolean) {
     val service = RecipientBarService
     service.layout.setIsTextFieldFirstResponder(isFocused)

@@ -20,9 +20,12 @@ package us.neotechnica.panther.modules.content.onboarding.constants
  * for example `private typealias Floats = SomeViewFloats`.
  */
 object AppConstants {
+    /** The domain for layout and timing values. */
     object Floats
 
+    /** The domain for colors. */
     object Colors
 
+    /** The domain for strings. */
     object Strings
 }

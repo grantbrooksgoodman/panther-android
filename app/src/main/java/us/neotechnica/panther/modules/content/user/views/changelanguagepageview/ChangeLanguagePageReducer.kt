@@ -54,21 +54,40 @@ class ChangeLanguagePageReducer : Reducer<ChangeLanguagePageReducer.State, Chang
 
     // MARK: - Action
 
+    /** The actions the change language page can process. */
     sealed interface Action {
+        /**
+         * An action that indicates the view appeared. Builds the
+         * language list, selects the current language, and begins
+         * resolving the display strings.
+         */
         data object ViewAppeared : Action
 
+        /**
+         * An action that indicates the view disappeared. Marks the
+         * settings page presented again and notifies observers of a
+         * trait collection change.
+         */
         data object ViewDisappeared : Action
 
+        /** An action that indicates the user tapped the confirm button. Applies the selected language. */
         data object ConfirmButtonTapped : Action
 
+        /** An action that indicates display string resolution succeeded, carrying the resolved strings. */
         data class ResolveReturned(
             val strings: List<TranslationOutputMap>,
         ) : Action
 
+        /** An action that indicates display string resolution failed, carrying the resulting [Exception]. */
         data class ResolveFailed(
             val exception: Exception,
         ) : Action
 
+        /**
+         * An action that indicates the user selected a language,
+         * carrying its name. Enables the confirm button when the
+         * selection differs from the current language.
+         */
         data class SelectedLanguageNameChanged(
             val name: String,
         ) : Action
@@ -76,6 +95,23 @@ class ChangeLanguagePageReducer : Reducer<ChangeLanguagePageReducer.State, Chang
 
     // MARK: - State
 
+    /**
+     * The state of the change language page.
+     *
+     * @property instructionViewStrings The instruction view's title
+     *   and subtitle.
+     * @property isConfirmButtonEnabled A Boolean value that indicates
+     *   whether the confirm button is enabled.
+     * @property languages The language names the picker offers, in
+     *   alphabetical order.
+     * @property selectedLanguageName The name of the selected
+     *   language.
+     * @property strings The page's translated display strings.
+     *   Contains the default, untranslated strings until resolution
+     *   completes.
+     * @property viewState The page's loading state. Remains loading
+     *   until display string resolution completes.
+     */
     data class State(
         val instructionViewStrings: InstructionViewStrings = InstructionViewStrings.empty,
         val isConfirmButtonEnabled: Boolean = false,

@@ -280,8 +280,8 @@ private fun FocusedMessageInteractionEffect(focusedMessageID: String?) {
     LaunchedEffect(controller, focusedMessageID) {
         if (controller == null || focusedMessageID == null) return@LaunchedEffect
         scope.launch {
-            // As on iOS, the message is focused only once the page has
-            // finished appearing, so it lifts out of a page at rest.
+            // The message is focused only once the page has finished
+            // appearing, so it lifts out of a page at rest.
             snapshotFlow { hasAppeared.value }.first { it }
             delay(PageFloats.TRIGGER_FOCUSED_MESSAGE_CELL_INTERACTION_DELAY_MILLISECONDS)
             SearchInteractionService(focusedMessageID) { controller.present(it) }

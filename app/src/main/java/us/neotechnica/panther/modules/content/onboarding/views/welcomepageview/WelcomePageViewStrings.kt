@@ -15,7 +15,10 @@ import us.neotechnica.panther.translator.models.TranslationInput
 
 /** The translated label strings for the welcome page. */
 object WelcomePageViewStrings : TranslatedLabelStrings {
+    /** The text of the continue button. */
     val continueButtonText = TranslatedLabelStringCollection("welcomePageView.continueButtonText")
+
+    /** The text of the sign in button. */
     val signInButtonText = TranslatedLabelStringCollection("welcomePageView.signInButtonText")
 
     override val keyPairs: List<TranslationInputMap> =

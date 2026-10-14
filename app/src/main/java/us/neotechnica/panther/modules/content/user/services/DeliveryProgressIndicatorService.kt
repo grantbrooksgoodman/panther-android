@@ -128,7 +128,7 @@ class DeliveryProgressIndicatorService(
 
     // MARK: - Auxiliary
 
-    // The curve of a UIKit `UIView.animate(withDuration:)` animation.
+    // An ease-in-out curve over the indicator's animation duration.
     private fun animationSpec(): FiniteAnimationSpec<Float> =
         SystemAnimation.easeInOut(IndicatorFloats.ANIMATION_DURATION.toDouble().seconds)
 

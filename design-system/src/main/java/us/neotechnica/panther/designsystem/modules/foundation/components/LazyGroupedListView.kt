@@ -51,7 +51,7 @@ private typealias LazyGroupedListFloats = GroupedListViewFloats
  *
  * Use this in place of [GroupedListView] for a group too long to
  * compose at once. Draw the list over the grouped content background;
- * it pads its rows above and below as iOS does, and extends beneath
+ * it pads its rows above and below, and extends beneath
  * the navigation bar and keyboard, scrolling its last row clear of
  * them:
  *
@@ -74,7 +74,7 @@ private typealias LazyGroupedListFloats = GroupedListViewFloats
  * @param dividerLeadingPadding The distance from the card's leading
  *   edge at which each divider begins. The default aligns the dividers
  *   with the rows' content; to align them with text that follows a
- *   leading image, as iOS does, add the image's width and spacing.
+ *   leading image, add the image's width and spacing.
  * @param content The content of an item's row.
  */
 @Composable

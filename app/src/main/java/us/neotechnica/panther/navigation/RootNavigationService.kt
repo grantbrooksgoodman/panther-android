@@ -47,10 +47,12 @@ object RootNavigationService : Navigating<RootNavigationService.Route, RootNavig
      * the navigator responsible for handling each.
      */
     sealed interface Route {
+        /** A route handled by [ChatNavigator]. */
         data class Chat(
             val route: ChatRoute,
         ) : Route
 
+        /** A route handled by [OnboardingNavigator]. */
         data class Onboarding(
             val route: OnboardingRoute,
         ) : Route
@@ -60,10 +62,12 @@ object RootNavigationService : Navigating<RootNavigationService.Route, RootNavig
             val route: RootRoute,
         ) : Route
 
+        /** A route handled by [SettingsNavigator]. */
         data class Settings(
             val route: SettingsRoute,
         ) : Route
 
+        /** A route handled by [UserContentNavigator]. */
         data class UserContent(
             val route: UserContentRoute,
         ) : Route

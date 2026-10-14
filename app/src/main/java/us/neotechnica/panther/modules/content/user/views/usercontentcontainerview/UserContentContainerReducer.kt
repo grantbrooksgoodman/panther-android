@@ -34,6 +34,7 @@ class UserContentContainerReducer : Reducer<UserContentContainerReducer.State, U
 
     // MARK: - Action
 
+    /** The actions the user content container can process. */
     sealed interface Action {
         /** An action that indicates the user tapped the chat info button. Opens the chat info page. */
         data object ChatInfoToolbarButtonTapped : Action
@@ -47,6 +48,7 @@ class UserContentContainerReducer : Reducer<UserContentContainerReducer.State, U
 
     // MARK: - State
 
+    /** The state of the user content container. */
     data class State(
         /** The identity of the container's content. Regenerated to rebuild it from the latest values. */
         val objectID: UUID = UUID.randomUUID(),

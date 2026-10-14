@@ -34,12 +34,11 @@ import java.io.ByteArrayOutputStream
  * Encodes and decodes LZFSE-framed byte streams.
  *
  * Use [Lzfse] to compress and decompress data in the LZFSE container
- * format, interoperating with Apple's `compression_encode_buffer` /
- * `compression_decode_buffer` (`.lzfse`).
+ * format, interoperating with the reference LZFSE implementation.
  *
  * **Important:** [encode] emits a single uncompressed block – a valid
- * LZFSE stream that Apple's decoder reads back verbatim, but without a
- * compression ratio. [decode] reads uncompressed, end-of-stream, LZVN,
+ * LZFSE stream that the reference decoder reads back verbatim, but
+ * without a compression ratio. [decode] reads uncompressed, end-of-stream, LZVN,
  * and FSE-compressed (v2) blocks; legacy v1 compressed blocks throw.
  */
 object Lzfse {
@@ -49,7 +48,7 @@ object Lzfse {
      * Returns [source] encoded as an LZFSE stream.
      *
      * The stream is a single uncompressed block followed by an
-     * end-of-stream marker, which Apple's LZFSE decoder reads back
+     * end-of-stream marker, which the reference decoder reads back
      * verbatim.
      *
      * @param source The bytes to encode.

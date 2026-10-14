@@ -21,8 +21,9 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
  * return ReduceResult(state, Effect.cancel(CancelIDs.Polling))
  * ```
  *
- * Any [Hashable][Any] value can serve as a cancellation
- * identifier. A common pattern is a private object per effect.
+ * Any value with a stable `equals` and `hashCode` can serve as a
+ * cancellation identifier. A common pattern is a private object per
+ * effect.
  *
  * @param id The identifier of the effect to cancel.
  */

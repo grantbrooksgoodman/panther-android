@@ -15,11 +15,18 @@ import us.neotechnica.panther.translator.models.TranslationInput
 
 /** The translated label strings for the change-language page. */
 object ChangeLanguagePageViewStrings : TranslatedLabelStrings {
+    /** The text of the confirm button. */
     val confirmButtonText = TranslatedLabelStringCollection("changeLanguagePageView.confirmButtonText")
+
+    /** The text of the instruction view subtitle label. */
     val instructionViewSubtitleLabelText =
         TranslatedLabelStringCollection("changeLanguagePageView.instructionViewSubtitleLabelText")
+
+    /** The text of the instruction view title label. */
     val instructionViewTitleLabelText =
         TranslatedLabelStringCollection("changeLanguagePageView.instructionViewTitleLabelText")
+
+    /** The page's navigation title. */
     val navigationTitle = TranslatedLabelStringCollection("changeLanguagePageView.navigationTitle")
 
     override val keyPairs: List<TranslationInputMap> =

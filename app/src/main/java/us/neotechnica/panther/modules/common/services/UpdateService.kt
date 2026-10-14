@@ -97,6 +97,14 @@ object UpdateService : ForcedUpdateModalDelegate {
 
     // MARK: - Observe Forced Update Changes
 
+    /**
+     * Begins observing the hosted update metadata, presenting the
+     * forced-update modal whenever the hosted Play Store build number
+     * exceeds the running build's and the hosted force-update flag is
+     * set.
+     *
+     * Calling this method again replaces the previous observation.
+     */
     fun startObservingForcedUpdateChanges() {
         observationJob?.cancel()
         observationJob =

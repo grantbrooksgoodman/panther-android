@@ -20,7 +20,7 @@ import us.neotechnica.panther.networking.modules.common.extensions.bangQualified
 import java.util.Date
 
 /**
- * Builders for the session-layer fixtures the Phase 6 tests share:
+ * Builders for the fixtures the session-layer tests share:
  * users with distinct phone numbers, text messages, and conversations
  * whose metadata is empty.
  */

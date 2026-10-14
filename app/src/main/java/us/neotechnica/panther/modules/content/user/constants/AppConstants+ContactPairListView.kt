@@ -14,8 +14,12 @@ import androidx.compose.ui.unit.dp
 
 // MARK: - Float
 
+/** The layout and timing values of the contact pair list view. */
 object ContactPairListViewFloats {
+    /** The default minimum height of a list row. */
     val defaultMinListRowHeight: Dp = 44.dp
+
+    /** The horizontal padding of the row. */
     val rowHorizontalPadding: Dp = 20.dp
 
     /**
@@ -30,9 +34,17 @@ object ContactPairListViewFloats {
 
 // MARK: - Color
 
+/** The colors of the contact pair list view. */
 object ContactPairListViewColors {
+    /** The divider color in dark mode. */
     val darkDivider = Color(0xFF3E3E41)
+
+    /** The divider color in light mode. */
     val lightDivider = Color(0xFFC6C6C8)
+
+    /** The highlight color of the row in dark mode. */
     val rowDarkHighlight = Color(0xFF3A3A3C)
+
+    /** The highlight color of the row in light mode. */
     val rowLightHighlight = Color(0xFFD1D1D6)
 }

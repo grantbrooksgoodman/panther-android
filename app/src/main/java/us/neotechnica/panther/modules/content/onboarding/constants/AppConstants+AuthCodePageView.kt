@@ -14,28 +14,42 @@ import androidx.compose.ui.unit.dp
 
 // MARK: - Float
 
+/** The layout and timing values of the auth code page view. */
 object AuthCodePageViewFloats {
+    /** The top padding of the back button. */
     val backButtonTopPadding: Dp = 2.dp
 
+    /** The top padding of the continue button. */
     val continueButtonTopPadding: Dp = 10.dp
 
+    /** The bottom padding of the inner stack. */
     val innerVStackBottomPadding: Dp = 50.dp
+
+    /** The vertical padding of the instruction label. */
     val instructionLabelVerticalPadding: Dp = 5.dp
 
+    /** The horizontal padding of the text field. */
     val textFieldHorizontalPadding: Dp = 20.dp
+
+    /** The vertical padding of the text field. */
     val textFieldVerticalPadding: Dp = 2.dp
 
+    /** The font size of the back button label. */
     const val BACK_BUTTON_LABEL_FONT_SIZE = 15f
 }
 
 // MARK: - Color
 
+/** The colors of the auth code page view. */
 object AuthCodePageViewColors {
+    /** The foreground color of the instruction label. */
     val instructionLabelForeground = Color.Gray
 }
 
 // MARK: - String
 
+/** The string constants of the auth code page view. */
 object AuthCodePageViewStrings {
+    /** The placeholder of the text field. */
     const val TEXT_FIELD_PLACEHOLDER = "000000"
 }

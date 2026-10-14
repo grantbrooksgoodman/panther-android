@@ -343,9 +343,8 @@ object Application {
     internal const val APP_STORE_BUILD_NUMBER = 0
     internal const val MILLIS_PER_SECOND = 1_000L
 
-    // Whether the app is styled as on iOS: animations with iOS's timing
-    // and style, the San Francisco font, and real SF Symbols. Set this
-    // to `false` to use Android's default animations, the Inter font,
-    // and Material Symbols instead.
+    // Whether the app uses its system-style animations, the San Francisco
+    // font, and SF Symbols. Set this to `false` to use Android's default
+    // animations, the Inter font, and Material Symbols instead.
     private const val USE_IOS_STYLING = true
 }

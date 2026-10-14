@@ -68,56 +68,125 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
 
     // MARK: - Action
 
+    /** The actions the chat page can process. */
     sealed interface Action {
+        /**
+         * An action that indicates the view appeared, carrying the
+         * conversation's ID key and the page's configuration. Sets the
+         * conversation current and begins observing its messages.
+         */
         data class ViewAppeared(
             val conversationIDKey: String,
             val configuration: ChatPageView.Configuration,
         ) : Action
 
+        /**
+         * An action that indicates the displayed messages changed,
+         * carrying them. Marks incoming messages read.
+         */
         data class MessagesUpdated(
             val messages: List<Message>,
         ) : Action
 
+        /** An action that indicates the input text changed, carrying the text. */
         data class TextViewDidChange(
             val text: String,
         ) : Action
 
+        /**
+         * An action that indicates the user pressed the send button.
+         * Sends the input text unless a send is in flight or the text
+         * is blank.
+         */
         data object DidPressSendButton : Action
 
+        /**
+         * An action that toggles the given message between its
+         * translation and its original text.
+         */
         data class HandleViewAlternateAction(
             val message: Message,
         ) : Action
 
+        /**
+         * An action that toggles the given message between its audio
+         * and its transcription.
+         */
         data class HandleAudioMessageAction(
             val message: Message,
         ) : Action
 
+        /** An action that applies the given reaction style to the given message. */
         data class ReactToSelectedMessage(
             val message: Message,
             val style: Reaction.Style,
         ) : Action
 
+        /**
+         * An action that indicates the session store changed, carrying
+         * the change. Schedules a debounced reload when the change
+         * affects the conversation.
+         */
         data class HandleSessionStoreChange(
             val change: SessionStoreChange,
         ) : Action
 
+        /**
+         * An action that indicates whether a message send is in flight
+         * changed, carrying the new value. Toggles the input bar's
+         * sending state.
+         */
         data class IsSendingMessageChanged(
             val isSendingMessage: Boolean,
         ) : Action
 
+        /**
+         * An action that indicates the outbox changed, carrying whether
+         * an entry is being sent. Schedules a debounced reload.
+         */
         data class HandleOutboxChange(
             val isSendingOutboxEntry: Boolean,
         ) : Action
 
+        /**
+         * An action that rebuilds the message list from the latest
+         * values and marks incoming messages read.
+         */
         data object ReloadRequested : Action
 
+        /** An action that indicates the conversation no longer exists. Pops the page. */
         data object ConversationUnavailable : Action
 
+        /**
+         * An action that indicates the view disappeared. Stops speech
+         * and playback, restores alternate content, clears the input,
+         * and – unless the conversation remains on screen – flushes
+         * read receipts and clears the current conversation.
+         */
         data object ViewDisappeared : Action
     }
 
     // MARK: - State
 
+    /**
+     * The state of the chat page.
+     *
+     * @property conversationIDKey The ID key of the conversation the
+     *   page displays.
+     * @property configuration The configuration the page was presented
+     *   with.
+     * @property messages The messages the page displays.
+     * @property isSendingMessage A Boolean value that indicates whether
+     *   a message send is in flight.
+     * @property isSendingOutboxEntry A Boolean value that indicates
+     *   whether an outbox entry is being sent.
+     * @property languageCode The app's language code when the page
+     *   appeared.
+     * @property changeToken The identity of the message list's content.
+     *   Regenerated to rebuild it from the latest values.
+     * @property viewState The page's loading state. Remains loading
+     *   until the messages first update.
+     */
     data class State(
         val conversationIDKey: String = "",
         val configuration: ChatPageView.Configuration = ChatPageView.Configuration.Default(),

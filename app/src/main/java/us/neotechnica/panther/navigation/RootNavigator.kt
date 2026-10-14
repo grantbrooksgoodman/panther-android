@@ -21,6 +21,11 @@ import us.neotechnica.panther.subsystem.modules.navigation.interfaces.Paths
  * [RootNavigatorState] tracks the presented full-screen [modal] – which
  * determines the top-level screen – along with nested state for each
  * child navigation flow. It defaults to [ModalPaths.Splash] on launch.
+ *
+ * @property chat The chat flow's state.
+ * @property onboarding The onboarding flow's state.
+ * @property settings The settings flow's state.
+ * @property userContent The signed-in content flow's state.
  */
 data class RootNavigatorState(
     val chat: ChatNavigatorState = ChatNavigatorState(),
@@ -35,11 +40,13 @@ data class RootNavigatorState(
 
     /** The full-screen destinations at the root level. */
     sealed interface ModalPaths : Paths {
+        /** The onboarding flow. */
         data object Onboarding : ModalPaths
 
         /** The splash screen, presented during app startup. */
         data object Splash : ModalPaths
 
+        /** The signed-in user's content. */
         data object UserContent : ModalPaths
     }
 
@@ -52,6 +59,12 @@ data class RootNavigatorState(
 
 /** Applies [RootRoute]s to the root-level navigation state. */
 object RootNavigator {
+    /**
+     * Returns the root-level state after applying the given route.
+     *
+     * @param to The route to apply.
+     * @param on The state to apply it to.
+     */
     fun navigate(
         to: RootRoute,
         on: RootNavigatorState,

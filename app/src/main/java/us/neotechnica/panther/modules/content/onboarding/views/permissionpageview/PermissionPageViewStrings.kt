@@ -15,14 +15,25 @@ import us.neotechnica.panther.translator.models.TranslationInput
 
 /** The translated label strings for the permissions page. */
 object PermissionPageViewStrings : TranslatedLabelStrings {
+    /** The text of the back button. */
     val backButtonText = TranslatedLabelStringCollection("permissionPageView.backButtonText")
+
+    /** The text of the finish button. */
     val finishButtonText = TranslatedLabelStringCollection("permissionPageView.finishButtonText")
+
+    /** The text of the contact permission capsule button. */
     val contactPermissionCapsuleButtonText =
         TranslatedLabelStringCollection("permissionPageView.contactPermissionCapsuleButtonText")
+
+    /** The text of the notification permission capsule button. */
     val notificationPermissionCapsuleButtonText =
         TranslatedLabelStringCollection("permissionPageView.notificationPermissionCapsuleButtonText")
+
+    /** The text of the instruction view subtitle label. */
     val instructionViewSubtitleLabelText =
         TranslatedLabelStringCollection("permissionPageView.instructionViewSubtitleLabelText")
+
+    /** The text of the instruction view title label. */
     val instructionViewTitleLabelText =
         TranslatedLabelStringCollection("permissionPageView.instructionViewTitleLabelText")
 

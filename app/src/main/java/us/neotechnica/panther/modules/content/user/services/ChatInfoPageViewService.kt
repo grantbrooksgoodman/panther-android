@@ -115,6 +115,36 @@ class ChatInfoPageViewService(
      *
      * Each property defaults to the live service; a test replaces the
      * ones it exercises.
+     *
+     * @property addEffectUponIsSendingMessage Registers the given
+     *   effect to run once the current send completes.
+     * @property contactPair Returns the given user's contact pair, or
+     *   `null` if the user has none.
+     * @property currentConversation Returns the current conversation.
+     * @property currentUserID Returns the current user's identifier.
+     * @property dismissSheets Dismisses every presented sheet.
+     * @property navigate Navigates to the given route.
+     * @property presentConfirmationAlert Presents the given
+     *   confirmation alert, translating the given parts, and returns
+     *   whether the user confirmed.
+     * @property removeConversation Removes the conversation with the
+     *   given ID key from the session store.
+     * @property removeFromConversation Removes the user with the given
+     *   identifier from the given conversation.
+     * @property resignFirstResponders Dismisses the keyboard.
+     * @property resolveUsers Resolves the given conversation's users
+     *   from the server.
+     * @property sendChatInfoPageLoadingStateUpdated Sends the
+     *   `chatInfoPageLoadingStateUpdated` shared event.
+     * @property sendCurrentConversationActivityChanged Sends the
+     *   `currentConversationActivityChanged` shared event.
+     * @property sendCurrentConversationMetadataChanged Sends the
+     *   `currentConversationMetadataChanged` shared event.
+     * @property storeShouldNotifyOfConversationAvailability Stores
+     *   whether to notify of conversation availability.
+     * @property updateValues Updates the given conversation's hosted
+     *   values with the given data, returning the updated
+     *   conversation.
      */
     data class Dependencies(
         val addEffectUponIsSendingMessage: (() -> Unit) -> Unit = { effect ->

@@ -22,8 +22,8 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.SFSymbol
  * list draws its disclosure indicator.
  *
  * While SF Symbols are in use, the chevron is the semibold
- * `chevron.forward` at the small scale and size of the indicator iOS
- * draws for body text. Otherwise, it is the nearest Material Symbol.
+ * `chevron.forward` at the small scale, sized for a body-text row.
+ * Otherwise, it is the nearest Material Symbol.
  *
  * @param foregroundColor The tint of the chevron.
  * @param modifier The modifier for this view.

@@ -14,9 +14,15 @@ import androidx.compose.ui.unit.dp
 
 // MARK: - Float
 
+/** The layout and timing values of the chat participant view. */
 object ChatParticipantViewFloats {
+    /** The height of the avatar image view. */
     val avatarImageViewSizeHeight: Dp = 40.dp
+
+    /** The width of the avatar image view. */
     val avatarImageViewSizeWidth: Dp = 40.dp
+
+    /** The trailing padding of the avatar image view. */
     val avatarImageViewTrailingPadding: Dp = 2.dp
 
     /** The width of the delete button a trailing swipe reveals. */
@@ -25,12 +31,16 @@ object ChatParticipantViewFloats {
 
 // MARK: - Color
 
+/** The colors of the chat participant view. */
 object ChatParticipantViewColors {
+    /** The tint color of the delete button. */
     val deleteButtonTint = Color(0xFFFF3B30)
 }
 
 // MARK: - String
 
+/** The string constants of the chat participant view. */
 object ChatParticipantViewStrings {
+    /** The system name of the delete button image. */
     const val DELETE_BUTTON_IMAGE_SYSTEM_NAME = "trash"
 }

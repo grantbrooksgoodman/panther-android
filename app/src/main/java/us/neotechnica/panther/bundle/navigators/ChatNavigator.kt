@@ -19,22 +19,33 @@ data class ChatNavigatorState(
 ) : NavigatorState<ChatNavigatorState.ModalPaths, ChatNavigatorState.SeguePaths, ChatNavigatorState.SheetPaths> {
     // MARK: - Types
 
+    /** The full-screen destinations in the chat flow; it presents none. */
     sealed interface ModalPaths : Paths
 
+    /** The push destinations in the chat flow; it pushes none. */
     sealed interface SeguePaths : Paths
 
     /** The sheet destinations presented over the chat flow. */
     sealed interface SheetPaths : Paths {
+        /** The camera, for a new group photo. */
         data object CameraPicker : SheetPaths
 
+        /** The contact selector, for adding participants. */
         data object ContactSelector : SheetPaths
 
+        /** The photo library picker, for a new group photo. */
         data object PhotoPicker : SheetPaths
     }
 }
 
 /** Applies [ChatRoute]s to the chat flow's navigation state. */
 object ChatNavigator {
+    /**
+     * Returns the chat flow's state after applying the given route.
+     *
+     * @param to The route to apply.
+     * @param on The state to apply it to.
+     */
     fun navigate(
         to: ChatRoute,
         on: ChatNavigatorState,

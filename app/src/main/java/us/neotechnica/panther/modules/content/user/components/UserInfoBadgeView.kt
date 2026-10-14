@@ -99,7 +99,7 @@ fun UserInfoBadgeView(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // The label's frame is narrower than its glyphs, so the text is
-            // drawn unclipped and centred over the frame as SwiftUI does.
+            // drawn unclipped and centred over the frame.
             // The opacity modulates each draw rather than compositing
             // offscreen, which would clip the shadow to the text bounds.
             Box(

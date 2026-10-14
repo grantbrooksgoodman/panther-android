@@ -53,8 +53,8 @@ fun RootView(modifier: Modifier = Modifier) {
     val navigation = remember { DependencyValues.current.navigation }
     val state by navigation.state.collectAsState()
 
-    // Fulfills app-wide keyboard-dismissal requests sent through
-    // KeyboardService, mirroring iOS's uiApplication.resignFirstResponders().
+    // Fulfills app-wide keyboard-dismissal requests sent through the
+    // `resignFirstResponders` shared event.
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     LaunchedEffect(Unit) {
@@ -64,8 +64,8 @@ fun RootView(modifier: Modifier = Modifier) {
         }
     }
 
-    // Announces interface style changes as the scene delegate does on
-    // a trait collection change.
+    // Announces interface style changes through the
+    // `traitCollectionChanged` shared event.
     val isSystemInDarkTheme = isSystemInDarkTheme()
     var didObserveInitialTheme by remember { mutableStateOf(false) }
     LaunchedEffect(isSystemInDarkTheme) {
@@ -84,8 +84,8 @@ fun RootView(modifier: Modifier = Modifier) {
         },
     ) { modal ->
         when (modal) {
-            // As in SwiftUI, the keyboard shrinks the onboarding pages' safe
-            // area, moving their centered content up to stay clear of it.
+            // The keyboard shrinks the onboarding pages' safe area, moving
+            // their centered content up to stay clear of it.
             RootNavigatorState.ModalPaths.Onboarding ->
                 OnboardingContainerView(Modifier.fillMaxSize().systemBarsPadding().imePadding())
             RootNavigatorState.ModalPaths.Splash ->

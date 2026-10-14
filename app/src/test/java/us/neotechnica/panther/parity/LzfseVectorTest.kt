@@ -18,10 +18,9 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.lzfse.Lzfse
 import java.util.Base64
 
 /**
- * Validates [Lzfse.decode] against vectors produced on a Mac with
- * `NSData.compressed(using: .lzfse)` – the exact API the app uses – so
- * the decoder is verified byte-for-byte against Apple's encoder across
- * the uncompressed, LZVN, and FSE-compressed (v2) block types.
+ * Validates [Lzfse.decode] byte for byte against vectors produced by
+ * the reference LZFSE encoder across the uncompressed, LZVN, and
+ * FSE-compressed (v2) block types.
  */
 class LzfseVectorTest {
     @Test

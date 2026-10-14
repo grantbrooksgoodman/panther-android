@@ -67,10 +67,9 @@ private typealias SheetFloats = PageSheetViewFloats
  * A modal page sheet that slides up over the current content, presented
  * while [isPresented] is `true`.
  *
- * The sheet presents and dismisses on UIKit's sheet spring, over
- * content dimmed as iOS dims it – or, while
- * [SystemAnimation.usesAppleAnimations] is `false`, on Material's bottom
- * sheet spring over Material's scrim. It has no drag handle and rests just
+ * The sheet presents and dismisses on the sheet spring, over dimmed
+ * content – or, while [SystemAnimation.usesAppleAnimations] is `false`,
+ * on Material's bottom sheet spring over Material's scrim. It has no drag handle and rests just
  * below the status bar. Swiping the sheet down or tapping the dimmed
  * content dismisses it, unless interactive dismissal is disabled; a
  * scrolling list inside the sheet hands a downward swipe at its top to

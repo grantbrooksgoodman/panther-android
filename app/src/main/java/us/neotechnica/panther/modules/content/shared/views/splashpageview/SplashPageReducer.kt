@@ -116,7 +116,15 @@ class SplashPageReducer : Reducer<SplashPageReducer.State, SplashPageReducer.Act
 
     // MARK: - State
 
-    /** The state of the splash page. */
+    /**
+     * The state of the splash page.
+     *
+     * @property didAttemptAutomaticErrorRecovery A Boolean value that
+     *   indicates whether initialization has already been retried
+     *   automatically after a failure.
+     * @property exception The initialization failure, or `null` if
+     *   none has occurred.
+     */
     data class State(
         val didAttemptAutomaticErrorRecovery: Boolean = false,
         val exception: Exception? = null,

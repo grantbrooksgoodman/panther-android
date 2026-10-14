@@ -42,13 +42,13 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 private typealias Floats = SystemAnimationFloats
 
 /**
- * A navigation stack that pushes and pops its pages as UIKit does.
+ * A navigation stack whose pages slide in and out over one another.
  *
  * The page on top of [path] is visible. A push slides the incoming
  * page in from the trailing edge over the current page, which slides a
  * fraction of its width toward the leading edge and dims; the incoming
  * page casts a shadow along its leading edge. A pop reverses the
- * motion. Both run on UIKit's navigation spring.
+ * motion. Both run on the navigation spring.
  *
  * While [SystemAnimation.usesAppleAnimations] is `false`, the pages
  * instead slide past one another at their full width, without dimming
@@ -144,8 +144,7 @@ fun <T : Any> NavigationStackView(
 }
 
 /**
- * Whether the page has finished appearing – the counterpart of UIKit's
- * `viewDidAppear(_:)`.
+ * Whether the page has finished appearing.
  *
  * Within a [NavigationStackView], a pushed page's value becomes `true`
  * once the push that presents it settles; the page at the top of the
@@ -184,8 +183,8 @@ private class NavigationTransition(
 // gone. The moving page – the incoming page of a push or the outgoing
 // page of a pop – slides its full width and casts a fading shadow along
 // its leading edge; the page beneath it slides a fraction of its width
-// and dims. Without iOS animations, both pages slide their full width,
-// undecorated.
+// and dims. While [SystemAnimation.usesAppleAnimations] is `false`,
+// both pages slide their full width, undecorated.
 private fun Modifier.navigationTransition(
     presence: () -> Float,
     isMovingPage: Boolean,

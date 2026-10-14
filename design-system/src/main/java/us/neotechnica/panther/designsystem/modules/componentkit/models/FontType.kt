@@ -18,8 +18,9 @@ sealed interface FontType {
     /**
      * A custom typeface identified by its registered font name.
      *
-     * **Note:** Named custom typefaces beyond the bundled Inter family
-     * fall back to Inter until additional fonts are shipped.
+     * **Note:** Text renders in [SystemFontFamily] regardless of the
+     * name; a custom type contributes only its italic and underline
+     * attributes.
      */
     data class Custom(
         val name: String,
@@ -27,7 +28,7 @@ sealed interface FontType {
         val isUnderlined: Boolean = false,
     ) : FontType
 
-    /** The system typeface (Inter on Android). */
+    /** The system typeface, in [SystemFontFamily]. */
     data class System(
         val style: FontStyle,
     ) : FontType

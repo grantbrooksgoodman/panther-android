@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontStyle as ComposeFontStyle
 class Font(
     /** The type of font, defining its weight and style. */
     val type: FontType,
+
     /** The scale of the font, defining its point size. */
     val scale: FontScale,
 ) {
@@ -84,18 +85,25 @@ class Font(
         /** A body-sized regular system font. */
         val system = Font(FontType.System(FontStyle.Regular()), FontScale.Medium)
 
+        /** Returns a regular system font at the given scale. */
         fun system(scale: FontScale) = Font(FontType.System(FontStyle.Regular()), scale)
 
+        /** Returns a bold system font at the given scale. */
         fun systemBold(scale: FontScale = FontScale.Medium) = Font(FontType.System(FontStyle.Bold()), scale)
 
+        /** Returns an italic system font at the given scale. */
         fun systemItalic(scale: FontScale = FontScale.Medium) = Font(FontType.System(FontStyle.Regular(isItalic = true)), scale)
 
+        /** Returns a light system font at the given scale. */
         fun systemLight(scale: FontScale = FontScale.Medium) = Font(FontType.System(FontStyle.Light()), scale)
 
+        /** Returns a medium-weight system font at the given scale. */
         fun systemMedium(scale: FontScale = FontScale.Medium) = Font(FontType.System(FontStyle.Medium()), scale)
 
+        /** Returns a semibold system font at the given scale. */
         fun systemSemibold(scale: FontScale = FontScale.Medium) = Font(FontType.System(FontStyle.Semibold()), scale)
 
+        /** Returns an underlined system font at the given scale. */
         fun systemUnderlined(scale: FontScale = FontScale.Medium) = Font(FontType.System(FontStyle.Regular(isUnderlined = true)), scale)
     }
 }

@@ -126,6 +126,26 @@ class SettingsPageViewService(
      *
      * Each property defaults to the live service; a test replaces the
      * ones it exercises.
+     *
+     * @property currentUser Returns the current user.
+     * @property delayed Runs the given operation after the given
+     *   delay.
+     * @property dismissSheets Dismisses every presented sheet.
+     * @property isDeveloperModeEnabled Returns whether developer mode
+     *   is enabled.
+     * @property logEvent Logs the given analytics event.
+     * @property milestone Returns the running build's milestone.
+     * @property navigate Navigates to the given route.
+     * @property overriddenLanguageCode Returns the overriding language
+     *   code, or `null` if none is set.
+     * @property promptToToggleDeveloperMode Prompts to toggle
+     *   developer mode.
+     * @property removeCurrentPushToken Removes the device's push token
+     *   from the given user.
+     * @property reset Resets the app.
+     * @property setBadgeNumber Sets the app's badge number.
+     * @property stopObservingCurrentUserChanges Stops observing
+     *   changes to the current user.
      */
     data class Dependencies(
         val currentUser: () -> User? = { DependencyValues.current.clientSession.entity.user.currentUser },

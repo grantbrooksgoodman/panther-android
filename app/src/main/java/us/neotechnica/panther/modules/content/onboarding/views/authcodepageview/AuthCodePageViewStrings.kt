@@ -15,11 +15,20 @@ import us.neotechnica.panther.translator.models.TranslationInput
 
 /** The translated label strings for the verification-code page. */
 object AuthCodePageViewStrings : TranslatedLabelStrings {
+    /** The text of the back button. */
     val backButtonText = TranslatedLabelStringCollection("authCodePageView.backButtonText")
+
+    /** The text of the continue button. */
     val continueButtonText = TranslatedLabelStringCollection("authCodePageView.continueButtonText")
+
+    /** The text of the instruction label. */
     val instructionLabelText = TranslatedLabelStringCollection("authCodePageView.instructionLabelText")
+
+    /** The text of the instruction view subtitle label. */
     val instructionViewSubtitleLabelText =
         TranslatedLabelStringCollection("authCodePageView.instructionViewSubtitleLabelText")
+
+    /** The text of the instruction view title label. */
     val instructionViewTitleLabelText =
         TranslatedLabelStringCollection("authCodePageView.instructionViewTitleLabelText")
 

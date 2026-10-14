@@ -228,7 +228,7 @@ private fun ConversationList(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            // Search results scroll clear of the keyboard, as a SwiftUI list's do.
+            // Search results scroll clear of the keyboard.
             contentPadding = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues(),
             verticalArrangement = Arrangement.Top,
         ) {

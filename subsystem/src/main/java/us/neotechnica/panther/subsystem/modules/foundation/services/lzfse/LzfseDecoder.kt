@@ -15,9 +15,10 @@ package us.neotechnica.panther.subsystem.modules.foundation.services.lzfse
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.readUInt32LE
 import java.io.ByteArrayOutputStream
 
-/** Decodes an LZFSE stream, dispatching each block to its block decoder. */
 // MagicNumber suppressed: the literals are the LZVN opcode values and bit-field
-// widths defined by Apple's wire format (`lzvn_decode_base.c`).
+// widths defined by the LZFSE wire format (`lzvn_decode_base.c`).
+
+/** Decodes an LZFSE stream, dispatching each block to its block decoder. */
 @Suppress("MagicNumber")
 internal object LzfseDecoder {
     // MARK: - Types

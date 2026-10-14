@@ -44,6 +44,8 @@ import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.math.max
 
+// The counterpart service carries `// swiftlint:disable file_length type_body_length`.
+
 /**
  * Sends push notifications and responds to notifications received
  * while the app is in the foreground.
@@ -51,7 +53,6 @@ import kotlin.math.max
  * Notifications are delivered directly through the push
  * notification backend, localized to each recipient's language.
  */
-// The counterpart service carries `// swiftlint:disable file_length type_body_length`.
 @Suppress("LargeClass")
 object NotificationService {
     // MARK: - Dependencies

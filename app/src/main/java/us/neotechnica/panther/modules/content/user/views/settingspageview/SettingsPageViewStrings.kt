@@ -20,12 +20,25 @@ private typealias Strings = SettingsPageViewConstants
 
 /** The translated label strings for the settings page. */
 object SettingsPageViewStrings : TranslatedLabelStrings {
+    /** The text of the blocked users button. */
     val blockedUsersButtonText = TranslatedLabelStringCollection("settingsPageView.blockedUsersButtonText")
+
+    /** The change language row's text. */
     val changeLanguage = TranslatedLabelStringCollection("settingsPageView.changeLanguage")
+
+    /** The text of the clear caches button. */
     val clearCachesButtonText = TranslatedLabelStringCollection("settingsPageView.clearCachesButtonText")
+
+    /** The text of the delete account button. */
     val deleteAccountButtonText = TranslatedLabelStringCollection("settingsPageView.deleteAccountButtonText")
+
+    /** The text of the invite friends button. */
     val inviteFriendsButtonText = TranslatedLabelStringCollection("settingsPageView.inviteFriendsButtonText")
+
+    /** The text of the leave review button. */
     val leaveReviewButtonText = TranslatedLabelStringCollection("settingsPageView.leaveReviewButtonText")
+
+    /** The text of the sign out button. */
     val signOutButtonText = TranslatedLabelStringCollection("settingsPageView.signOutButtonText")
 
     override val keyPairs: List<TranslationInputMap> =

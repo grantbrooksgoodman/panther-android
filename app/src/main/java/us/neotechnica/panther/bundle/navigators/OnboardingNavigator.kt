@@ -19,26 +19,40 @@ data class OnboardingNavigatorState(
 ) : NavigatorState<OnboardingNavigatorState.ModalPaths, OnboardingNavigatorState.SeguePaths, OnboardingNavigatorState.SheetPaths> {
     // MARK: - Types
 
+    /** The full-screen destinations in the onboarding flow; it presents none. */
     sealed interface ModalPaths : Paths
 
     /** The push destinations on the onboarding stack. */
     sealed interface SeguePaths : Paths {
+        /** The verification code page. */
         data object AuthCode : SeguePaths
 
+        /** The permissions page. */
         data object Permission : SeguePaths
 
+        /** The language selection page. */
         data object SelectLanguage : SeguePaths
 
+        /** The sign-in page. */
         data object SignIn : SeguePaths
 
+        /** The phone number verification page. */
         data object VerifyNumber : SeguePaths
     }
 
+    /** The sheet destinations in the onboarding flow; it presents none. */
     sealed interface SheetPaths : Paths
 }
 
 /** Applies [OnboardingRoute]s to the onboarding flow's navigation state. */
 object OnboardingNavigator {
+    /**
+     * Returns the onboarding flow's state after applying the given
+     * route.
+     *
+     * @param to The route to apply.
+     * @param on The state to apply it to.
+     */
     fun navigate(
         to: OnboardingRoute,
         on: OnboardingNavigatorState,
@@ -52,12 +66,15 @@ object OnboardingNavigator {
 
 /** Routes handled by the onboarding navigator. */
 sealed interface OnboardingRoute {
+    /** Pops the top page of the onboarding stack. */
     data object Pop : OnboardingRoute
 
+    /** Pushes the given page onto the onboarding stack. */
     data class Push(
         val path: OnboardingNavigatorState.SeguePaths,
     ) : OnboardingRoute
 
+    /** Replaces the onboarding stack with the given pages. */
     data class Stack(
         val paths: List<OnboardingNavigatorState.SeguePaths>,
     ) : OnboardingRoute

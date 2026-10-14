@@ -48,6 +48,14 @@ data class SquareIconViewConfiguration(
          * The resource is drawn as a template, tinted with its
          * foreground color. A resource has no weight variants, so
          * [weight] has no effect on it.
+         *
+         * @property resourceID The drawable resource to draw.
+         * @property foregroundColor The color the resource is tinted
+         *   with.
+         * @property framePercentOfTotalSize The fraction of the icon's
+         *   size the resource's frame occupies.
+         * @property weight The font weight, which has no effect on a
+         *   resource.
          */
         data class Resource(
             @DrawableRes val resourceID: Int,
@@ -59,6 +67,13 @@ data class SquareIconViewConfiguration(
         /**
          * A symbol, with its foreground color, frame size relative to
          * the icon, and font weight.
+         *
+         * @property name The system name of the symbol.
+         * @property foregroundColor The symbol's foreground color.
+         * @property framePercentOfTotalSize The fraction of the icon's
+         *   size the symbol's frame occupies.
+         * @property weight The symbol's font weight, or `null` for the
+         *   regular weight.
          */
         data class Symbol(
             val name: String,
@@ -67,7 +82,13 @@ data class SquareIconViewConfiguration(
             val weight: FontWeight? = null,
         ) : OverlayConfiguration
 
-        /** A text string, with its font and foreground color. */
+        /**
+         * A text string, with its font and foreground color.
+         *
+         * @property string The text to draw.
+         * @property font The text's font.
+         * @property foregroundColor The text's foreground color.
+         */
         data class Text(
             val string: String,
             val font: Font = Font.system(FontScale.Custom(SquareIconViewFloats.OVERLAY_TEXT_FONT_SCALE)),

@@ -33,12 +33,12 @@ import kotlin.time.Duration.Companion.milliseconds
 private typealias Floats = SystemAnimationFloats
 
 /**
- * The animations of iOS's system transitions and SwiftUI's animation
- * presets, for matching iOS motion.
+ * The animations of the app's system-style transitions and its
+ * animation presets.
  *
- * Use these in place of Material's motion wherever the iOS app relies
- * on a system default – a navigation push, a sheet, an alert – or on
- * a SwiftUI animation preset:
+ * Use these in place of Material's motion wherever the app animates a
+ * system transition – a navigation push, a sheet, an alert – or relies
+ * on an animation preset:
  *
  * ```kotlin
  * val alpha by animateFloatAsState(
@@ -54,15 +54,15 @@ object SystemAnimation {
     // MARK: - Properties
 
     /**
-     * A Boolean value that indicates whether animations match iOS's
-     * timing and style.
+     * A Boolean value that indicates whether animations run on the
+     * system-style springs and curves in this namespace.
      *
      * While this is `false`, each animation in this namespace is
      * replaced by its Android counterpart – Compose's default curve
      * and spring, and Material's alert, navigation, and bottom sheet
-     * motion – and components that otherwise recreate iOS motion,
-     * such as navigation stacks, page sheets, and context menus, move
-     * and dim as Android does. The default is `true`.
+     * motion – and components that otherwise follow the system-style
+     * motion, such as navigation stacks, page sheets, and context
+     * menus, move and dim as Android does. The default is `true`.
      *
      * **Important:** Set this value once at launch, before any content
      * is composed. Animations already under way, and content already
@@ -85,13 +85,13 @@ object SystemAnimation {
             ((Ease.transform(fraction) - fadeStart) / Floats.SEARCH_TRANSITION_FADE_FRACTION).coerceAtLeast(0f)
         }
 
-    // MARK: - UIKit
+    // MARK: - Transitions
 
     /**
      * The animation of an alert or action sheet as it dismisses.
      *
-     * The animation is UIKit's alert spring – the same spring with
-     * which the alert or action sheet presents. While
+     * The animation is the alert spring – the same spring with which
+     * the alert or action sheet presents. While
      * [usesAppleAnimations] is `false`, it is instead Material's
      * accelerating exit curve.
      *
@@ -106,8 +106,8 @@ object SystemAnimation {
     /**
      * The animation of an alert or action sheet as it presents.
      *
-     * The animation is UIKit's alert spring – the same spring with
-     * which the alert or action sheet dismisses. While
+     * The animation is the alert spring – the same spring with which
+     * the alert or action sheet dismisses. While
      * [usesAppleAnimations] is `false`, it is instead Material's
      * decelerating entrance curve.
      *
@@ -122,7 +122,7 @@ object SystemAnimation {
     /**
      * The animation of a navigation push or pop.
      *
-     * The animation is UIKit's navigation spring. While
+     * The animation is the navigation spring. While
      * [usesAppleAnimations] is `false`, it is instead a short slide on
      * Compose's default curve.
      *
@@ -177,7 +177,7 @@ object SystemAnimation {
      * The animation of a sheet as it presents, dismisses, or settles
      * after a drag.
      *
-     * The animation is UIKit's sheet spring, which is the navigation
+     * The animation is the sheet spring, which is the navigation
      * transition's spring. While [usesAppleAnimations] is `false`, it is
      * instead Material's bottom sheet spring.
      *
@@ -192,10 +192,10 @@ object SystemAnimation {
         return navigationSpring(visibilityThreshold)
     }
 
-    // MARK: - SwiftUI
+    // MARK: - Presets
 
     /**
-     * SwiftUI's `easeIn` animation.
+     * An ease-in animation.
      *
      * While [usesAppleAnimations] is `false`, the animation runs on
      * Compose's default curve instead.
@@ -207,8 +207,7 @@ object SystemAnimation {
     fun <T> easeIn(duration: Duration? = null): TweenSpec<T> = timingCurve(EaseIn, duration)
 
     /**
-     * SwiftUI's `easeInOut` animation – also the curve of a UIKit
-     * `UIView.animate(withDuration:)` animation.
+     * An ease-in-out animation.
      *
      * While [usesAppleAnimations] is `false`, the animation runs on
      * Compose's default curve instead.
@@ -220,7 +219,7 @@ object SystemAnimation {
     fun <T> easeInOut(duration: Duration? = null): TweenSpec<T> = timingCurve(EaseInOut, duration)
 
     /**
-     * SwiftUI's `easeOut` animation.
+     * An ease-out animation.
      *
      * While [usesAppleAnimations] is `false`, the animation runs on
      * Compose's default curve instead.
@@ -232,7 +231,8 @@ object SystemAnimation {
     fun <T> easeOut(duration: Duration? = null): TweenSpec<T> = timingCurve(EaseOut, duration)
 
     /**
-     * SwiftUI's default `spring()` animation.
+     * The default spring animation: a critically damped spring with a
+     * response of 0.5 seconds.
      *
      * While [usesAppleAnimations] is `false`, the animation is instead
      * the spring Compose gives an enter or exit transition by default.
@@ -261,21 +261,21 @@ object SystemAnimation {
     private fun <T> navigationSpring(visibilityThreshold: T?): SpringSpec<T> =
         spring(Spring.DampingRatioNoBouncy, Floats.NAVIGATION_TRANSITION_SPRING_STIFFNESS, visibilityThreshold)
 
-    // The unit-mass stiffness of a SwiftUI spring with the given response,
-    // in seconds: the square of its angular frequency.
+    // The unit-mass stiffness of a spring with the given response, in
+    // seconds: the square of its angular frequency.
     private fun springStiffness(response: Float): Float {
         val angularFrequency = 2 * PI.toFloat() / response
         return angularFrequency * angularFrequency
     }
 
-    // A tween on the given SwiftUI curve, or on Compose's default curve
-    // while iOS animations are disabled.
+    // A tween on the given curve, or on Compose's default curve while
+    // system-style animations are disabled.
     private fun <T> timingCurve(
         easing: Easing,
         duration: Duration?,
     ): TweenSpec<T> {
         if (!usesAppleAnimations) return defaultTween(duration)
-        val iOSDuration = duration ?: Floats.DEFAULT_TIMING_CURVE_DURATION_MILLISECONDS.milliseconds
-        return tween(iOSDuration.inWholeMilliseconds.toInt(), easing = easing)
+        val presetDuration = duration ?: Floats.DEFAULT_TIMING_CURVE_DURATION_MILLISECONDS.milliseconds
+        return tween(presetDuration.inWholeMilliseconds.toInt(), easing = easing)
     }
 }

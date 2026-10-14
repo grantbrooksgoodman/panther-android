@@ -104,7 +104,7 @@ class Auth : AuthDelegate {
 
     // MARK: - Auxiliary
 
-    // Each request sends a new code, as on iOS. A repeated request for a
+    // Each request sends a new code. A repeated request for a
     // number already sent a code passes that code's resending token:
     // without it, Firebase ignores any request for the number until the
     // earlier one times out, reporting neither a code nor a failure.

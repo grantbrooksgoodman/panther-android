@@ -73,6 +73,12 @@ object ListRowView {
     sealed interface Interaction {
         /**
          * The row acts as a button, optionally trailing a chevron.
+         *
+         * @property id A value that identifies the row.
+         * @property showsChevron Whether a chevron trails the row's
+         *   content.
+         * @property action The action performed when the user taps
+         *   the row.
          */
         data class Button(
             val id: UUID = UUID.randomUUID(),
@@ -82,13 +88,24 @@ object ListRowView {
 
         /**
          * The row navigates to another page, trailing a chevron.
+         *
+         * @property id A value that identifies the row.
+         * @property action The action performed when the user taps
+         *   the row.
          */
         data class Destination(
             val id: UUID = UUID.randomUUID(),
             val action: () -> Unit,
         ) : Interaction
 
-        /** The row hosts a toggle switch. */
+        /**
+         * The row hosts a toggle switch.
+         *
+         * @property id A value that identifies the row.
+         * @property isToggled Whether the switch is on.
+         * @property onToggle The action performed with the new value
+         *   when the user toggles the switch.
+         */
         data class Switch(
             val id: UUID = UUID.randomUUID(),
             val isToggled: Boolean,
@@ -102,20 +119,27 @@ object ListRowView {
     class Configuration(
         /** How the row responds to user interaction. */
         val interaction: Interaction,
+
         /** An uppercased caption above the row, or `null`. */
         val headerText: String? = null,
+
         /** The row's title text. */
         val innerText: String,
+
         /** A caption below the row, or `null`. */
         val footerText: String? = null,
+
         /**
          * The title's color, or `null` for the theme's title color.
          */
         val innerTextColor: Color? = null,
+
         /** Whether the row responds to interaction. */
         val isEnabled: Boolean = true,
+
         /** The row's corner radius. */
         val cornerRadius: Float = CORNER_RADIUS,
+
         /** A leading image for the row, or `null`. */
         val imageView: (@Composable () -> Unit)? = null,
     ) {
@@ -135,6 +159,11 @@ object ListRowView {
 
     // MARK: - Body
 
+    /**
+     * Composes the list row the given configuration describes.
+     *
+     * @param configuration The row's content and behavior.
+     */
     @Composable
     operator fun invoke(configuration: Configuration) {
         if (configuration.headerText != null || configuration.footerText != null) {

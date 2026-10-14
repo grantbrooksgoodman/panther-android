@@ -122,10 +122,13 @@ object HeaderView {
     class Attributes(
         /** The background treatment. */
         val appearance: Appearance = Appearance.Themed,
+
         /** Whether the hairline divider shows below the header. */
         val showsDivider: Boolean = true,
+
         /** The minimum height treatment. */
         val sizeClass: SizeClass = SizeClass.Sheet,
+
         /**
          * The window insets the header's background extends beneath,
          * with its content inset below them. The default is none; a
@@ -138,10 +141,13 @@ object HeaderView {
     class ImageAttributes(
         /** The SF Symbol name of the image. */
         val systemName: String,
+
         /** The image's tint. */
         val foregroundColor: Color? = null,
+
         /** The image's size, or `null` to fit its space. */
         val size: DpSize? = null,
+
         /**
          * A drawable resource to display in place of the symbol, or
          * `null` to display the symbol. The drawable is tinted like the
@@ -154,8 +160,10 @@ object HeaderView {
     class TextAttributes(
         /** The string to display. */
         val string: String,
+
         /** The text's font. The default is the 17-point semibold system font. */
         val font: Font = Font.systemSemibold(),
+
         /** The text's color, or `null` for the themed color. */
         val foregroundColor: Color? = null,
     )
@@ -164,8 +172,10 @@ object HeaderView {
     class ImageButtonAttributes(
         /** The button's image. */
         val image: ImageAttributes,
+
         /** Whether the button responds to taps. */
         val isEnabled: Boolean = true,
+
         /** The action to perform when tapped. */
         val action: () -> Unit,
     )
@@ -174,14 +184,28 @@ object HeaderView {
     class TextButtonAttributes(
         /** The button's text. */
         val text: TextAttributes,
+
         /** Whether the button responds to taps. */
         val isEnabled: Boolean = true,
+
         /** The action to perform when tapped. */
         val action: () -> Unit,
     )
 
     // MARK: - Body
 
+    /**
+     * Composes the header.
+     *
+     * @param leftItem The button at the header's left edge, or
+     *   `null` for none.
+     * @param centerItem The content at the header's center, or
+     *   `null` for none.
+     * @param rightItem The button at the header's right edge, or
+     *   `null` for none.
+     * @param attributes The header's appearance, size class, and
+     *   window insets.
+     */
     @Composable
     operator fun invoke(
         leftItem: PeripheralButtonType? = null,

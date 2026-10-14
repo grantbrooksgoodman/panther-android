@@ -16,8 +16,12 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 
 // MARK: - Float
 
+/** The layout and timing values of the reaction details page view. */
 object ReactionDetailsPageViewFloats {
+    /** The horizontal padding of the group list view. */
     val groupListViewHorizontalPadding: Dp = 20.dp
+
+    /** The top padding of the group list view. */
     val groupListViewTopPadding: Dp = 20.dp
 
     /** The font scale of the emoji in a list row's square icon. */
@@ -26,10 +30,13 @@ object ReactionDetailsPageViewFloats {
 
 // MARK: - Color
 
+/** The colors of the reaction details page view. */
 object ReactionDetailsPageViewColors {
+    /** The foreground color of the done header item. */
     val doneHeaderItemForeground: Color
         @Composable get() = LocalPantherColors.current.navigationBarButton
 
+    /** The tint color of a navigation bar item. */
     val navigationBarItemGlassTint: Color
         @Composable get() = LocalPantherColors.current.navigationBarButton
 }

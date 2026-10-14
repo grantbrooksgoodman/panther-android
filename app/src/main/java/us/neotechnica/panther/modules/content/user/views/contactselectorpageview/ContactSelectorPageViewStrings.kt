@@ -15,8 +15,13 @@ import us.neotechnica.panther.translator.models.TranslationInput
 
 /** The translated label strings for the contact selector page. */
 object ContactSelectorPageViewStrings : TranslatedLabelStrings {
+    /** The page's navigation title. */
     val navigationTitle = TranslatedLabelStringCollection("contactSelectorPageView.navigationTitle")
+
+    /** The text of the no results label. */
     val noResultsLabelText = TranslatedLabelStringCollection("contactSelectorPageView.noResultsLabelText")
+
+    /** The search bar's placeholder text. */
     val searchBarPlaceholderText = TranslatedLabelStringCollection("contactSelectorPageView.searchBarPlaceholderText")
 
     override val keyPairs: List<TranslationInputMap> =

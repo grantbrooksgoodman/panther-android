@@ -58,8 +58,7 @@ object HapticsService {
     /**
      * Prepares the given style's generator to receive events.
      *
-     * A no-op: `View.performHapticFeedback` has no pre-warm step, and
-     * it is retained for signature compatibility.
+     * A no-op: `View.performHapticFeedback` has no pre-warm step.
      *
      * @param generatorStyle The style of generator to prepare.
      */

@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.Velocity
 // begins with the list at its top lowers the sheet, and an upward swipe
 // raises a partly lowered sheet before the list scrolls. A drag that
 // begins while the list can still scroll down stays with the list, even
-// once the list reaches its top – as with a UIKit scroll view in a sheet.
+// once the list reaches its top.
 // While the sheet ignores swipes, the list keeps every drag and fling.
 internal class PageSheetNestedScrollConnection(
     private val sheetState: PageSheetState,
@@ -65,8 +65,7 @@ internal class PageSheetNestedScrollConnection(
     }
 
     // A fling the list cannot finish moves the sheet only if a drag has
-    // already lowered it – a list flung to its top stops there, as a
-    // UIKit scroll view in a sheet does.
+    // already lowered it – a list flung to its top stops there.
     override suspend fun onPostFling(
         consumed: Velocity,
         available: Velocity,

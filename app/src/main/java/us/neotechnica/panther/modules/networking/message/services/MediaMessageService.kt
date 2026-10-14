@@ -38,8 +38,8 @@ import kotlin.time.Duration
  *
  * **Note:** plain-text document payloads are LZFSE-compressed before
  * upload and decompressed on download, while the local file stays
- * uncompressed. [Lzfse] emits uncompressed LZFSE blocks on encode (valid
- * and Apple-decodable, without a compression ratio) and decodes every
+ * uncompressed. [Lzfse] emits uncompressed LZFSE blocks on encode (a
+ * valid stream, without a compression ratio) and decodes every
  * block type – uncompressed, LZVN, and FSE-compressed (v2).
  */
 object MediaMessageService {

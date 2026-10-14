@@ -262,9 +262,8 @@ private fun BottomLabel(
     // received bubbles are indented past the sender avatar column.
     val leadingInset = if (row.isGroup && !isOwn) CellDisplayFloats.avatarSize + CellDisplayFloats.avatarSpacing else 0.dp
 
-    // iOS's text insets span the bubble's tail, ending the label at the
-    // bubble body's edge. The bubble here has no tail, so the label sits
-    // flush with the bubble's leading or trailing edge instead.
+    // The bubble has no tail, so the label sits flush with the bubble's
+    // leading or trailing edge.
     Row(
         horizontalArrangement = if (isOwn) Arrangement.End else Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically,

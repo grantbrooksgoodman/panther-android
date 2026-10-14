@@ -15,6 +15,7 @@ import us.neotechnica.panther.translator.models.TranslationInput
 
 /** The translated label strings for the conversations page. */
 object ConversationsPageViewStrings : TranslatedLabelStrings {
+    /** The page's navigation title. */
     val navigationTitle = TranslatedLabelStringCollection("conversationsPageView.navigationTitle")
 
     override val keyPairs: List<TranslationInputMap> =

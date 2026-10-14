@@ -15,6 +15,7 @@ import us.neotechnica.panther.translator.models.TranslationInput
 
 /** The translated label strings for the invite QR code page. */
 object InviteQRCodePageViewStrings : TranslatedLabelStrings {
+    /** The text of the instruction label. */
     val instructionLabelText = TranslatedLabelStringCollection("inviteQRCodePageView.instructionLabelText")
 
     override val keyPairs: List<TranslationInputMap> =

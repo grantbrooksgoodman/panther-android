@@ -116,11 +116,9 @@ fun ContactPairCellView(
 
 // MARK: - Auxiliary
 
-// Whether the current conversation is on screen: in its chat page or in
-// its chat info page. iOS presents the chat info page as a sheet over the
-// chat page, which stays presented beneath it; Android pushes it in the
-// chat page's place, so the chat page is no longer presented while it
-// shows.
+// Whether the current conversation is on screen: in its chat page, or in
+// its chat info page, which is pushed in the chat page's place and so
+// hides it.
 private val isCurrentConversationPresented: Boolean
     get() {
         if (ChatPageStateService.isPresented) return true

@@ -15,7 +15,7 @@ import java.util.Locale
 
 // MARK: - Hashing
 
-/** The SHA-256 encoded hash of this string, matching `encodedHashOf([self])`. */
+/** The SHA-256 encoded hash of this string, matching `encodedHashOf(listOf(this))`. */
 internal val String.encodedHash: String
     get() = encodedHashOf(listOf(this))
 

@@ -15,11 +15,20 @@ import us.neotechnica.panther.translator.models.TranslationInput
 
 /** The translated label strings for the language-selection page. */
 object SelectLanguagePageViewStrings : TranslatedLabelStrings {
+    /** The text of the back button. */
     val backButtonText = TranslatedLabelStringCollection("selectLanguagePageView.backButtonText")
+
+    /** The text of the continue button. */
     val continueButtonText = TranslatedLabelStringCollection("selectLanguagePageView.continueButtonText")
+
+    /** The text of the instruction label. */
     val instructionLabelText = TranslatedLabelStringCollection("selectLanguagePageView.instructionLabelText")
+
+    /** The text of the instruction view subtitle label. */
     val instructionViewSubtitleLabelText =
         TranslatedLabelStringCollection("selectLanguagePageView.instructionViewSubtitleLabelText")
+
+    /** The text of the instruction view title label. */
     val instructionViewTitleLabelText =
         TranslatedLabelStringCollection("selectLanguagePageView.instructionViewTitleLabelText")
 

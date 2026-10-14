@@ -29,8 +29,8 @@ import us.neotechnica.panther.subsystem.modules.shared.models.send
  * collects to recompose the themed view tree, and are announced through
  * the `themedViewAppearanceChanged` shared event.
  *
- * **Note:** theme selection is held in memory for this phase; persisting
- * the selection across launches is not yet implemented.
+ * **Note:** The selected theme is held in memory and does not persist
+ * across launches.
  */
 object ThemeService {
     // MARK: - Properties

@@ -15,9 +15,10 @@ package us.neotechnica.panther.subsystem.modules.foundation.services.lzfse
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.readUInt32LE
 import java.io.ByteArrayOutputStream
 
-/** Decodes an FSE-compressed LZFSE block (v2; v1 is legacy and unsupported). */
 // MagicNumber suppressed: the literals are the FSE header bit-field offsets/widths
-// and code lengths defined by Apple's wire format (`lzfse_decode_base.c`, `lzfse_fse.c`).
+// and code lengths defined by the LZFSE wire format (`lzfse_decode_base.c`, `lzfse_fse.c`).
+
+/** Decodes an FSE-compressed LZFSE block (v2; v1 is legacy and unsupported). */
 @Suppress("MagicNumber")
 internal object LzfseCompressedBlockDecoder {
     // MARK: - Types

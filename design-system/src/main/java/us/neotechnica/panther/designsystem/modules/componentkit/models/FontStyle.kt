@@ -31,6 +31,7 @@ sealed interface FontStyle {
 
     // MARK: - Cases
 
+    /** The bold weight. */
     data class Bold(
         override val isItalic: Boolean = false,
         override val isUnderlined: Boolean = false,
@@ -38,12 +39,14 @@ sealed interface FontStyle {
         override val weight: FontWeight get() = FontWeight.Bold
     }
 
+    /** An arbitrary weight. */
     data class Custom(
         override val weight: FontWeight,
         override val isItalic: Boolean = false,
         override val isUnderlined: Boolean = false,
     ) : FontStyle
 
+    /** The light weight. */
     data class Light(
         override val isItalic: Boolean = false,
         override val isUnderlined: Boolean = false,
@@ -51,6 +54,7 @@ sealed interface FontStyle {
         override val weight: FontWeight get() = FontWeight.Light
     }
 
+    /** The medium weight. */
     data class Medium(
         override val isItalic: Boolean = false,
         override val isUnderlined: Boolean = false,
@@ -58,6 +62,7 @@ sealed interface FontStyle {
         override val weight: FontWeight get() = FontWeight.Medium
     }
 
+    /** The regular weight. */
     data class Regular(
         override val isItalic: Boolean = false,
         override val isUnderlined: Boolean = false,
@@ -65,6 +70,7 @@ sealed interface FontStyle {
         override val weight: FontWeight get() = FontWeight.Normal
     }
 
+    /** The semibold weight. */
     data class Semibold(
         override val isItalic: Boolean = false,
         override val isUnderlined: Boolean = false,

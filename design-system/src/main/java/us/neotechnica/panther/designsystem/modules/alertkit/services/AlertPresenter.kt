@@ -36,7 +36,20 @@ import kotlin.time.Duration.Companion.milliseconds
  * composable renders it.
  */
 sealed interface PresentedAlert {
-    /** A standard alert with a title, message, and a list of actions. */
+    /**
+     * A standard alert with a title, message, and a list of actions.
+     *
+     * @property title The alert's title, or `null` for none.
+     * @property message The alert's message, or `null` for none.
+     * @property actions The actions the alert offers, in display
+     *   order.
+     * @property messageAttributes The attributes applied to the
+     *   message, or `null` for plain text.
+     * @property titleAttributes The attributes applied to the title,
+     *   or `null` for plain text.
+     * @property onSelect The action performed with the index of the
+     *   chosen action.
+     */
     data class Standard(
         val title: String?,
         val message: String?,
@@ -46,7 +59,20 @@ sealed interface PresentedAlert {
         val onSelect: (Int) -> Unit,
     ) : PresentedAlert
 
-    /** A two-button confirmation alert resolving to a Boolean. */
+    /**
+     * A two-button confirmation alert resolving to a Boolean.
+     *
+     * @property title The alert's title, or `null` for none.
+     * @property message The alert's message.
+     * @property cancelAction The action that declines.
+     * @property confirmAction The action that confirms.
+     * @property messageAttributes The attributes applied to the
+     *   message, or `null` for plain text.
+     * @property titleAttributes The attributes applied to the title,
+     *   or `null` for plain text.
+     * @property onResult The action performed with `true` if the user
+     *   confirmed; otherwise, `false`.
+     */
     data class Confirmation(
         val title: String?,
         val message: String,
@@ -57,7 +83,19 @@ sealed interface PresentedAlert {
         val onResult: (Boolean) -> Unit,
     ) : PresentedAlert
 
-    /** An error alert with an optional send-report action. */
+    /**
+     * An error alert with an optional send-report action.
+     *
+     * @property title The alert's title, or `null` for none.
+     * @property message The alert's message.
+     * @property dismissButtonTitle The dismiss button's title.
+     * @property sendReportButtonTitle The send-report button's title,
+     *   or `null` to omit the button.
+     * @property onDismiss The action performed when the user
+     *   dismisses the alert.
+     * @property onSendReport The action performed when the user sends
+     *   a report, or `null` when none is offered.
+     */
     data class ErrorContent(
         val title: String?,
         val message: String,
@@ -67,7 +105,26 @@ sealed interface PresentedAlert {
         val onSendReport: (() -> Unit)?,
     ) : PresentedAlert
 
-    /** A single-field text-input alert resolving to the entered text or `null`. */
+    /**
+     * A single-field text-input alert resolving to the entered text
+     * or `null`.
+     *
+     * @property title The alert's title, or `null` for none.
+     * @property message The alert's message.
+     * @property attributes The text field's configuration.
+     * @property cancelButtonTitle The cancel button's title.
+     * @property cancelButtonStyle The cancel button's style.
+     * @property confirmButtonTitle The confirm button's title.
+     * @property confirmButtonStyle The confirm button's style.
+     * @property messageAttributes The attributes applied to the
+     *   message, or `null` for plain text.
+     * @property titleAttributes The attributes applied to the title,
+     *   or `null` for plain text.
+     * @property onTextFieldChange The action performed with the
+     *   field's text as it changes, or `null` for none.
+     * @property onResult The action performed with the entered text,
+     *   or `null` if the user cancelled.
+     */
     data class TextInput(
         val title: String?,
         val message: String,
@@ -85,6 +142,19 @@ sealed interface PresentedAlert {
     /**
      * A bottom action sheet offering a list of actions and a cancel
      * button.
+     *
+     * @property title The sheet's title, or `null` for none.
+     * @property message The sheet's message, or `null` for none.
+     * @property actions The actions the sheet offers, in display
+     *   order.
+     * @property cancelButtonTitle The cancel button's title.
+     * @property messageAttributes The attributes applied to the
+     *   message, or `null` for plain text.
+     * @property titleAttributes The attributes applied to the title,
+     *   or `null` for plain text.
+     * @property onSelect The action performed with the index of the
+     *   chosen action.
+     * @property onCancel The action performed when the user cancels.
      */
     data class ActionSheet(
         val title: String?,
@@ -97,7 +167,23 @@ sealed interface PresentedAlert {
         val onCancel: () -> Unit,
     ) : PresentedAlert
 
-    /** A non-dismissable determinate progress bar with an optional cancel action. */
+    /**
+     * A non-dismissable determinate progress bar with an optional
+     * cancel action.
+     *
+     * @property title The alert's title, or `null` for none.
+     * @property message The alert's message.
+     * @property cancelButtonTitle The cancel button's title, or `null`
+     *   to omit the button.
+     * @property cancelButtonStyle The cancel button's style.
+     * @property progress The progress to display, from `0` to `1`.
+     * @property messageAttributes The attributes applied to the
+     *   message, or `null` for plain text.
+     * @property titleAttributes The attributes applied to the title,
+     *   or `null` for plain text.
+     * @property onCancel The action performed when the user cancels,
+     *   or `null` when cancellation is not offered.
+     */
     data class Progress(
         val title: String?,
         val message: String,

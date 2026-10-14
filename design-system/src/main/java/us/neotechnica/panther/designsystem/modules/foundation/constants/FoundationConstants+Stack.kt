@@ -13,11 +13,8 @@ import androidx.compose.ui.unit.dp
 
 // MARK: - Float
 
+/** The layout values of stacks. */
 object StackFloats {
-    /**
-     * The spacing between adjacent elements in a row or column whose
-     * iOS counterpart relies on the default spacing of a SwiftUI
-     * `HStack` or `VStack`.
-     */
+    /** The default spacing between adjacent elements in a row or column. */
     val defaultSpacing: Dp = 8.dp
 }

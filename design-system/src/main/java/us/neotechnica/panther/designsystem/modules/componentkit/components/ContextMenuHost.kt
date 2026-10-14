@@ -62,10 +62,10 @@ fun ContextMenuHost(
     controller.hapticFeedback = LocalHapticFeedback.current
     val progress = remember { Animatable(0f) }
 
-    // The menu appears and disappears on ContextualMenu's spring. UIKit's
-    // initial spring velocity is relative to the distance left to travel,
-    // so a dismissal starts out heading back toward rest. Without iOS
-    // animations, the menu moves on Compose's default spring from rest.
+    // The menu appears and disappears on a spring whose initial velocity
+    // is relative to the distance left to travel, so a dismissal starts
+    // out heading back toward rest. While system-style animations are
+    // disabled, the menu moves on Compose's default spring from rest.
     LaunchedEffect(controller.active) {
         val usesAppleAnimations = SystemAnimation.usesAppleAnimations
         val stiffness = if (usesAppleAnimations) PRESENTATION_SPRING_STIFFNESS else Spring.StiffnessMediumLow
@@ -148,7 +148,7 @@ private fun softwareBlurred(image: ImageBitmap): ImageBitmap {
 
 private const val PRESENTATION_SPRING_INITIAL_VELOCITY = 4f
 
-// The stiffness UIKit gives the vendored ContextualMenu's spring: a 0.3-
-// second UIView spring animation with a damping ratio of 1.
+// The stiffness of the menu's spring: a 0.3-second critically damped
+// spring.
 private const val PRESENTATION_SPRING_STIFFNESS = 918.701f
 private const val SOFTWARE_BLUR_DOWNSCALE_FACTOR = 16

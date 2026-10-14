@@ -14,21 +14,21 @@ import androidx.compose.ui.unit.dp
 // MARK: - Float
 
 /**
- * The parameters of iOS's system animations, measured from the Core
- * Animation animations UIKit and SwiftUI attach on iOS 18, and of the
- * Material animations that replace them while iOS animations are
- * disabled.
+ * The parameters of the system-style animations in [SystemAnimation] –
+ * the springs and timing curves of alerts, navigation transitions,
+ * sheets, and the search bar – and of the Material animations that
+ * replace them while [SystemAnimation.usesAppleAnimations] is `false`.
  *
- * Every UIKit spring below is critically damped. Core Animation
- * clamps an overdamped spring to critical damping, so the navigation
- * spring – mass 3, stiffness 1000, damping 500 – moves as a critically
- * damped spring with a stiffness of 1000 / 3 for unit mass.
+ * Every system-style spring below is critically damped. The navigation
+ * spring is specified as mass 3, stiffness 1000, damping 500 – an
+ * overdamped spring that clamps to critical damping – so it moves as a
+ * critically damped spring with a stiffness of 1000 / 3 for unit mass.
  */
 object SystemAnimationFloats {
     /** The stiffness of the spring of an alert or action sheet presentation. */
     const val ALERT_TRANSITION_SPRING_STIFFNESS = 522.35f
 
-    /** The duration of SwiftUI's ease-in, ease-out, and ease-in-out animations, in milliseconds. */
+    /** The duration, in milliseconds, of the ease-in, ease-out, and ease-in-out animations. */
     const val DEFAULT_TIMING_CURVE_DURATION_MILLISECONDS = 350
 
     /** The duration, in milliseconds, of Material's alert or action sheet dismissal. */
@@ -79,6 +79,6 @@ object SystemAnimationFloats {
     /** The opacity of the black dimming behind a presented sheet. */
     const val SHEET_DIMMING_ALPHA = 0.12f
 
-    /** The response, in seconds, of SwiftUI's default spring. */
+    /** The response, in seconds, of the default spring. */
     const val SPRING_RESPONSE = 0.5f
 }

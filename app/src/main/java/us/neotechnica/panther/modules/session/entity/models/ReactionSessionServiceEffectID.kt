@@ -18,7 +18,10 @@ data class ReactionSessionServiceEffectID(
     val rawValue: String,
 ) {
     companion object {
+        /** The effect that reloads the message list once a reaction is applied. */
         val reloadCollectionView = ReactionSessionServiceEffectID("reloadCollectionView")
+
+        /** The effect that scrolls the message list to its last item once a reaction is applied. */
         val scrollToLastItem = ReactionSessionServiceEffectID("scrollToLastItem")
     }
 }

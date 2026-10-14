@@ -18,8 +18,13 @@ data class ChatPageStateServiceEffectID(
     val rawValue: String,
 ) {
     companion object {
+        /** The effect that opens the chat a notification targets once the current chat dismisses. */
         val deeplinkToOtherChat = ChatPageStateServiceEffectID("deeplinkToOtherChat")
+
+        /** The effect that marks the current conversation stale once the chat page dismisses. */
         val markConversationStale = ChatPageStateServiceEffectID("markConversationStale")
+
+        /** The effect that refreshes the conversations page once the chat page dismisses. */
         val updateAppearance = ChatPageStateServiceEffectID("updateAppearance")
     }
 }

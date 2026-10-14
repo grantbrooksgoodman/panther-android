@@ -15,11 +15,20 @@ import us.neotechnica.panther.translator.models.TranslationInput
 
 /** The translated label strings for the phone-number entry page. */
 object VerifyNumberPageViewStrings : TranslatedLabelStrings {
+    /** The text of the back button. */
     val backButtonText = TranslatedLabelStringCollection("verifyNumberPageView.backButtonText")
+
+    /** The text of the continue button. */
     val continueButtonText = TranslatedLabelStringCollection("verifyNumberPageView.continueButtonText")
+
+    /** The text of the instruction label. */
     val instructionLabelText = TranslatedLabelStringCollection("verifyNumberPageView.instructionLabelText")
+
+    /** The text of the instruction view title label. */
     val instructionViewTitleLabelText =
         TranslatedLabelStringCollection("verifyNumberPageView.instructionViewTitleLabelText")
+
+    /** The text of the instruction view subtitle label. */
     val instructionViewSubtitleLabelText =
         TranslatedLabelStringCollection("verifyNumberPageView.instructionViewSubtitleLabelText")
 

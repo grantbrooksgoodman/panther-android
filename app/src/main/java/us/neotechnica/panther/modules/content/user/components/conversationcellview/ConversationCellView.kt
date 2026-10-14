@@ -160,9 +160,8 @@ fun ConversationCellView(
                     .background(colors.background)
                     .swipeActionsDraggable(draggableState, enabled = !isShowingRedactedContent),
         ) {
-            // The cell's menu stands in for SwiftUI's `contextMenu`, so it
-            // keeps the system long-press timeout rather than the shorter
-            // message bubble press.
+            // The cell's menu opens on the system long-press timeout rather
+            // than the shorter message bubble press.
             MessageContextMenu(
                 liftedBackground = colors.background,
                 minimumPressDuration = LocalViewConfiguration.current.longPressTimeoutMillis.milliseconds,

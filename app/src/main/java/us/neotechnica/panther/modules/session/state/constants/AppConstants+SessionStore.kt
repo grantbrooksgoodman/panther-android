@@ -1,5 +1,5 @@
 //
-//  AppConstants+DependencyValues.current.clientSession.store.kt
+//  AppConstants+SessionStore.kt
 //  Panther Android
 //
 //  Created by Grant Brooks Goodman.
@@ -10,6 +10,7 @@ package us.neotechnica.panther.modules.session.state.constants
 
 // MARK: - Float
 
+/** The values of the session store. */
 object SessionStoreFloats {
     /**
      * The maximum number of messages persisted per conversation.

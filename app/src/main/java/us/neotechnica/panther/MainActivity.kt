@@ -42,6 +42,16 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStor
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 
+/**
+ * The app's single activity.
+ *
+ * The activity hosts [RootView] and the alert, toast, overlay, HUD,
+ * sheet, and build-info hosts inside the app theme; records the
+ * conversation a launch or notification intent targets through
+ * [PendingChatNavigation]; sends the app to the background when Back
+ * has nothing left to pop; and flushes the session store when it
+ * finishes.
+ */
 class MainActivity : ComponentActivity() {
     // MARK: - Dependencies
 
@@ -61,9 +71,9 @@ class MainActivity : ComponentActivity() {
             PendingChatNavigation.set(Persistent.string(PersistentStorageKey.openConversationIDKey))
         }
 
-        // As on iOS, where leaving the app never closes it, Back with nothing
-        // left to go back to sends the app to the background. Android does
-        // this itself only for a task opened from the home screen; opened any
+        // Back with nothing left to go back to sends the app to the
+        // background rather than closing it. Android does this itself only
+        // for a task opened from the home screen; opened any
         // other way – from a notification, say – the activity would finish,
         // and reopening the app would rebuild the signed-in session's content.
         // Registered before the content, every in-app Back handler takes

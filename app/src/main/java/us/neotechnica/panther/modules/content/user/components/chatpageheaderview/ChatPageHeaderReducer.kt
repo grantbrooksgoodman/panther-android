@@ -42,13 +42,22 @@ import kotlin.time.Duration.Companion.milliseconds
 class ChatPageHeaderReducer : Reducer<ChatPageHeaderReducer.State, ChatPageHeaderReducer.Action> {
     // MARK: - Action
 
+    /** The actions the chat page header can process. */
     sealed interface Action {
+        /** An action that indicates the user tapped the back button. Pops the user content navigation stack. */
         data object BackButtonTapped : Action
 
+        /** An action that indicates the user tapped the chat info button. Opens the chat info page. */
         data object ChatInfoButtonTapped : Action
 
+        /** An action that rebuilds the header from the latest values. */
         data object ReloadData : Action
 
+        /**
+         * An action that indicates the session store changed, carrying
+         * the change. Schedules a reload when the change affects the
+         * current conversation, its messages, or its participants.
+         */
         data class SessionStoreDidChange(
             val change: SessionStoreChange,
         ) : Action
@@ -56,6 +65,14 @@ class ChatPageHeaderReducer : Reducer<ChatPageHeaderReducer.State, ChatPageHeade
 
     // MARK: - State
 
+    /**
+     * The state of the chat page header.
+     *
+     * @property conversationIDKey The ID key of the conversation the
+     *   header describes.
+     * @property viewID The identity of the header's content.
+     *   Regenerated to rebuild it from the latest values.
+     */
     data class State(
         val conversationIDKey: String = "",
         val viewID: UUID = UUID.randomUUID(),

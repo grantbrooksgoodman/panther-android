@@ -100,22 +100,27 @@ class OnboardingService {
 
     // MARK: - Setters
 
+    /** Records the authentication identifier of the pending sign-in. */
     fun setAuthID(authID: String) {
         this.authID = authID
     }
 
+    /** Records the language code the user selected. */
     fun setLanguageCode(languageCode: String) {
         this.languageCode = languageCode
     }
 
+    /** Records the phone number the user entered. */
     fun setPhoneNumber(phoneNumber: PhoneNumber) {
         this.phoneNumber = phoneNumber
     }
 
+    /** Records the region code the user selected. */
     fun setRegionCode(regionCode: String) {
         this.regionCode = regionCode
     }
 
+    /** Records the identifier of the authenticated user. */
     fun setUserID(userID: String) {
         this.userID = userID
     }

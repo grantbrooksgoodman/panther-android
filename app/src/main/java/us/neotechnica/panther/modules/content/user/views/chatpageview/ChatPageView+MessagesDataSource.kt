@@ -156,10 +156,9 @@ private fun StickToBottomEffect(
  * scrolls toward them, and scrolls to the topmost message after a
  * scroll-to-top load.
  *
- * As on iOS, where older messages load once the list stops
- * decelerating, a load follows a fling toward older messages –
- * wherever it comes to rest – or a release after pulling the list past
- * its topmost message.
+ * Older messages load once the list stops decelerating: a load follows
+ * a fling toward older messages – wherever it comes to rest – or a
+ * release after pulling the list past its topmost message.
  */
 @Composable
 private fun rememberLoadMoreMessagesConnection(listState: LazyListState): NestedScrollConnection {

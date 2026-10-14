@@ -91,22 +91,27 @@ class ContactSelectorPageReducer : Reducer<ContactSelectorPageReducer.State, Con
             val exception: Exception,
         ) : Action
 
+        /** An action that indicates the user lookup succeeded, carrying the found user. Shows the user as the only result. */
         data class FindUserReturned(
             val user: User,
         ) : Action
 
+        /** An action that indicates display string resolution failed, carrying the resulting [Exception]. */
         data class ResolveFailed(
             val exception: Exception,
         ) : Action
 
+        /** An action that indicates display string resolution succeeded, carrying the resolved strings. */
         data class ResolveReturned(
             val strings: List<TranslationOutputMap>,
         ) : Action
 
+        /** An action that indicates the search query changed, carrying the new query. */
         data class SearchQueryChanged(
             val searchQuery: String,
         ) : Action
 
+        /** An action that indicates the user selected a contact pair, carrying it. */
         data class SelectedContactPairChanged(
             val selectedContactPair: ContactPair,
         ) : Action
@@ -118,10 +123,20 @@ class ContactSelectorPageReducer : Reducer<ContactSelectorPageReducer.State, Con
     data class State(
         /** The context the page was presented from. */
         val entryPoint: ContactSelectorPageView.EntryPoint,
+
+        /** The localized text the invite toolbar button displays. */
         val inviteToolbarButtonText: String = LocalizedStringKey.Invite.localized(),
+
+        /** The search query the user has entered. */
         val searchQuery: String = "",
+
+        /** The contact pair the user selected, or `null` if none is selected. */
         val selectedContactPair: ContactPair? = null,
+
+        /** The page's translated display strings. */
         val strings: List<TranslationOutputMap> = ContactSelectorPageViewStrings.defaultOutputMap,
+
+        /** The page's loading state. */
         val viewState: ViewState = ViewState.Loading,
         internal val foundContactPair: ContactPair? = null,
     ) {

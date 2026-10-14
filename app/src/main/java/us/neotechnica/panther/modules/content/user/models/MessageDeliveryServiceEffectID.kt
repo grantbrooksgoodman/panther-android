@@ -18,10 +18,19 @@ data class MessageDeliveryServiceEffectID(
     val rawValue: String,
 ) {
     companion object {
+        /** The effect that reconfigures the input bar once a send completes. */
         val configureInputBar = MessageDeliveryServiceEffectID("configureInputBar")
+
+        /** The effect that reloads the message list once a send completes. */
         val reloadCollectionView = MessageDeliveryServiceEffectID("reloadCollectionView")
+
+        /** The effect that refreshes the chat info page once a send completes. */
         val updateChatInfoPageView = MessageDeliveryServiceEffectID("updateChatInfoPageView")
+
+        /** The effect that refreshes the conversations page once a send completes. */
         val updateConversations = MessageDeliveryServiceEffectID("updateConversations")
+
+        /** The effect that updates the current user's typing indicator once a send completes. */
         val updateIsTypingForCurrentUser = MessageDeliveryServiceEffectID("updateIsTypingForCurrentUser")
     }
 }

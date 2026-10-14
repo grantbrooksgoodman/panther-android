@@ -46,14 +46,32 @@ class NetworkActivityIndicatorReducer : Reducer<NetworkActivityIndicatorReducer.
 
     /** An event the view sends to the reducer. */
     sealed interface Action {
+        /**
+         * An action that indicates the network health changed.
+         * Refreshes the indicator's background color.
+         */
         data object HealthChanged : Action
 
+        /**
+         * An action that hides the indicator once activity has
+         * ended.
+         */
         data object HideIfInactive : Action
 
+        /** An action that hides the indicator. */
         data object HideIndicator : Action
 
+        /**
+         * An action that indicates the user tapped the indicator.
+         * Performs the configured tap action, or inspects network
+         * health.
+         */
         data object IndicatorTapped : Action
 
+        /**
+         * An action that indicates the indicator's visibility
+         * changed, carrying the new value.
+         */
         data class IsVisibleChanged(
             val isVisible: Boolean,
         ) : Action
@@ -65,8 +83,10 @@ class NetworkActivityIndicatorReducer : Reducer<NetworkActivityIndicatorReducer.
     data class State(
         /** The background color of the indicator. */
         val backgroundColor: Color? = null,
+
         /** Whether the indicator is currently visible. */
         val isVisible: Boolean = false,
+
         /** The indicator's vertical offset. */
         val yOffset: Float = NetworkActivityIndicatorFloats.HIDDEN_Y_OFFSET,
     ) {

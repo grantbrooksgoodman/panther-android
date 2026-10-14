@@ -33,8 +33,8 @@ import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.Dep
  *
  * The top of the coordinator's onboarding stack determines the visible
  * page (an empty stack shows the welcome page); pushing and popping
- * animate as a UIKit navigation stack does, and the system back
- * gesture pops.
+ * animate on the navigation transition, and the system back gesture
+ * pops.
  *
  * @param modifier The modifier for this container.
  */

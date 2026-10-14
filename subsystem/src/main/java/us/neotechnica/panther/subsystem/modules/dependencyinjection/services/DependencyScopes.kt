@@ -27,7 +27,7 @@ import kotlinx.coroutines.withContext
  *
  * ```kotlin
  * val items = DependencyScopes.withDependencies({
- *     it[URLSessionDependency] = mockSession
+ *     it[NetworkClientDependency] = mockClient
  * }) {
  *     service.fetchItems()
  * }

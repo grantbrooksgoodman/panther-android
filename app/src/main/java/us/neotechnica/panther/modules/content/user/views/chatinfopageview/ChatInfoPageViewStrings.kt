@@ -15,11 +15,22 @@ import us.neotechnica.panther.translator.models.TranslationInput
 
 /** The translated label strings for the chat info page. */
 object ChatInfoPageViewStrings : TranslatedLabelStrings {
+    /** The text of the add contact button. */
     val addContactButtonText = TranslatedLabelStringCollection("chatInfoPageView.addContactButtonText")
+
+    /** The text of the change metadata button. */
     val changeMetadataButtonText = TranslatedLabelStringCollection("chatInfoPageView.changeMetadataButtonText")
+
+    /** The leave conversation row's text. */
     val leaveConversation = TranslatedLabelStringCollection("chatInfoPageView.leaveConversation")
+
+    /** The text of the participant count label. */
     val participantCountLabelText = TranslatedLabelStringCollection("chatInfoPageView.participantCountLabelText")
+
+    /** The text of the segmented control's media option. */
     val segmentedControlMediaOptionText = TranslatedLabelStringCollection("chatInfoPageView.segmentedControlMediaOptionText")
+
+    /** The text of the segmented control's participants option. */
     val segmentedControlParticipantsOptionText =
         TranslatedLabelStringCollection("chatInfoPageView.segmentedControlParticipantsOptionText")
 
