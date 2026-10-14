@@ -140,7 +140,7 @@ class ViewModel<State, Action>(
      *
      * @param action The action to send.
      */
-    suspend fun sendCancellableAction(action: Action) {
+    suspend fun sendCancellableAction(action: Action) { // NIT: Unused on Android.
         val job = send(action)
         try {
             job.join()

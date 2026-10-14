@@ -102,7 +102,7 @@ object DevModeService {
      *
      * @param actions The actions to add.
      */
-    fun addActions(actions: List<DevModeAction>) {
+    fun addActions(actions: List<DevModeAction>) { // NIT: Unused on Android.
         actions.forEach { addAction(it) }
     }
 

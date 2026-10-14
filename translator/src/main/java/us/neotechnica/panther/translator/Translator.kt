@@ -69,7 +69,7 @@ object Translator {
         }
 
         /** Registers the logger delegate the pipeline logs through. */
-        fun registerLoggerDelegate(loggerDelegate: TranslationLoggerDelegate) {
+        fun registerLoggerDelegate(loggerDelegate: TranslationLoggerDelegate) { // NIT: Unused on Android.
             this.loggerDelegate = loggerDelegate
         }
 

@@ -55,7 +55,7 @@ data class TextFieldAttributes(
     enum class CorrectionType {
         DEFAULT,
         NO,
-        YES,
+        YES, // NIT: Unused on Android.
     }
 
     // MARK: - Methods

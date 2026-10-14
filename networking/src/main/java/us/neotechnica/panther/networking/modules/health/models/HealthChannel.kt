@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.networking.modules.health.models
 
+import us.neotechnica.panther.networking.modules.common.constants.CommonNetworkingFloats
 import kotlin.math.max
 import kotlin.math.pow
 import kotlin.math.sqrt
@@ -63,7 +64,7 @@ internal data class HealthChannel(
         val lastUpdate = lastUpdate ?: return 0.0
         if (halfLife <= 0.0) return 0.0
 
-        val elapsed = (at - lastUpdate) / MILLIS_PER_SECOND
+        val elapsed = (at - lastUpdate) / CommonNetworkingFloats.MILLIS_PER_SECOND
         return weight * DECAY_BASE.pow(-elapsed / halfLife)
     }
 
@@ -87,7 +88,7 @@ internal data class HealthChannel(
             )
         }
 
-        val elapsed = (at - previous) / MILLIS_PER_SECOND
+        val elapsed = (at - previous) / CommonNetworkingFloats.MILLIS_PER_SECOND
         val decayedWeight = weight * DECAY_BASE.pow(-elapsed / halfLife)
         val totalWeight = decayedWeight + 1.0
 
@@ -109,6 +110,5 @@ internal data class HealthChannel(
 
     private companion object {
         private const val DECAY_BASE = 2.0
-        private const val MILLIS_PER_SECOND = 1000.0
     }
 }

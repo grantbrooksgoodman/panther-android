@@ -39,6 +39,41 @@ data class SquareIconViewConfiguration(
     val overlay: OverlayConfiguration,
     val includesShadow: Boolean = false,
 ) {
+    // MARK: - Companion
+
+    companion object {
+        /**
+         * Returns a configuration whose overlay is the symbol with the
+         * given system name.
+         *
+         * @param backgroundColor The icon's background color.
+         * @param systemName The system name of the overlaid symbol.
+         * @param framePercentOfTotalSize The fraction of the icon's size
+         *   the symbol's frame occupies.
+         * @param weight The symbol's font weight, or `null` for the
+         *   regular weight.
+         *
+         * @return The icon configuration.
+         */
+        fun symbol(
+            backgroundColor: Color,
+            systemName: String,
+            framePercentOfTotalSize: Float = SquareIconViewFloats.OVERLAY_FRAME_HEIGHT_MULTIPLIER,
+            weight: FontWeight? = null,
+        ): SquareIconViewConfiguration =
+            SquareIconViewConfiguration(
+                backgroundColor = backgroundColor,
+                overlay =
+                    OverlayConfiguration.Symbol(
+                        name = systemName,
+                        framePercentOfTotalSize = framePercentOfTotalSize,
+                        weight = weight,
+                    ),
+            )
+    }
+
+    // MARK: - Types
+
     /** The content overlaid on a square icon. */
     sealed interface OverlayConfiguration {
         /**

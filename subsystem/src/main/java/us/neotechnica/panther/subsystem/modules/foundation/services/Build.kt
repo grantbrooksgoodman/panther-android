@@ -45,7 +45,7 @@ object Build {
         val shortString: String,
     ) {
         /** A very early development build. */
-        PRE_ALPHA("pre-alpha", "p"),
+        PRE_ALPHA("pre-alpha", "p"), // NIT: Unused on Android.
 
         /** An early development build with core features in progress. */
         ALPHA("alpha", "a"),
@@ -54,7 +54,7 @@ object Build {
         BETA("beta", "b"),
 
         /** A build that is a candidate for general release. */
-        RELEASE_CANDIDATE("release candidate", "c"),
+        RELEASE_CANDIDATE("release candidate", "c"), // NIT: Unused on Android.
 
         /** A production release distributed through the store. */
         GENERAL_RELEASE("general", "g"),

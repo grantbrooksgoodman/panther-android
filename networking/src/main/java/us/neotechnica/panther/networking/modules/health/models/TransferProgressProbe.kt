@@ -16,6 +16,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.constants.CommonNetworkingFloats
 import us.neotechnica.panther.networking.modules.storage.models.StorageTransferProgress
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 
@@ -80,7 +81,7 @@ internal class TransferProgressProbe {
 
                 if (mutableState.segmentBytes < minimumThroughputSampleBytes) return@withValue null
 
-                val sample = mutableState.segmentBytes to (now - mutableState.segmentStartedAt) / MILLIS_PER_SECOND
+                val sample = mutableState.segmentBytes to (now - mutableState.segmentStartedAt) / CommonNetworkingFloats.MILLIS_PER_SECOND
                 mutableState.didEmitSegment = true
                 mutableState.segmentBytes = 0
                 mutableState.segmentStartedAt = now
@@ -110,10 +111,10 @@ internal class TransferProgressProbe {
                     if (mutableState.segmentBytes <= 0) {
                         null
                     } else {
-                        mutableState.segmentBytes to (now - mutableState.segmentStartedAt) / MILLIS_PER_SECOND
+                        mutableState.segmentBytes to (now - mutableState.segmentStartedAt) / CommonNetworkingFloats.MILLIS_PER_SECOND
                     }
                 } else {
-                    totalBytes?.let { it to (now - mutableState.startedAt) / MILLIS_PER_SECOND }
+                    totalBytes?.let { it to (now - mutableState.startedAt) / CommonNetworkingFloats.MILLIS_PER_SECOND }
                 }
             }
 
@@ -146,7 +147,7 @@ internal class TransferProgressProbe {
     private suspend fun runWatchdog() {
         while (scope.isActive) {
             val checkInterval = Networking.config.networkHealthConfiguration.transferStallCheckInterval
-            delay((checkInterval * MILLIS_PER_SECOND).toLong())
+            delay((checkInterval * CommonNetworkingFloats.MILLIS_PER_SECOND).toLong())
             if (!scope.isActive) return
 
             val transferStallSeconds = Networking.config.networkHealthConfiguration.transferStallSeconds
@@ -155,7 +156,8 @@ internal class TransferProgressProbe {
                     val mutableState = reference.value
                     if (mutableState.isFinished ||
                         mutableState.didReportStall ||
-                        (System.currentTimeMillis() - mutableState.lastProgressAt) / MILLIS_PER_SECOND < transferStallSeconds
+                        (System.currentTimeMillis() - mutableState.lastProgressAt) / CommonNetworkingFloats.MILLIS_PER_SECOND <
+                        transferStallSeconds
                     ) {
                         false
                     } else {
@@ -178,8 +180,6 @@ internal class TransferProgressProbe {
     // MARK: - Companion
 
     companion object {
-        private const val MILLIS_PER_SECOND = 1000.0
-
         /**
          * Runs a transfer with an attached probe, composing the
          * probe's progress sink with the caller's, finishing the

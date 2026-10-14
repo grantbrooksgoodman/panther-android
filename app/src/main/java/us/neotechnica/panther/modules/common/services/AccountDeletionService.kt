@@ -16,6 +16,7 @@ import us.neotechnica.panther.bundle.deletedUsers
 import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ProgressAlert
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
+import us.neotechnica.panther.modules.common.extensions.runCatchingException
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
@@ -176,14 +177,6 @@ object AccountDeletionService {
             ids.filter { it != BANG_QUALIFIED_EMPTY }.distinct()
         }
     }
-
-    private suspend fun runCatchingException(block: suspend () -> Unit): Exception? =
-        try {
-            block()
-            null
-        } catch (exception: Exception) {
-            exception
-        }
 
     private fun incrementProgress(total: Double) {
         completedUnits.withValue { reference ->

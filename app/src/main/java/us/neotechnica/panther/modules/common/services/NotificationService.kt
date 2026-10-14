@@ -17,6 +17,7 @@ import org.json.JSONObject
 import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
 import us.neotechnica.panther.modules.common.extensions.notRegisteredForPushNotifications
+import us.neotechnica.panther.modules.common.extensions.runCatchingException
 import us.neotechnica.panther.modules.common.extensions.stalePushToken
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
@@ -295,14 +296,6 @@ object NotificationService {
 
         exceptions.compiledException?.let { throw it.appending(userInfo) }
     }
-
-    private suspend fun runCatchingException(block: suspend () -> Unit): Exception? =
-        try {
-            block()
-            null
-        } catch (exception: Exception) {
-            exception
-        }
 
     @Suppress("LongParameterList")
     private suspend fun sendNotification(

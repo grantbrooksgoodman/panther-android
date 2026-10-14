@@ -35,15 +35,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 object MediaMessagePreviewService {
     // MARK: - Types
 
-    /** The keys identifying the service's media caches. */
-    enum class CacheKey {
-        /** The cache of full-size images. */
-        IMAGES,
-
-        /** The cache of thumbnail images. */
-        THUMBNAILS,
-    }
-
     // MARK: - Properties
 
     /** The cache of full-size images, keyed by local file path. */

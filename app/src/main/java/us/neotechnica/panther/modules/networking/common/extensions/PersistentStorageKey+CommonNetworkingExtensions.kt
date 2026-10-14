@@ -18,7 +18,7 @@ enum class SessionStoreStorageKey(
 ) {
     CONVERSATION_ARCHIVE("conversationArchive"),
     MESSAGE_ARCHIVE("messageArchive"),
-    MESSAGE_OUTBOX("messageOutbox"),
+    MESSAGE_OUTBOX("messageOutbox"), // NIT: Unused on Android.
     USER_ARCHIVE("userArchive"),
 }
 

@@ -27,6 +27,8 @@ interface TranslatedLabelStrings {
         get() = keyPairs.map { it.defaultOutputMap }
 }
 
+// NIT: Unused on Android.
+
 /**
  * A single translatable label-string key.
  *

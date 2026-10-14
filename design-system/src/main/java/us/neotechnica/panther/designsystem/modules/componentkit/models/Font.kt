@@ -91,17 +91,25 @@ class Font(
         /** Returns a bold system font at the given scale. */
         fun systemBold(scale: FontScale = FontScale.Medium) = Font(FontType.System(FontStyle.Bold()), scale)
 
+        // NIT: Unused on Android.
+
         /** Returns an italic system font at the given scale. */
         fun systemItalic(scale: FontScale = FontScale.Medium) = Font(FontType.System(FontStyle.Regular(isItalic = true)), scale)
 
+        // NIT: Unused on Android.
+
         /** Returns a light system font at the given scale. */
         fun systemLight(scale: FontScale = FontScale.Medium) = Font(FontType.System(FontStyle.Light()), scale)
+
+        // NIT: Unused on Android.
 
         /** Returns a medium-weight system font at the given scale. */
         fun systemMedium(scale: FontScale = FontScale.Medium) = Font(FontType.System(FontStyle.Medium()), scale)
 
         /** Returns a semibold system font at the given scale. */
         fun systemSemibold(scale: FontScale = FontScale.Medium) = Font(FontType.System(FontStyle.Semibold()), scale)
+
+        // NIT: Unused on Android.
 
         /** Returns an underlined system font at the given scale. */
         fun systemUnderlined(scale: FontScale = FontScale.Medium) = Font(FontType.System(FontStyle.Regular(isUnderlined = true)), scale)

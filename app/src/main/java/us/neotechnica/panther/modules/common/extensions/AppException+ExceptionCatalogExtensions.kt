@@ -15,7 +15,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 // string.
 
 /** The exceptions that indicate an audio recording failure. */
-val AppException.Companion.audioRecordingFailures: List<AppException>
+val AppException.Companion.audioRecordingFailures: List<AppException> // NIT: Unused on Android.
     get() =
         listOf(
             failedToInitializeRecognizer,
@@ -48,10 +48,10 @@ val AppException.Companion.kAFAssistantError: AppException get() = AppException(
 val AppException.Companion.mismatchedHashAndCallingCode: AppException get() = AppException("D339")
 
 /** An exception that records a reported mistranslation. */
-val AppException.Companion.mistranslationReported: AppException get() = AppException("CA45")
+val AppException.Companion.mistranslationReported: AppException get() = AppException("CA45") // NIT: Unused on Android.
 
 /** An exception that indicates no audio recording is in progress. */
-val AppException.Companion.noAudioRecorderToStop: AppException get() = AppException("E44E")
+val AppException.Companion.noAudioRecorderToStop: AppException get() = AppException("E44E") // NIT: Unused on Android.
 
 /** An exception that indicates the app is not authorized to access contacts. */
 val AppException.Companion.notAuthorizedForContacts: AppException get() = AppException("B7FC")
@@ -69,7 +69,7 @@ val AppException.Companion.noUsersWithPhoneNumber: AppException get() = AppExcep
 val AppException.Companion.observerRegistrationMisuse: AppException get() = AppException("983A")
 
 /** An exception that indicates a random participant could not be resolved. */
-val AppException.Companion.penPalResolutionFailed: AppException get() = AppException("AD6B")
+val AppException.Companion.penPalResolutionFailed: AppException get() = AppException("AD6B") // NIT: Unused on Android.
 
 /** An exception that indicates database read and write access is disabled. */
 val AppException.Companion.readWriteAccessDisabled: AppException get() = AppException("DF6E")
@@ -81,7 +81,7 @@ val AppException.Companion.stalePushToken: AppException get() = AppException("28
 val AppException.Companion.timedOut: AppException get() = AppException("801F")
 
 /** An exception that indicates the translation platform is not supported. */
-val AppException.Companion.translationPlatformNotSupported: AppException get() = AppException("B04E")
+val AppException.Companion.translationPlatformNotSupported: AppException get() = AppException("B04E") // NIT: Unused on Android.
 
 /** An exception that indicates the app must be updated before continuing. */
-val AppException.Companion.updateRequired: AppException get() = AppException("B455")
+val AppException.Companion.updateRequired: AppException get() = AppException("B455") // NIT: Unused on Android.

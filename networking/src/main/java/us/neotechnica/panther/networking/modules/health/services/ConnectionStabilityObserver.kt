@@ -19,6 +19,7 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.constants.CommonNetworkingFloats
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealthEvent
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
@@ -157,7 +158,7 @@ internal class ConnectionStabilityObserver(
 
                 if (isConnected) {
                     val disconnectedAt = mutableState.disconnectedAt ?: return@withValue null
-                    val duration = (now - disconnectedAt) / MILLIS_PER_SECOND
+                    val duration = (now - disconnectedAt) / CommonNetworkingFloats.MILLIS_PER_SECOND
                     mutableState.disconnectedAt = null
                     mutableState.lastReconnectDuration = duration
                     return@withValue NetworkHealthEvent.ConnectionRestored(duration)
@@ -170,7 +171,7 @@ internal class ConnectionStabilityObserver(
                 if (!isOnline || mutableState.isInBackground) return@withValue null
                 val foregroundReturnedAt = mutableState.foregroundReturnedAt
                 if (foregroundReturnedAt != null &&
-                    (now - foregroundReturnedAt) / MILLIS_PER_SECOND < flapForegroundGraceSeconds
+                    (now - foregroundReturnedAt) / CommonNetworkingFloats.MILLIS_PER_SECOND < flapForegroundGraceSeconds
                 ) {
                     return@withValue null
                 }
@@ -185,6 +186,5 @@ internal class ConnectionStabilityObserver(
 
     private companion object {
         private const val INFO_CONNECTED_PATH = ".info/connected"
-        private const val MILLIS_PER_SECOND = 1000.0
     }
 }

@@ -15,7 +15,6 @@ import kotlinx.coroutines.launch
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.content.user.services.ReadReceiptService
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
-import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.models.ReactionSessionServiceEffectID
@@ -58,11 +57,6 @@ private suspend fun performReaction(
         Logger.log(exception, with = AlertType.toast)
     }
 }
-
-internal fun sendMediaEffect(mediaFile: MediaFile): Effect<ChatPageReducer.Action> =
-    Effect.run {
-        MessageDeliveryService.sendMediaMessage(mediaFile)
-    }
 
 internal fun sendEffect(text: String): Effect<ChatPageReducer.Action> =
     Effect.run {

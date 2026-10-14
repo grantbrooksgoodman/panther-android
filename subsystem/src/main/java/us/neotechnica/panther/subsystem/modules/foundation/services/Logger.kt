@@ -289,7 +289,7 @@ object Logger {
      *
      * @param domainsExcludedFromSessionRecord The domains to exclude.
      */
-    fun setDomainsExcludedFromSessionRecord(domainsExcludedFromSessionRecord: List<LoggerDomain>) {
+    fun setDomainsExcludedFromSessionRecord(domainsExcludedFromSessionRecord: List<LoggerDomain>) { // NIT: Unused on Android.
         _domainsExcludedFromSessionRecord.wrappedValue = domainsExcludedFromSessionRecord
     }
 
@@ -302,7 +302,7 @@ object Logger {
      * @param filter The filter to apply, or `null` to clear the
      *   current filter.
      */
-    fun setFilter(filter: Filter?) {
+    fun setFilter(filter: Filter?) { // NIT: Unused on Android.
         _filter.wrappedValue = filter
     }
 

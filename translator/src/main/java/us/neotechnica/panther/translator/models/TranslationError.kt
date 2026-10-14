@@ -32,11 +32,6 @@ sealed class TranslationError(
     /** The input or language pair failed validation. */
     data object InvalidArguments : TranslationError("The arguments are invalid.")
 
-    /** A JavaScript error occurred during extraction. */
-    class JavaScriptError(
-        description: String,
-    ) : TranslationError("JavaScript error occurred: $description")
-
     /** The extracted translation result was malformed. */
     data object MalformedTranslationResult : TranslationError("Malformed translation result.")
 

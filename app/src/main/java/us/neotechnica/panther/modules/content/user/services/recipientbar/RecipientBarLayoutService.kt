@@ -88,7 +88,7 @@ class RecipientBarLayoutService {
      * Releases the recipient bar once the conversation exists,
      * re-enabling the new chat page's done button.
      */
-    fun removeFromSuperview() {
+    fun removeFromSuperview() { // NIT: Unused on Android.
         DependencyValues.current.sharedStates.isNewChatPageDoneToolbarButtonEnabled.value = true
     }
 
@@ -132,7 +132,7 @@ class RecipientBarLayoutService {
      * @param isUserInteractionEnabled A Boolean value that indicates
      *   whether user interaction is enabled.
      */
-    fun setIsUserInteractionEnabled(isUserInteractionEnabled: Boolean) {
+    fun setIsUserInteractionEnabled(isUserInteractionEnabled: Boolean) { // NIT: Unused on Android.
         DependencyValues.current.sharedStates.isNewChatPageDoneToolbarButtonEnabled.value = isUserInteractionEnabled
 
         when (isUserInteractionEnabled) {

@@ -162,6 +162,8 @@ object ChatPageViewFloats {
         val revealDistance: Dp = 80.dp
     }
 
+    // NIT: Unused on Android.
+
     /** The values of the text view delegate. */
     object UITextViewDelegate {
         /** The delay, in milliseconds, before the buttons' enabled state updates. */

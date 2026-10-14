@@ -11,6 +11,7 @@ package us.neotechnica.panther.modules.networking.user.models
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
+import us.neotechnica.panther.modules.networking.common.extensions.stringList
 import us.neotechnica.panther.modules.networking.common.extensions.visibleForCurrentUser
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
@@ -187,7 +188,7 @@ data class User(
             val phoneNumber = mapValue(data, SerializableKey.PHONE_NUMBER) ?: return false
             if (!PhoneNumber.canDecode(phoneNumber)) return false
             if (data[SerializableKey.LANGUAGE_CODE.rawValue] !is String) return false
-            if (stringList(data, SerializableKey.PREVIOUS_LANGUAGE_CODES) == null) return false
+            if (data.stringList(SerializableKey.PREVIOUS_LANGUAGE_CODES.rawValue) == null) return false
             return isAbsentOrMap(data, SerializableKey.PUSH_TOKENS)
         }
 
@@ -199,7 +200,7 @@ data class User(
             val isPenPalsParticipant = data[SerializableKey.IS_PEN_PALS_PARTICIPANT.rawValue] as? Boolean
             val languageCode = data[SerializableKey.LANGUAGE_CODE.rawValue] as? String
             val consentRequired = data[SerializableKey.MESSAGE_RECIPIENT_CONSENT_REQUIRED.rawValue] as? Boolean
-            val previousLanguageCodes = stringList(data, SerializableKey.PREVIOUS_LANGUAGE_CODES)
+            val previousLanguageCodes = data.stringList(SerializableKey.PREVIOUS_LANGUAGE_CODES.rawValue)
 
             if (id == null ||
                 aiEnhanced == null ||
@@ -268,14 +269,5 @@ data class User(
             (data[key.rawValue] as? Map<*, *>)
                 ?.takeIf { map -> map.keys.all { it is String } }
                 ?.let { it as Map<String, Any?> }
-
-        @Suppress("UNCHECKED_CAST")
-        private fun stringList(
-            data: Map<String, Any?>,
-            key: SerializableKey,
-        ): List<String>? =
-            (data[key.rawValue] as? List<*>)
-                ?.takeIf { list -> list.all { it is String } }
-                ?.map { it as String }
     }
 }

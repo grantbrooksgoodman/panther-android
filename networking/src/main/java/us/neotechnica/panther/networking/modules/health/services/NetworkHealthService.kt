@@ -25,6 +25,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.constants.CommonNetworkingFloats
 import us.neotechnica.panther.networking.modules.health.extensions.networkHealth
 import us.neotechnica.panther.networking.modules.health.interfaces.NetworkHealthDelegate
 import us.neotechnica.panther.networking.modules.health.models.EstimatorContext
@@ -244,7 +245,7 @@ internal object NetworkHealthService : NetworkHealthDelegate {
     }
 
     private fun formattedSeconds(seconds: Double): String =
-        if (seconds < 1) "${(seconds * MILLIS_PER_SECOND).toInt()} ms" else "%.2f s".format(seconds)
+        if (seconds < 1) "${(seconds * CommonNetworkingFloats.MILLIS_PER_SECOND).toInt()} ms" else "%.2f s".format(seconds)
 
     private fun formattedBytesPerSecond(bytesPerSecond: Double): String =
         when {
@@ -475,7 +476,6 @@ internal object NetworkHealthService : NetworkHealthDelegate {
 
     private const val BYTES_PER_KILOBYTE = 1024.0
     private const val BYTES_PER_MEGABYTE = 1_048_576.0
-    private const val MILLIS_PER_SECOND = 1000.0
     private const val PERCENT = 100.0
     private const val PROBE_SETTLE_DELAY_MILLIS = 2000L
 }

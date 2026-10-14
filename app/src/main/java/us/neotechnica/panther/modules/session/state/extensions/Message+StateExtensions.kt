@@ -10,6 +10,7 @@ package us.neotechnica.panther.modules.session.state.extensions
 
 import us.neotechnica.panther.modules.common.models.AudioFileExtension
 import us.neotechnica.panther.modules.common.models.MediaFileExtension
+import us.neotechnica.panther.modules.networking.common.extensions.stringList
 import us.neotechnica.panther.modules.networking.message.models.AudioFile
 import us.neotechnica.panther.modules.networking.message.models.AudioMessageReference
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
@@ -185,11 +186,6 @@ private fun richContent(map: Map<*, *>): RichMessageContent? {
     val audio = map[ArchiveKey.AUDIO.rawValue] as? List<*> ?: return null
     return RichMessageContent.Audio(audio.map { audioMessageReference(it) ?: return null })
 }
-
-private fun stringList(data: Any?): List<String>? =
-    (data as? List<*>)
-        ?.takeIf { list -> list.all { it is String } }
-        ?.map { it as String }
 
 private fun translation(data: Any?): Translation? {
     val map = data as? Map<*, *> ?: return null

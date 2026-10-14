@@ -147,7 +147,7 @@ object Networking {
      * @param enabled A Boolean value that determines whether
      *   verbose logging is enabled.
      */
-    fun setVerboseFirebaseLoggingEnabled(enabled: Boolean) {
+    fun setVerboseFirebaseLoggingEnabled(enabled: Boolean) { // NIT: Unused on Android.
         FirebaseDatabase.getInstance().setLogLevel(
             if (enabled) com.google.firebase.database.Logger.Level.DEBUG else com.google.firebase.database.Logger.Level.INFO,
         )
@@ -276,7 +276,7 @@ object Networking {
         }
 
         /** Registers a custom auth delegate. */
-        fun registerAuthDelegate(authDelegate: AuthDelegate) {
+        fun registerAuthDelegate(authDelegate: AuthDelegate) { // NIT: Unused on Android.
             register(authDelegate = authDelegate)
         }
 
@@ -286,7 +286,7 @@ object Networking {
         }
 
         /** Registers a custom network-health delegate. */
-        fun registerHealthDelegate(healthDelegate: NetworkHealthDelegate) {
+        fun registerHealthDelegate(healthDelegate: NetworkHealthDelegate) { // NIT: Unused on Android.
             register(healthDelegate = healthDelegate)
         }
 
@@ -296,7 +296,7 @@ object Networking {
         }
 
         /** Registers a custom storage delegate. */
-        fun registerStorageDelegate(storageDelegate: StorageDelegate) {
+        fun registerStorageDelegate(storageDelegate: StorageDelegate) { // NIT: Unused on Android.
             register(storageDelegate = storageDelegate)
         }
 

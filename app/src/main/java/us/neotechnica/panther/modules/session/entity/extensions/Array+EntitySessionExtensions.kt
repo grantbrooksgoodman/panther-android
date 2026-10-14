@@ -21,7 +21,7 @@ import us.neotechnica.panther.modules.networking.user.models.User
  *
  * @return The filtered reaction metadata.
  */
-fun List<ReactionMetadata>.filteringCurrentUserReactions(messageID: String): List<ReactionMetadata> {
+fun List<ReactionMetadata>.filteringCurrentUserReactions(messageID: String): List<ReactionMetadata> { // NIT: Unused on Android.
     val result = toMutableList()
 
     for (index in result.indices.reversed()) {

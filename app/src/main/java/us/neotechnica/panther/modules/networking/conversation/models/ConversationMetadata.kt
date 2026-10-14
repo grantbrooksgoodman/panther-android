@@ -9,6 +9,7 @@
 package us.neotechnica.panther.modules.networking.conversation.models
 
 import android.util.Base64
+import us.neotechnica.panther.modules.networking.common.extensions.stringList
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
@@ -297,9 +298,9 @@ class ConversationMetadata(
             }
 
             val consentData =
-                stringList(data, SerializableKey.MESSAGE_RECIPIENT_CONSENT_ACKNOWLEDGEMENT_DATA)
+                data.stringList(SerializableKey.MESSAGE_RECIPIENT_CONSENT_ACKNOWLEDGEMENT_DATA.rawValue)
                     ?: return false
-            val sharingData = stringList(data, SerializableKey.PEN_PALS_SHARING_DATA) ?: return false
+            val sharingData = data.stringList(SerializableKey.PEN_PALS_SHARING_DATA.rawValue) ?: return false
 
             val imageDecodes =
                 imageDataString.isBangQualifiedEmpty ||
@@ -321,8 +322,8 @@ class ConversationMetadata(
                 lastModifiedString?.let {
                     DependencyValues.current.timestampDateFormatter.parse(it)
                 }
-            val encodedConsent = stringList(data, SerializableKey.MESSAGE_RECIPIENT_CONSENT_ACKNOWLEDGEMENT_DATA)
-            val encodedSharing = stringList(data, SerializableKey.PEN_PALS_SHARING_DATA)
+            val encodedConsent = data.stringList(SerializableKey.MESSAGE_RECIPIENT_CONSENT_ACKNOWLEDGEMENT_DATA.rawValue)
+            val encodedSharing = data.stringList(SerializableKey.PEN_PALS_SHARING_DATA.rawValue)
             val requiresConsent = data[SerializableKey.REQUIRES_CONSENT_FROM_INITIATOR.rawValue] as? String
 
             if (name == null ||
@@ -375,15 +376,6 @@ class ConversationMetadata(
                 requiresConsentFromInitiator = if (requiresConsent.isBangQualifiedEmpty) null else requiresConsent,
             )
         }
-
-        @Suppress("UNCHECKED_CAST")
-        private fun stringList(
-            data: Map<String, Any?>,
-            key: SerializableKey,
-        ): List<String>? =
-            (data[key.rawValue] as? List<*>)
-                ?.takeIf { list -> list.all { it is String } }
-                ?.map { it as String }
 
         private fun decodeBase64(string: String): ByteArray? =
             runCatching {

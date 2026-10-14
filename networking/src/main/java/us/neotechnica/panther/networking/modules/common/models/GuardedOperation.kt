@@ -17,6 +17,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.constants.CommonNetworkingFloats
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.health.models.HealthSampleToken
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -31,8 +32,6 @@ import kotlin.time.Duration
 // service's performOperation entry point.
 internal object GuardedOperation {
     // MARK: - Properties
-
-    private const val MILLIS_PER_SECOND = 1000.0
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -82,7 +81,7 @@ internal object GuardedOperation {
                 if (showsActivityIndicator) Networking.config.activityIndicatorDelegate.hide()
                 if (recordsCensoredSampleOnTimeout && healthToken.claim()) {
                     Networking.config.healthDelegate.recordCensoredLatencySample(
-                        timeout.inWholeMilliseconds / MILLIS_PER_SECOND,
+                        timeout.inWholeMilliseconds / CommonNetworkingFloats.MILLIS_PER_SECOND,
                     )
                 }
 

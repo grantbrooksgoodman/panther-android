@@ -12,6 +12,7 @@ import android.os.PowerManager
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.constants.CommonNetworkingFloats
 import us.neotechnica.panther.networking.modules.health.extensions.isNetworkLevelFailure
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealthEvent
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealthProbeConfiguration
@@ -74,7 +75,7 @@ internal class NetworkHealthProber(
                 if (lastAttemptAt == null) {
                     "never · ℛ $remainingBudget/$maximumProbesPerHour"
                 } else {
-                    val secondsAgo = ((now - lastAttemptAt) / MILLIS_PER_SECOND).toInt()
+                    val secondsAgo = ((now - lastAttemptAt) / CommonNetworkingFloats.MILLIS_PER_SECOND).toInt()
                     val outcomeDescription = reference.value.lastOutcomeDescription ?: "in flight"
                     "${secondsAgo}s ago ($outcomeDescription) · $remainingBudget/$maximumProbesPerHour rem."
                 }
@@ -113,7 +114,7 @@ internal class NetworkHealthProber(
             if (recent.size >= configuration.maximumProbesPerHour) return@withValue false
             val lastProbe = recent.maxOrNull()
             if (lastProbe != null &&
-                now - lastProbe < configuration.minimumIntervalSeconds * MILLIS_PER_SECOND
+                now - lastProbe < configuration.minimumIntervalSeconds * CommonNetworkingFloats.MILLIS_PER_SECOND
             ) {
                 return@withValue false
             }
@@ -125,7 +126,7 @@ internal class NetworkHealthProber(
     private fun performProbe(configuration: NetworkHealthProbeConfiguration) {
         Logger.log("Probing \"${configuration.url}\" for network health.", domain = LoggerDomain.Networking.health)
 
-        val timeoutMillis = (configuration.timeoutSeconds * MILLIS_PER_SECOND).toInt()
+        val timeoutMillis = (configuration.timeoutSeconds * CommonNetworkingFloats.MILLIS_PER_SECOND).toInt()
         val start = System.currentTimeMillis()
         val outcomeDescription =
             try {
@@ -141,7 +142,7 @@ internal class NetworkHealthProber(
                         connection.disconnect()
                     }
 
-                val elapsed = (System.currentTimeMillis() - start) / MILLIS_PER_SECOND
+                val elapsed = (System.currentTimeMillis() - start) / CommonNetworkingFloats.MILLIS_PER_SECOND
                 val probeHost = runCatching { URL(configuration.url).host }.getOrNull()
                 if (landingHost != null && probeHost != null && !landingHost.equals(probeHost, ignoreCase = true)) {
                     // A redirect off the operator's host is not evidence about their endpoint.
@@ -157,7 +158,7 @@ internal class NetworkHealthProber(
                 } else {
                     // The server answered or the failure was not network-level; the round-trip
                     // duration is still honest latency evidence.
-                    val elapsed = (System.currentTimeMillis() - start) / MILLIS_PER_SECOND
+                    val elapsed = (System.currentTimeMillis() - start) / CommonNetworkingFloats.MILLIS_PER_SECOND
                     onLatencySample(elapsed)
                     "%.3fs (non-network error)".format(elapsed)
                 }
@@ -184,7 +185,6 @@ internal class NetworkHealthProber(
     // MARK: - Companion
 
     private companion object {
-        private const val MILLIS_PER_SECOND = 1000.0
         private const val BUDGET_WINDOW_SECONDS = 3600L
         private const val BUDGET_WINDOW_MILLIS = BUDGET_WINDOW_SECONDS * 1000L
     }

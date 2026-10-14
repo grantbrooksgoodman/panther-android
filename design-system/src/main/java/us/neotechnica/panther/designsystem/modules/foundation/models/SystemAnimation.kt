@@ -12,7 +12,6 @@ import androidx.compose.animation.core.AnimationConstants
 import androidx.compose.animation.core.Ease
 import androidx.compose.animation.core.EaseIn
 import androidx.compose.animation.core.EaseInOut
-import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -217,18 +216,6 @@ object SystemAnimation {
      *   [usesAppleAnimations] is `false`.
      */
     fun <T> easeInOut(duration: Duration? = null): TweenSpec<T> = timingCurve(EaseInOut, duration)
-
-    /**
-     * An ease-out animation.
-     *
-     * While [usesAppleAnimations] is `false`, the animation runs on
-     * Compose's default curve instead.
-     *
-     * @param duration The animation's duration, or `null` for the
-     *   default: 0.35 seconds, or Compose's default duration while
-     *   [usesAppleAnimations] is `false`.
-     */
-    fun <T> easeOut(duration: Duration? = null): TweenSpec<T> = timingCurve(EaseOut, duration)
 
     /**
      * The default spring animation: a critically damped spring with a

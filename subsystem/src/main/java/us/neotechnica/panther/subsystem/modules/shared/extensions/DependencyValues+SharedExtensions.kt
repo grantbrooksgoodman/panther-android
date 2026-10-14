@@ -45,7 +45,7 @@ val DependencyValues.sharedStates: SharedStates
  * }
  * ```
  */
-fun DependencyValues.Builder.resetSharedValues() {
+fun DependencyValues.Builder.resetSharedValues() { // NIT: Unused on Android.
     this[SharedEventsDependency] = SharedEvents()
     this[SharedStatesDependency] = SharedStates()
 }

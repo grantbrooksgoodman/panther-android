@@ -55,7 +55,7 @@ object InputBarConfigService {
      *
      * @return The symbol name.
      */
-    fun attachMediaButtonImage(): String = InputBarStrings.ATTACH_MEDIA_BUTTON_IMAGE_SYSTEM_NAME
+    fun attachMediaButtonImage(): String = InputBarStrings.ATTACH_MEDIA_BUTTON_IMAGE_SYSTEM_NAME // NIT: Unused on Android.
 
     /**
      * Returns the send button's symbol name for the given
@@ -69,7 +69,7 @@ object InputBarConfigService {
      *
      * @return The symbol name.
      */
-    fun sendButtonImage(forRecording: Boolean = false): String {
+    fun sendButtonImage(forRecording: Boolean = false): String { // NIT: Unused on Android.
         val isNewChatPagePresented =
             DependencyValues.current.navigation.state.value.userContent.stack
                 .lastOrNull() == UserContentNavigatorState.SeguePaths.NewChat

@@ -9,6 +9,7 @@
 package us.neotechnica.panther.networking.modules.health.models
 
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.constants.CommonNetworkingFloats
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.health.interfaces.NetworkHealthDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
@@ -34,8 +35,6 @@ internal sealed interface HealthEvidence {
     // MARK: - Companion
 
     companion object {
-        private const val MILLIS_PER_SECOND = 1000.0
-
         fun classify(
             error: Exception?,
             elapsed: Double,
@@ -101,7 +100,7 @@ internal sealed interface HealthEvidence {
             delegate: NetworkHealthDelegate = Networking.config.healthDelegate,
         ) {
             if (!token.claim()) return
-            val elapsed = (System.currentTimeMillis() - startTimeMillis) / MILLIS_PER_SECOND
+            val elapsed = (System.currentTimeMillis() - startTimeMillis) / CommonNetworkingFloats.MILLIS_PER_SECOND
 
             when (
                 val evidence =

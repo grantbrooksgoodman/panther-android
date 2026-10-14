@@ -29,7 +29,7 @@ enum class SubsystemStringKey(
     NO_EMAIL("no_email"),
     NO_INTERNET_MESSAGE("no_internet_message"),
     REPORT_BUG("report_bug"),
-    REPORT_SENT("report_sent"),
+    REPORT_SENT("report_sent"), // NIT: Unused on Android.
     SEND_FEEDBACK("send_feedback"),
     SETTINGS("settings"),
     SOMETHING_WENT_WRONG("something_went_wrong"),

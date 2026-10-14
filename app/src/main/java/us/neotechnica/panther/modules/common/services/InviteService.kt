@@ -27,6 +27,7 @@ import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootShee
 import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheets
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.ReviewServiceStorageKey
+import us.neotechnica.panther.modules.common.extensions.toException
 import us.neotechnica.panther.modules.common.services.AnalyticsService.AnalyticsEvent
 import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.onboarding.dependencies.onboardingService
@@ -41,7 +42,6 @@ import us.neotechnica.panther.networking.modules.translation.interfaces.HostedTr
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
-import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
@@ -293,8 +293,6 @@ object InviteService {
     ): String = "$appShareLink\n$text"
 
     private fun hasContactsBesidesCurrentUser(): Boolean = contactService.hasContactsBesidesCurrentUser
-
-    private fun Throwable.toException(): Exception = this as? Exception ?: Exception.from(this, ExceptionMetadata(this))
 
     // MARK: - Companion
 

@@ -13,6 +13,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.networking.common.extensions.messageService
+import us.neotechnica.panther.modules.networking.common.extensions.stringList
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
 import us.neotechnica.panther.modules.networking.message.models.LocalAudioFilePath
 import us.neotechnica.panther.modules.networking.message.models.LocalMediaFilePath
@@ -54,14 +55,14 @@ fun Message.Companion.canDecode(data: Map<String, Any?>): Boolean {
     if (data[Keys.FROM_ACCOUNT_ID.rawValue] !is String) return false
     val contentTypeString = data[Keys.CONTENT_TYPE.rawValue] as? String ?: return false
     val hostedContentType = HostedContentType.from(contentTypeString) ?: return false
-    val encodedReadReceipts = stringList(data, Keys.READ_RECEIPTS) ?: return false
+    val encodedReadReceipts = data.stringList(Keys.READ_RECEIPTS.rawValue) ?: return false
     if (!encodedReadReceipts.isBangQualifiedEmpty && !encodedReadReceipts.all { ReadReceipt.canDecode(it) }) {
         return false
     }
 
     val sentDateString = data[Keys.SENT_DATE.rawValue] as? String ?: return false
     if (DependencyValues.current.timestampDateFormatter.parse(sentDateString) == null) return false
-    val translationReferenceStrings = stringList(data, Keys.TRANSLATION_REFERENCES) ?: return false
+    val translationReferenceStrings = data.stringList(Keys.TRANSLATION_REFERENCES.rawValue) ?: return false
 
     if (hostedContentType == HostedContentType.Text &&
         translationReferenceStrings.isBangQualifiedEmpty
@@ -94,8 +95,8 @@ suspend fun Message.Companion.decode(data: Map<String, Any?>): Message {
     val id = data[Keys.ID.rawValue] as? String
     val fromAccountID = data[Keys.FROM_ACCOUNT_ID.rawValue] as? String
     val contentType = (data[Keys.CONTENT_TYPE.rawValue] as? String)?.let { HostedContentType.from(it) }
-    val translationReferenceStrings = stringList(data, Keys.TRANSLATION_REFERENCES)
-    val encodedReadReceipts = stringList(data, Keys.READ_RECEIPTS)
+    val translationReferenceStrings = data.stringList(Keys.TRANSLATION_REFERENCES.rawValue)
+    val encodedReadReceipts = data.stringList(Keys.READ_RECEIPTS.rawValue)
     val sentDate = (data[Keys.SENT_DATE.rawValue] as? String)?.let { dateFormatter.parse(it) }
 
     if (id == null ||
@@ -293,15 +294,6 @@ private suspend fun getTranslations(references: List<TranslationReference>): Lis
 
     return translations
 }
-
-@Suppress("UNCHECKED_CAST")
-private fun stringList(
-    data: Map<String, Any?>,
-    key: Keys,
-): List<String>? =
-    (data[key.rawValue] as? List<*>)
-        ?.takeIf { list -> list.all { it is String } }
-        ?.map { it as String }
 
 private val String.isUserReadableLanguageCode: Boolean
     get() {

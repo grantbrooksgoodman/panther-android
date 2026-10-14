@@ -20,6 +20,7 @@ import us.neotechnica.panther.modules.content.user.extensions.filteringSystemMes
 import us.neotechnica.panther.modules.content.user.extensions.firstWithCurrentUserID
 import us.neotechnica.panther.modules.content.user.extensions.isVisibleForCurrentUser
 import us.neotechnica.panther.modules.networking.common.extensions.messageService
+import us.neotechnica.panther.modules.networking.common.extensions.stringList
 import us.neotechnica.panther.modules.networking.common.extensions.userService
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.message.models.ReadReceipt
@@ -249,7 +250,7 @@ data class Conversation(
      *
      * @throws Exception if the write fails.
      */
-    suspend fun updateLastModifiedDate(to: Date = Date()) {
+    suspend fun updateLastModifiedDate(to: Date = Date()) { // NIT: Unused on Android.
         val database = DependencyValues.current.networking.database
         val dateFormatter = DependencyValues.current.timestampDateFormatter
 
@@ -626,11 +627,5 @@ data class Conversation(
             (value as? Map<*, *>)
                 ?.takeIf { map -> map.keys.all { it is String } }
                 ?.let { it as Map<String, Any?> }
-
-        @Suppress("UNCHECKED_CAST")
-        private fun stringList(value: Any?): List<String>? =
-            (value as? List<*>)
-                ?.takeIf { list -> list.all { it is String } }
-                ?.map { it as String }
     }
 }

@@ -14,6 +14,8 @@ import androidx.compose.ui.unit.dp
 
 // MARK: - Float
 
+// NIT: Unused on Android.
+
 /** The layout and timing values of the new chat page view. */
 object NewChatPageViewFloats {
     /** The frame height of the done toolbar button. */
@@ -35,6 +37,8 @@ object NewChatPageViewColors {
 }
 
 // MARK: - String
+
+// NIT: Unused on Android.
 
 /** The string constants of the new chat page view. */
 object NewChatPageViewConstants {

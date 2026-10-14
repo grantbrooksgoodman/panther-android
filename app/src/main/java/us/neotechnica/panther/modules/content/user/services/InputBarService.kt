@@ -173,7 +173,7 @@ class InputBarService(
      * @param isEnabled A Boolean value that indicates whether the send
      *   button is enabled.
      */
-    fun setSendButtonIsEnabled(isEnabled: Boolean) {
+    fun setSendButtonIsEnabled(isEnabled: Boolean) { // NIT: Unused on Android.
         mutableIsSendButtonEnabled.value = isEnabled
     }
 

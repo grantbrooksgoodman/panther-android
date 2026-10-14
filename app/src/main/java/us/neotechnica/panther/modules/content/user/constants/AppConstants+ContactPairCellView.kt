@@ -22,6 +22,8 @@ object ContactPairCellViewFloats {
 
 // MARK: - Color
 
+// NIT: Unused on Android.
+
 /** The colors of the contact pair cell view. */
 object ContactPairCellViewColors {
     /** The background color while prevarication mode is on. */

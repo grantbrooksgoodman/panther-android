@@ -52,12 +52,12 @@ object AnalyticsService {
         ACCESS_NEW_CHAT_PAGE("access_new_chat_page"),
 
         CLEAR_CACHES("clear_caches"),
-        CLOSE_APP("close_app"),
+        CLOSE_APP("close_app"), // NIT: Unused on Android.
         CREATE_NEW_CONVERSATION("create_new_conversation"),
 
         DELETE_ACCOUNT("delete_account"),
         DELETE_CONVERSATION("delete_conversation"),
-        DISMISS_NEW_CHAT_PAGE("dismiss_new_chat_page"),
+        DISMISS_NEW_CHAT_PAGE("dismiss_new_chat_page"), // NIT: Unused on Android.
 
         INVITE("invite"),
 
@@ -66,13 +66,13 @@ object AnalyticsService {
 
         OPEN_APP("open_app"),
 
-        SEND_AUDIO_MESSAGE("send_audio_message"),
+        SEND_AUDIO_MESSAGE("send_audio_message"), // NIT: Unused on Android.
         SEND_MEDIA_MESSAGE("send_media_message"),
         SEND_TEXT_MESSAGE("send_text_message"),
         SIGN_UP("sign_up"),
 
         TERMINATE_APP("terminate_app"),
-        TOUCH_UI_ELEMENT("touch_ui_element"),
+        TOUCH_UI_ELEMENT("touch_ui_element"), // NIT: Unused on Android.
 
         VIEW_ALTERNATE("view_alternate"),
     }

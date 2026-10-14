@@ -15,7 +15,6 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import kotlinx.coroutines.CoroutineScope
@@ -42,6 +41,7 @@ import us.neotechnica.panther.designsystem.modules.foundation.components.ListRow
 import us.neotechnica.panther.designsystem.modules.foundation.dependencies.reportDelegate
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.modules.common.extensions.ApplicationStorageKey
+import us.neotechnica.panther.modules.common.extensions.toException
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.services.AccountDeletionService
 import us.neotechnica.panther.modules.common.services.AnalyticsService.AnalyticsEvent
@@ -53,7 +53,6 @@ import us.neotechnica.panther.modules.content.user.components.SquareIconImage
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewConstants
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewFloats
-import us.neotechnica.panther.modules.content.user.constants.SquareIconViewFloats
 import us.neotechnica.panther.modules.content.user.extensions.contactPair
 import us.neotechnica.panther.modules.content.user.extensions.removeCurrentPushToken
 import us.neotechnica.panther.modules.content.user.models.SquareIconViewConfiguration
@@ -475,7 +474,7 @@ class SettingsPageViewService(
                     innerText = overrideOrRestore,
                     imageView = {
                         SquareIconImage(
-                            squareIconConfiguration(
+                            SquareIconViewConfiguration.symbol(
                                 SettingsColors.overrideLanguageCodeButtonImageBackground,
                                 SettingsStrings.OVERRIDE_LANGUAGE_CODE_BUTTON_IMAGE_SYSTEM_NAME,
                             ),
@@ -493,7 +492,7 @@ class SettingsPageViewService(
                     innerText = SettingsStrings.TOGGLE_DEVELOPER_MODE_BUTTON_TEXT,
                     imageView = {
                         SquareIconImage(
-                            squareIconConfiguration(
+                            SquareIconViewConfiguration.symbol(
                                 SettingsColors.toggleDeveloperModeButtonImageBackground,
                                 SettingsStrings.TOGGLE_DEVELOPER_MODE_BUTTON_IMAGE_SYSTEM_NAME,
                                 SettingsFloats.TOGGLE_DEVELOPER_MODE_BUTTON_OVERLAY_FRAME_PERCENT_OF_TOTAL_SIZE,
@@ -562,22 +561,6 @@ class SettingsPageViewService(
         HUD.showSuccess(text = "Set to English")
         dependencies.dismissSheets()
     }
-
-    private fun squareIconConfiguration(
-        backgroundColor: Color,
-        systemName: String,
-        framePercentOfTotalSize: Float = SquareIconViewFloats.OVERLAY_FRAME_HEIGHT_MULTIPLIER,
-        weight: FontWeight? = null,
-    ): SquareIconViewConfiguration =
-        SquareIconViewConfiguration(
-            backgroundColor = backgroundColor,
-            overlay =
-                SquareIconViewConfiguration.OverlayConfiguration.Symbol(
-                    name = systemName,
-                    framePercentOfTotalSize = framePercentOfTotalSize,
-                    weight = weight,
-                ),
-        )
 
     private suspend fun clearCaches() {
         dependencies.stopObservingCurrentUserChanges()
@@ -676,8 +659,6 @@ class SettingsPageViewService(
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
         runCatching { context.startActivity(intent) }
     }
-
-    private fun Throwable.toException(): Exception = this as? Exception ?: Exception.from(this, ExceptionMetadata(this))
 
     // MARK: - Companion
 

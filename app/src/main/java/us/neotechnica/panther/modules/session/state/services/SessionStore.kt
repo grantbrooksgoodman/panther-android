@@ -414,7 +414,7 @@ object SessionStore {
     }
 
     /** Removes the user with the given identifier from the store. */
-    fun removeUser(id: String) {
+    fun removeUser(id: String) { // NIT: Unused on Android.
         var didRemove = false
         storeState.withValue { state ->
             didRemove = state.value.users.containsKey(id)

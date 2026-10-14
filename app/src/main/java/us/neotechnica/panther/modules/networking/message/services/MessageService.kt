@@ -201,7 +201,7 @@ object MessageService {
      *
      * @throws Exception if the message cannot be built or written.
      */
-    suspend fun createMessage(
+    suspend fun createMessage( // NIT: Unused on Android.
         fromAccountID: String,
         richContent: RichMessageContent?,
         sentDate: Date = Date(),

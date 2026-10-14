@@ -63,7 +63,7 @@ object HapticsService {
      * @param generatorStyle The style of generator to prepare.
      */
     @Suppress("UnusedParameter")
-    fun prepare(generatorStyle: HapticFeedbackStyle) = Unit
+    fun prepare(generatorStyle: HapticFeedbackStyle) = Unit // NIT: Unused on Android.
 
     // MARK: - Auxiliary
 

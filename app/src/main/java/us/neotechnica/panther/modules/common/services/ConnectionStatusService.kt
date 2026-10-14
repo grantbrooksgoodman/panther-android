@@ -86,7 +86,7 @@ object ConnectionStatusService {
     }
 
     /** Removes every registered effect. */
-    fun clearAllEffects() {
+    fun clearAllEffects() { // NIT: Unused on Android.
         uponConnectionChanged.wrappedValue = emptyMap()
     }
 

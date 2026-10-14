@@ -13,6 +13,8 @@ import androidx.compose.ui.unit.dp
 
 // MARK: - Float
 
+// NIT: Unused on Android.
+
 /** The layout and timing values of the user content container view. */
 object UserContentContainerViewFloats {
     /** The minimum frame height of the chat info toolbar button. */
@@ -29,6 +31,8 @@ object UserContentContainerViewFloats {
 }
 
 // MARK: - String
+
+// NIT: Unused on Android.
 
 /** The string constants of the user content container view. */
 object UserContentContainerViewStrings {

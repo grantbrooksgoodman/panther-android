@@ -31,6 +31,7 @@ import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.currentUserIDNotSet
 import us.neotechnica.panther.modules.common.extensions.isEmulator
 import us.neotechnica.panther.modules.common.extensions.isOnline
+import us.neotechnica.panther.modules.common.extensions.runCatchingException
 import us.neotechnica.panther.modules.common.models.RemoteCacheStatus
 import us.neotechnica.panther.modules.common.services.AlertKitTranslationService
 import us.neotechnica.panther.modules.common.services.CommonServices
@@ -603,14 +604,6 @@ object SplashPageViewService {
             delay(DEFERRED_RESOLUTION_RETRY_INTERVAL)
         }
     }
-
-    private suspend fun runCatchingException(operation: suspend () -> Unit): Exception? =
-        try {
-            operation()
-            null
-        } catch (exception: Exception) {
-            exception
-        }
 
     // MARK: - Companion
 

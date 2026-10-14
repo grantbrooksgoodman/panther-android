@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import us.neotechnica.panther.R
 import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
@@ -25,7 +24,6 @@ import us.neotechnica.panther.modules.content.user.components.SquareIconImage
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewConstants
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewFloats
-import us.neotechnica.panther.modules.content.user.constants.SquareIconViewFloats
 import us.neotechnica.panther.modules.content.user.models.SquareIconViewConfiguration
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.navigation.Navigation
@@ -96,7 +94,10 @@ internal fun blockedUsersListItem(
         isEnabled = state.isBlockedUsersButtonEnabled,
         imageView = {
             SquareIconImage(
-                symbolConfiguration(Colors.blockedUsersButtonImageBackground, GroupedStrings.BLOCKED_USERS_BUTTON_IMAGE_SYSTEM_NAME),
+                SquareIconViewConfiguration.symbol(
+                    Colors.blockedUsersButtonImageBackground,
+                    GroupedStrings.BLOCKED_USERS_BUTTON_IMAGE_SYSTEM_NAME,
+                ),
                 modifier = Modifier.fillMaxSize(),
             )
         },
@@ -139,7 +140,7 @@ internal fun clearCachesListItem(
         innerText = state.strings.value(SettingsPageViewStrings.clearCachesButtonText),
         imageView = {
             SquareIconImage(
-                symbolConfiguration(
+                SquareIconViewConfiguration.symbol(
                     Colors.clearCachesButtonImageBackground,
                     GroupedStrings.CLEAR_CACHES_BUTTON_IMAGE_SYSTEM_NAME,
                     GroupedFloats.CLEAR_CACHES_BUTTON_OVERLAY_FRAME_PERCENT_OF_TOTAL_SIZE,
@@ -160,7 +161,10 @@ internal fun deleteAccountListItem(
         innerText = state.strings.value(SettingsPageViewStrings.deleteAccountButtonText),
         imageView = {
             SquareIconImage(
-                symbolConfiguration(Colors.deleteAccountButtonImageBackground, GroupedStrings.DELETE_ACCOUNT_BUTTON_IMAGE_SYSTEM_NAME),
+                SquareIconViewConfiguration.symbol(
+                    Colors.deleteAccountButtonImageBackground,
+                    GroupedStrings.DELETE_ACCOUNT_BUTTON_IMAGE_SYSTEM_NAME,
+                ),
                 modifier = Modifier.fillMaxSize(),
             )
         },
@@ -176,7 +180,10 @@ internal fun inviteFriendsListItem(
         innerText = state.strings.value(SettingsPageViewStrings.inviteFriendsButtonText),
         imageView = {
             SquareIconImage(
-                symbolConfiguration(Colors.inviteFriendsButtonImageBackground, GroupedStrings.INVITE_FRIENDS_BUTTON_IMAGE_SYSTEM_NAME),
+                SquareIconViewConfiguration.symbol(
+                    Colors.inviteFriendsButtonImageBackground,
+                    GroupedStrings.INVITE_FRIENDS_BUTTON_IMAGE_SYSTEM_NAME,
+                ),
                 modifier = Modifier.fillMaxSize(),
             )
         },
@@ -192,7 +199,10 @@ internal fun leaveReviewListItem(
         innerText = state.strings.value(SettingsPageViewStrings.leaveReviewButtonText),
         imageView = {
             SquareIconImage(
-                symbolConfiguration(Colors.leaveReviewButtonImageBackground, GroupedStrings.LEAVE_REVIEW_BUTTON_IMAGE_SYSTEM_NAME),
+                SquareIconViewConfiguration.symbol(
+                    Colors.leaveReviewButtonImageBackground,
+                    GroupedStrings.LEAVE_REVIEW_BUTTON_IMAGE_SYSTEM_NAME,
+                ),
                 modifier = Modifier.fillMaxSize(),
             )
         },
@@ -209,7 +219,7 @@ internal fun sendFeedbackListItem(send: (SettingsPageReducer.Action) -> Unit): L
                 .replaceFirstChar { it.uppercase() },
         imageView = {
             SquareIconImage(
-                symbolConfiguration(
+                SquareIconViewConfiguration.symbol(
                     Colors.sendFeedbackButtonImageBackground,
                     GroupedStrings.SEND_FEEDBACK_BUTTON_IMAGE_SYSTEM_NAME,
                     weight = FontWeight.SemiBold,
@@ -229,26 +239,11 @@ internal fun signOutListItem(
         innerText = state.strings.value(SettingsPageViewStrings.signOutButtonText),
         imageView = {
             SquareIconImage(
-                symbolConfiguration(Colors.signOutButtonImageBackground, GroupedStrings.SIGN_OUT_BUTTON_IMAGE_SYSTEM_NAME),
+                SquareIconViewConfiguration.symbol(
+                    Colors.signOutButtonImageBackground,
+                    GroupedStrings.SIGN_OUT_BUTTON_IMAGE_SYSTEM_NAME,
+                ),
                 modifier = Modifier.fillMaxSize(),
             )
         },
-    )
-
-// MARK: - Auxiliary
-
-private fun symbolConfiguration(
-    backgroundColor: Color,
-    systemName: String,
-    framePercentOfTotalSize: Float = SquareIconViewFloats.OVERLAY_FRAME_HEIGHT_MULTIPLIER,
-    weight: FontWeight? = null,
-): SquareIconViewConfiguration =
-    SquareIconViewConfiguration(
-        backgroundColor = backgroundColor,
-        overlay =
-            SquareIconViewConfiguration.OverlayConfiguration.Symbol(
-                name = systemName,
-                framePercentOfTotalSize = framePercentOfTotalSize,
-                weight = weight,
-            ),
     )

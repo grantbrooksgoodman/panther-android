@@ -47,7 +47,7 @@ val Message.isFromCurrentUser: Boolean
  * A Boolean value that indicates whether the message is an outbox
  * message whose delivery failed.
  */
-val Message.isFailedOutboxMessage: Boolean
+val Message.isFailedOutboxMessage: Boolean // NIT: Unused on Android.
     get() {
         if (!isOutboxMessage) return false
         val outbox = DependencyValues.current.clientSession.outbox
@@ -241,7 +241,7 @@ val Message.attributedSystemString: AnnotatedString?
  * A Boolean value that indicates whether this message's audio is
  * currently playing.
  */
-val Message.isPlayingMessage: Boolean
+val Message.isPlayingMessage: Boolean // NIT: Unused on Android.
     get() {
         if (!contentType.isAudio || audioComponent == null) return false
         val playingMessageID = DependencyValues.current.chatPageViewService.audioMessagePlayback.playingMessageID ?: return false
@@ -252,7 +252,7 @@ val Message.isPlayingMessage: Boolean
  * A Boolean value that indicates whether this message is currently
  * being spoken aloud.
  */
-val Message.isSpeakingMessage: Boolean
+val Message.isSpeakingMessage: Boolean // NIT: Unused on Android.
     get() {
         val speakingMessage = DependencyValues.current.contextMenuActionHandlerService.speakingMessage ?: return false
         return speakingMessage.id == id

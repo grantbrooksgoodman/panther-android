@@ -179,16 +179,6 @@ object MediaActionHandlerService {
         sendMediaMessage(mediaFile)
     }
 
-    // MARK: - Process Image
-
-    /**
-     * Compresses the image at [uri] and stages it as a sendable media
-     * file.
-     *
-     * @throws Exception if the image cannot be read or compressed.
-     */
-    suspend fun processImage(uri: Uri): MediaFile = withContext(Dispatchers.IO) { imageMediaFile(uri) }
-
     // MARK: - Process Video
 
     /**

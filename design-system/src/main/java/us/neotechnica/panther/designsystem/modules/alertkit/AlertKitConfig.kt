@@ -92,7 +92,7 @@ object AlertKitConfig {
      * @param sourceLanguageCode The ISO 639-1 language code to use as
      *   the source language.
      */
-    fun overrideSourceLanguageCode(sourceLanguageCode: String) {
+    fun overrideSourceLanguageCode(sourceLanguageCode: String) { // NIT: Unused on Android.
         sourceLanguageCodeOverride = sourceLanguageCode
     }
 
@@ -120,7 +120,7 @@ object AlertKitConfig {
      *
      * @param translationTimeoutConfig The timeout configuration to use.
      */
-    fun overrideTranslationTimeoutConfig(translationTimeoutConfig: TranslationTimeoutConfig) {
+    fun overrideTranslationTimeoutConfig(translationTimeoutConfig: TranslationTimeoutConfig) { // NIT: Unused on Android.
         this.translationTimeoutConfig = translationTimeoutConfig
     }
 

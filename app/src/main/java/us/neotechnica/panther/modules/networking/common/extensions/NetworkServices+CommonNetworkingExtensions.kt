@@ -14,7 +14,7 @@ import us.neotechnica.panther.modules.networking.user.services.UserService
 import us.neotechnica.panther.networking.modules.common.models.NetworkServices
 
 /** The conversation service. */
-val NetworkServices.conversationService: ConversationService
+val NetworkServices.conversationService: ConversationService // NIT: Unused on Android.
     get() = ConversationService
 
 /** The message service. */
