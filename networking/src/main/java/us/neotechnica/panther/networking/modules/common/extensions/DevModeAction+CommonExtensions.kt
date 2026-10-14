@@ -27,13 +27,13 @@ import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkEnvironment
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealthTier
 import us.neotechnica.panther.networking.modules.health.services.NetworkHealthService
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import kotlin.system.exitProcess
 

@@ -8,12 +8,14 @@
 
 package us.neotechnica.panther.modules.content.user.views.inviteqrcodepageview
 
+import us.neotechnica.panther.bundle.navigators.SettingsRoute
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.SettingsRoute
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
+import us.neotechnica.panther.networking.modules.translation.interfaces.HostedTranslationDelegate
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -35,6 +37,10 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
  * - Tapping done dismisses the page.
  */
 class InviteQRCodePageReducer : Reducer<InviteQRCodePageReducer.State, InviteQRCodePageReducer.Action> {
+    // MARK: - Dependencies
+
+    private val translator: HostedTranslationDelegate by Dependency { it.networking.hostedTranslation }
+
     // MARK: - Actions
 
     /** The actions the invite QR code page can process. */
@@ -95,7 +101,7 @@ class InviteQRCodePageReducer : Reducer<InviteQRCodePageReducer.State, InviteQRC
     private fun resolveEffect(): Effect<Action> =
         Effect.run { send ->
             try {
-                send(Action.ResolveReturned(Networking.config.hostedTranslationDelegate.resolve(InviteQRCodePageViewStrings)))
+                send(Action.ResolveReturned(translator.resolve(InviteQRCodePageViewStrings)))
             } catch (exception: Exception) {
                 send(Action.ResolveFailed(exception))
             }

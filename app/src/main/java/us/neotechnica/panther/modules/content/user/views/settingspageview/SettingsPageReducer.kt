@@ -11,6 +11,7 @@ package us.neotechnica.panther.modules.content.user.views.settingspageview
 import android.graphics.Bitmap
 import androidx.annotation.DrawableRes
 import us.neotechnica.panther.R
+import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.bundle.traitCollectionChanged
 import us.neotechnica.panther.designsystem.modules.foundation.components.ListRowView
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
@@ -19,14 +20,16 @@ import us.neotechnica.panther.modules.content.user.dependencies.settingsPageView
 import us.neotechnica.panther.modules.content.user.models.BuildInfoButtonStrings
 import us.neotechnica.panther.modules.content.user.services.SettingsPageViewService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.translation.extensions.value
+import us.neotechnica.panther.networking.modules.translation.interfaces.HostedTranslationDelegate
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.effect.merge
@@ -58,8 +61,9 @@ import java.util.UUID
 class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReducer.Action> {
     // MARK: - Dependencies
 
-    private val viewService: SettingsPageViewService
-        get() = DependencyValues.current.settingsPageViewService
+    private val translator: HostedTranslationDelegate by Dependency { it.networking.hostedTranslation }
+    private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
+    private val viewService: SettingsPageViewService by Dependency { it.settingsPageViewService }
 
     // MARK: - Actions
 
@@ -230,8 +234,10 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
         val blockedUsersButtonText: String
             get() {
                 val count =
-                    (UserSessionService.currentUser?.blockedUserIDs ?: emptyList())
-                        .count { !it.isBangQualifiedEmpty }
+                    (
+                        DependencyValues.current.clientSession.entity.user.currentUser
+                            ?.blockedUserIDs ?: emptyList()
+                    ).count { !it.isBangQualifiedEmpty }
                 return "${strings.value(SettingsPageViewStrings.blockedUsersButtonText)} ($count)"
             }
 
@@ -249,7 +255,11 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
          * least one user.
          */
         val isBlockedUsersButtonEnabled: Boolean
-            get() = !(UserSessionService.currentUser?.blockedUserIDs ?: emptyList()).isBangQualifiedEmpty
+            get() =
+                !(
+                    DependencyValues.current.clientSession.entity.user.currentUser
+                        ?.blockedUserIDs ?: emptyList()
+                ).isBangQualifiedEmpty
     }
 
     // MARK: - Reduce
@@ -352,7 +362,7 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
 
             is Action.FetchCNContactForCurrentUserFailed -> {
                 Logger.log(action.exception)
-                val phoneNumber = UserSessionService.currentUser?.phoneNumber?.formattedString()
+                val phoneNumber = userSession.currentUser?.phoneNumber?.formattedString()
                 ReduceResult(
                     state.copy(contactDetailViewTitleLabelText = phoneNumber ?: state.contactDetailViewTitleLabelText),
                 )
@@ -361,7 +371,7 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
             is Action.FetchCNContactForCurrentUserReturned -> {
                 val contact = action.contactPair.contact
                 val formattedPhoneNumberString =
-                    UserSessionService.currentUser?.phoneNumber?.formattedString()
+                    userSession.currentUser?.phoneNumber?.formattedString()
                         ?: contact.phoneNumbers.firstOrNull()?.formattedString()
                 ReduceResult(
                     state.copy(
@@ -397,7 +407,7 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
     private fun resolveEffect(): Effect<Action> =
         Effect.run { send ->
             try {
-                send(Action.ResolveReturned(Networking.config.hostedTranslationDelegate.resolve(SettingsPageViewStrings)))
+                send(Action.ResolveReturned(translator.resolve(SettingsPageViewStrings)))
             } catch (exception: Exception) {
                 send(Action.ResolveFailed(exception))
             }

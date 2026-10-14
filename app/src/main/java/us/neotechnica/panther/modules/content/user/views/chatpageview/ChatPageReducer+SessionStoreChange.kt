@@ -8,8 +8,9 @@
 
 package us.neotechnica.panther.modules.content.user.views.chatpageview
 
-import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 
 /**
  * Determines whether the given store change affects the displayed
@@ -25,7 +26,7 @@ import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
  *   otherwise, `false`.
  */
 internal fun ChatPageReducer.shouldReload(change: SessionStoreChange): Boolean {
-    val currentConversation = ConversationSessionService.currentConversation ?: return false
+    val currentConversation = DependencyValues.current.clientSession.entity.conversation.currentConversation ?: return false
     return when (change) {
         is SessionStoreChange.Conversations ->
             currentConversation.id.key in change.upsertedIDKeys

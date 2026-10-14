@@ -8,22 +8,25 @@
 
 package us.neotechnica.panther.modules.content.user.views.newchatpageview
 
+import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
+import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.modules.common.services.AnalyticsService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.content.user.services.recipientbar.RecipientBarService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentNavigatorState
-import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
@@ -47,6 +50,11 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
  * - Tapping done dismisses the page.
  */
 class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.Action> {
+    // MARK: - Dependencies
+
+    private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
+    private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
+
     // MARK: - Actions
 
     /** The actions the new chat page can process. */
@@ -128,7 +136,7 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
     ): ReduceResult<State, Action> =
         when (action) {
             Action.ViewAppeared -> {
-                AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.ACCESS_NEW_CHAT_PAGE)
+                analyticsService.logEvent(AnalyticsService.AnalyticsEvent.ACCESS_NEW_CHAT_PAGE)
                 ReduceResult(
                     state.copy(
                         doneToolbarButtonText = LocalizedStringKey.Cancel.localized(),
@@ -138,7 +146,7 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
             }
 
             Action.ViewDisappeared -> {
-                if (!state.hasSentFirstMessage) ConversationSessionService.setCurrentConversation(null)
+                if (!state.hasSentFirstMessage) conversationSession.setCurrentConversation(null)
                 RecipientBarService.reset()
                 ReduceResult(state)
             }
@@ -184,7 +192,7 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
     // MARK: - Auxiliary
 
     private fun reduceFirstMessageSent(state: State): ReduceResult<State, Action> {
-        val currentConversation = ConversationSessionService.currentConversation ?: return ReduceResult(state)
+        val currentConversation = conversationSession.currentConversation ?: return ReduceResult(state)
         val titleLabelText = ConversationCellViewData(currentConversation)?.titleLabelText ?: return ReduceResult(state)
 
         return ReduceResult(
@@ -200,7 +208,7 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
         Effect.run { send ->
             try {
                 MessageDeliveryService.sendTextMessage(text)
-                val conversationIDKey = ConversationSessionService.currentConversation?.id?.key
+                val conversationIDKey = conversationSession.currentConversation?.id?.key
                 if (conversationIDKey != null) {
                     send(Action.FirstMessageSent)
                     send(Action.SendReturned(conversationIDKey))

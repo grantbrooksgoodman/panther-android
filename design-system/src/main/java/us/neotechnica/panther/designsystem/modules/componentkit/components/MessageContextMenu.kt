@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import us.neotechnica.panther.designsystem.modules.componentkit.constants.MessageContextMenuFloats
 import us.neotechnica.panther.designsystem.modules.componentkit.extensions.detectMessageTapGestures
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAction
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAlignment
@@ -80,7 +81,7 @@ fun MessageContextMenu(
     actions: List<ContextMenuAction>,
     alignment: ContextMenuAlignment,
     reactionChoices: List<ReactionChoice> = emptyList(),
-    liftScale: Float = LIFT_SCALE_BONUS,
+    liftScale: Float = MessageContextMenuFloats.LIFT_SCALE_BONUS,
     liftedBackground: Color? = null,
     minimumPressDuration: Duration? = null,
     menuLeadingOffset: Dp = 0.dp,
@@ -97,7 +98,7 @@ fun MessageContextMenu(
     val originID = remember { Any() }
     val pressDuration =
         minimumPressDuration ?: if (SystemAnimation.usesAppleAnimations) {
-            GESTURE_PRESS_DURATION
+            MessageContextMenuFloats.GESTURE_PRESS_DURATION
         } else {
             LocalViewConfiguration.current.longPressTimeoutMillis.milliseconds
         }
@@ -201,7 +202,7 @@ fun MessageContextMenu(
                             controller?.beginInteraction(
                                 state,
                                 location = bubblePositionInRoot() + position,
-                                dragThreshold = INTERACTION_DRAG_THRESHOLD.toPx(),
+                                dragThreshold = MessageContextMenuFloats.INTERACTION_DRAG_THRESHOLD.toPx(),
                                 menu = ::activeContextMenu,
                             )
                         },

@@ -1,5 +1,5 @@
 //
-//  AppConstants+SessionStore.kt
+//  AppConstants+DependencyValues.current.clientSession.store.kt
 //  Panther Android
 //
 //  Created by Grant Brooks Goodman.

@@ -15,6 +15,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.chatInfoPageLoadingStateUpdated
 import us.neotechnica.panther.bundle.currentConversationActivityChanged
+import us.neotechnica.panther.bundle.navigators.ChatRoute
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
@@ -22,6 +23,7 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.common.services.InviteService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.content.user.extensions.userIDs
 import us.neotechnica.panther.modules.content.user.extensions.users
@@ -31,16 +33,17 @@ import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.networking.user.services.UserService
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.ActivitySessionService
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.navigation.ChatRoute
-import us.neotechnica.panther.navigation.Route
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
@@ -54,6 +57,12 @@ import kotlin.time.Duration.Companion.milliseconds
  * choose a recipient.
  */
 object ContactSelectorPageViewService {
+    // MARK: - Dependencies
+
+    private val activitySession: ActivitySessionService by Dependency { it.clientSession.entity.activity }
+    private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
+    private val inviteService: InviteService by Dependency { it.commonServices.invite }
+
     // MARK: - Properties
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -97,7 +106,7 @@ object ContactSelectorPageViewService {
     /** Presents the invitation prompt, surfacing any error as a toast. */
     fun inviteToolbarButtonTapped() {
         serviceScope.launch {
-            runCatching { InviteService.presentInvitationPrompt() }
+            runCatching { inviteService.presentInvitationPrompt() }
                 .onFailure { Logger.log(it as? Exception ?: Exception.from(it, ExceptionMetadata(this)), with = AlertType.toast) }
         }
     }
@@ -145,7 +154,7 @@ object ContactSelectorPageViewService {
             ContactSelectorPageView.EntryPoint.CHAT_INFO_PAGE_VIEW -> {
                 val user = selectedContactPair.users.firstOrNull() ?: return
                 val userID = selectedContactPair.userIDs.firstOrNull() ?: return
-                val conversation = ConversationSessionService.currentConversation ?: return
+                val conversation = conversationSession.currentConversation ?: return
                 if (conversation.participants.map { it.userID }.contains(userID)) return
 
                 val addToConversationAction =
@@ -186,7 +195,7 @@ object ContactSelectorPageViewService {
         navigation.navigate(Route.Chat(ChatRoute.Sheet(null)))
         sharedEvents.chatInfoPageLoadingStateUpdated.send(Unit)
         try {
-            ActivitySessionService.addToConversation(userID, conversation)
+            activitySession.addToConversation(userID, conversation)
             sharedEvents.currentConversationActivityChanged.send(Unit)
         } catch (exception: Exception) {
             Logger.log(exception, with = AlertType.toast)

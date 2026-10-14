@@ -18,10 +18,12 @@ import kotlinx.coroutines.launch
 import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceFloats
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.interfaces.DeliveryProgressIndicator
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import kotlin.time.Duration.Companion.seconds
 
 // MARK: - Constants Accessors
@@ -47,6 +49,10 @@ private typealias IndicatorFloats = ChatPageViewServiceFloats.DeliveryProgressIn
 class DeliveryProgressIndicatorService(
     private val scope: CoroutineScope,
 ) : DeliveryProgressIndicator {
+    // MARK: - Dependencies
+
+    private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
+
     // MARK: - Properties
 
     private val alphaAnimatable = Animatable(0f)
@@ -68,7 +74,7 @@ class DeliveryProgressIndicatorService(
     private val isSendingOutboxEntry: Boolean
         get() {
             val conversationIDKey =
-                ConversationSessionService.currentConversation?.id?.key ?: return false
+                conversationSession.currentConversation?.id?.key ?: return false
             return MessageOutboxService
                 .entries(conversationIDKey)
                 .any { it.state == OutboxEntry.State.SENDING }

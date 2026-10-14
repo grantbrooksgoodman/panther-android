@@ -19,8 +19,8 @@ import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.filteringSystemMessages
 import us.neotechnica.panther.modules.content.user.extensions.firstWithCurrentUserID
 import us.neotechnica.panther.modules.content.user.extensions.isVisibleForCurrentUser
-import us.neotechnica.panther.modules.networking.common.messageService
-import us.neotechnica.panther.modules.networking.common.userService
+import us.neotechnica.panther.modules.networking.common.extensions.messageService
+import us.neotechnica.panther.modules.networking.common.extensions.userService
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.message.models.ReadReceipt
 import us.neotechnica.panther.modules.networking.user.models.User

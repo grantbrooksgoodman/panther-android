@@ -43,6 +43,7 @@ import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnima
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.modules.common.models.ConnectionStatusServiceEffectID
 import us.neotechnica.panther.modules.common.services.ConnectionStatusService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.components.DeliveryProgressView
 import us.neotechnica.panther.modules.content.user.components.MediaPreviewOverlay
 import us.neotechnica.panther.modules.content.user.components.RegisterContentPickerLaunchers
@@ -60,7 +61,8 @@ import us.neotechnica.panther.modules.content.user.services.MediaMessagePreviewS
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.content.user.services.SearchInteractionService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
+import us.neotechnica.panther.modules.session.clientSession
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
@@ -85,6 +87,10 @@ private typealias PageFloats = ChatPageViewServiceFloats
  * configuration shows a read-only message list.
  */
 object ChatPageView {
+    // MARK: - Dependencies
+
+    private val connectionStatusService: ConnectionStatusService by Dependency { it.commonServices.connectionStatus }
+
     // MARK: - Types
 
     /** The configurations the chat page presents in. */
@@ -142,12 +148,12 @@ object ChatPageView {
 
         DisposableEffect(Unit) {
             ChatPageStateService.setIsPresented(true)
-            ConnectionStatusService.addEffectUponConnectionChanged(id = ConnectionStatusServiceEffectID.CONFIGURE_INPUT_BAR) {
+            connectionStatusService.addEffectUponConnectionChanged(id = ConnectionStatusServiceEffectID.CONFIGURE_INPUT_BAR) {
                 inputBarService.configureInputBar(forceUpdate = true)
             }
             onDispose {
                 ChatPageStateService.setIsPresented(false)
-                ConnectionStatusService.removeEffect(ConnectionStatusServiceEffectID.CONFIGURE_INPUT_BAR)
+                connectionStatusService.removeEffect(ConnectionStatusServiceEffectID.CONFIGURE_INPUT_BAR)
                 viewModel.send(ChatPageReducer.Action.ViewDisappeared)
                 viewModel.close()
             }
@@ -301,7 +307,7 @@ private fun ChatHeaderWithDeliveryProgress(
 
 private fun buildChatPageViewModel(): ViewModel<ChatPageReducer.State, ChatPageReducer.Action> =
     ViewModel(ChatPageReducer.State(), ChatPageReducer())
-        .observing(ConversationSessionService.displayedMessages) {
+        .observing(DependencyValues.current.clientSession.entity.conversation.displayedMessages) {
             ChatPageReducer.Action.MessagesUpdated(it)
         }.observing(DependencyValues.current.sharedEvents.sessionStoreDidChange.events) { change ->
             ChatPageReducer.Action.HandleSessionStoreChange(change)

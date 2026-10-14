@@ -10,18 +10,19 @@ package us.neotechnica.panther.modules.content.onboarding.views.selectlanguagepa
 
 import us.neotechnica.panther.bundle.activityDescription
 import us.neotechnica.panther.bundle.conversationCellViewData
+import us.neotechnica.panther.bundle.navigators.OnboardingNavigatorState
+import us.neotechnica.panther.bundle.navigators.OnboardingRoute
 import us.neotechnica.panther.bundle.regionDetailService
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.content.onboarding.components.InstructionViewStrings
 import us.neotechnica.panther.modules.content.onboarding.dependencies.onboardingService
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
 import us.neotechnica.panther.navigation.Navigation
-import us.neotechnica.panther.navigation.OnboardingNavigatorState
-import us.neotechnica.panther.navigation.OnboardingRoute
-import us.neotechnica.panther.navigation.Route
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.translation.extensions.value
+import us.neotechnica.panther.networking.modules.translation.interfaces.HostedTranslationDelegate
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.effect.Effect
@@ -62,6 +63,7 @@ class SelectLanguagePageReducer : Reducer<SelectLanguagePageReducer.State, Selec
 
     private val navigation: Navigation by Dependency { it.navigation }
     private val onboardingService: OnboardingService by Dependency { it.onboardingService }
+    private val translator: HostedTranslationDelegate by Dependency { it.networking.hostedTranslation }
 
     // MARK: - Actions
 
@@ -209,7 +211,7 @@ class SelectLanguagePageReducer : Reducer<SelectLanguagePageReducer.State, Selec
             try {
                 send(
                     Action.ResolveReturned(
-                        Networking.config.hostedTranslationDelegate.resolve(SelectLanguagePageViewStrings),
+                        translator.resolve(SelectLanguagePageViewStrings),
                     ),
                 )
             } catch (exception: Exception) {

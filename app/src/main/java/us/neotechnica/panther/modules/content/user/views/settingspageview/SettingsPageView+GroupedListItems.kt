@@ -17,6 +17,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import us.neotechnica.panther.R
+import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
+import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.designsystem.modules.foundation.components.GroupedListView
 import us.neotechnica.panther.designsystem.modules.foundation.components.ListRowView
 import us.neotechnica.panther.modules.content.user.components.SquareIconImage
@@ -27,9 +29,7 @@ import us.neotechnica.panther.modules.content.user.constants.SquareIconViewFloat
 import us.neotechnica.panther.modules.content.user.models.SquareIconViewConfiguration
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.navigation.Navigation
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentNavigatorState
-import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 

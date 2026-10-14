@@ -12,7 +12,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import us.neotechnica.panther.modules.common.services.AnalyticsService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.networking.message.models.Message
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 
 /**
  * The service that manages messages displaying alternate content, such
@@ -24,6 +26,10 @@ import us.neotechnica.panther.modules.networking.message.models.Message
  * state, so message cells rebuild as they change.
  */
 object AlternateMessageService {
+    // MARK: - Dependencies
+
+    private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
+
     // MARK: - Types
 
     /** The kinds of alternate content a message can display. */
@@ -109,7 +115,7 @@ object AlternateMessageService {
         type: AlternateMessageType,
         message: Message,
     ) {
-        AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.VIEW_ALTERNATE)
+        analyticsService.logEvent(AnalyticsService.AnalyticsEvent.VIEW_ALTERNATE)
         when (type) {
             AlternateMessageType.ALTERNATE_TEXT -> alternateTextMessageIDs = alternateTextMessageIDs + message.id
             AlternateMessageType.AUDIO_TRANSCRIPTION -> audioTranscriptionMessageIDs = audioTranscriptionMessageIDs + message.id

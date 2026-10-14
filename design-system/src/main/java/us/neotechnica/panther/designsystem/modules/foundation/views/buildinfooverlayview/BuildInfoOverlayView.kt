@@ -9,8 +9,6 @@
 package us.neotechnica.panther.designsystem.modules.foundation.views.buildinfooverlayview
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.EaseIn
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -40,7 +38,9 @@ import us.neotechnica.panther.designsystem.modules.foundation.constants.BuildInf
 import us.neotechnica.panther.designsystem.modules.foundation.constants.BuildInfoOverlayViewFloats
 import us.neotechnica.panther.designsystem.modules.foundation.constants.BuildInfoOverlayViewStrings
 import us.neotechnica.panther.designsystem.modules.foundation.constants.StackFloats
+import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
+import kotlin.time.Duration.Companion.milliseconds
 
 // MARK: - Type Aliases
 
@@ -67,9 +67,8 @@ internal fun BuildInfoOverlayView(viewModel: BuildInfoOverlayViewModel) {
     val backgroundColor by animateColorAsState(
         targetValue = state.backgroundColor,
         animationSpec =
-            tween(
-                durationMillis = (DEFAULT_ANIMATION_DURATION_MILLISECONDS / Floats.TRANSLUCENCY_ANIMATION_SPEED).toInt(),
-                easing = EaseIn,
+            SystemAnimation.easeIn(
+                (DEFAULT_ANIMATION_DURATION_MILLISECONDS / Floats.TRANSLUCENCY_ANIMATION_SPEED).toInt().milliseconds,
             ),
         label = "BuildInfoOverlayBackgroundColor",
     )

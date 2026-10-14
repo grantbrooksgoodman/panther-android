@@ -8,14 +8,15 @@
 
 package us.neotechnica.panther.modules.content.user.services.recipientbar
 
+import us.neotechnica.panther.bundle.navigators.ChatNavigatorState
+import us.neotechnica.panther.bundle.navigators.ChatRoute
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
-import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.contactAccessDenied
 import us.neotechnica.panther.modules.common.extensions.mismatchedHashAndCallingCode
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.models.PhoneNumber
-import us.neotechnica.panther.modules.common.services.InviteService
 import us.neotechnica.panther.modules.common.services.PermissionService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceFloats
 import us.neotechnica.panther.modules.content.user.extensions.contactPair
 import us.neotechnica.panther.modules.content.user.extensions.hasContactsBesidesCurrentUser
@@ -24,17 +25,15 @@ import us.neotechnica.panther.modules.content.user.extensions.mock
 import us.neotechnica.panther.modules.content.user.extensions.withUser
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.networking.user.services.UserService
-import us.neotechnica.panther.navigation.ChatNavigatorState
-import us.neotechnica.panther.navigation.ChatRoute
-import us.neotechnica.panther.navigation.Route
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -57,6 +56,8 @@ private typealias ActionHandlerFloats = ChatPageViewServiceFloats.RecipientBarSe
 class RecipientBarActionHandlerService(
     private val dependencies: Dependencies = Dependencies(),
 ) {
+    // MARK: - Dependencies
+
     // MARK: - Types
 
     /**
@@ -66,19 +67,33 @@ class RecipientBarActionHandlerService(
     @Suppress("LongParameterList")
     class Dependencies(
         /** Returns the contacts permission status. */
-        val contactPermissionStatus: () -> PermissionService.PermissionStatus = { PermissionService.contactPermissionStatus },
+        val contactPermissionStatus: () -> PermissionService.PermissionStatus = {
+            DependencyValues.current.commonServices.permission.contactPermissionStatus
+        },
         /** Returns whether the contact pair archive holds contacts besides the current user. */
-        val hasContactsBesidesCurrentUser: () -> Boolean = { ContactService.hasContactsBesidesCurrentUser },
+        val hasContactsBesidesCurrentUser: () -> Boolean = {
+            DependencyValues.current.commonServices.contact.hasContactsBesidesCurrentUser
+        },
         /** Presents the contacts call to action. */
-        val presentContactCTA: suspend () -> Unit = { PermissionService.presentCTA(PermissionService.PermissionType.CONTACTS) },
+        val presentContactCTA: suspend () -> Unit = {
+            DependencyValues.current.commonServices.permission
+                .presentCTA(PermissionService.PermissionType.CONTACTS)
+        },
         /** Presents the invitation suggestion prompt. */
-        val presentInvitationSuggestionPrompt: suspend () -> Unit = { InviteService.presentInvitationSuggestionPrompt() },
+        val presentInvitationSuggestionPrompt: suspend () -> Unit = {
+            DependencyValues.current.commonServices.invite
+                .presentInvitationSuggestionPrompt()
+        },
         /** Requests the contacts permission. */
         val requestContactPermission: suspend () -> PermissionService.PermissionStatus = {
-            PermissionService.requestPermission(PermissionService.PermissionType.CONTACTS)
+            DependencyValues.current.commonServices.permission
+                .requestPermission(PermissionService.PermissionType.CONTACTS)
         },
         /** Synchronizes the contact pair archive. */
-        val syncContactPairArchive: suspend () -> Unit = { ContactService.syncContactPairArchive() },
+        val syncContactPairArchive: suspend () -> Unit = {
+            DependencyValues.current.commonServices.contact
+                .syncContactPairArchive()
+        },
         /** Returns the registered user with the given phone number. */
         val getUser: suspend (PhoneNumber) -> User = { UserService.getUser(it) },
         /** Navigates to the given route. */

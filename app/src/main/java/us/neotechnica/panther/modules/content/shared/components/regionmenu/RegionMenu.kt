@@ -47,10 +47,12 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.designsystem.modules.theming.views.ThemedView
 import us.neotechnica.panther.modules.common.services.HapticsService
 import us.neotechnica.panther.modules.common.services.RegionDetailService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.shared.components.SearchBarInView
 import us.neotechnica.panther.modules.content.shared.constants.RegionMenuColors
 import us.neotechnica.panther.modules.content.shared.constants.RegionMenuFloats
 import us.neotechnica.panther.modules.content.shared.constants.RegionMenuStrings
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 
 // MARK: - Constants Accessors
@@ -109,20 +111,25 @@ fun RegionMenu(
                     .widthIn(min = Floats.buttonLabelVStackFrameMinWidth)
                     .heightIn(min = Floats.buttonLabelVStackFrameMinHeight),
         ) {
-            RegionDetailService.image(RegionDetailService.QueryStrategy.RegionCode(state.selectedRegionCode))?.let {
-                Image(
-                    painter = painterResource(it.resourceID),
-                    contentDescription = null,
-                    contentScale = ContentScale.Fit,
-                    modifier =
-                        Modifier
-                            .size(width = Floats.buttonLabelImageFrameWidth, height = Floats.buttonLabelImageFrameHeight)
-                            .clip(RoundedCornerShape(Floats.buttonLabelImageCornerRadius)),
-                )
-            }
+            DependencyValues.current.commonServices.regionDetail
+                .image(
+                    RegionDetailService.QueryStrategy.RegionCode(state.selectedRegionCode),
+                )?.let {
+                    Image(
+                        painter = painterResource(it.resourceID),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier =
+                            Modifier
+                                .size(width = Floats.buttonLabelImageFrameWidth, height = Floats.buttonLabelImageFrameHeight)
+                                .clip(RoundedCornerShape(Floats.buttonLabelImageCornerRadius)),
+                    )
+                }
 
             Components.Text(
-                "+${RegionDetailService.callingCode(state.selectedRegionCode) ?: Strings.DEFAULT_CALLING_CODE}",
+                "+${DependencyValues.current.commonServices.regionDetail.callingCode(
+                    state.selectedRegionCode,
+                ) ?: Strings.DEFAULT_CALLING_CODE}",
                 foregroundColor = Colors.buttonLabelTextForeground,
             )
         }
@@ -154,7 +161,10 @@ private fun RegionPickerView(
 ) {
     val colors = LocalPantherColors.current
 
-    LaunchedEffect(Unit) { HapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM) }
+    LaunchedEffect(Unit) {
+        DependencyValues.current.commonServices.haptics
+            .generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
+    }
 
     HeaderView(
         centerItem = HeaderView.CenterItemType.Text(HeaderView.TextAttributes(state.headerLabelText)),
@@ -204,7 +214,7 @@ private fun ListView(
                 Floats.listViewCellHorizontalPadding / 2,
         onSelect = onRegionTitleSelected,
     ) { regionTitle ->
-        RegionDetailService.image(RegionDetailService.QueryStrategy.RegionTitle(regionTitle))?.let {
+        DependencyValues.current.commonServices.regionDetail.image(RegionDetailService.QueryStrategy.RegionTitle(regionTitle))?.let {
             Image(
                 painter = painterResource(it.resourceID),
                 contentDescription = null,

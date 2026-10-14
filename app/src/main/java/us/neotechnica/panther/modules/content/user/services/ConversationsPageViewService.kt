@@ -20,46 +20,45 @@ import us.neotechnica.panther.bundle.developermode.DangerZone
 import us.neotechnica.panther.bundle.reloadingConversationIDKeys
 import us.neotechnica.panther.bundle.traitCollectionChanged
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
-import us.neotechnica.panther.modules.common.contacts.services.ContactPairArchiveService
-import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.isOnline
 import us.neotechnica.panther.modules.common.extensions.mismatchedHashAndCallingCode
 import us.neotechnica.panther.modules.common.extensions.notAuthorizedForContacts
 import us.neotechnica.panther.modules.common.extensions.roundedString
 import us.neotechnica.panther.modules.common.models.ConnectionStatusServiceEffectID
 import us.neotechnica.panther.modules.common.services.ConnectionStatusService
-import us.neotechnica.panther.modules.common.services.InviteService
 import us.neotechnica.panther.modules.common.services.PermissionService
 import us.neotechnica.panther.modules.common.services.PushTokenService
-import us.neotechnica.panther.modules.common.services.ReviewService
 import us.neotechnica.panther.modules.common.services.UpdateService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.constants.ConversationsPageViewFloats
 import us.neotechnica.panther.modules.content.user.extensions.hasContactsBesidesCurrentUser
 import us.neotechnica.panther.modules.content.user.extensions.markStaleLocally
 import us.neotechnica.panther.modules.content.user.models.ChatPageStateServiceEffectID
 import us.neotechnica.panther.modules.content.user.models.MessageDeliveryServiceEffectID
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.networking.common.allDataTypes
-import us.neotechnica.panther.modules.networking.common.clearTemporaryCaches
-import us.neotechnica.panther.modules.networking.common.sortedByLatestMessageSentDate
-import us.neotechnica.panther.modules.networking.common.uniquedByID
-import us.neotechnica.panther.modules.networking.common.visibleForCurrentUser
-import us.neotechnica.panther.modules.networking.common.withGlobalCacheStrategy
+import us.neotechnica.panther.modules.networking.common.extensions.allDataTypes
+import us.neotechnica.panther.modules.networking.common.extensions.clearTemporaryCaches
+import us.neotechnica.panther.modules.networking.common.extensions.sortedByLatestMessageSentDate
+import us.neotechnica.panther.modules.networking.common.extensions.uniquedByID
+import us.neotechnica.panther.modules.networking.common.extensions.visibleForCurrentUser
+import us.neotechnica.panther.modules.networking.common.extensions.withGlobalCacheStrategy
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
+import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
@@ -83,9 +82,19 @@ import kotlin.time.Duration.Companion.seconds
  * @param dependencies The collaborators the service calls; the
  *   defaults resolve the production services.
  */
+@Suppress("LargeClass") // The counterpart service carries `// swiftlint:disable type_body_length file_length`.
 class ConversationsPageViewService(
     private val dependencies: Dependencies = Dependencies(),
 ) {
+    // MARK: - Dependencies
+
+    private val connectionStatusService: ConnectionStatusService by Dependency { it.commonServices.connectionStatus }
+    private val database: DatabaseDelegate by Dependency { it.networking.database }
+    private val pushTokenService: PushTokenService by Dependency { it.commonServices.pushToken }
+    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
+    private val updateService: UpdateService by Dependency { it.commonServices.update }
+    private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
+
     // MARK: - Types
 
     /**
@@ -122,29 +131,52 @@ class ConversationsPageViewService(
      *   were unread.
      */
     data class Dependencies(
-        val clearTemporaryCaches: () -> Unit = { Networking.config.databaseDelegate.clearTemporaryCaches() },
-        val currentConversation: () -> Conversation? = { ConversationSessionService.currentConversation },
-        val currentUser: () -> User? = { UserSessionService.currentUser },
-        val hasContactsBesidesCurrentUser: () -> Boolean = { ContactService.hasContactsBesidesCurrentUser },
+        val clearTemporaryCaches: () -> Unit = {
+            DependencyValues.current.networking.database
+                .clearTemporaryCaches()
+        },
+        val currentConversation: () -> Conversation? = { DependencyValues.current.clientSession.entity.conversation.currentConversation },
+        val currentUser: () -> User? = { DependencyValues.current.clientSession.entity.user.currentUser },
+        val hasContactsBesidesCurrentUser: () -> Boolean = {
+            DependencyValues.current.commonServices.contact.hasContactsBesidesCurrentUser
+        },
         val isChatPagePresented: () -> Boolean = { ChatPageStateService.isPresented },
         val isSendingMessage: () -> Boolean = { MessageDeliveryService.isSendingMessage.value },
-        val lastContactSyncDate: () -> Date? = { ContactPairArchiveService.lastContactSyncDate },
+        val lastContactSyncDate: () -> Date? = { DependencyValues.current.commonServices.contact.contactPairArchive.lastContactSyncDate },
         val notificationPermissionStatus: () -> PermissionService.PermissionStatus = {
-            PermissionService.notificationPermissionStatus
+            DependencyValues.current.commonServices.permission.notificationPermissionStatus
         },
-        val promptToReview: () -> Unit = { ReviewService.promptToReview() },
+        val promptToReview: () -> Unit = {
+            DependencyValues.current.commonServices.review
+                .promptToReview()
+        },
         val requestNotificationPermission: suspend () -> Unit = {
-            PermissionService.requestPermission(PermissionService.PermissionType.NOTIFICATIONS)
+            DependencyValues.current.commonServices.permission
+                .requestPermission(PermissionService.PermissionType.NOTIFICATIONS)
         },
-        val resolveCurrentUser: suspend (Set<User.DataType>) -> Unit = { UserSessionService.resolveCurrentUser(it) },
+        val resolveCurrentUser: suspend (
+            Set<User.DataType>,
+        ) -> Unit = {
+            DependencyValues.current.clientSession.entity.user
+                .resolveCurrentUser(it)
+        },
         val resolveLastMessage: suspend (String, Conversation) -> Unit = { lastMessageID, conversation ->
-            Networking.config.databaseDelegate.withGlobalCacheStrategy(CacheStrategy.RETURN_CACHE_ON_FAILURE) {
+            DependencyValues.current.networking.database.withGlobalCacheStrategy(CacheStrategy.RETURN_CACHE_ON_FAILURE) {
                 conversation.resolveMessages(setOf(lastMessageID))
             }
         },
-        val setLastContactSyncDate: (Date?) -> Unit = { ContactPairArchiveService.lastContactSyncDate = it },
-        val suggestInvitationIfNeeded: suspend () -> Boolean = { InviteService.suggestInvitationIfNeeded() },
-        val syncContactPairArchive: suspend () -> Unit = { ContactService.syncContactPairArchive() },
+        val setLastContactSyncDate: (Date?) -> Unit = {
+            DependencyValues.current.commonServices.contact.contactPairArchive.lastContactSyncDate =
+                it
+        },
+        val suggestInvitationIfNeeded: suspend () -> Boolean = {
+            DependencyValues.current.commonServices.invite
+                .suggestInvitationIfNeeded()
+        },
+        val syncContactPairArchive: suspend () -> Unit = {
+            DependencyValues.current.commonServices.contact
+                .syncContactPairArchive()
+        },
         val updateReadDateForUnreadMessages: suspend () -> Boolean = { ReadReceiptService.updateReadDateForUnreadMessages() },
     )
 
@@ -183,10 +215,10 @@ class ConversationsPageViewService(
      */
     fun viewAppeared() {
         didShowSecondsToLoadToast = false
-        UserSessionService.startObservingCurrentUserChanges()
+        userSession.startObservingCurrentUserChanges()
         serviceScope.launch {
             try {
-                PushTokenService.updatePushTokensForCurrentUser()
+                pushTokenService.updatePushTokensForCurrentUser()
             } catch (exception: Exception) {
                 Logger.log(exception)
             }
@@ -343,7 +375,7 @@ class ConversationsPageViewService(
             }
 
         val allMessages =
-            (currentUser?.conversations ?: SessionStore.conversations.values.toList())
+            (currentUser?.conversations ?: sessionStore.conversations.values.toList())
                 .visibleForCurrentUser
                 .mapNotNull { it.messages }
                 .flatten()
@@ -394,18 +426,18 @@ class ConversationsPageViewService(
             }
         }
 
-        ConnectionStatusService.addEffectUponConnectionChanged(ConnectionStatusServiceEffectID.CHECK_FOR_UPDATES) {
+        connectionStatusService.addEffectUponConnectionChanged(ConnectionStatusServiceEffectID.CHECK_FOR_UPDATES) {
             if (!Build.isOnline) return@addEffectUponConnectionChanged
             serviceScope.launch {
                 try {
-                    UpdateService.promptToUpdateIfNeeded()
+                    updateService.promptToUpdateIfNeeded()
                 } catch (exception: Exception) {
                     Logger.log(exception, with = AlertType.toastInPrerelease)
                 }
             }
         }
 
-        ConnectionStatusService.addEffectUponConnectionChanged(ConnectionStatusServiceEffectID.SHOW_OFFLINE_MODE_TOAST) {
+        connectionStatusService.addEffectUponConnectionChanged(ConnectionStatusServiceEffectID.SHOW_OFFLINE_MODE_TOAST) {
             if (Build.isOnline) return@addEffectUponConnectionChanged
             showOfflineModeToast()
         }

@@ -13,13 +13,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import us.neotechnica.panther.bundle.navigators.OnboardingNavigatorState
+import us.neotechnica.panther.bundle.navigators.OnboardingRoute
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.common.services.CommonPropertyLists
 import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.content.onboarding.dependencies.onboardingService
-import us.neotechnica.panther.navigation.OnboardingNavigatorState
-import us.neotechnica.panther.navigation.OnboardingRoute
-import us.neotechnica.panther.navigation.Route
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.StoredItemKey

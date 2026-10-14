@@ -22,6 +22,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import us.neotechnica.panther.bundle.currentConversationMetadataChanged
+import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
+import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.designsystem.modules.foundation.components.NavigationStackView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.user.views.changelanguagepageview.ChangeLanguagePageView
@@ -33,9 +35,7 @@ import us.neotechnica.panther.modules.content.user.views.conversationspageview.b
 import us.neotechnica.panther.modules.content.user.views.newchatpageview.NewChatPageView
 import us.neotechnica.panther.modules.content.user.views.settingspageview.SettingsPageView
 import us.neotechnica.panther.modules.content.user.views.usercontentcontainerview.UserContentContainerReducer
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentNavigatorState
-import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel

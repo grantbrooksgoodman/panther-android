@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.notifications
 import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.services.NotificationService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.Participant
 import us.neotechnica.panther.modules.networking.conversation.services.ConversationService
@@ -29,9 +30,11 @@ import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.constants.MessageSessionServiceFloats
 import us.neotechnica.panther.modules.session.state.services.PendingTranslationArchive
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.translation.extensions.reference
+import us.neotechnica.panther.networking.modules.translation.interfaces.HostedTranslationDelegate
 import us.neotechnica.panther.networking.modules.translation.models.ArchiveStrategy
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -51,12 +54,18 @@ private typealias Floats = MessageSessionServiceFloats
  * The service that sends text and media messages.
  */
 object MessageSessionService {
+    // MARK: - Dependencies
+
+    private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
+    private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
+    private val notificationService: NotificationService by Dependency { it.commonServices.notification }
+
     // MARK: - Properties
 
     private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mainScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    private val hostedTranslation get() = Networking.config.hostedTranslationDelegate
+    private val hostedTranslation: HostedTranslationDelegate by Dependency { it.networking.hostedTranslation }
 
     // MARK: - Send Media Message
 
@@ -233,7 +242,7 @@ object MessageSessionService {
                 by = Floats.ADD_MESSAGE_DELIVERY_PROGRESS_INCREMENT,
             )
 
-            return ConversationSessionService.addMessages(listOf(message), to)
+            return conversationSession.addMessages(listOf(message), to)
         }
 
         fun notifyUsers(
@@ -242,7 +251,7 @@ object MessageSessionService {
         ) {
             backgroundScope.launch {
                 try {
-                    NotificationService.notify(
+                    notificationService.notify(
                         users = otherUsers.filter { !(it.blockedUserIDs ?: emptyList()).contains(initiatingUser.id) },
                         message = ofMessage,
                         conversationIDKey = conversationIDKey,
@@ -290,7 +299,7 @@ object MessageSessionService {
 
         val participantUsers = listOf(initiatingUser) + otherUsers
 
-        AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.CREATE_NEW_CONVERSATION)
+        analyticsService.logEvent(AnalyticsService.AnalyticsEvent.CREATE_NEW_CONVERSATION)
         incrementDeliveryProgress(
             inConversation = conversation,
             by = Floats.CREATE_CONVERSATION_DELIVERY_PROGRESS_INCREMENT,

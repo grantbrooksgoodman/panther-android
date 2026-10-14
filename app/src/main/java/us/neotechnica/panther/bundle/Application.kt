@@ -9,8 +9,10 @@
 package us.neotechnica.panther.bundle
 
 import android.content.Context
-import us.neotechnica.panther.BuildConfig
 import us.neotechnica.panther.bundle.developermode.AppActions
+import us.neotechnica.panther.bundle.navigators.ChatRoute
+import us.neotechnica.panther.bundle.navigators.SettingsRoute
+import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.designsystem.modules.alertkit.dependencies.alertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.HUDConfig
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
@@ -24,7 +26,6 @@ import us.neotechnica.panther.designsystem.modules.foundation.services.ReportDel
 import us.neotechnica.panther.designsystem.modules.foundation.services.SoundPlayer
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.ApplicationStorageKey
-import us.neotechnica.panther.modules.common.extensions.isEmulator
 import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.services.CommonPropertyLists
 import us.neotechnica.panther.modules.common.services.DefaultAttributeDetectionServiceDelegate
@@ -33,34 +34,34 @@ import us.neotechnica.panther.modules.common.services.ErrorReportingService
 import us.neotechnica.panther.modules.common.services.ExceptionMetadataService
 import us.neotechnica.panther.modules.common.services.InviteService
 import us.neotechnica.panther.modules.common.services.LoggerPresentationService
-import us.neotechnica.panther.modules.common.services.NetworkActivityIndicatorService
 import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.common.services.TextToSpeechService
 import us.neotechnica.panther.modules.common.services.UpdateService
+import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.modules.content.user.dependencies.chatPageViewService
 import us.neotechnica.panther.modules.content.user.dependencies.settingsPageViewService
 import us.neotechnica.panther.modules.content.user.services.AudioMessagePlaybackService
 import us.neotechnica.panther.modules.content.user.services.ContextMenuActionHandlerService
 import us.neotechnica.panther.modules.content.user.services.MediaActionHandlerService
 import us.neotechnica.panther.modules.networking.translation.delegates.LocalTranslationArchiverDelegate
 import us.neotechnica.panther.modules.networking.user.models.DeviceID
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.extensions.UserSessionServiceStorageKey
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.modules.session.sync.services.ConversationObserverService
-import us.neotechnica.panther.navigation.ChatRoute
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.RootNavigatorState
 import us.neotechnica.panther.navigation.RootRoute
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.SettingsRoute
-import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
-import us.neotechnica.panther.networking.Networking
-import us.neotechnica.panther.networking.modules.common.models.NetworkEnvironment
+import us.neotechnica.panther.networking.modules.auth.interfaces.AuthDelegate
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.services.BuildInfoOverlayDotIndicatorColorDelegate
-import us.neotechnica.panther.networking.modules.health.models.NetworkHealthConfiguration
-import us.neotechnica.panther.networking.modules.health.models.NetworkHealthProbeConfiguration
+import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
+import us.neotechnica.panther.networking.modules.storage.interfaces.StorageDelegate
 import us.neotechnica.panther.subsystem.AppSubsystem
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -77,7 +78,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import us.neotechnica.panther.subsystem.modules.localization.services.LocalizedStringResolver
 import java.util.Date
 import java.util.Locale
-import java.util.Properties
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -89,6 +89,22 @@ import kotlin.time.Duration.Companion.milliseconds
  * state, and to dismiss presented sheets.
  */
 object Application {
+    // MARK: - Dependencies
+
+    private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
+    private val audioMessagePlaybackService: AudioMessagePlaybackService by Dependency { it.chatPageViewService.audioMessagePlayback }
+    private val auth: AuthDelegate by Dependency { it.networking.auth }
+    private val contactService: ContactService by Dependency { it.commonServices.contact }
+    private val conversationObserver: ConversationObserverService by Dependency { it.clientSession.sync.conversationObserver }
+    private val database: DatabaseDelegate by Dependency { it.networking.database }
+    private val inviteService: InviteService by Dependency { it.commonServices.invite }
+    private val outbox: MessageOutboxService by Dependency { it.clientSession.outbox }
+    private val regionDetailService: RegionDetailService by Dependency { it.commonServices.regionDetail }
+    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
+    private val storage: StorageDelegate by Dependency { it.networking.storage }
+    private val textToSpeechService: TextToSpeechService by Dependency { it.commonServices.audio.textToSpeech }
+    private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
+
     // MARK: - Types
 
     /** A follow-up action to perform after a reset completes. */
@@ -192,12 +208,12 @@ object Application {
         preserveCurrentUserID: Boolean = false,
         onCompletion: ResetCompletionProcedure? = null,
     ) {
-        MessageOutboxService.removeAll()
-        SessionStore.advanceEpoch()
-        ConversationObserverService.stopObserving()
+        outbox.removeAll()
+        sessionStore.advanceEpoch()
+        conversationObserver.stopObserving()
 
         if (!preserveCurrentUserID) {
-            UserSessionService.stopObservingCurrentUserChanges()
+            userSession.stopObservingCurrentUserChanges()
         }
 
         CoreUtilities.clearCaches()
@@ -219,7 +235,7 @@ object Application {
         RuntimeStorage.remove(StoredItemKey.populatedTemporaryCaches)
 
         if (!preserveCurrentUserID) {
-            runCatching { Networking.config.authDelegate.signOut() }
+            runCatching { auth.signOut() }
                 .onFailure { Logger.log(it as? Exception ?: Exception.from(it, ExceptionMetadata(this))) }
         }
 
@@ -258,20 +274,20 @@ object Application {
     // MARK: - Auxiliary
 
     private fun initializeServices(context: Context) {
-        AnalyticsService.initialize(context)
+        analyticsService.initialize(context)
         LocalizedStringResolver.initialize(context)
         RuntimeStorage.languageCodeDictionary = LocalizedStringResolver.languageDisplayNames()
         Persistent.initialize(context)
         FileStore.initialize(context)
         SoundPlayer.initialize(context)
         CommonPropertyLists.initialize(context)
-        RegionDetailService.initialize(context)
-        ContactService.initialize(context)
+        regionDetailService.initialize(context)
+        contactService.initialize(context)
         DeviceID.initialize(context)
-        InviteService.initialize(context)
+        inviteService.initialize(context)
         DependencyValues.current.settingsPageViewService.initialize(context)
-        TextToSpeechService.initialize(context)
-        AudioMessagePlaybackService.initialize(context)
+        textToSpeechService.initialize(context)
+        audioMessagePlaybackService.initialize(context)
         MediaActionHandlerService.initialize(context)
         ContextMenuActionHandlerService.initialize(context)
         DefaultAttributeDetectionServiceDelegate.initialize(context)
@@ -296,23 +312,6 @@ object Application {
         )
     }
 
-    private fun configureBuild(context: Context) {
-        val (buildNumber, buildDate, firstCompileDate) = readBuildInfo(context)
-        Build.initialize(
-            context = context,
-            appStoreBuildNumber = APP_STORE_BUILD_NUMBER,
-            buildNumber = buildNumber,
-            codeName = CODE_NAME,
-            finalName = FINAL_NAME,
-            bundleVersion = BuildConfig.VERSION_NAME,
-            environment = BuildConfig.NETWORK_ENVIRONMENT,
-            // TODO: FIX BEFORE PLAY STORE RELEASE.
-            milestone = Build.Milestone.BETA, // resolveBuildMilestone(),
-            buildDate = Date(buildDate * MILLIS_PER_SECOND),
-            firstCompileDate = Date(firstCompileDate * MILLIS_PER_SECOND),
-        )
-    }
-
     private fun setUpSubsystem() {
         CoreUtilities.setLanguageCode(systemLanguageCode)
 
@@ -328,57 +327,6 @@ object Application {
         }
     }
 
-    private fun resolveBuildMilestone(): Build.Milestone {
-        val key = PersistentStorageKey.application(ApplicationStorageKey.BUILD_MILESTONE_STRING)
-        val persisted = Persistent.string(key)
-        val milestone =
-            persisted?.let { Build.Milestone.from(it) }
-                ?: if (Build.isEmulator) Build.Milestone.BETA else Build.Milestone.GENERAL_RELEASE
-        Persistent.setString(key, milestone.rawValue)
-        return milestone
-    }
-
-    private fun readBuildInfo(context: Context): Triple<Int, Long, Long> =
-        runCatching {
-            context.assets.open(BUILD_INFO_ASSET).use { stream ->
-                val properties = Properties().apply { load(stream) }
-                Triple(
-                    properties.getProperty("buildNumber", "0").toInt(),
-                    properties.getProperty("buildDate", "0").toLong(),
-                    properties.getProperty("firstCompileDate", "0").toLong(),
-                )
-            }
-        }.getOrDefault(Triple(0, 0L, 0L))
-
-    private fun setUpNetworking(context: Context) {
-        Networking.initialize(
-            context = context,
-            defaultEnvironment = NetworkEnvironment.from(BuildConfig.NETWORK_ENVIRONMENT),
-            useDebugAppCheckProvider = BuildConfig.DEBUG,
-        )
-        Networking.config.registerActivityIndicatorDelegate(NetworkActivityIndicatorService)
-        Networking.config.setNetworkHealthConfiguration(
-            NetworkHealthConfiguration.default.copy(
-                probeConfiguration = NetworkHealthProbeConfiguration(url = "https://www.apple.com"),
-            ),
-        )
-    }
-
-    private fun prewarmConnections() {
-        Networking.config.databaseDelegate.prewarm()
-        Networking.config.storageDelegate.prewarm()
-    }
-
-    private fun selectFirstRunEnvironment() {
-        val hasRunOnceKey = PersistentStorageKey.application(ApplicationStorageKey.HAS_RUN_ONCE)
-        if (Build.isEmulator && Persistent.booleanOrNull(hasRunOnceKey) == null) {
-            Networking.config.setEnvironment(NetworkEnvironment.DEVELOPMENT)
-            Persistent.setBoolean(hasRunOnceKey, true)
-        } else if (Build.milestone == Build.Milestone.GENERAL_RELEASE) {
-            Networking.config.setEnvironment(NetworkEnvironment.PRODUCTION)
-        }
-    }
-
     private fun eraseDirectories() {
         val context = appContext ?: return
         context.filesDir?.listFiles()?.forEach { it.deleteRecursively() }
@@ -388,12 +336,12 @@ object Application {
 
     // MARK: - Constants
 
-    private const val BUILD_INFO_ASSET = "build_info.properties"
+    internal const val BUILD_INFO_ASSET = "build_info.properties"
     private const val BUILD_INFO_OVERLAY_SETUP_DELAY_MILLISECONDS = 50L
-    private const val CODE_NAME = "Panther"
-    private const val FINAL_NAME = "Hello"
-    private const val APP_STORE_BUILD_NUMBER = 0
-    private const val MILLIS_PER_SECOND = 1_000L
+    internal const val CODE_NAME = "Panther"
+    internal const val FINAL_NAME = "Hello"
+    internal const val APP_STORE_BUILD_NUMBER = 0
+    internal const val MILLIS_PER_SECOND = 1_000L
 
     // Whether the app is styled as on iOS: animations with iOS's timing
     // and style, the San Francisco font, and real SF Symbols. Set this

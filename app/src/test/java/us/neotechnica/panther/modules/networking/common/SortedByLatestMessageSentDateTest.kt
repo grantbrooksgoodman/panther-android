@@ -11,6 +11,7 @@ package us.neotechnica.panther.modules.networking.common
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import us.neotechnica.panther.modules.networking.common.extensions.sortedByLatestMessageSentDate
 import us.neotechnica.panther.modules.networking.conversation.models.Activity
 import us.neotechnica.panther.modules.networking.support.MessageDecodeEnvironment
 import us.neotechnica.panther.modules.networking.support.SessionTestEnvironment

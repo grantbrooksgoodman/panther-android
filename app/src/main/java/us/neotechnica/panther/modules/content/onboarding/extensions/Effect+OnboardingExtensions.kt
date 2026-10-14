@@ -9,7 +9,8 @@
 package us.neotechnica.panther.modules.content.onboarding.extensions
 
 import us.neotechnica.panther.modules.common.models.PhoneNumber
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -52,7 +53,7 @@ fun <Action> Effect.Companion.verifyPhoneNumber(
 
         try {
             returned(
-                Networking.config.authDelegate.verifyPhoneNumber(
+                DependencyValues.current.networking.auth.verifyPhoneNumber(
                     activity = activity,
                     internationalNumber = phoneNumber.compiledNumberString,
                     languageCode = RuntimeStorage.languageCode,

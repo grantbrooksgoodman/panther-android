@@ -22,6 +22,7 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationA
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.models.ContactPair
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.extensions.contactPair
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.syncIfNeeded
@@ -33,19 +34,22 @@ import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpdatableKey
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.update
 import us.neotechnica.panther.modules.networking.user.services.UserService
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.models.ModerationType
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
 import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.networking.modules.database.interfaces.getValues
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 
@@ -58,6 +62,11 @@ import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
  * user are presented as an action sheet.
  */
 object ModerationSessionService {
+    // MARK: - Dependencies
+
+    private val contactService: ContactService by Dependency { it.commonServices.contact }
+    private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
+
     // MARK: - Types
 
     private data class ModerationAlertData(
@@ -67,7 +76,7 @@ object ModerationSessionService {
 
     // MARK: - Properties
 
-    private val database get() = Networking.config.databaseDelegate
+    private val database: DatabaseDelegate by Dependency { it.networking.database }
     private val moderationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     // MARK: - Content Moderation
@@ -119,7 +128,7 @@ object ModerationSessionService {
             conversation?.users ?: users
                 ?: throw Exception("No data source provided.", metadata = ExceptionMetadata(this))
 
-        runCatching { ContactService.syncIfNeeded() }.onFailure { Logger.log("$it") }
+        runCatching { contactService.syncIfNeeded() }.onFailure { Logger.log("$it") }
 
         val contactPairs =
             resolvedUsers
@@ -242,7 +251,7 @@ object ModerationSessionService {
 
     private suspend fun blockUsers(userIDs: List<String>) {
         val currentUser =
-            UserSessionService.currentUser
+            userSession.currentUser
                 ?: throw Exception("Current user has not been set.", metadata = ExceptionMetadata(this))
 
         val blockedUserIDs =
@@ -269,7 +278,7 @@ object ModerationSessionService {
 
     private suspend fun unblockUsers(userIDs: List<String>) {
         val currentUser =
-            UserSessionService.currentUser
+            userSession.currentUser
                 ?: throw Exception("Current user has not been set.", metadata = ExceptionMetadata(this))
 
         val blockedUserIDs =

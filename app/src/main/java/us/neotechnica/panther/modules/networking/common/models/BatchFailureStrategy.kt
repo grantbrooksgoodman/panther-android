@@ -6,7 +6,7 @@
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
-package us.neotechnica.panther.modules.networking.common
+package us.neotechnica.panther.modules.networking.common.models
 
 /** The strategy that determines how a batch operation responds to a failure. */
 enum class BatchFailureStrategy {

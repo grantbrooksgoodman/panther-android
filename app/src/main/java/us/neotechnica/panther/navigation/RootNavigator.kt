@@ -1,5 +1,5 @@
 //
-//  NavigatorStates.kt
+//  RootNavigator.kt
 //  Panther Android
 //
 //  Created by Grant Brooks Goodman.
@@ -7,6 +7,13 @@
 //
 
 package us.neotechnica.panther.navigation
+
+import us.neotechnica.panther.bundle.navigators.ChatNavigatorState
+import us.neotechnica.panther.bundle.navigators.OnboardingNavigatorState
+import us.neotechnica.panther.bundle.navigators.SettingsNavigatorState
+import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
+import us.neotechnica.panther.subsystem.modules.navigation.interfaces.NavigatorState
+import us.neotechnica.panther.subsystem.modules.navigation.interfaces.Paths
 
 /**
  * The top-level navigation state.
@@ -20,14 +27,17 @@ data class RootNavigatorState(
     val onboarding: OnboardingNavigatorState = OnboardingNavigatorState(),
     val settings: SettingsNavigatorState = SettingsNavigatorState(),
     val userContent: UserContentNavigatorState = UserContentNavigatorState(),
-    val modal: ModalPaths? = ModalPaths.Splash,
-    val sheet: SheetPaths? = null,
-    val stack: List<SeguePaths> = emptyList(),
-) {
+    override val modal: ModalPaths? = ModalPaths.Splash,
+    override val sheet: SheetPaths? = null,
+    override val stack: List<SeguePaths> = emptyList(),
+) : NavigatorState<RootNavigatorState.ModalPaths, RootNavigatorState.SeguePaths, RootNavigatorState.SheetPaths> {
+    // MARK: - Types
+
     /** The full-screen destinations at the root level. */
     sealed interface ModalPaths : Paths {
         data object Onboarding : ModalPaths
 
+        /** The splash screen, presented during app startup. */
         data object Splash : ModalPaths
 
         data object UserContent : ModalPaths
@@ -40,75 +50,31 @@ data class RootNavigatorState(
     sealed interface SheetPaths : Paths
 }
 
-/** The onboarding flow's navigation state. */
-data class OnboardingNavigatorState(
-    val stack: List<SeguePaths> = emptyList(),
-) {
-    sealed interface SeguePaths : Paths {
-        data object AuthCode : SeguePaths
-
-        data object Permission : SeguePaths
-
-        data object SelectLanguage : SeguePaths
-
-        data object SignIn : SeguePaths
-
-        data object VerifyNumber : SeguePaths
-    }
+/** Applies [RootRoute]s to the root-level navigation state. */
+object RootNavigator {
+    fun navigate(
+        to: RootRoute,
+        on: RootNavigatorState,
+    ): RootNavigatorState =
+        when (to) {
+            is RootRoute.Modal -> on.copy(modal = to.path)
+        }
 }
 
-/** The signed-in content flow's navigation state. */
-data class UserContentNavigatorState(
-    val stack: List<SeguePaths> = emptyList(),
-) {
-    sealed interface SeguePaths : Paths {
-        /** The chat page for the conversation with the given key. */
-        data class Chat(
-            val conversationIDKey: String,
-            val focusedMessageID: String? = null,
-        ) : SeguePaths
-
-        /** The chat-info page for the conversation with the given key. */
-        data class ChatInfo(
-            val conversationIDKey: String,
-        ) : SeguePaths
-
-        data object NewChat : SeguePaths
-
-        data object Settings : SeguePaths
-
-        data object ChangeLanguage : SeguePaths
-    }
+/** Routes handled by the root navigator. */
+sealed interface RootRoute {
+    /** Presents the given full-screen modal, or dismisses it when `null`. */
+    data class Modal(
+        val path: RootNavigatorState.ModalPaths?,
+    ) : RootRoute
 }
 
-/** The settings flow's navigation state. */
-data class SettingsNavigatorState(
-    val sheet: SheetPaths? = null,
-) {
-    /** The sheet destinations presented over the settings flow. */
-    sealed interface SheetPaths : Paths {
-        /** The invite QR code sheet. */
-        data object InviteQRCode : SheetPaths
-    }
-}
-
-/** The chat flow's navigation state. */
-data class ChatNavigatorState(
-    val sheet: SheetPaths? = null,
-) {
-    /** The sheet destinations presented over the chat flow. */
-    sealed interface SheetPaths : Paths {
-        data object CameraPicker : SheetPaths
-
-        data object ContactSelector : SheetPaths
-
-        data object PhotoPicker : SheetPaths
-    }
-}
+// MARK: - Descriptor
 
 /**
  * A descriptor for the frontmost navigation destination (the
- * destination type's simple name). Used as the `view_id` in analytics and error-report metadata.
+ * destination type's simple name), used as the `view_id` in analytics
+ * and error-report metadata.
  *
  * The frontmost sheet wins; otherwise the top of the active modal's
  * stack, falling back to the modal itself.

@@ -26,11 +26,13 @@ import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.services.ConnectionStatusService
 import us.neotechnica.panther.modules.common.services.NotificationService
 import us.neotechnica.panther.modules.common.services.PushTokenService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
 import us.neotechnica.panther.modules.networking.common.dependencies.firebaseMessaging
 import us.neotechnica.panther.modules.notifications.services.PantherMessagingService
 import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.modules.session.state.services.retryAllEligible
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
@@ -49,6 +51,13 @@ import java.util.concurrent.atomic.AtomicReference
  * reach the current activity, and observes the process lifecycle.
  */
 class PantherApplication : Application() {
+    // MARK: - Dependencies
+
+    private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
+    private val connectionStatusService: ConnectionStatusService by Dependency { it.commonServices.connectionStatus }
+    private val notificationService: NotificationService by Dependency { it.commonServices.notification }
+    private val pushTokenService: PushTokenService by Dependency { it.commonServices.pushToken }
+
     // MARK: - Properties
 
     private val outboxScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -67,7 +76,7 @@ class PantherApplication : Application() {
         registerTranslatorActivityProvider()
         observeProcessLifecycle()
 
-        AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.OPEN_APP)
+        analyticsService.logEvent(AnalyticsService.AnalyticsEvent.OPEN_APP)
     }
 
     // MARK: - Process Lifecycle
@@ -87,7 +96,7 @@ class PantherApplication : Application() {
                     outboxScope.launch {
                         val currentUser = ClientSession.entity.user.currentUser ?: return@launch
                         try {
-                            NotificationService.setBadgeNumber(currentUser.calculateBadgeNumber())
+                            notificationService.setBadgeNumber(currentUser.calculateBadgeNumber())
                         } catch (exception: Exception) {
                             Logger.log(exception)
                         }
@@ -102,7 +111,7 @@ class PantherApplication : Application() {
     private fun setUpFirebaseAnalytics() {
         FirebaseAnalytics
             .getInstance(this)
-            .setAnalyticsCollectionEnabled(AnalyticsService.shouldEnableDataCollection)
+            .setAnalyticsCollectionEnabled(analyticsService.shouldEnableDataCollection)
     }
 
     // MARK: - Push Notifications
@@ -110,17 +119,17 @@ class PantherApplication : Application() {
     private fun setUpPushNotifications() {
         PantherMessagingService.createChannel(this)
         DependencyValues.current.firebaseMessaging.token.addOnSuccessListener { token ->
-            PushTokenService.setCurrentToken(token)
+            pushTokenService.setCurrentToken(token)
         }
     }
 
     // MARK: - Connection Status Effects
 
     private fun setUpConnectionStatusEffects() {
-        ConnectionStatusService.initialize(this)
+        connectionStatusService.initialize(this)
 
         // Retry eligible entries when connectivity is restored.
-        ConnectionStatusService.addEffectUponConnectionChanged(ConnectionStatusServiceEffectID.RETRY_MESSAGE_OUTBOX) {
+        connectionStatusService.addEffectUponConnectionChanged(ConnectionStatusServiceEffectID.RETRY_MESSAGE_OUTBOX) {
             if (Build.isOnline) outboxScope.launch { ClientSession.outbox.retryAllEligible() }
         }
     }

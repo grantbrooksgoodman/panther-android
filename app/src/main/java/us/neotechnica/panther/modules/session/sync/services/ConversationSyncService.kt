@@ -13,7 +13,7 @@ import us.neotechnica.panther.bundle.conversations
 import us.neotechnica.panther.modules.content.user.extensions.currentUserParticipant
 import us.neotechnica.panther.modules.content.user.extensions.filteringSystemMessages
 import us.neotechnica.panther.modules.content.user.extensions.sortedByAscendingSentDate
-import us.neotechnica.panther.modules.networking.common.uniquedByID
+import us.neotechnica.panther.modules.networking.common.extensions.uniquedByID
 import us.neotechnica.panther.modules.networking.conversation.models.Activity
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
@@ -23,15 +23,19 @@ import us.neotechnica.panther.modules.networking.conversation.models.ReactionMet
 import us.neotechnica.panther.modules.networking.conversation.remotelyupdatable.ConversationUpdatableKey
 import us.neotechnica.panther.modules.networking.conversation.remotelyupdatable.modifyKey
 import us.neotechnica.panther.modules.networking.message.services.MessageService
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.modules.session.sync.models.ConversationSyncData
 import us.neotechnica.panther.modules.session.sync.models.SynchronizationRecord
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.networking.modules.database.interfaces.getValues
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
 import us.neotechnica.panther.subsystem.modules.foundation.models.Coalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -50,6 +54,12 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
  */
 @Suppress("LargeClass")
 class ConversationSyncService {
+    // MARK: - Dependencies
+
+    private val database: DatabaseDelegate by Dependency { it.networking.database }
+    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
+    private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
+
     // MARK: - Properties
 
     private val syncDataValue = LockIsolated<ConversationSyncData?>(null)
@@ -137,7 +147,7 @@ class ConversationSyncService {
         // conversation's id.hash so archive lookups match on the server
         // hash rather than the client-computed encodedHash.
         val serverHash =
-            UserSessionService.currentUser
+            userSession.currentUser
                 ?.conversationIDs
                 ?.firstOrNull { it.key == data.conversation.id.key }
                 ?.hash ?: data.conversation.encodedHash
@@ -285,7 +295,7 @@ class ConversationSyncService {
         try {
             val currentMessages = conversation.messages?.uniquedByID ?: emptyList()
             val newData: Map<String, Any?> =
-                Networking.config.databaseDelegate.getValues<Map<String, Any?>>(
+                database.getValues<Map<String, Any?>>(
                     path = "${NetworkPath.conversations.rawValue}/${conversation.id.key}",
                     cacheStrategy = CacheStrategy.DISREGARD_CACHE,
                 )
@@ -308,9 +318,9 @@ class ConversationSyncService {
         )
 
         // Synced from network; bypasses RemotelyUpdatable.update.
-        SessionStore.upsertConversation(data.conversation)
+        sessionStore.upsertConversation(data.conversation)
         if (data.messages.isNotEmpty()) {
-            SessionStore.upsertMessages(data.messages.toSet())
+            sessionStore.upsertMessages(data.messages.toSet())
         }
 
         syncData = null
@@ -357,7 +367,7 @@ class ConversationSyncService {
         if (currentMessages == null) {
             try {
                 conversation.resolveMessages()
-                val reconciled = SessionStore.conversations[conversation.id.key] ?: conversation
+                val reconciled = sessionStore.conversations[conversation.id.key] ?: conversation
                 syncData =
                     ConversationSyncData(reconciled, reconciled.messages?.uniquedByID ?: emptyList(), syncData?.newData ?: emptyMap())
 

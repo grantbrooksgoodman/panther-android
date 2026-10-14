@@ -40,9 +40,11 @@ import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.models.FlagImage
 import us.neotechnica.panther.modules.common.services.RegionDetailService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.constants.UserInfoBadgeViewColors
 import us.neotechnica.panther.modules.content.user.constants.UserInfoBadgeViewFloats
 import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import androidx.compose.material3.Text as Material3Text
 
 // MARK: - Constants Accessors
@@ -75,7 +77,9 @@ fun UserInfoBadgeView(
     val density = LocalDensity.current
     val flagImage =
         remember(user.phoneNumber.regionCode, user.languageCode) {
-            RegionDetailService.image(RegionDetailService.QueryStrategy.RegionCode(user.phoneNumber.regionCode))
+            DependencyValues.current.commonServices.regionDetail.image(
+                RegionDetailService.QueryStrategy.RegionCode(user.phoneNumber.regionCode),
+            )
                 ?: FlagImage.named(user.languageCode, context)
         }
 

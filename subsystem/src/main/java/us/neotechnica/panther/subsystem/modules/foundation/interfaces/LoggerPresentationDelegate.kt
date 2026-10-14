@@ -8,8 +8,8 @@
 
 package us.neotechnica.panther.subsystem.modules.foundation.interfaces
 
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 
 /**
  * A delegate that presents user-visible alerts on the logger's

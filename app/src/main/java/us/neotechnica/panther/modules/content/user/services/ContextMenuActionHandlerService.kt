@@ -27,9 +27,10 @@ import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootShee
 import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheets
 import us.neotechnica.panther.modules.common.services.DocumentExportService
 import us.neotechnica.panther.modules.common.services.ErrorReportingService
-import us.neotechnica.panther.modules.common.services.TextToSpeechService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceStrings
+import us.neotechnica.panther.modules.content.user.dependencies.chatPageViewService
 import us.neotechnica.panther.modules.content.user.extensions.isConsentMessage
 import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.content.user.extensions.messageLabelText
@@ -38,15 +39,15 @@ import us.neotechnica.panther.modules.networking.conversation.models.Conversatio
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.modules.session.entity.services.UserSessionService
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.networking.modules.translation.extensions.system
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.containsLetters
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.lowercasedTrimmingWhitespaceAndNewlines
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.services.LanguageRecognitionService
@@ -73,6 +74,8 @@ private typealias ContextMenuStrings = ChatPageViewServiceStrings.ContextMenu
 class ContextMenuActionHandlerService(
     private val dependencies: Dependencies = Dependencies(),
 ) {
+    // MARK: - Dependencies
+
     // MARK: - Types
 
     /**
@@ -116,13 +119,18 @@ class ContextMenuActionHandlerService(
     @Suppress("LongParameterList")
     data class Dependencies(
         val copyToPasteboard: (String) -> Unit = { text -> copyToSystemPasteboard(text) },
-        val currentConversation: () -> Conversation? = { ConversationSessionService.currentConversation },
-        val currentUser: () -> User? = { UserSessionService.currentUser },
+        val currentConversation: () -> Conversation? = { DependencyValues.current.clientSession.entity.conversation.currentConversation },
+        val currentUser: () -> User? = { DependencyValues.current.clientSession.entity.user.currentUser },
         val fileReport: (Exception) -> Unit = { ErrorReportingService.fileReport(it) },
         val isDisplayingAlternateText: (Message) -> Boolean = { AlternateMessageService.isDisplayingAlternateText(it) },
         val isDisplayingAudioTranscription: (Message) -> Boolean = { AlternateMessageService.isDisplayingAudioTranscription(it) },
-        val isSpeaking: () -> Boolean = { TextToSpeechService.isSpeaking },
-        val isTextToSpeechSupported: (String) -> Boolean = { TextToSpeechService.isTextToSpeechSupported(it) },
+        val isSpeaking: () -> Boolean = { DependencyValues.current.commonServices.audio.textToSpeech.isSpeaking },
+        val isTextToSpeechSupported: (
+            String,
+        ) -> Boolean = {
+            DependencyValues.current.commonServices.audio.textToSpeech
+                .isTextToSpeechSupported(it)
+        },
         val matchConfidence: suspend (String, String) -> Float = { text, languageCode ->
             LanguageRecognitionService.shared.matchConfidence(text, languageCode)
         },
@@ -133,10 +141,17 @@ class ContextMenuActionHandlerService(
         val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main),
         val showSuccessHUD: () -> Unit = { HUD.showSuccess() },
         val speak: (String, String, String) -> Boolean = { text, languageCode, messageID ->
-            TextToSpeechService.speak(text, languageCode, messageID)
+            DependencyValues.current.commonServices.audio.textToSpeech
+                .speak(text, languageCode, messageID)
         },
-        val stopPlayback: () -> Unit = { AudioMessagePlaybackService.stopPlayback() },
-        val stopSpeakingIfNeeded: () -> Unit = { TextToSpeechService.stopSpeakingIfNeeded() },
+        val stopPlayback: () -> Unit = {
+            DependencyValues.current.chatPageViewService.audioMessagePlayback
+                .stopPlayback()
+        },
+        val stopSpeakingIfNeeded: () -> Unit = {
+            DependencyValues.current.commonServices.audio.textToSpeech
+                .stopSpeakingIfNeeded()
+        },
         val toggleAlternate: (AlternateMessageService.AlternateMessageType, Message) -> Unit = { type, message ->
             AlternateMessageService.toggle(type, message)
         },

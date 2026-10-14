@@ -8,10 +8,14 @@
 
 package us.neotechnica.panther.modules.content.user.views.chatpageview
 
+import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
+import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.services.TextToSpeechService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceFloats
+import us.neotechnica.panther.modules.content.user.dependencies.chatPageViewService
 import us.neotechnica.panther.modules.content.user.dependencies.contextMenuActionHandlerService
 import us.neotechnica.panther.modules.content.user.dependencies.inputBarService
 import us.neotechnica.panther.modules.content.user.extensions.chatPageHeaderLabelText
@@ -22,19 +26,19 @@ import us.neotechnica.panther.modules.content.user.services.ChatPageViewService
 import us.neotechnica.panther.modules.content.user.services.ReadReceiptService
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.message.models.Message
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
 import us.neotechnica.panther.modules.session.state.services.SessionStore
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentNavigatorState
-import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.effect.cancellable
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
@@ -54,6 +58,14 @@ private typealias ReducerFloats = ChatPageViewServiceFloats
  * incoming messages read.
  */
 class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
+    // MARK: - Dependencies
+
+    private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
+    private val audioMessagePlaybackService: AudioMessagePlaybackService by Dependency { it.chatPageViewService.audioMessagePlayback }
+    private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
+    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
+    private val textToSpeechService: TextToSpeechService by Dependency { it.commonServices.audio.textToSpeech }
+
     // MARK: - Action
 
     sealed interface Action {
@@ -131,7 +143,7 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         when (action) {
             is Action.ViewAppeared -> {
                 if (action.configuration is ChatPageView.Configuration.Default) {
-                    AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.ACCESS_CHAT)
+                    analyticsService.logEvent(AnalyticsService.AnalyticsEvent.ACCESS_CHAT)
                 }
                 ReduceResult(
                     state.copy(
@@ -254,16 +266,16 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         configuration: ChatPageView.Configuration,
     ): Effect<Action> =
         Effect.run { send ->
-            val conversation = SessionStore.getConversation(conversationIDKey)
+            val conversation = sessionStore.getConversation(conversationIDKey)
             if (conversation == null) {
                 send(Action.ConversationUnavailable)
                 return@run
             }
 
             ChatPageViewService.setConfiguration(configuration)
-            ConversationSessionService.resetMessageOffset()
-            ConversationSessionService.setCurrentConversation(conversation)
-            configuration.focusedMessageID?.let { ConversationSessionService.incrementMessageOffset(it) }
+            conversationSession.resetMessageOffset()
+            conversationSession.setCurrentConversation(conversation)
+            configuration.focusedMessageID?.let { conversationSession.incrementMessageOffset(it) }
 
             val inputBarService = DependencyValues.current.inputBarService
             inputBarService.configureInputBar(forceUpdate = true)
@@ -282,8 +294,8 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
     // outgoing page is disposed only after its exit transition, by which
     // time the incoming page has already set the pointer.
     private fun viewDisappeared(state: State) {
-        TextToSpeechService.stopSpeakingIfNeeded()
-        AudioMessagePlaybackService.stopPlayback()
+        textToSpeechService.stopSpeakingIfNeeded()
+        audioMessagePlaybackService.stopPlayback()
         DependencyValues.current.contextMenuActionHandlerService.resetSpeakingMessage()
         AlternateMessageService.restoreAllAlternateTextMessageIDs()
         AlternateMessageService.restoreAllAudioTranscriptionMessageIDs()
@@ -295,11 +307,11 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             // mark-read debounce window just before the page was left; the
             // detached flush outlives the view model.
             ReadReceiptService.flushUnreadMessages(state.conversationIDKey)
-            ConversationSessionService.setCurrentConversation(null)
+            conversationSession.setCurrentConversation(null)
             ChatPageViewService.clearNavigationTitle()
         }
 
-        ConversationSessionService.resetMessageOffset()
+        conversationSession.resetMessageOffset()
     }
 
     private fun sendEffect(text: String): Effect<Action> =

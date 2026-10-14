@@ -13,11 +13,11 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.painterResource
 import us.neotechnica.panther.R
+import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
 import us.neotechnica.panther.designsystem.modules.componentkit.models.MessageInputBarImages
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.modules.common.extensions.isOnline
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceStrings
-import us.neotechnica.panther.navigation.UserContentNavigatorState
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build

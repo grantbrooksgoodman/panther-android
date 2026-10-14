@@ -9,11 +9,11 @@
 package us.neotechnica.panther.modules.content.user.views.contactselectorpageview
 
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
-import us.neotechnica.panther.modules.common.contacts.services.ContactPairArchiveService
 import us.neotechnica.panther.modules.common.extensions.compiledNumberStrings
 import us.neotechnica.panther.modules.common.extensions.noUsersWithPhoneNumber
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.models.PhoneNumber
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.extensions.contactPair
 import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.content.user.extensions.queried
@@ -23,15 +23,18 @@ import us.neotechnica.panther.modules.content.user.extensions.withUser
 import us.neotechnica.panther.modules.content.user.services.ContactSelectorPageViewService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.translation.extensions.value
+import us.neotechnica.panther.networking.modules.translation.interfaces.HostedTranslationDelegate
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
@@ -60,6 +63,10 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
  *   through [ContactSelectorPageViewService].
  */
 class ContactSelectorPageReducer : Reducer<ContactSelectorPageReducer.State, ContactSelectorPageReducer.Action> {
+    // MARK: - Dependencies
+
+    private val translator: HostedTranslationDelegate by Dependency { it.networking.hostedTranslation }
+
     // MARK: - Actions
 
     /** The actions the contact selector page can process. */
@@ -120,7 +127,9 @@ class ContactSelectorPageReducer : Reducer<ContactSelectorPageReducer.State, Con
     ) {
         /** The user's known contact pairs, from the contact pair archive. */
         val contactPairs: List<ContactPair>
-            get() = ContactPairArchiveService.allValues()
+            get() =
+                DependencyValues.current.commonServices.contact.contactPairArchive
+                    .allValues()
 
         /** The page's navigation title. */
         val navigationTitle: String
@@ -254,7 +263,7 @@ class ContactSelectorPageReducer : Reducer<ContactSelectorPageReducer.State, Con
     private fun resolveEffect(): Effect<Action> =
         Effect.run { send ->
             try {
-                send(Action.ResolveReturned(Networking.config.hostedTranslationDelegate.resolve(ContactSelectorPageViewStrings)))
+                send(Action.ResolveReturned(translator.resolve(ContactSelectorPageViewStrings)))
             } catch (exception: Exception) {
                 send(Action.ResolveFailed(exception))
             }

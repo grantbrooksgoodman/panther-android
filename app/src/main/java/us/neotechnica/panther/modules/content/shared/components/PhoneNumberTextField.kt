@@ -19,9 +19,9 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import us.neotechnica.panther.modules.common.models.PhoneNumber
-import us.neotechnica.panther.modules.common.services.PhoneNumberService
-import us.neotechnica.panther.modules.common.services.RegionDetailService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.networking.modules.common.extensions.digits
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 
 /**
  * A text field that formats an entered phone number as the user types.
@@ -71,7 +71,9 @@ fun PhoneNumberTextField(
         value = value,
         onValueChange = ::update,
         keyboardType = KeyboardType.Phone,
-        placeholderText = PhoneNumberService.exampleNationalNumberString(regionCode),
+        placeholderText =
+            DependencyValues.current.commonServices.phoneNumber
+                .exampleNationalNumberString(regionCode),
         modifier = modifier,
     )
 }
@@ -83,7 +85,10 @@ private fun partiallyFormatted(
     regionCode: String,
 ): String =
     PhoneNumber(
-        callingCode = RegionDetailService.callingCode(regionCode) ?: PhoneNumberService.deviceCallingCode,
+        callingCode =
+            DependencyValues.current.commonServices.regionDetail
+                .callingCode(regionCode)
+                ?: DependencyValues.current.commonServices.phoneNumber.deviceCallingCode,
         nationalNumberString = text.digits,
         regionCode = regionCode,
         label = null,

@@ -17,12 +17,13 @@ import us.neotechnica.panther.modules.content.user.services.ReadReceiptService
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.models.ReactionSessionServiceEffectID
-import us.neotechnica.panther.modules.session.entity.services.ReactionSessionService
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 
 private val deferredReactionScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -40,8 +41,8 @@ private suspend fun performReaction(
     message: Message,
     style: Reaction.Style,
 ) {
-    if (ReactionSessionService.isReactingToMessage) {
-        ReactionSessionService.addEffectUponIsReactingToMessage(
+    if (DependencyValues.current.clientSession.entity.reaction.isReactingToMessage) {
+        DependencyValues.current.clientSession.entity.reaction.addEffectUponIsReactingToMessage(
             state = false,
             id = ReactionSessionServiceEffectID("deferredReaction-" + (1..DEFERRED_REACTION_ID_BOUND).random()),
         ) { deferredReactionScope.launch { performReaction(message, style) } }
@@ -51,7 +52,8 @@ private suspend fun performReaction(
 
     val reaction = Reaction.from(style) ?: return
     try {
-        ReactionSessionService.react(reaction, message)
+        DependencyValues.current.clientSession.entity.reaction
+            .react(reaction, message)
     } catch (exception: Exception) {
         Logger.log(exception, with = AlertType.toast)
     }

@@ -19,10 +19,9 @@ import java.security.MessageDigest
  * description, a deterministic error code, source-location
  * metadata, and an optional chain of underlying exceptions.
  *
- * Use [Exception] throughout your app as the standard error
- * currency. Each exception records where it was created, what
- * went wrong, and whether it should be reported to
- * crash-reporting infrastructure:
+ * Use [Exception] as the standard error currency. Each exception
+ * records where it was created, what went wrong, and whether it
+ * should be reported to crash-reporting infrastructure:
  *
  * ```kotlin
  * throw Exception(

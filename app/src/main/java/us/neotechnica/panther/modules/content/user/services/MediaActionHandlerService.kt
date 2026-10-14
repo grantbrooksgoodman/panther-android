@@ -42,6 +42,7 @@ import us.neotechnica.panther.modules.common.models.ImageFileExtension
 import us.neotechnica.panther.modules.common.models.MediaFileExtension
 import us.neotechnica.panther.modules.common.models.VideoFileExtension
 import us.neotechnica.panther.modules.common.services.HapticsService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceStrings
 import us.neotechnica.panther.modules.content.user.models.ContentPickerResult
@@ -50,13 +51,15 @@ import us.neotechnica.panther.modules.content.user.services.contentpicker.Conten
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -81,6 +84,11 @@ private typealias Strings = ChatPageViewServiceStrings.MediaActionHandler
  * thumbnails are rendered; other document types are sent without one.
  */
 object MediaActionHandlerService {
+    // MARK: - Dependencies
+
+    private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
+    private val hapticsService: HapticsService by Dependency { it.commonServices.haptics }
+
     // MARK: - Properties
 
     private var appContext: Context? = null
@@ -114,7 +122,7 @@ object MediaActionHandlerService {
      * picker.
      */
     fun attachMediaButtonTapped() {
-        HapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
+        hapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
 
         val takePhotoAction = Action("Take photo") { presentCameraPicker() }
         val selectDocumentAction = Action("Select document") { presentDocumentPicker() }
@@ -240,7 +248,7 @@ object MediaActionHandlerService {
 
     private suspend fun sendMediaMessage(mediaFile: MediaFile) {
         MessageDeliveryService.sendMediaMessage(mediaFile)
-        ConversationSessionService.currentConversation?.let { conversation -> onMediaMessageSent?.invoke(conversation) }
+        conversationSession.currentConversation?.let { conversation -> onMediaMessageSent?.invoke(conversation) }
     }
 
     private suspend fun onContentPickerDismissed(callback: Result<ContentPickerResult>?) {

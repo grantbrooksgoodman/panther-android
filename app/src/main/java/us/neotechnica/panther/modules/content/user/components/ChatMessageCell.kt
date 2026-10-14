@@ -32,11 +32,12 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMe
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
-import us.neotechnica.panther.modules.common.services.TextToSpeechService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewStrings
 import us.neotechnica.panther.modules.content.user.constants.UserContentExtensionsColors
+import us.neotechnica.panther.modules.content.user.dependencies.chatPageViewService
 import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.content.user.extensions.isSystemMessage
 import us.neotechnica.panther.modules.content.user.extensions.kind
@@ -45,6 +46,7 @@ import us.neotechnica.panther.modules.content.user.services.AudioMessagePlayback
 import us.neotechnica.panther.modules.content.user.services.MediaMessagePreviewService
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.message.models.Message
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 
 // MARK: - Constants Accessors
 
@@ -52,6 +54,11 @@ private typealias CellDataSourceColors = ChatPageViewColors.MessagesDataSource
 private typealias CellDataSourceStrings = ChatPageViewStrings.MessagesDataSource
 private typealias CellDisplayFloats = ChatPageViewFloats.MessagesDisplayDelegate
 private typealias CellLayoutFloats = ChatPageViewFloats.MessagesLayoutDelegate
+
+// MARK: - Dependencies
+
+private val audioMessagePlaybackService: AudioMessagePlaybackService
+    get() = DependencyValues.current.chatPageViewService.audioMessagePlayback
 
 /**
  * A single chat row: an optional day separator, the message bubble
@@ -133,8 +140,8 @@ private fun MessageContent(
     val alignment = if (isOwn) ContextMenuAlignment.TRAILING else ContextMenuAlignment.LEADING
     val messageLabel = remember { MessageLabel() }
 
-    val isSpeakingThisMessage = TextToSpeechService.speakingMessageID == message.id
-    val speakingHighlightRange = if (isSpeakingThisMessage) TextToSpeechService.spokenRange else null
+    val isSpeakingThisMessage = DependencyValues.current.commonServices.audio.textToSpeech.speakingMessageID == message.id
+    val speakingHighlightRange = if (isSpeakingThisMessage) DependencyValues.current.commonServices.audio.textToSpeech.spokenRange else null
     val isMedia = kind is MessageKind.Photo || kind is MessageKind.Video
     val isText = kind is MessageKind.Text || kind is MessageKind.AttributedText
 
@@ -199,7 +206,7 @@ private fun MessageKindContent(
 ) {
     val message = row.message
     val isOwn = message.isFromCurrentUser
-    val isPlayingThisMessage = AudioMessagePlaybackService.playingMessageID == message.id
+    val isPlayingThisMessage = audioMessagePlaybackService.playingMessageID == message.id
 
     when (kind) {
         is MessageKind.Audio ->
@@ -207,8 +214,8 @@ private fun MessageKindContent(
                 item = kind.item,
                 isOwn = isOwn,
                 isPlaying = isPlayingThisMessage,
-                progress = if (isPlayingThisMessage) AudioMessagePlaybackService.progress else 0f,
-                onPlay = { message.audioComponent?.let { AudioMessagePlaybackService.didTapPlayButton(message, it) } },
+                progress = if (isPlayingThisMessage) audioMessagePlaybackService.progress else 0f,
+                onPlay = { message.audioComponent?.let { audioMessagePlaybackService.didTapPlayButton(message, it) } },
             )
 
         is MessageKind.AttributedText ->

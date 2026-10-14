@@ -14,14 +14,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import us.neotechnica.panther.bundle.navigators.ChatNavigatorState
+import us.neotechnica.panther.bundle.navigators.ChatRoute
 import us.neotechnica.panther.designsystem.modules.foundation.components.PageSheetView
 import us.neotechnica.panther.modules.content.user.models.ContentPickerResult
 import us.neotechnica.panther.modules.content.user.services.contentpicker.ContentPickerService
 import us.neotechnica.panther.modules.content.user.services.contentpicker.ContentPickerSource
 import us.neotechnica.panther.modules.content.user.views.contactselectorpageview.ContactSelectorPageView
-import us.neotechnica.panther.navigation.ChatNavigatorState
-import us.neotechnica.panther.navigation.ChatRoute
-import us.neotechnica.panther.navigation.Route
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception

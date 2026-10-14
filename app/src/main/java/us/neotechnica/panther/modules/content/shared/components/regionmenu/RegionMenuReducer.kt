@@ -13,8 +13,11 @@ import androidx.compose.ui.platform.AndroidUiDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import us.neotechnica.panther.modules.common.services.RegionDetailService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.shared.constants.RegionMenuFloats
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
@@ -39,6 +42,10 @@ import kotlin.time.Duration.Companion.milliseconds
  *   after a brief delay.
  */
 class RegionMenuReducer : Reducer<RegionMenuReducer.State, RegionMenuReducer.Action> {
+    // MARK: - Dependencies
+
+    private val regionDetailService: RegionDetailService by Dependency { it.commonServices.regionDetail }
+
     // MARK: - Actions
 
     /** The actions the region picker can process. */
@@ -102,7 +109,10 @@ class RegionMenuReducer : Reducer<RegionMenuReducer.State, RegionMenuReducer.Act
 
         /** The display titles of the regions matching the search query, or `null` if none match. */
         val queriedRegionTitles: List<String>?
-            get() = RegionDetailService.regionTitles(RegionDetailService.QueryStrategy.SearchTerm(searchQuery))
+            get() =
+                DependencyValues.current.commonServices.regionDetail.regionTitles(
+                    RegionDetailService.QueryStrategy.SearchTerm(searchQuery),
+                )
 
         /** The display title of the selected region, or `null` if it cannot be determined. */
         val selectedRegionTitle: String?
@@ -152,7 +162,7 @@ class RegionMenuReducer : Reducer<RegionMenuReducer.State, RegionMenuReducer.Act
 
             is Action.SelectedRegionTitleChanged -> {
                 val selectedRegionCode =
-                    RegionDetailService.regionCode(
+                    regionDetailService.regionCode(
                         RegionDetailService.QueryStrategy.RegionTitle(action.selectedRegionTitle),
                     ) ?: ""
                 ReduceResult(

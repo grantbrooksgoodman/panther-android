@@ -14,11 +14,14 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.conversation
 import us.neotechnica.panther.modules.common.services.NotificationService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
@@ -31,6 +34,13 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
  * resulting unread count.
  */
 object ReadReceiptService {
+    // MARK: - Dependencies
+
+    private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
+    private val notificationService: NotificationService by Dependency { it.commonServices.notification }
+    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
+    private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
+
     // MARK: - Properties
 
     private val flushScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -46,7 +56,7 @@ object ReadReceiptService {
      * @throws Exception if updating the read dates fails.
      */
     suspend fun updateReadDateForUnreadMessages(): Boolean {
-        val conversation = ConversationSessionService.currentConversation ?: return false
+        val conversation = conversationSession.currentConversation ?: return false
         return updateReadDateForUnreadMessages(conversation)
     }
 
@@ -65,7 +75,7 @@ object ReadReceiptService {
     fun flushUnreadMessages(conversationIDKey: String) {
         flushScope.launch {
             try {
-                val conversation = SessionStore.getConversation(conversationIDKey) ?: return@launch
+                val conversation = sessionStore.getConversation(conversationIDKey) ?: return@launch
                 updateReadDateForUnreadMessages(conversation)
             } catch (exception: Exception) {
                 Logger.log(exception)
@@ -82,9 +92,9 @@ object ReadReceiptService {
 
         conversation.updateReadDate(unreadMessages)
 
-        val currentUser = UserSessionService.currentUser ?: return true
+        val currentUser = userSession.currentUser ?: return true
         try {
-            NotificationService.setBadgeNumber(currentUser.calculateBadgeNumber())
+            notificationService.setBadgeNumber(currentUser.calculateBadgeNumber())
         } catch (exception: Exception) {
             Logger.log(exception, domain = LoggerDomain.conversation)
         }

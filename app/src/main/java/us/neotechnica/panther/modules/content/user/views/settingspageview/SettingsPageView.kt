@@ -37,6 +37,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
+import us.neotechnica.panther.bundle.navigators.SettingsNavigatorState
+import us.neotechnica.panther.bundle.navigators.SettingsRoute
 import us.neotechnica.panther.bundle.traitCollectionChanged
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
@@ -53,10 +55,8 @@ import us.neotechnica.panther.modules.content.user.components.ContactDetailView
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewFloats
 import us.neotechnica.panther.modules.content.user.models.BuildInfoButtonStrings
 import us.neotechnica.panther.modules.content.user.views.inviteqrcodepageview.InviteQRCodePageView
-import us.neotechnica.panther.modules.session.entity.services.UserSessionService
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.SettingsNavigatorState
-import us.neotechnica.panther.navigation.SettingsRoute
+import us.neotechnica.panther.modules.session.clientSession
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
@@ -124,7 +124,11 @@ fun SettingsPageView(modifier: Modifier = Modifier) {
                         Modifier
                     } else {
                         Modifier.clickable {
-                            presentContactCard.onTap(UserSessionService.currentUser?.phoneNumber, contactPair.contact.fullName)
+                            presentContactCard.onTap(
+                                DependencyValues.current.clientSession.entity.user.currentUser
+                                    ?.phoneNumber,
+                                contactPair.contact.fullName,
+                            )
                         }
                     }
 

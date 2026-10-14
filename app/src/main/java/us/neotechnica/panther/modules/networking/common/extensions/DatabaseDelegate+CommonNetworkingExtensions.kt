@@ -6,7 +6,7 @@
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
-package us.neotechnica.panther.modules.networking.common
+package us.neotechnica.panther.modules.networking.common.extensions
 
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope

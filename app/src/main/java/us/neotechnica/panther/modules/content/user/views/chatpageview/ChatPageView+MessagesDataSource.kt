@@ -60,10 +60,9 @@ import us.neotechnica.panther.modules.content.user.extensions.systemLocalized
 import us.neotechnica.panther.modules.content.user.services.ChatPageViewService
 import us.neotechnica.panther.modules.networking.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
-import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
-import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 
 // MARK: - Constants Accessors
 
@@ -229,8 +228,16 @@ internal fun MessageList(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val messages = state.messages
-    val users = ConversationSessionService.currentConversation?.users.orEmpty()
-    val isGroup = (ConversationSessionService.currentConversation?.participants?.size ?: 2) > 2
+    val users =
+        DependencyValues.current.clientSession.entity.conversation.currentConversation
+            ?.users
+            .orEmpty()
+    val isGroup =
+        (
+            DependencyValues.current.clientSession.entity.conversation.currentConversation
+                ?.participants
+                ?.size ?: 2
+        ) > 2
     val lastConfirmedOwnIndex = messages.indexOfLast { it.isFromCurrentUser && !it.isOutboxMessage }
     val loadMoreConnection = rememberLoadMoreMessagesConnection(listState)
 
@@ -262,14 +269,17 @@ internal fun MessageList(
             val message = displayedMessage.systemLocalized
             val isFailed =
                 message.isOutboxMessage &&
-                    MessageOutboxService.entry(message.id)?.state == OutboxEntry.State.FAILED
+                    DependencyValues.current.clientSession.outbox
+                        .entry(message.id)
+                        ?.state == OutboxEntry.State.FAILED
 
             val previousMessage = messages.getOrNull(index - 1)
             val showSender = isGroup && !message.isFromCurrentUser
             val firstOfRun = previousMessage?.fromAccountID != message.fromAccountID
             val senderUser =
                 if (showSender) {
-                    users.firstOrNull { it.id == message.fromAccountID } ?: SessionStore.users[message.fromAccountID]
+                    users.firstOrNull { it.id == message.fromAccountID }
+                        ?: DependencyValues.current.clientSession.store.users[message.fromAccountID]
                 } else {
                     null
                 }

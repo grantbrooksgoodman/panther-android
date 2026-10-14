@@ -9,6 +9,8 @@
 package us.neotechnica.panther.modules.common.services
 
 import com.google.i18n.phonenumbers.PhoneNumberUtil
+import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHashOf
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 
@@ -20,6 +22,10 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
  * data; results are cached in memory.
  */
 object PhoneNumberService {
+    // MARK: - Dependencies
+
+    private val regionDetailService: RegionDetailService by Dependency { it.commonServices.regionDetail }
+
     // MARK: - Properties
 
     private val cachedPossibleCallingCodesForNumbers = LockIsolated<Map<String, List<String>>?>(null)
@@ -33,7 +39,7 @@ object PhoneNumberService {
      * cannot be determined.
      */
     val deviceCallingCode: String
-        get() = callingCodes[RegionDetailService.deviceRegionCode] ?: DEFAULT_CALLING_CODE
+        get() = callingCodes[regionDetailService.deviceRegionCode] ?: DEFAULT_CALLING_CODE
 
     private val callingCodes: Map<String, String>
         get() = CommonPropertyLists.callingCodes

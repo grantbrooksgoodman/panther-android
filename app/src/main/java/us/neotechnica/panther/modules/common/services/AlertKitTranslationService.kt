@@ -18,6 +18,9 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.HUDConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TranslationTimeoutConfig
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
+import us.neotechnica.panther.networking.modules.translation.interfaces.HostedTranslationDelegate
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
@@ -37,6 +40,10 @@ import kotlin.coroutines.cancellation.CancellationException
  * according to the timeout configuration.
  */
 object AlertKitTranslationService : TranslationDelegate {
+    // MARK: - Dependencies
+
+    private val translator: HostedTranslationDelegate by Dependency { it.networking.hostedTranslation }
+
     override suspend fun getTranslations(
         inputs: List<TranslationInput>,
         languagePair: LanguagePair,
@@ -60,7 +67,7 @@ object AlertKitTranslationService : TranslationDelegate {
                     withTimeoutOrNull(timeoutConfig.duration) {
                         try {
                             Result.success(
-                                Networking.config.hostedTranslationDelegate.getTranslations(inputs, languagePair),
+                                translator.getTranslations(inputs, languagePair),
                             )
                         } catch (cancellation: CancellationException) {
                             throw cancellation

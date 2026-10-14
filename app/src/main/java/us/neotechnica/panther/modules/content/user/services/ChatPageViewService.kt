@@ -17,9 +17,11 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.modules.content.user.dependencies.chatInfoPageViewService
 import us.neotechnica.panther.modules.content.user.views.chatpageview.ChatPageView
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
 import us.neotechnica.panther.modules.session.state.services.retry
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
@@ -47,6 +49,11 @@ import kotlin.time.Duration.Companion.milliseconds
  * [shouldRespondToViewLifecycleEvent] before acting on them.
  */
 object ChatPageViewService {
+    // MARK: - Dependencies
+
+    private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
+    private val outbox: MessageOutboxService by Dependency { it.clientSession.outbox }
+
     // MARK: - Properties
 
     private val mutableDidLoadMoreMessagesFromScrollToTop = MutableStateFlow(false)
@@ -57,6 +64,10 @@ object ChatPageViewService {
         private set
 
     // MARK: - Computed Properties
+
+    /** The service that plays audio messages. */
+    val audioMessagePlayback: AudioMessagePlaybackService
+        get() = AudioMessagePlaybackService
 
     /**
      * Whether the most recent load of older messages was triggered by
@@ -107,9 +118,9 @@ object ChatPageViewService {
     fun loadMoreMessages(fromScrollToTop: Boolean): Boolean {
         if (MessageDeliveryService.isSendingMessage.value) return false
 
-        val previousMessageCount = ConversationSessionService.displayedMessages.value.size
-        ConversationSessionService.incrementMessageOffset()
-        val didLoad = previousMessageCount != ConversationSessionService.displayedMessages.value.size
+        val previousMessageCount = conversationSession.displayedMessages.value.size
+        conversationSession.incrementMessageOffset()
+        val didLoad = previousMessageCount != conversationSession.displayedMessages.value.size
         if (didLoad) mutableDidLoadMoreMessagesFromScrollToTop.value = fromScrollToTop
         return didLoad
     }
@@ -129,10 +140,10 @@ object ChatPageViewService {
                     Action(
                         title = LocalizedStringKey.Delete.localized(),
                         style = ActionStyle.DESTRUCTIVE,
-                    ) { MessageOutboxService.remove(forMessageID) },
+                    ) { outbox.remove(forMessageID) },
                     Action(
                         title = LocalizedStringKey.TryAgain.localized(),
-                    ) { Task.delayed(by = 0.milliseconds) { MessageOutboxService.retry(forMessageID) } },
+                    ) { Task.delayed(by = 0.milliseconds) { outbox.retry(forMessageID) } },
                 ),
             cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
         ).present(translating = emptyList())

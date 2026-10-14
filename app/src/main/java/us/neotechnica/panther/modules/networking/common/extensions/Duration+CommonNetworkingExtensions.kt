@@ -6,7 +6,7 @@
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
-package us.neotechnica.panther.modules.networking.common
+package us.neotechnica.panther.modules.networking.common.extensions
 
 import us.neotechnica.panther.modules.networking.common.constants.CommonNetworkingExtensionsFloats
 import java.io.File

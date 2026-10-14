@@ -12,8 +12,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.EaseIn
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -52,10 +50,12 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.constants.ForcedUpdateModalPageViewColors
 import us.neotechnica.panther.designsystem.modules.foundation.constants.ForcedUpdateModalPageViewConstants
 import us.neotechnica.panther.designsystem.modules.foundation.constants.ForcedUpdateModalPageViewFloats
+import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.designsystem.modules.theming.views.ThemedView
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
+import kotlin.time.Duration.Companion.milliseconds
 
 // MARK: - Type Aliases
 
@@ -85,10 +85,7 @@ internal fun ForcedUpdateModalPageView(viewModel: ForcedUpdateModalPageViewModel
         LaunchedEffect(Unit) {
             contentAlpha.animateTo(
                 1f,
-                tween(
-                    durationMillis = (Floats.TRANSITION_ANIMATION_DURATION * MILLISECONDS_PER_SECOND).toInt(),
-                    easing = EaseIn,
-                ),
+                SystemAnimation.easeIn((Floats.TRANSITION_ANIMATION_DURATION * MILLISECONDS_PER_SECOND).toInt().milliseconds),
             )
         }
 

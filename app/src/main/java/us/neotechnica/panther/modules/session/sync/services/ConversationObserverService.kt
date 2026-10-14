@@ -20,16 +20,19 @@ import us.neotechnica.panther.bundle.conversationObserver
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.state.services.SessionStore
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
+import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.networking.modules.database.interfaces.observe
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import java.util.UUID
 
 /**
@@ -41,6 +44,10 @@ import java.util.UUID
  * pipeline remains the safety net.
  */
 object ConversationObserverService {
+    // MARK: - Dependencies
+
+    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
+
     // MARK: - Types
 
     private data class ObservationState(
@@ -54,7 +61,7 @@ object ConversationObserverService {
     private val observationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val state = LockIsolated<ObservationState?>(null)
 
-    private val database get() = Networking.config.databaseDelegate
+    private val database: DatabaseDelegate by Dependency { it.networking.database }
 
     // MARK: - Observation
 
@@ -138,7 +145,7 @@ object ConversationObserverService {
 
         try {
             val conversation = Conversation.decode(decodable)
-            val existingIDs = SessionStore.getConversation(conversationIDKey)?.messageIDs?.toSet() ?: emptySet()
+            val existingIDs = sessionStore.getConversation(conversationIDKey)?.messageIDs?.toSet() ?: emptySet()
             val newMessageIDs = conversation.messageIDs.toSet() - existingIDs
             if (newMessageIDs.isNotEmpty()) {
                 Logger.log(
@@ -150,14 +157,14 @@ object ConversationObserverService {
             }
 
             // Received from real-time observer; bypasses the update path.
-            SessionStore.upsertConversation(conversation)
+            sessionStore.upsertConversation(conversation)
 
             // Backfill users for any participants not yet in the session
             // store. The user-node pipeline normally handles this, but the
             // observer guard makes that path skip this conversation.
             val participantUserIDs =
                 conversation.participants.map { it.userID }.filter { it != User.currentUserID }
-            if (participantUserIDs.any { SessionStore.users[it] == null }) {
+            if (participantUserIDs.any { sessionStore.users[it] == null }) {
                 Logger.log(
                     "Backfilling missing participant user(s) from observer snapshot. " +
                         "(ConversationIDKey: $conversationIDKey)",

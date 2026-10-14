@@ -15,10 +15,8 @@ import us.neotechnica.panther.bundle.outbox
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.user.services.UserService
 import us.neotechnica.panther.modules.session.clientSession
-import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.modules.session.entity.services.MessageSessionService
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -38,10 +36,13 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
  */
 suspend fun MessageOutboxService.retry(entryID: String) {
     val candidateRemoteID =
-        Networking.config.databaseDelegate.generateKey(NetworkPath.messages.rawValue) ?: return
+        DependencyValues.current.networking.database
+            .generateKey(NetworkPath.messages.rawValue) ?: return
     val entry = claimForRetry(entryID, candidateRemoteID) ?: return
 
-    val conversation = SessionStore.getConversation(entry.conversationIDKey)
+    val conversation =
+        DependencyValues.current.clientSession.store
+            .getConversation(entry.conversationIDKey)
     if (conversation == null) {
         remove(entryID)
         Logger.log("Removed outbox entry $entryID: conversation no longer exists.", domain = LoggerDomain.outbox)
@@ -50,7 +51,7 @@ suspend fun MessageOutboxService.retry(entryID: String) {
 
     val recipients =
         entry.recipientUserIDs.mapNotNull { userID ->
-            SessionStore.users[userID] ?: runCatching { UserService.getUser(userID) }.getOrNull()
+            DependencyValues.current.clientSession.store.users[userID] ?: runCatching { UserService.getUser(userID) }.getOrNull()
         }
     if (recipients.isEmpty()) {
         markFailed(entryID)
@@ -90,7 +91,7 @@ private suspend fun sendPayload(
                     name = payload.fileName.substringBeforeLast("."),
                     fileExtension = payload.fileExtension,
                 )
-            MessageSessionService.sendMediaMessage(
+            DependencyValues.current.clientSession.entity.message.sendMediaMessage(
                 mediaFile = mediaFile,
                 presetID = entry.reservedRemoteID,
                 toUsers = recipients,
@@ -100,7 +101,7 @@ private suspend fun sendPayload(
         }
 
         is OutboxEntry.Payload.Text ->
-            MessageSessionService.sendTextMessage(
+            DependencyValues.current.clientSession.entity.message.sendTextMessage(
                 text = payload.value,
                 presetID = entry.reservedRemoteID,
                 toUsers = recipients,
@@ -111,7 +112,12 @@ private suspend fun sendPayload(
 }
 
 private suspend fun startDeliveryProgressIfCurrent(entry: OutboxEntry) {
-    if (ConversationSessionService.currentConversation?.id?.key != entry.conversationIDKey) return
+    if (DependencyValues.current.clientSession.entity.conversation.currentConversation
+            ?.id
+            ?.key != entry.conversationIDKey
+    ) {
+        return
+    }
     withContext(Dispatchers.Main) {
         DependencyValues
             .current
@@ -122,7 +128,12 @@ private suspend fun startDeliveryProgressIfCurrent(entry: OutboxEntry) {
 }
 
 private suspend fun stopDeliveryProgressIfCurrent(entry: OutboxEntry) {
-    if (ConversationSessionService.currentConversation?.id?.key != entry.conversationIDKey) return
+    if (DependencyValues.current.clientSession.entity.conversation.currentConversation
+            ?.id
+            ?.key != entry.conversationIDKey
+    ) {
+        return
+    }
     withContext(Dispatchers.Main) {
         DependencyValues
             .current

@@ -11,13 +11,13 @@ package us.neotechnica.panther.modules.content.user.services
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
 import us.neotechnica.panther.modules.common.extensions.isOnline
 import us.neotechnica.panther.modules.content.user.extensions.isEmpty
 import us.neotechnica.panther.modules.content.user.services.recipientbar.RecipientBarService
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.navigation.UserContentNavigatorState
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
@@ -52,7 +52,7 @@ class InputBarService(
      *   flight.
      */
     data class Dependencies(
-        val currentConversation: () -> Conversation? = { ConversationSessionService.currentConversation },
+        val currentConversation: () -> Conversation? = { DependencyValues.current.clientSession.entity.conversation.currentConversation },
         val isNewChatPagePresented: () -> Boolean = {
             DependencyValues.current.navigation.state.value.userContent.stack
                 .lastOrNull() == UserContentNavigatorState.SeguePaths.NewChat

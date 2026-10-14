@@ -17,15 +17,14 @@ import us.neotechnica.panther.modules.networking.conversation.models.Conversatio
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpdatableKey
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.update
-import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.modules.session.entity.services.UserSessionService
-import us.neotechnica.panther.modules.session.state.services.SessionStore
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.modules.session.clientSession
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.database.interfaces.getValues
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.compiledException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -71,7 +70,7 @@ enum class ConversationDeletionGranularity {
  */
 suspend fun CoreUtilities.clearPreviousLanguageCodes() {
     val currentUser =
-        UserSessionService.currentUser
+        DependencyValues.current.clientSession.entity.user.currentUser
             ?: throw Exception("Current user has not been set.", metadata = ExceptionMetadata(this))
     currentUser.update(UserUpdatableKey.PREVIOUS_LANGUAGE_CODES, to = bangQualifiedEmptyList)
 }
@@ -95,15 +94,15 @@ suspend fun CoreUtilities.clearPreviousLanguageCodes() {
  *   resolved, or if deletion fails for any conversation.
  */
 suspend fun CoreUtilities.deleteConversations(granularity: ConversationDeletionGranularity) {
-    UserSessionService.resolveCurrentUser(
+    DependencyValues.current.clientSession.entity.user.resolveCurrentUser(
         setOf(
             User.DataType.CONVERSATIONS,
             User.DataType.MESSAGES,
         ),
     )
 
-    val currentUser = UserSessionService.currentUser
-    val ignoredConversationIDKeys = SessionStore.ignoredConversationIDKeys
+    val currentUser = DependencyValues.current.clientSession.entity.user.currentUser
+    val ignoredConversationIDKeys = DependencyValues.current.clientSession.store.ignoredConversationIDKeys
     val conversationIDKeys =
         when (granularity) {
             ConversationDeletionGranularity.ALL_FOR_CURRENT_USER ->
@@ -119,8 +118,8 @@ suspend fun CoreUtilities.deleteConversations(granularity: ConversationDeletionG
             else -> currentUser?.conversations?.filter { it.matches(granularity) }?.map { it.id.key }
         } ?: throw Exception("Failed to resolve conversation ID keys.", metadata = ExceptionMetadata(this))
 
-    val database = Networking.config.databaseDelegate
-    val storage = Networking.config.storageDelegate
+    val database = DependencyValues.current.networking.database
+    val storage = DependencyValues.current.networking.storage
 
     try {
         Overlay.addOverlay(
@@ -131,15 +130,18 @@ suspend fun CoreUtilities.deleteConversations(granularity: ConversationDeletionG
         database.setGlobalCacheStrategy(CacheStrategy.DISREGARD_CACHE)
         storage.setGlobalCacheStrategy(CacheStrategy.DISREGARD_CACHE)
 
-        UserSessionService.stopObservingCurrentUserChanges()
+        DependencyValues.current.clientSession.entity.user
+            .stopObservingCurrentUserChanges()
 
         val exceptions = mutableListOf<Exception>()
         for (conversationIDKey in conversationIDKeys.distinct()) {
             try {
                 val conversation =
-                    SessionStore.getConversation(conversationIDKey)
+                    DependencyValues.current.clientSession.store
+                        .getConversation(conversationIDKey)
                         ?: throw Exception("No conversation for ID key $conversationIDKey.", metadata = ExceptionMetadata(this))
-                ConversationSessionService.deleteConversation(conversation, forced = true)
+                DependencyValues.current.clientSession.entity.conversation
+                    .deleteConversation(conversation, forced = true)
             } catch (exception: Exception) {
                 exceptions.add(exception)
             }
@@ -160,7 +162,7 @@ suspend fun CoreUtilities.deleteConversations(granularity: ConversationDeletionG
  * @throws Exception if any database operation fails.
  */
 suspend fun CoreUtilities.resetPushTokens() {
-    val database = Networking.config.databaseDelegate
+    val database = DependencyValues.current.networking.database
     val userData: Map<String, Any?> =
         database.getValues<Map<String, Any?>>(
             NetworkPath.users.rawValue,

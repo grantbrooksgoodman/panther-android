@@ -11,7 +11,7 @@ package us.neotechnica.panther.modules.networking.user.models
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
-import us.neotechnica.panther.modules.networking.common.visibleForCurrentUser
+import us.neotechnica.panther.modules.networking.common.extensions.visibleForCurrentUser
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
 import us.neotechnica.panther.modules.session.clientSession

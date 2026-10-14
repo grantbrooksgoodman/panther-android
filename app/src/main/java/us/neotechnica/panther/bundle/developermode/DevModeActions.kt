@@ -18,7 +18,9 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.developermode.interfaces.DevModeAppActionDelegate
 import us.neotechnica.panther.designsystem.modules.developermode.models.DevModeAction
 import us.neotechnica.panther.designsystem.modules.developermode.services.DevModeService
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 
 /**
  * The delegate that supplies app-specific actions to the Developer Mode
@@ -30,6 +32,10 @@ import us.neotechnica.panther.modules.session.entity.services.UserSessionService
  * them entirely in general-release builds.
  */
 object AppActions : DevModeAppActionDelegate {
+    // MARK: - Dependencies
+
+    private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
+
     // MARK: - Properties
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -64,7 +70,7 @@ object AppActions : DevModeAppActionDelegate {
         get() =
             DevModeAction(title = "Danger Zone", isDestructive = true) {
                 scope.launch {
-                    val currentUser = UserSessionService.currentUser
+                    val currentUser = userSession.currentUser
                     val actions = mutableListOf(DangerZone.resetPushTokensAction)
 
                     if (currentUser?.previousLanguageCodes?.isNotEmpty() == true) {

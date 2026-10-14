@@ -16,7 +16,8 @@ import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.services.recipientbar.RecipientBarService
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.services.UserSessionService
+import us.neotechnica.panther.modules.session.clientSession
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 
 // MARK: - Properties
 
@@ -27,7 +28,9 @@ val ContactPair.compiledNumberStrings: List<String>
 /** Whether the contact pair contains a user the current user has blocked. */
 val ContactPair.containsBlockedUser: Boolean
     get() {
-        val blockedUserIDs = UserSessionService.currentUser?.blockedUserIDs ?: return false
+        val blockedUserIDs =
+            DependencyValues.current.clientSession.entity.user.currentUser
+                ?.blockedUserIDs ?: return false
         return userIDs.any { it in blockedUserIDs }
     }
 

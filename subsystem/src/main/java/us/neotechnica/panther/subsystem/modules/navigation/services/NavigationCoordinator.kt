@@ -6,41 +6,21 @@
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
-package us.neotechnica.panther.navigation
+package us.neotechnica.panther.subsystem.modules.navigation.services
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-
-// MARK: - Navigating
-
-/**
- * A service that applies navigation routes to a navigation state.
- *
- * @param Route The set of navigation actions the service handles.
- * @param State The navigation state the service modifies.
- */
-interface Navigating<Route, State> {
-    /**
-     * Applies the given route to the given state.
-     *
-     * @param to The navigation action to perform.
-     * @param on The current navigation state.
-     *
-     * @return The navigation state after the route is applied.
-     */
-    fun navigate(
-        to: Route,
-        on: State,
-    ): State
-}
-
-// MARK: - Navigation Coordinator
+import us.neotechnica.panther.subsystem.modules.navigation.interfaces.Navigating
+import us.neotechnica.panther.subsystem.modules.navigation.interfaces.NavigatorState
 
 /**
  * A coordinator that holds an observable navigation state and applies
  * routes to it through a [Navigating] service.
+ *
+ * Create a coordinator with an initial state and a navigator, then
+ * dispatch routes through [navigate]; views observe [state].
  *
  * @param Route The set of navigation actions the coordinator
  *   dispatches.
@@ -49,7 +29,7 @@ interface Navigating<Route, State> {
  * @param navigating The service that applies routes.
  * @param onStateChanged The handler to run with each new state.
  */
-class NavigationCoordinator<Route, State>(
+class NavigationCoordinator<Route, State : NavigatorState<*, *, *>>(
     initialState: State,
     private val navigating: Navigating<Route, State>,
     private val onStateChanged: ((State) -> Unit)? = null,

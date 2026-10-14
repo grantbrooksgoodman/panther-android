@@ -8,9 +8,10 @@
 
 package us.neotechnica.panther.modules.content.user.extensions
 
-import us.neotechnica.panther.modules.common.contacts.services.ContactPairArchiveService
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.services.PermissionService
+import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 
 // MARK: - Properties
 
@@ -20,7 +21,9 @@ import us.neotechnica.panther.modules.common.services.PermissionService
  */
 val ContactService.hasContactsBesidesCurrentUser: Boolean
     get() {
-        val contactPairArchive = ContactPairArchiveService.allValues()
+        val contactPairArchive =
+            DependencyValues.current.commonServices.contact.contactPairArchive
+                .allValues()
         if (contactPairArchive.isEmpty()) return false
         return contactPairArchive.any { !it.containsCurrentUser }
     }
@@ -34,9 +37,13 @@ val ContactService.hasContactsBesidesCurrentUser: Boolean
  * @throws Exception if synchronization fails.
  */
 suspend fun ContactService.syncIfNeeded() {
-    val isArchiveEmpty = ContactPairArchiveService.allValues().isEmpty() || !hasContactsBesidesCurrentUser
+    val isArchiveEmpty =
+        DependencyValues.current.commonServices.contact.contactPairArchive
+            .allValues()
+            .isEmpty() ||
+            !hasContactsBesidesCurrentUser
     if (isArchiveEmpty &&
-        PermissionService.contactPermissionStatus == PermissionService.PermissionStatus.GRANTED
+        DependencyValues.current.commonServices.permission.contactPermissionStatus == PermissionService.PermissionStatus.GRANTED
     ) {
         syncContactPairArchive()
     }

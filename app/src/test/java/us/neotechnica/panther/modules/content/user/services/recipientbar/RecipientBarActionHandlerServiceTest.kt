@@ -21,6 +21,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import us.neotechnica.panther.bundle.navigators.ChatNavigatorState
+import us.neotechnica.panther.bundle.navigators.ChatRoute
 import us.neotechnica.panther.modules.common.extensions.contactAccessDenied
 import us.neotechnica.panther.modules.common.extensions.mismatchedHashAndCallingCode
 import us.neotechnica.panther.modules.common.models.Contact
@@ -33,9 +35,7 @@ import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.content.user.extensions.isMock
 import us.neotechnica.panther.modules.networking.support.MessageDecodeEnvironment
 import us.neotechnica.panther.modules.networking.support.SessionTestEnvironment
-import us.neotechnica.panther.navigation.ChatNavigatorState
-import us.neotechnica.panther.navigation.ChatRoute
-import us.neotechnica.panther.navigation.Route
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
 import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception

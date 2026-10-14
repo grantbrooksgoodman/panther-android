@@ -9,24 +9,13 @@
 package us.neotechnica.panther.modules.content.user.views.conversationspageview
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -52,9 +41,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalFocusManager
 import us.neotechnica.panther.bundle.sessionStoreDidChange
 import us.neotechnica.panther.bundle.traitCollectionChanged
@@ -65,7 +51,6 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.componentkit.models.LocalSwipeActionsCoordinator
 import us.neotechnica.panther.designsystem.modules.componentkit.models.SwipeActionsCoordinator
-import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.shared.components.SearchBar
@@ -81,7 +66,6 @@ import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.Dep
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
-import kotlin.math.roundToInt
 
 // MARK: - Constants Accessors
 
@@ -284,165 +268,3 @@ private fun RowSeparator() {
             ),
     )
 }
-
-// MARK: - Header
-
-// The toolbar, title, and search bar. As a search begins, the toolbar
-// fades in place and the title fades as it rides up with the search
-// bar, until the search bar rests at the top of the page; as the
-// search ends, the motion reverses.
-@Composable
-private fun Header(
-    isSearching: Boolean,
-    toolbar: @Composable () -> Unit,
-    title: @Composable () -> Unit,
-    searchBar: @Composable () -> Unit,
-) {
-    val searchTransitionFraction =
-        animateFloatAsState(
-            targetValue = if (isSearching) 1f else 0f,
-            animationSpec = SystemAnimation.searchTransition(),
-            label = SEARCH_TRANSITION_ANIMATION_LABEL,
-        )
-    val toolbarAndTitleAlpha =
-        animateFloatAsState(
-            targetValue = if (isSearching) 0f else 1f,
-            animationSpec = SystemAnimation.searchTransitionFade(isBeginning = isSearching),
-            label = SEARCH_TRANSITION_FADE_ANIMATION_LABEL,
-        )
-
-    Layout(contents = listOf(toolbar, title, searchBar)) { (toolbarMeasurables, titleMeasurables, searchBarMeasurables), constraints ->
-        val looseConstraints = constraints.copy(minHeight = 0)
-        val toolbarPlaceable = toolbarMeasurables.first().measure(looseConstraints)
-        val titlePlaceable = titleMeasurables.first().measure(looseConstraints)
-        val searchBarPlaceable = searchBarMeasurables.first().measure(looseConstraints)
-
-        val fraction = searchTransitionFraction.value
-        val collapsedHeight = ((toolbarPlaceable.height + titlePlaceable.height) * fraction).roundToInt()
-        val searchBarY =
-            toolbarPlaceable.height + titlePlaceable.height - collapsedHeight + (Floats.searchTopSpacing.toPx() * fraction).roundToInt()
-        val bottomSpacing = (Floats.searchBottomSpacing.toPx() * (1f - fraction)).roundToInt()
-
-        layout(constraints.maxWidth, searchBarY + searchBarPlaceable.height + bottomSpacing) {
-            // Once faded out, the toolbar and title are left unplaced so that
-            // they neither draw nor receive taps beneath the search bar.
-            val alpha = toolbarAndTitleAlpha.value
-            if (alpha > 0f) {
-                toolbarPlaceable.placeWithLayer(0, 0) { this.alpha = alpha }
-                titlePlaceable.placeWithLayer(0, toolbarPlaceable.height - collapsedHeight) { this.alpha = alpha }
-            }
-
-            searchBarPlaceable.place(0, searchBarY)
-        }
-    }
-}
-
-// MARK: - Toolbar
-
-@Composable
-private fun Toolbar(
-    state: ConversationsPageReducer.State,
-    viewModel: ViewModel<ConversationsPageReducer.State, ConversationsPageReducer.Action>,
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(
-                    start = Floats.headerHorizontalPadding,
-                    end = Floats.headerHorizontalPadding,
-                    top = Floats.headerTopPadding,
-                ),
-    ) {
-        ToolbarButton(
-            symbolName = Constants.SETTINGS_TOOLBAR_BUTTON_IMAGE_SYSTEM_NAME,
-            foregroundColor = Colors.settingsToolbarButtonForeground,
-            onClick = { viewModel.send(ConversationsPageReducer.Action.SettingsToolbarButtonTapped) },
-        )
-
-        if (state.shouldShowExtraToolbarButtons) {
-            ToolbarButton(
-                symbolName = Constants.DELETE_CONVERSATIONS_TOOLBAR_BUTTON_IMAGE_SYSTEM_NAME,
-                foregroundColor = Colors.deleteConversationsToolbarButtonForeground,
-                onClick = { viewModel.send(ConversationsPageReducer.Action.DeleteConversationsToolbarButtonTapped) },
-            )
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        key(state.composeToolbarButtonViewID) {
-            ComposeToolbarButton(state = state, viewModel = viewModel)
-        }
-    }
-}
-
-@Composable
-private fun ComposeToolbarButton(
-    state: ConversationsPageReducer.State,
-    viewModel: ViewModel<ConversationsPageReducer.State, ConversationsPageReducer.Action>,
-) {
-    val isAnimated = state.conversations.isEmpty()
-    LaunchedEffect(isAnimated) {
-        if (isAnimated) viewModel.send(ConversationsPageReducer.Action.AnimatedComposeToolbarButtonAppeared)
-    }
-
-    // Once the reducer advances the amount past rest, the button pulses
-    // between rest and the amount until the list fills.
-    val scale =
-        if (isAnimated && state.animationAmount != 1f) {
-            rememberInfiniteTransition(label = COMPOSE_ANIMATION_LABEL)
-                .animateFloat(
-                    initialValue = 1f,
-                    targetValue = state.animationAmount,
-                    animationSpec =
-                        infiniteRepeatable(
-                            animation =
-                                tween(
-                                    durationMillis = (Floats.COMPOSE_TOOLBAR_BUTTON_ANIMATION_DURATION * MILLISECONDS_PER_SECOND).toInt(),
-                                    delayMillis = (Floats.COMPOSE_TOOLBAR_BUTTON_ANIMATION_DELAY * MILLISECONDS_PER_SECOND).toInt(),
-                                    easing = LinearEasing,
-                                ),
-                            repeatMode = RepeatMode.Reverse,
-                        ),
-                    label = COMPOSE_ANIMATION_LABEL,
-                ).value
-        } else {
-            1f
-        }
-
-    ToolbarButton(
-        symbolName = Constants.COMPOSE_TOOLBAR_BUTTON_IMAGE_SYSTEM_NAME,
-        foregroundColor = Colors.composeToolbarButtonForeground,
-        onClick = { viewModel.send(ConversationsPageReducer.Action.ComposeToolbarButtonTapped) },
-        modifier =
-            Modifier.graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
-    )
-}
-
-@Composable
-private fun ToolbarButton(
-    symbolName: String,
-    foregroundColor: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier =
-            modifier.defaultMinSize(
-                minWidth = Floats.toolbarButtonFrameMinWidth,
-                minHeight = Floats.toolbarButtonFrameMinHeight,
-            ),
-    ) {
-        Components.Button(symbolName = symbolName, foregroundColor = foregroundColor, onClick = onClick)
-    }
-}
-
-private const val COMPOSE_ANIMATION_LABEL = "ComposeToolbarButton"
-private const val MILLISECONDS_PER_SECOND = 1000f
-private const val SEARCH_TRANSITION_ANIMATION_LABEL = "ConversationsPageSearchTransition"
-private const val SEARCH_TRANSITION_FADE_ANIMATION_LABEL = "ConversationsPageSearchTransitionFade"

@@ -22,6 +22,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import us.neotechnica.panther.bundle.navigators.ChatRoute
+import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.models.ImageFileExtension
 import us.neotechnica.panther.modules.common.models.MediaFileExtension
@@ -36,9 +38,7 @@ import us.neotechnica.panther.modules.networking.support.MessageDecodeEnvironmen
 import us.neotechnica.panther.modules.networking.support.SessionTestEnvironment
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.state.services.SessionStore
-import us.neotechnica.panther.navigation.ChatRoute
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 
 /**
  * Exercises the chat info page service: participant resolution and

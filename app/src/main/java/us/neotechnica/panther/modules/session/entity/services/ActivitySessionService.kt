@@ -20,9 +20,11 @@ import us.neotechnica.panther.modules.networking.conversation.remotelyupdatable.
 import us.neotechnica.panther.modules.networking.conversation.remotelyupdatable.updateValues
 import us.neotechnica.panther.modules.networking.conversation.services.ConversationService
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 
@@ -33,7 +35,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetad
 object ActivitySessionService {
     // MARK: - Properties
 
-    private val database get() = Networking.config.databaseDelegate
+    private val database: DatabaseDelegate by Dependency { it.networking.database }
 
     // MARK: - Add User to Conversation
 

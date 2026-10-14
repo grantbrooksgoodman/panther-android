@@ -90,10 +90,6 @@ object Build {
     var bundleVersion: String = "0.0.0"
         private set
 
-    /** The network environment this build targets (for example, `"development"`). */
-    var environment: String = "production"
-        private set
-
     /** The release-cycle stage of this build. */
     var milestone: Milestone = Milestone.ALPHA
         private set
@@ -190,7 +186,6 @@ object Build {
         codeName: String,
         finalName: String,
         bundleVersion: String,
-        environment: String,
         milestone: Milestone,
         buildDate: Date,
         firstCompileDate: Date,
@@ -201,7 +196,6 @@ object Build {
         this.codeName = codeName
         this.finalName = finalName
         this.bundleVersion = bundleVersion
-        this.environment = environment
         this.milestone = milestone
         this.buildDate = buildDate
         this.firstCompileDate = firstCompileDate

@@ -13,6 +13,9 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.selects.select
 import us.neotechnica.panther.bundle.clientSession
+import us.neotechnica.panther.bundle.navigators.OnboardingRoute
+import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
+import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.modules.common.extensions.failedToGenerateMediaFile
 import us.neotechnica.panther.modules.common.extensions.timedOut
 import us.neotechnica.panther.modules.content.shared.dependencies.splashPageViewService
@@ -22,13 +25,10 @@ import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.navigation.Navigation
-import us.neotechnica.panther.navigation.OnboardingRoute
 import us.neotechnica.panther.navigation.PendingChatNavigation
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.RootNavigatorState
 import us.neotechnica.panther.navigation.RootRoute
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentNavigatorState
-import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues

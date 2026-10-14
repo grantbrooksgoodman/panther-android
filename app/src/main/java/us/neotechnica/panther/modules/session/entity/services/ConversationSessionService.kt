@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.conversation
 import us.neotechnica.panther.bundle.conversations
 import us.neotechnica.panther.bundle.messageOutboxDidChange
+import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.bundle.openConversationIDKey
 import us.neotechnica.panther.bundle.sessionStoreDidChange
 import us.neotechnica.panther.bundle.shouldNotifyOfConversationAvailability
@@ -31,7 +32,7 @@ import us.neotechnica.panther.modules.content.user.extensions.isMock
 import us.neotechnica.panther.modules.content.user.extensions.isOutboxMessage
 import us.neotechnica.panther.modules.content.user.extensions.offsetFromCurrentUserAdditionDate
 import us.neotechnica.panther.modules.content.user.extensions.sortedByAscendingSentDate
-import us.neotechnica.panther.modules.networking.common.uniquedByID
+import us.neotechnica.panther.modules.networking.common.extensions.uniquedByID
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
 import us.neotechnica.panther.modules.networking.conversation.models.Participant
@@ -41,16 +42,18 @@ import us.neotechnica.panther.modules.networking.conversation.services.Conversat
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.message.services.MessageService
 import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.constants.ConversationSessionServiceFloats
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.modules.session.sync.services.ConversationObserverService
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -73,6 +76,12 @@ import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
  */
 @Suppress("LargeClass")
 object ConversationSessionService {
+    // MARK: - Dependencies
+
+    private val conversationObserver: ConversationObserverService by Dependency { it.clientSession.sync.conversationObserver }
+    private val outbox: MessageOutboxService by Dependency { it.clientSession.outbox }
+    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
+
     // MARK: - Types
 
     private sealed interface CurrentConversationReference {
@@ -97,7 +106,7 @@ object ConversationSessionService {
     private val observationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val observersStarted = LockIsolated(false)
 
-    private val database get() = Networking.config.databaseDelegate
+    private val database: DatabaseDelegate by Dependency { it.networking.database }
     private val sharedEvents get() = DependencyValues.current.sharedEvents
 
     // MARK: - Computed Properties
@@ -113,7 +122,7 @@ object ConversationSessionService {
         get() =
             when (val reference = currentConversationReference.wrappedValue) {
                 is CurrentConversationReference.Draft -> reference.conversation
-                is CurrentConversationReference.Stored -> SessionStore.getConversation(reference.idKey)
+                is CurrentConversationReference.Stored -> sessionStore.getConversation(reference.idKey)
                 CurrentConversationReference.None -> null
             }
 
@@ -176,12 +185,12 @@ object ConversationSessionService {
             persistOpenConversationIDKey(null)
         } else {
             // Ensures the store contains the conversation before setting the pointer.
-            SessionStore.upsertConversation(conversation)
+            sessionStore.upsertConversation(conversation)
             currentConversationReference.wrappedValue = CurrentConversationReference.Stored(conversation.id.key)
 
             // Live-observe the open conversation; the observer coalesces
             // repeated starts for the same key.
-            ConversationObserverService.startObserving(conversation.id.key)
+            conversationObserver.startObserving(conversation.id.key)
 
             // Persist the open conversation so process death can restore it.
             persistOpenConversationIDKey(conversation.id.key)
@@ -255,7 +264,7 @@ object ConversationSessionService {
             ).toMutableList()
 
         currentConversation?.id?.key?.let { conversationIDKey ->
-            messages += MessageOutboxService.entries(conversationIDKey).map { it.asDisplayMessage }
+            messages += outbox.entries(conversationIDKey).map { it.asDisplayMessage }
         }
 
         internalDisplayedMessages.value = messages.uniquedByID
@@ -328,7 +337,7 @@ object ConversationSessionService {
     // MARK: - Auxiliary
 
     private fun clearPointer() {
-        ConversationObserverService.stopObserving()
+        conversationObserver.stopObserving()
         currentConversationReference.wrappedValue = CurrentConversationReference.None
         internalDisplayedMessages.value = emptyList()
         persistOpenConversationIDKey(null)
@@ -465,7 +474,7 @@ object ConversationSessionService {
         database.commit(updates)
 
         // Upsert the updated conversation to the session store.
-        SessionStore.upsertConversation(
+        sessionStore.upsertConversation(
             updatedConversation.copy(
                 id =
                     ConversationID(

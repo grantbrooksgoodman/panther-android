@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.Application
+import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.bundle.shouldNotifyOfConversationAvailability
 import us.neotechnica.panther.bundle.userSessionService
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
@@ -21,17 +22,19 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.designsystem.modules.foundation.extensions.cancelAction
 import us.neotechnica.panther.modules.common.services.RegionDetailService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.extensions.UserSessionServiceStorageKey
 import us.neotechnica.panther.modules.session.entity.services.ModerationSessionService
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.RootNavigatorState
 import us.neotechnica.panther.navigation.RootRoute
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.models.StoredItemKey
@@ -50,6 +53,11 @@ import us.neotechnica.panther.subsystem.modules.localization.services.LocalizedS
  * confirmation.
  */
 object ConversationCellViewService {
+    // MARK: - Dependencies
+
+    private val moderationSession: ModerationSessionService by Dependency { it.clientSession.entity.moderation }
+    private val regionDetailService: RegionDetailService by Dependency { it.commonServices.regionDetail }
+
     // MARK: - Properties
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -64,7 +72,7 @@ object ConversationCellViewService {
      * @throws Exception if the operation fails.
      */
     suspend fun blockUsersButtonTapped(conversation: Conversation) {
-        ModerationSessionService.blockUsers(inConversation = conversation)
+        moderationSession.blockUsers(inConversation = conversation)
     }
 
     /**
@@ -114,7 +122,7 @@ object ConversationCellViewService {
                 LocalizedStringResolver.languageDisplayNames()[user.languageCode.lowercase()]?.let {
                     "$it (${user.languageCode.uppercase()})"
                 } ?: user.languageCode.uppercase()
-            val regionName = RegionDetailService.localizedRegionName(user.phoneNumber.regionCode)
+            val regionName = regionDetailService.localizedRegionName(user.phoneNumber.regionCode)
             val alertMessage =
                 "${LocalizedStringKey.Language.localized()}: $languageName\n" +
                     "${LocalizedStringKey.Region.localized()}: $regionName"
@@ -140,7 +148,7 @@ object ConversationCellViewService {
      * @throws Exception if the operation fails.
      */
     suspend fun reportUsersButtonTapped(conversation: Conversation) {
-        ModerationSessionService.reportUsers(inConversation = conversation)
+        moderationSession.reportUsers(inConversation = conversation)
     }
 
     // MARK: - Auxiliary

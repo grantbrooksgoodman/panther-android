@@ -9,9 +9,8 @@
 package us.neotechnica.panther.modules.content.user.extensions
 
 import us.neotechnica.panther.bundle.currentUserID
-import us.neotechnica.panther.modules.common.contacts.services.ContactPairArchiveService
 import us.neotechnica.panther.modules.common.models.ContactPair
-import us.neotechnica.panther.modules.common.services.PushTokenService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.networking.user.models.DeviceID
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpdatableKey
@@ -41,7 +40,9 @@ val User.Companion.currentUserID: String?
 
 /** The contact pair matching this user in the contact pair archive, if one exists. */
 val User.contactPair: ContactPair?
-    get() = ContactPairArchiveService.getValue(phoneNumber)
+    get() =
+        DependencyValues.current.commonServices.contact.contactPairArchive
+            .getValue(phoneNumber)
 
 /**
  * The user's display name.
@@ -76,7 +77,7 @@ val User.displayName: String
  * @throws Exception if updating the user fails.
  */
 suspend fun User.removeCurrentPushToken() {
-    val currentPushToken = PushTokenService.currentToken ?: return
+    val currentPushToken = DependencyValues.current.commonServices.pushToken.currentToken ?: return
 
     var filteredPushTokens = (pushTokens ?: emptyList()).filter { it != currentPushToken }
     if (filteredPushTokens.isBangQualifiedEmpty) {

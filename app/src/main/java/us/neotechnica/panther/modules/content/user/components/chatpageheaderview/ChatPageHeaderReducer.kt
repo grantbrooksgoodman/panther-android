@@ -8,15 +8,15 @@
 
 package us.neotechnica.panther.modules.content.user.components.chatpageheaderview
 
+import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
+import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.modules.content.user.extensions.empty
 import us.neotechnica.panther.modules.content.user.extensions.isRelevant
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
-import us.neotechnica.panther.modules.session.state.services.SessionStore
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentNavigatorState
-import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
@@ -69,7 +69,9 @@ class ChatPageHeaderReducer : Reducer<ChatPageHeaderReducer.State, ChatPageHeade
          * session store – an empty placeholder if it no longer exists.
          */
         val conversation: Conversation
-            get() = SessionStore.getConversation(conversationIDKey) ?: Conversation.empty
+            get() =
+                DependencyValues.current.clientSession.store
+                    .getConversation(conversationIDKey) ?: Conversation.empty
     }
 
     // MARK: - Reduce

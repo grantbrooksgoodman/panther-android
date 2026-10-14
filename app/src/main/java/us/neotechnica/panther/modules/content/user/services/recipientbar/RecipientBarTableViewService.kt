@@ -16,8 +16,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import us.neotechnica.panther.modules.common.contacts.services.ContactPairArchiveService
 import us.neotechnica.panther.modules.common.models.ContactPair
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.extensions.absoluteLastName
 import us.neotechnica.panther.modules.content.user.extensions.alphabeticallySorted
 import us.neotechnica.panther.modules.content.user.extensions.queried
@@ -26,10 +26,11 @@ import us.neotechnica.panther.modules.content.user.extensions.uniquedByPhoneNumb
 import us.neotechnica.panther.modules.content.user.extensions.userIDs
 import us.neotechnica.panther.modules.content.user.extensions.withUser
 import us.neotechnica.panther.modules.content.user.models.QueriedContactPairCache
-import us.neotechnica.panther.modules.networking.common.visibleForCurrentUser
+import us.neotechnica.panther.modules.networking.common.extensions.visibleForCurrentUser
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.services.UserSessionService
+import us.neotechnica.panther.modules.session.clientSession
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.SingleSlotCoalescer
 
 /**
@@ -48,8 +49,14 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.SingleSlotCoal
  *   conversations, or `null` if they have not resolved.
  */
 class RecipientBarTableViewService(
-    private val knownContactPairsProvider: () -> List<ContactPair> = { ContactPairArchiveService.allValues() },
-    private val conversationsProvider: () -> List<Conversation>? = { UserSessionService.currentUser?.conversations },
+    private val knownContactPairsProvider: () -> List<ContactPair> = {
+        DependencyValues.current.commonServices.contact.contactPairArchive
+            .allValues()
+    },
+    private val conversationsProvider: () -> List<Conversation>? = {
+        DependencyValues.current.clientSession.entity.user.currentUser
+            ?.conversations
+    },
 ) {
     // MARK: - Types
 

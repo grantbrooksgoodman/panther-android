@@ -9,8 +9,10 @@
 package us.neotechnica.panther.modules.common.models
 
 import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.modules.common.interfaces.Serializable
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 
 /**
  * A phone number paired with the registered users it resolves to.
@@ -24,6 +26,10 @@ class NumberPair(
      */
     val userIDs: List<String>,
 ) : Serializable<Map<String, Any?>> {
+    // MARK: - Dependencies
+
+    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
+
     // MARK: - Types
 
     private enum class Keys(
@@ -46,7 +52,7 @@ class NumberPair(
      * store. Users not present in the store are omitted.
      */
     val users: List<User>
-        get() = userIDs.mapNotNull { SessionStore.users[it] }
+        get() = userIDs.mapNotNull { sessionStore.users[it] }
 
     override val encoded: Map<String, Any?>
         get() =

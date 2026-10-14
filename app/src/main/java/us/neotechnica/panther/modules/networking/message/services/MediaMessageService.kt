@@ -14,16 +14,17 @@ import us.neotechnica.panther.bundle.media
 import us.neotechnica.panther.bundle.messages
 import us.neotechnica.panther.modules.common.models.DocumentFileExtension
 import us.neotechnica.panther.modules.common.models.MediaFileExtension
-import us.neotechnica.panther.modules.networking.common.transferTimeout
+import us.neotechnica.panther.modules.networking.common.extensions.transferTimeout
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
 import us.neotechnica.panther.modules.networking.message.models.LocalMediaFilePath
 import us.neotechnica.panther.modules.networking.message.models.MediaFile
 import us.neotechnica.panther.modules.networking.message.models.Message
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.database.interfaces.getValues
 import us.neotechnica.panther.networking.modules.storage.interfaces.StorageDelegate
 import us.neotechnica.panther.networking.modules.storage.models.HostedItemMetadata
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -82,7 +83,7 @@ object MediaMessageService {
         mediaComponent: MediaFile,
         message: Message,
     ) {
-        val storage = Networking.config.storageDelegate
+        val storage = DependencyValues.current.networking.storage
         val pathPrefix = "${NetworkPath.media.rawValue}/${mediaComponent.encodedHash.take(SHORTENED_HASH_LENGTH)}"
         val relativePath = "$pathPrefix.${mediaComponent.fileExtension.rawValue}"
         val thumbnailRelativePath = "$pathPrefix${MediaFile.THUMBNAIL_IMAGE_NAME_SUFFIX}"
@@ -110,8 +111,8 @@ object MediaMessageService {
      *   fails.
      */
     suspend fun deleteMediaComponent(messageID: String) {
-        val storage = Networking.config.storageDelegate
-        val database = Networking.config.databaseDelegate
+        val storage = DependencyValues.current.networking.storage
+        val database = DependencyValues.current.networking.database
         val exceptions = mutableListOf<Exception>()
 
         try {
@@ -220,7 +221,7 @@ object MediaMessageService {
     }
 
     private suspend fun multipleMessagesReference(mediaFilePath: String): Boolean {
-        val database = Networking.config.databaseDelegate
+        val database = DependencyValues.current.networking.database
         val allMessages: Map<String, Any?>? = database.getValues<Map<String, Any?>>(NetworkPath.messages.rawValue)
         val referenceCount =
             allMessages
@@ -236,7 +237,7 @@ object MediaMessageService {
         messageID: String,
         localPath: LocalMediaFilePath,
     ): MediaFile {
-        val storage = Networking.config.storageDelegate
+        val storage = DependencyValues.current.networking.storage
         val userInfo = mapOf("MessageID" to messageID)
 
         val destination =

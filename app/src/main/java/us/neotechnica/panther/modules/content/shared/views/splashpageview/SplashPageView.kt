@@ -44,7 +44,7 @@ import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnima
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.designsystem.modules.theming.views.ThemedView
-import us.neotechnica.panther.modules.content.shared.components.GIFImage
+import us.neotechnica.panther.modules.content.shared.components.GIFImageView
 import us.neotechnica.panther.modules.content.shared.constants.SplashPageViewColors
 import us.neotechnica.panther.modules.content.shared.constants.SplashPageViewFloats
 import us.neotechnica.panther.modules.content.shared.constants.SplashPageViewStrings
@@ -109,7 +109,7 @@ fun SplashPageView(
             contentAlignment = Alignment.Center,
             modifier = Modifier.padding(bottom = Floats.padding),
         ) {
-            GIFImage(
+            GIFImageView(
                 name = Strings.GIF_IMAGE_NAME,
                 isActive = loadingIndicatorStyle == LoadingIndicatorStyle.BAR,
                 modifier =

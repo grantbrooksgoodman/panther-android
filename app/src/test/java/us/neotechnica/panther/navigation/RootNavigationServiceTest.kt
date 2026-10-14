@@ -11,6 +11,16 @@ package us.neotechnica.panther.navigation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import us.neotechnica.panther.bundle.navigators.ChatNavigatorState
+import us.neotechnica.panther.bundle.navigators.ChatRoute
+import us.neotechnica.panther.bundle.navigators.OnboardingNavigatorState
+import us.neotechnica.panther.bundle.navigators.OnboardingRoute
+import us.neotechnica.panther.bundle.navigators.SettingsNavigatorState
+import us.neotechnica.panther.bundle.navigators.SettingsRoute
+import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
+import us.neotechnica.panther.bundle.navigators.UserContentRoute
+import us.neotechnica.panther.navigation.RootNavigationService.Route
+import us.neotechnica.panther.subsystem.modules.navigation.services.NavigationCoordinator
 
 /**
  * Exercises the navigation service's route dispatch: the root modal,

@@ -9,39 +9,42 @@
 package us.neotechnica.panther.modules.content.onboarding.views.signinpageview
 
 import us.neotechnica.panther.bundle.currentUserID
+import us.neotechnica.panther.bundle.navigators.OnboardingNavigatorState
+import us.neotechnica.panther.bundle.navigators.OnboardingRoute
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardService
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.common.services.AnalyticsService
-import us.neotechnica.panther.modules.common.services.PhoneNumberService
 import us.neotechnica.panther.modules.common.services.RegionDetailService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.onboarding.dependencies.onboardingService
 import us.neotechnica.panther.modules.content.onboarding.extensions.verifyPhoneNumber
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
 import us.neotechnica.panther.modules.networking.user.services.UserService
 import us.neotechnica.panther.navigation.Navigation
-import us.neotechnica.panther.navigation.OnboardingNavigatorState
-import us.neotechnica.panther.navigation.OnboardingRoute
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.RootNavigatorState
 import us.neotechnica.panther.navigation.RootRoute
-import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.navigation
-import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.auth.extensions.notReportableForAuthCodes
+import us.neotechnica.panther.networking.modules.auth.interfaces.AuthDelegate
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.translation.extensions.value
+import us.neotechnica.panther.networking.modules.translation.interfaces.HostedTranslationDelegate
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.effect.cancel
 import us.neotechnica.panther.subsystem.modules.effect.cancellable
 import us.neotechnica.panther.subsystem.modules.effect.merge
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
@@ -101,8 +104,12 @@ import kotlin.time.Duration.Companion.milliseconds
 class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Action> {
     // MARK: - Dependencies
 
+    private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
+    private val auth: AuthDelegate by Dependency { it.networking.auth }
     private val navigation: Navigation by Dependency { it.navigation }
     private val onboardingService: OnboardingService by Dependency { it.onboardingService }
+    private val regionDetailService: RegionDetailService by Dependency { it.commonServices.regionDetail }
+    private val translator: HostedTranslationDelegate by Dependency { it.networking.hostedTranslation }
 
     // MARK: - Actions
 
@@ -257,12 +264,19 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
             get() = Build.isDeveloperModeEnabled
 
         internal val numberIsValidLength: Boolean
-            get() = PhoneNumberService.numberIsValidLength(phoneNumberString.digits.length, phoneNumber.callingCode)
+            get() =
+                DependencyValues.current.commonServices.phoneNumber.numberIsValidLength(
+                    phoneNumberString.digits.length,
+                    phoneNumber.callingCode,
+                )
 
         internal val phoneNumber: PhoneNumber
             get() =
                 PhoneNumber(
-                    callingCode = RegionDetailService.callingCode(selectedRegionCode) ?: PhoneNumberService.deviceCallingCode,
+                    callingCode =
+                        DependencyValues.current.commonServices.regionDetail
+                            .callingCode(selectedRegionCode)
+                            ?: DependencyValues.current.commonServices.phoneNumber.deviceCallingCode,
                     nationalNumberString = phoneNumberString.digits,
                     regionCode = selectedRegionCode,
                     label = null,
@@ -304,7 +318,7 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
                 Overlay.removeOverlay()
 
                 Persistent.setString(PersistentStorageKey.currentUserID, action.userID)
-                AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.LOG_IN)
+                analyticsService.logEvent(AnalyticsService.AnalyticsEvent.LOG_IN)
                 navigation.navigate(Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.Splash)))
                 ReduceResult(state)
             }
@@ -455,7 +469,7 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
                         .task<Action> {
                             try {
                                 Action.AuthenticateUserReturned(
-                                    Networking.config.authDelegate.authenticateUser(
+                                    auth.authenticateUser(
                                         authID = authID,
                                         verificationCode = verificationCode,
                                     ),
@@ -474,7 +488,7 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
     }
 
     private fun reduceViewAppeared(state: State): ReduceResult<State, Action> {
-        val selectedRegionCode = onboardingService.regionCode ?: RegionDetailService.deviceRegionCode
+        val selectedRegionCode = onboardingService.regionCode ?: regionDetailService.deviceRegionCode
 
         val newState =
             if (state.isDeveloperModeEnabled) {
@@ -500,7 +514,7 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
     private fun resolveEffect(): Effect<Action> =
         Effect.run { send ->
             try {
-                send(Action.ResolveReturned(Networking.config.hostedTranslationDelegate.resolve(SignInPageViewStrings)))
+                send(Action.ResolveReturned(translator.resolve(SignInPageViewStrings)))
             } catch (exception: Exception) {
                 send(Action.ResolveFailed(exception))
             }

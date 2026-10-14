@@ -30,6 +30,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
+import us.neotechnica.panther.designsystem.modules.componentkit.constants.MessageContextMenuColors
+import us.neotechnica.panther.designsystem.modules.componentkit.constants.MessageContextMenuFloats
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAction
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
@@ -49,22 +51,29 @@ internal fun ContextMenuCard(
 
     Column(
         Modifier
-            .width(MENU_WIDTH)
-            .clip(RoundedCornerShape(MENU_CORNER_RADIUS))
-            .background(Color.White.copy(alpha = MENU_BACKGROUND_ALPHA)),
+            .width(MessageContextMenuFloats.MENU_WIDTH)
+            .clip(RoundedCornerShape(MessageContextMenuFloats.MENU_CORNER_RADIUS))
+            .background(Color.White.copy(alpha = MessageContextMenuFloats.MENU_BACKGROUND_ALPHA)),
     ) {
         actions.forEachIndexed { index, action ->
-            val contentColor = if (action.isDestructive) DESTRUCTIVE_COLOR else colors.titleText
+            val contentColor = if (action.isDestructive) MessageContextMenuColors.DESTRUCTIVE_COLOR else colors.titleText
             Column(modifier = Modifier.onGloballyPositioned { onElementPositioned(index, it) }) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .height(MENU_ROW_HEIGHT)
-                            .background(if (index == highlightedElementIndex) MENU_ELEMENT_HIGHLIGHTED_BACKGROUND else Color.Transparent)
-                            .clickable { onSelect(action) }
-                            .padding(start = MENU_ROW_START_PADDING, end = 12.dp),
+                            .height(MessageContextMenuFloats.MENU_ROW_HEIGHT)
+                            .background(
+                                if (index ==
+                                    highlightedElementIndex
+                                ) {
+                                    MessageContextMenuColors.MENU_ELEMENT_HIGHLIGHTED_BACKGROUND
+                                } else {
+                                    Color.Transparent
+                                },
+                            ).clickable { onSelect(action) }
+                            .padding(start = MessageContextMenuFloats.MENU_ROW_START_PADDING, end = 12.dp),
                 ) {
                     Components.Text(
                         action.title,
@@ -77,20 +86,23 @@ internal fun ContextMenuCard(
                         Icon(
                             painter = painterResource(imageResourceID),
                             contentDescription = null,
-                            modifier = Modifier.size(MENU_ICON_SIZE),
+                            modifier = Modifier.size(MessageContextMenuFloats.MENU_ICON_SIZE),
                             tint = contentColor,
                         )
                     } else {
                         Components.Symbol(
                             action.systemImageName,
                             foregroundColor = contentColor,
-                            modifier = Modifier.size(MENU_ICON_SIZE),
+                            modifier = Modifier.size(MessageContextMenuFloats.MENU_ICON_SIZE),
                         )
                     }
                 }
 
                 if (index != actions.lastIndex) {
-                    HorizontalDivider(thickness = MENU_DIVIDER_THICKNESS, color = colors.subtitleText.copy(alpha = 0.25f))
+                    HorizontalDivider(
+                        thickness = MessageContextMenuFloats.MENU_DIVIDER_THICKNESS,
+                        color = colors.subtitleText.copy(alpha = 0.25f),
+                    )
                 }
             }
         }

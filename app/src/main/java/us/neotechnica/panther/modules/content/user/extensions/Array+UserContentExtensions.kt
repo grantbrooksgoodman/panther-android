@@ -12,9 +12,9 @@ import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.content.user.models.QueriedContactPairCache
 import us.neotechnica.panther.modules.content.user.models.QueriedConversationCache
-import us.neotechnica.panther.modules.networking.common.sortedByLatestMessageSentDate
-import us.neotechnica.panther.modules.networking.common.uniquedByID
-import us.neotechnica.panther.modules.networking.common.visibleForCurrentUser
+import us.neotechnica.panther.modules.networking.common.extensions.sortedByLatestMessageSentDate
+import us.neotechnica.panther.modules.networking.common.extensions.uniquedByID
+import us.neotechnica.panther.modules.networking.common.extensions.visibleForCurrentUser
 import us.neotechnica.panther.modules.networking.conversation.models.Activity
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.MessageRecipientConsentAcknowledgementData

@@ -31,11 +31,14 @@ import org.json.JSONObject
 import us.neotechnica.panther.MainActivity
 import us.neotechnica.panther.R
 import us.neotechnica.panther.bundle.Application
+import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
+import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.bundle.notifications
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
 import us.neotechnica.panther.modules.common.constants.NotificationExtensionConstants
 import us.neotechnica.panther.modules.common.services.HapticsService
 import us.neotechnica.panther.modules.common.services.PushTokenService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.isVisibleForCurrentUser
 import us.neotechnica.panther.modules.content.user.models.ChatPageStateServiceEffectID
@@ -44,9 +47,7 @@ import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.navigation.PendingChatNavigation
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentNavigatorState
-import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
@@ -72,6 +73,8 @@ class PantherMessagingService : FirebaseMessagingService() {
     // MARK: - Dependencies
 
     private val clientSession: ClientSession by Dependency { it.clientSession }
+    private val hapticsService: HapticsService by Dependency { it.commonServices.haptics }
+    private val pushTokenService: PushTokenService by Dependency { it.commonServices.pushToken }
 
     // MARK: - Properties
 
@@ -80,10 +83,10 @@ class PantherMessagingService : FirebaseMessagingService() {
     // MARK: - Token
 
     override fun onNewToken(token: String) {
-        PushTokenService.setCurrentToken(token)
+        pushTokenService.setCurrentToken(token)
         if (User.currentUserID == null) return
         scope.launch {
-            runCatching { PushTokenService.updatePushTokensForCurrentUser() }
+            runCatching { pushTokenService.updatePushTokensForCurrentUser() }
                 .onFailure { Logger.log(Exception.from(it, ExceptionMetadata(this@PantherMessagingService))) }
         }
     }
@@ -170,7 +173,7 @@ class PantherMessagingService : FirebaseMessagingService() {
             currentConversationIDKey == conversationIDKey
         ) {
             if (reactionMessageID.isBangQualifiedEmpty) return
-            return HapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
+            return hapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
         }
 
         val title = enrichedTitle(message)

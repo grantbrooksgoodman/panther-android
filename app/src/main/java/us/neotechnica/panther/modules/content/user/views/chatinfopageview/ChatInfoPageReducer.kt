@@ -14,6 +14,9 @@ import android.net.Uri
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.bundle.currentConversationMetadataChanged
+import us.neotechnica.panther.bundle.navigators.ChatNavigatorState
+import us.neotechnica.panther.bundle.navigators.ChatRoute
+import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewFloats
 import us.neotechnica.panther.modules.content.user.dependencies.chatInfoPageViewService
@@ -32,25 +35,23 @@ import us.neotechnica.panther.modules.networking.conversation.models.Activity
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationMetadata
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.modules.session.state.services.SessionStore
-import us.neotechnica.panther.navigation.ChatNavigatorState
-import us.neotechnica.panther.navigation.ChatRoute
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.modules.session.clientSession
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.translation.extensions.value
+import us.neotechnica.panther.networking.modules.translation.interfaces.HostedTranslationDelegate
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.effect.merge
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
@@ -86,8 +87,8 @@ import java.util.UUID
 class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReducer.Action> {
     // MARK: - Dependencies
 
-    private val viewService: ChatInfoPageViewService
-        get() = DependencyValues.current.chatInfoPageViewService
+    private val translator: HostedTranslationDelegate by Dependency { it.networking.hostedTranslation }
+    private val viewService: ChatInfoPageViewService by Dependency { it.chatInfoPageViewService }
 
     // MARK: - Actions
 
@@ -429,7 +430,10 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
             }
 
         internal val conversation: Conversation?
-            get() = ConversationSessionService.currentConversation ?: SessionStore.getConversation(conversationIDKey)
+            get() =
+                DependencyValues.current.clientSession.entity.conversation.currentConversation
+                    ?: DependencyValues.current.clientSession.store
+                        .getConversation(conversationIDKey)
 
         private val cellViewData: ConversationCellViewData?
             get() = conversation?.let { ConversationCellViewData(it) }
@@ -677,7 +681,7 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
     private fun resolveEffect(): Effect<Action> =
         Effect.run { send ->
             try {
-                send(Action.ResolveReturned(Networking.config.hostedTranslationDelegate.resolve(ChatInfoPageViewStrings)))
+                send(Action.ResolveReturned(translator.resolve(ChatInfoPageViewStrings)))
             } catch (exception: Exception) {
                 send(Action.ResolveFailed(exception))
             }

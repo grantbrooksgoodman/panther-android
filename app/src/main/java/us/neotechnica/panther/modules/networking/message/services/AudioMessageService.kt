@@ -14,8 +14,10 @@ import us.neotechnica.panther.modules.networking.message.models.AudioFile
 import us.neotechnica.panther.modules.networking.message.models.AudioMessageReference
 import us.neotechnica.panther.modules.networking.message.models.LocalAudioFilePath
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -63,7 +65,7 @@ object AudioMessageService {
      * @throws Exception if deletion fails.
      */
     suspend fun deleteInputAudioComponent(messageID: String) {
-        val storage = Networking.config.storageDelegate
+        val storage = DependencyValues.current.networking.storage
 
         try {
             storage.deleteItem(
@@ -95,7 +97,7 @@ object AudioMessageService {
         localAudioFilePath: LocalAudioFilePath,
         translation: Translation,
     ): AudioMessageReference {
-        val storage = Networking.config.storageDelegate
+        val storage = DependencyValues.current.networking.storage
         val userInfo = mapOf("MessageID" to messageID)
 
         val sourcePathString =

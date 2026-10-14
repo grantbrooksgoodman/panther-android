@@ -9,8 +9,6 @@
 package us.neotechnica.panther.navigation
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.EaseIn
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -31,6 +29,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import us.neotechnica.panther.bundle.traitCollectionChanged
 import us.neotechnica.panther.designsystem.modules.foundation.extensions.resignFirstResponders
+import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import us.neotechnica.panther.modules.content.onboarding.views.OnboardingContainerView
 import us.neotechnica.panther.modules.content.shared.views.splashpageview.SplashPageReducer
 import us.neotechnica.panther.modules.content.shared.views.splashpageview.SplashPageView
@@ -38,6 +37,7 @@ import us.neotechnica.panther.modules.content.user.views.UserContentContainerVie
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * The app's root view.
@@ -80,7 +80,7 @@ fun RootView(modifier: Modifier = Modifier) {
         modifier = modifier.fillMaxSize(),
         targetState = state.modal,
         transitionSpec = {
-            fadeIn(tween(TRANSITION_MILLIS, easing = EaseIn)) togetherWith fadeOut(tween(TRANSITION_MILLIS, easing = EaseIn))
+            fadeIn(SystemAnimation.easeIn(TRANSITION_DURATION)) togetherWith fadeOut(SystemAnimation.easeIn(TRANSITION_DURATION))
         },
     ) { modal ->
         when (modal) {
@@ -99,4 +99,4 @@ fun RootView(modifier: Modifier = Modifier) {
     }
 }
 
-private const val TRANSITION_MILLIS = 200
+private val TRANSITION_DURATION = 200.milliseconds

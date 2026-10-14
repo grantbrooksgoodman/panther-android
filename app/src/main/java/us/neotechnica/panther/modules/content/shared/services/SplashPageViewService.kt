@@ -41,7 +41,7 @@ import us.neotechnica.panther.modules.content.user.extensions.syncIfNeeded
 import us.neotechnica.panther.modules.content.user.extensions.updateDeviceIDIfNeeded
 import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.networking.common.populateTemporaryCaches
+import us.neotechnica.panther.modules.networking.common.extensions.populateTemporaryCaches
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.modules.session.clientSession
@@ -54,7 +54,6 @@ import us.neotechnica.panther.networking.modules.health.extensions.networkHealth
 import us.neotechnica.panther.networking.modules.health.models.NetworkHealthTier
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -63,6 +62,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.shared.models.SharedState
@@ -114,6 +114,7 @@ object SplashPageViewService {
     // MARK: - Dependencies
 
     private val clientSession: ClientSession by Dependency { it.clientSession }
+    private val contactService: ContactService by Dependency { it.commonServices.contact }
     private val networking: NetworkServices by Dependency { it.networking }
     private val services: CommonServices by Dependency { it.commonServices }
 
@@ -469,7 +470,7 @@ object SplashPageViewService {
 
             appScope.launch(Dispatchers.Default) {
                 try {
-                    ContactService.syncIfNeeded()
+                    contactService.syncIfNeeded()
                 } catch (exception: Exception) {
                     Logger.log(exception)
                 }

@@ -25,6 +25,10 @@ import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.Application
 import us.neotechnica.panther.bundle.Application.ResetCompletionProcedure
 import us.neotechnica.panther.bundle.application
+import us.neotechnica.panther.bundle.navigators.OnboardingRoute
+import us.neotechnica.panther.bundle.navigators.SettingsNavigatorState
+import us.neotechnica.panther.bundle.navigators.SettingsRoute
+import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
@@ -40,12 +44,11 @@ import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.modules.common.extensions.ApplicationStorageKey
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.services.AccountDeletionService
-import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.services.AnalyticsService.AnalyticsEvent
 import us.neotechnica.panther.modules.common.services.HapticsService
 import us.neotechnica.panther.modules.common.services.InviteService
 import us.neotechnica.panther.modules.common.services.MetadataService
-import us.neotechnica.panther.modules.common.services.NotificationService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.components.SquareIconImage
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewConstants
@@ -56,19 +59,15 @@ import us.neotechnica.panther.modules.content.user.extensions.removeCurrentPushT
 import us.neotechnica.panther.modules.content.user.models.SquareIconViewConfiguration
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.user.models.User
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.ModerationSessionService
-import us.neotechnica.panther.modules.session.entity.services.UserSessionService
-import us.neotechnica.panther.navigation.OnboardingRoute
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.RootNavigatorState
 import us.neotechnica.panther.navigation.RootRoute
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.SettingsNavigatorState
-import us.neotechnica.panther.navigation.SettingsRoute
-import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.languageExonym
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
@@ -76,6 +75,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.StoredItemKey
 import us.neotechnica.panther.subsystem.modules.foundation.models.overriddenLanguageCode
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
@@ -111,6 +111,14 @@ private typealias SettingsStrings = SettingsPageViewConstants
 class SettingsPageViewService(
     private val dependencies: Dependencies = Dependencies(),
 ) {
+    // MARK: - Dependencies
+
+    private val accountDeletionService: AccountDeletionService by Dependency { it.commonServices.accountDeletion }
+    private val hapticsService: HapticsService by Dependency { it.commonServices.haptics }
+    private val inviteService: InviteService by Dependency { it.commonServices.invite }
+    private val metadataService: MetadataService by Dependency { it.commonServices.metadata }
+    private val moderationSession: ModerationSessionService by Dependency { it.clientSession.entity.moderation }
+
     // MARK: - Types
 
     /**
@@ -120,19 +128,30 @@ class SettingsPageViewService(
      * ones it exercises.
      */
     data class Dependencies(
-        val currentUser: () -> User? = { UserSessionService.currentUser },
+        val currentUser: () -> User? = { DependencyValues.current.clientSession.entity.user.currentUser },
         val delayed: (Duration, suspend () -> Unit) -> Unit = { by, operation -> Task.delayed(by, operation) },
         val dismissSheets: () -> Unit = { Application.dismissSheets() },
         val isDeveloperModeEnabled: () -> Boolean = { Build.isDeveloperModeEnabled },
-        val logEvent: (AnalyticsEvent) -> Unit = { AnalyticsService.logEvent(it) },
+        val logEvent: (AnalyticsEvent) -> Unit = {
+            DependencyValues.current.commonServices.analytics
+                .logEvent(it)
+        },
         val milestone: () -> Build.Milestone = { Build.milestone },
         val navigate: (Route) -> Unit = { DependencyValues.current.navigation.navigate(it) },
         val overriddenLanguageCode: () -> String? = { RuntimeStorage.retrieve(StoredItemKey.overriddenLanguageCode) as? String },
         val promptToToggleDeveloperMode: () -> Unit = { DevModeService.promptToToggle() },
         val removeCurrentPushToken: suspend (User) -> Unit = { it.removeCurrentPushToken() },
         val reset: () -> Unit = { Application.reset() },
-        val setBadgeNumber: suspend (Int) -> Unit = { NotificationService.setBadgeNumber(it, updateHostedValue = false) },
-        val stopObservingCurrentUserChanges: () -> Unit = { UserSessionService.stopObservingCurrentUserChanges() },
+        val setBadgeNumber: suspend (
+            Int,
+        ) -> Unit = {
+            DependencyValues.current.commonServices.notification
+                .setBadgeNumber(it, updateHostedValue = false)
+        },
+        val stopObservingCurrentUserChanges: () -> Unit = {
+            DependencyValues.current.clientSession.entity.user
+                .stopObservingCurrentUserChanges()
+        },
     )
 
     // MARK: - Properties
@@ -162,7 +181,7 @@ class SettingsPageViewService(
     /** Begins the unblock users flow, surfacing any error as a toast. */
     fun blockedUsersButtonTapped() {
         scope.launch {
-            runCatching { ModerationSessionService.unblockUsers() }.onFailure { Logger.log(it.toException(), with = AlertType.toast) }
+            runCatching { moderationSession.unblockUsers() }.onFailure { Logger.log(it.toException(), with = AlertType.toast) }
         }
     }
 
@@ -246,7 +265,7 @@ class SettingsPageViewService(
             val shareToOtherAppAction =
                 Action(SettingsStrings.SHARE_TO_ANOTHER_APP) {
                     scope.launch {
-                        runCatching { InviteService.presentInvitationPrompt() }
+                        runCatching { inviteService.presentInvitationPrompt() }
                             .onFailure { Logger.log(it.toException(), with = AlertType.toast) }
                     }
                 }
@@ -276,7 +295,7 @@ class SettingsPageViewService(
      * does nothing.
      */
     fun leaveReviewButtonTapped() {
-        val shareLink = MetadataService.playStoreShareLink ?: return
+        val shareLink = metadataService.playStoreShareLink ?: return
         openURL(shareLink)
     }
 
@@ -378,7 +397,7 @@ class SettingsPageViewService(
         val context = appContext ?: return
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
         clipboard?.setPrimaryClip(ClipData.newPlainText(CLIPBOARD_LABEL, string))
-        HapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.HEAVY)
+        hapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.HEAVY)
     }
 
     /**
@@ -568,7 +587,7 @@ class SettingsPageViewService(
         val deleteAccountAction =
             Action(SettingsStrings.DELETE_ACCOUNT, style = ActionStyle.DESTRUCTIVE_PREFERRED) {
                 scope.launch {
-                    runCatching { AccountDeletionService.deleteAccount() }.onFailure { Logger.log(it.toException()) }
+                    runCatching { accountDeletionService.deleteAccount() }.onFailure { Logger.log(it.toException()) }
                     val exitAction = Action(SettingsStrings.EXIT, style = ActionStyle.DESTRUCTIVE_PREFERRED) { clearCachesAndExit() }
                     Alert(message = SettingsStrings.ACCOUNT_DELETED_MESSAGE, actions = listOf(exitAction)).present(
                         translating =

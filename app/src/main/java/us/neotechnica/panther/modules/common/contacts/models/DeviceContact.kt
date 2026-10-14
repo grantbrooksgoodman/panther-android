@@ -10,6 +10,8 @@ package us.neotechnica.panther.modules.common.contacts.models
 
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.common.services.PhoneNumberService
+import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 
 /**
  * A contact read from the device's address book, grouped by its
@@ -33,6 +35,10 @@ internal class DeviceContact(
     val phoneNumbers: List<PhoneNumber>,
     val imageData: ByteArray?,
 ) {
+    // MARK: - Dependencies
+
+    private val phoneNumberService: PhoneNumberService by Dependency { it.commonServices.phoneNumber }
+
     // MARK: - Methods
 
     /**
@@ -56,7 +62,7 @@ internal class DeviceContact(
                 (
                     nationalNumberString.isNotEmpty() &&
                         number.nationalNumberString == nationalNumberString &&
-                        PhoneNumberService.numberIsValidLength(nationalNumberString.length, phoneNumber.callingCode)
+                        phoneNumberService.numberIsValidLength(nationalNumberString.length, phoneNumber.callingCode)
                 )
         }
     }

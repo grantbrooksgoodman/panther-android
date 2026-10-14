@@ -14,9 +14,11 @@ import us.neotechnica.panther.modules.content.onboarding.components.InstructionV
 import us.neotechnica.panther.modules.content.user.dependencies.changeLanguagePageViewService
 import us.neotechnica.panther.modules.content.user.dependencies.settingsPageViewService
 import us.neotechnica.panther.modules.content.user.services.ChangeLanguagePageViewService
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.translation.extensions.value
+import us.neotechnica.panther.networking.modules.translation.interfaces.HostedTranslationDelegate
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -46,6 +48,10 @@ import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
  * - Tapping confirm applies the selected language.
  */
 class ChangeLanguagePageReducer : Reducer<ChangeLanguagePageReducer.State, ChangeLanguagePageReducer.Action> {
+    // MARK: - Dependencies
+
+    private val translator: HostedTranslationDelegate by Dependency { it.networking.hostedTranslation }
+
     // MARK: - Action
 
     sealed interface Action {
@@ -155,7 +161,7 @@ class ChangeLanguagePageReducer : Reducer<ChangeLanguagePageReducer.State, Chang
             try {
                 send(
                     Action.ResolveReturned(
-                        Networking.config.hostedTranslationDelegate.resolve(ChangeLanguagePageViewStrings),
+                        translator.resolve(ChangeLanguagePageViewStrings),
                     ),
                 )
             } catch (exception: Exception) {

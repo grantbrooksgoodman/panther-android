@@ -29,6 +29,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
+import us.neotechnica.panther.designsystem.modules.componentkit.constants.MessageContextMenuFloats
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAlignment
 import kotlin.math.roundToInt
 
@@ -57,9 +58,9 @@ internal fun ContextMenuOverlay(
             .fillMaxSize()
             .pointerInput(Unit) { detectTapGestures { controller.dismiss() } },
     ) {
-        val gapPx = with(density) { MENU_GAP.toPx() }
-        val reactionGapPx = with(density) { REACTION_ROW_GAP.toPx() }
-        val edgeMarginPx = with(density) { EDGE_MARGIN.toPx() }
+        val gapPx = with(density) { MessageContextMenuFloats.MENU_GAP.toPx() }
+        val reactionGapPx = with(density) { MessageContextMenuFloats.REACTION_ROW_GAP.toPx() }
+        val edgeMarginPx = with(density) { MessageContextMenuFloats.EDGE_MARGIN.toPx() }
         val menuLeadingOffsetPx = with(density) { active.menuLeadingOffset.toPx() }
         val topLimitPx = WindowInsets.systemBars.getTop(density) + edgeMarginPx
         val bottomLimitPx = constraints.maxHeight - WindowInsets.systemBars.getBottom(density) - edgeMarginPx
@@ -95,7 +96,7 @@ internal fun ContextMenuOverlay(
                         IntOffset(x.roundToInt().coerceAtLeast(0), y.roundToInt().coerceAtLeast(0))
                     }.graphicsLayer {
                         alpha = progress
-                        val scale = MENU_MIN_SCALE + (1f - MENU_MIN_SCALE) * progress
+                        val scale = MessageContextMenuFloats.MENU_MIN_SCALE + (1f - MessageContextMenuFloats.MENU_MIN_SCALE) * progress
                         scaleX = scale
                         scaleY = scale
                         transformOrigin = TransformOrigin(originX, 1f)
@@ -123,18 +124,25 @@ internal fun ContextMenuOverlay(
                 Modifier
                     .onGloballyPositioned { menuHeightPx = it.size.height }
                     .offset {
-                        val menuWidthPx = with(density) { MENU_WIDTH.toPx() }
+                        val menuWidthPx = with(density) { MessageContextMenuFloats.MENU_WIDTH.toPx() }
                         // Pull the card left by its text inset so the text lands at the offset,
                         // unless the caller wants the card's leading edge itself at the offset
                         // (aligning the menu with the message bubble's leading edge).
-                        val textInsetPx = if (active.alignsMenuCardToLeadingEdge) 0f else with(density) { MENU_ROW_START_PADDING.toPx() }
+                        val textInsetPx =
+                            if (active.alignsMenuCardToLeadingEdge) {
+                                0f
+                            } else {
+                                with(
+                                    density,
+                                ) { MessageContextMenuFloats.MENU_ROW_START_PADDING.toPx() }
+                            }
                         val leadingX = bounds.left + menuLeadingOffsetPx - textInsetPx
                         val x = if (active.alignment == ContextMenuAlignment.LEADING) leadingX else bounds.right - menuWidthPx
                         val y = bubbleBottomPx + gapPx + shiftPx
                         IntOffset(x.roundToInt().coerceAtLeast(0), y.roundToInt())
                     }.graphicsLayer {
                         alpha = progress
-                        val scale = MENU_MIN_SCALE + (1f - MENU_MIN_SCALE) * progress
+                        val scale = MessageContextMenuFloats.MENU_MIN_SCALE + (1f - MessageContextMenuFloats.MENU_MIN_SCALE) * progress
                         scaleX = scale
                         scaleY = scale
                         transformOrigin = TransformOrigin(originX, 0f)
@@ -149,3 +157,6 @@ internal fun ContextMenuOverlay(
         }
     }
 }
+
+// The dimming applied to the content beneath a presented menu.
+private fun contextMenuScrimAlpha(): Float = MessageContextMenuFloats.LIGHT_SCRIM_ALPHA

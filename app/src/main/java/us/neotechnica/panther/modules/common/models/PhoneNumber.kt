@@ -10,12 +10,14 @@ package us.neotechnica.panther.modules.common.models
 
 import com.google.i18n.phonenumbers.NumberParseException
 import com.google.i18n.phonenumbers.PhoneNumberUtil
-import us.neotechnica.panther.modules.common.services.PhoneNumberService
 import us.neotechnica.panther.modules.common.services.RegionDetailService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.common.interfaces.Serializable
 import us.neotechnica.panther.networking.modules.common.interfaces.SerializableDecoder
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.EncodedHashable
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -55,6 +57,10 @@ class PhoneNumber(
     val internalFormattedString: String?,
 ) : Serializable<Map<String, Any?>>,
     EncodedHashable {
+    // MARK: - Dependencies
+
+    private val regionDetailService: RegionDetailService by Dependency { it.commonServices.regionDetail }
+
     // MARK: - Types
 
     private enum class Keys(
@@ -177,7 +183,7 @@ class PhoneNumber(
 
         var fullFormatAttempt = formattedString(regionCode = resolvedRegionCode, includeCallingCode = false)
 
-        val regionCallingCode = RegionDetailService.callingCode(resolvedRegionCode) ?: return fullFormatAttempt
+        val regionCallingCode = regionDetailService.callingCode(resolvedRegionCode) ?: return fullFormatAttempt
 
         if (fullFormatAttempt != failsafeFormat(partialNumberString)) {
             if (!fullFormatAttempt.startsWith("+$regionCallingCode")) {
@@ -322,11 +328,13 @@ class PhoneNumber(
             label: String? = null,
         ): PhoneNumber {
             var numberValue = string.digits
-            val deviceCallingCode = PhoneNumberService.deviceCallingCode
-            val deviceRegionCode = RegionDetailService.deviceRegionCode
+            val deviceCallingCode = DependencyValues.current.commonServices.phoneNumber.deviceCallingCode
+            val deviceRegionCode = DependencyValues.current.commonServices.regionDetail.deviceRegionCode
 
             var callingCode: String? = null
-            val possibleCallingCodes = PhoneNumberService.possibleCallingCodes(numberValue)
+            val possibleCallingCodes =
+                DependencyValues.current.commonServices.phoneNumber
+                    .possibleCallingCodes(numberValue)
             if (possibleCallingCodes != null &&
                 (possibleCallingCodes.contains(deviceCallingCode) || possibleCallingCodes.size == 1)
             ) {
@@ -340,13 +348,22 @@ class PhoneNumber(
                 numberValue = numberValue.drop(resolvedCallingCode.length)
             }
 
-            if (!PhoneNumberService.numberIsValidLength(numberValue.length, resolvedCallingCode)) {
-                resolvedCallingCode = PhoneNumberService.possibleCallingCodes(numberValue)?.firstOrNull() ?: resolvedCallingCode
+            if (!DependencyValues.current.commonServices.phoneNumber
+                    .numberIsValidLength(numberValue.length, resolvedCallingCode)
+            ) {
+                resolvedCallingCode =
+                    DependencyValues.current.commonServices.phoneNumber
+                        .possibleCallingCodes(numberValue)
+                        ?.firstOrNull()
+                        ?: resolvedCallingCode
                 if (resolvedCallingCode.isBlank()) resolvedCallingCode = deviceCallingCode
             }
 
             val possibleRegionCodes =
-                RegionDetailService.regionCodes(RegionDetailService.QueryStrategy.CallingCode(resolvedCallingCode)) ?: emptyList()
+                DependencyValues.current.commonServices.regionDetail.regionCodes(
+                    RegionDetailService.QueryStrategy.CallingCode(resolvedCallingCode),
+                )
+                    ?: emptyList()
             val regionCode =
                 when {
                     possibleRegionCodes.contains(deviceRegionCode) -> deviceRegionCode

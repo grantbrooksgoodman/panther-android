@@ -22,9 +22,11 @@ import us.neotechnica.panther.modules.common.constants.NotificationExtensionCons
 import us.neotechnica.panther.modules.content.user.extensions.UserDisplayNameCache
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewDataCache
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.CacheDomain
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
@@ -47,6 +49,10 @@ import kotlin.time.Duration.Companion.milliseconds
  * changes coalesce into a single invalidation.
  */
 object UICacheInvalidationService {
+    // MARK: - Dependencies
+
+    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
+
     // MARK: - Types
 
     private enum class TaskID(
@@ -138,7 +144,7 @@ object UICacheInvalidationService {
 
     private fun persistValuesForNotificationExtension() {
         val json = JSONObject()
-        SessionStore.conversations.values
+        sessionStore.conversations.values
             .filter { it.participants.size > GROUP_PARTICIPANT_THRESHOLD }
             .forEach { conversation ->
                 val titleLabelText = ConversationCellViewData(conversation)?.titleLabelText ?: return@forEach

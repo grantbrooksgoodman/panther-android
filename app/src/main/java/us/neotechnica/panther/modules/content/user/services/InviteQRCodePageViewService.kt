@@ -16,10 +16,16 @@ import com.google.zxing.WriterException
 import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import us.neotechnica.panther.modules.common.services.MetadataService
+import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 
 /** The service that generates the invite QR code page's content. */
 object InviteQRCodePageViewService {
+    // MARK: - Dependencies
+
+    private val metadataService: MetadataService by Dependency { it.commonServices.metadata }
+
     // MARK: - Computed Properties
 
     /**
@@ -28,7 +34,7 @@ object InviteQRCodePageViewService {
      */
     val appShareQRCodeImage: Bitmap?
         get() {
-            val appShareLink = MetadataService.appShareLink ?: return null
+            val appShareLink = metadataService.appShareLink ?: return null
             return generateQRCode(from = appShareLink, outputSize = OUTPUT_SIZE)
         }
 

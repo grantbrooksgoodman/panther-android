@@ -11,15 +11,8 @@ package us.neotechnica.panther.navigation
 import us.neotechnica.panther.designsystem.modules.foundation.extensions.presentedViewsCount
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.interfaces.DependencyKey
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.navigation.services.NavigationCoordinator
 import us.neotechnica.panther.subsystem.modules.shared.models.SharedState
-
-/**
- * A convenience alias for the app's navigation coordinator.
- *
- * Use `Navigation` wherever you need to reference the coordinator
- * type without repeating the full generic signature.
- */
-typealias Navigation = NavigationCoordinator<Route, RootNavigatorState>
 
 // MARK: - Dependency
 

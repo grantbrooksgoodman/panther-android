@@ -13,16 +13,19 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.modules.common.models.PhoneNumber
-import us.neotechnica.panther.modules.networking.common.withGlobalCacheStrategy
+import us.neotechnica.panther.modules.networking.common.extensions.withGlobalCacheStrategy
 import us.neotechnica.panther.modules.networking.user.models.DeviceID
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.networking.user.models.UserDataSnapshot
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.state.services.SessionStore
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.networking.modules.database.interfaces.getValues
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.foundation.models.Coalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -41,6 +44,10 @@ import kotlin.time.Duration.Companion.milliseconds
  * session store.
  */
 object UserService {
+    // MARK: - Dependencies
+
+    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
+
     // MARK: - Properties
 
     private val keyedCoalescer = Coalescer<String, User>()
@@ -48,7 +55,7 @@ object UserService {
 
     private val cachedUserDataSnapshots = LockIsolated<List<UserDataSnapshot>?>(null)
 
-    private val database get() = Networking.config.databaseDelegate
+    private val database: DatabaseDelegate by Dependency { it.networking.database }
 
     // MARK: - User Creation
 
@@ -370,7 +377,7 @@ object UserService {
          this service returns is resolvable from the session store
          (e.g. NumberPair.users). Bypasses RemotelyUpdatable.update.
          */
-        SessionStore.upsertUser(user)
+        sessionStore.upsertUser(user)
         return user
     }
 

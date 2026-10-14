@@ -17,7 +17,9 @@ import us.neotechnica.panther.designsystem.modules.foundation.extensions.cancelA
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.services.PushTokenService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.networking.user.services.UserService
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
@@ -57,6 +59,11 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
  * context, such as the reducers that drive the onboarding pages.
  */
 class OnboardingService {
+    // MARK: - Dependencies
+
+    private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
+    private val pushTokenService: PushTokenService by Dependency { it.commonServices.pushToken }
+
     // MARK: - Properties
 
     /**
@@ -135,11 +142,11 @@ class OnboardingService {
                 id = userID,
                 languageCode = languageCode,
                 phoneNumber = phoneNumber,
-                pushTokens = PushTokenService.currentToken?.let { listOf(it) },
+                pushTokens = pushTokenService.currentToken?.let { listOf(it) },
             )
         Persistent.setString(PersistentStorageKey.currentUserID, user.id)
         createdUserInCurrentAppSession = true
-        AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.SIGN_UP)
+        analyticsService.logEvent(AnalyticsService.AnalyticsEvent.SIGN_UP)
     }
 
     // MARK: - Alert Presentation

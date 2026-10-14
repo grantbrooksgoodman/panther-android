@@ -16,18 +16,21 @@ import us.neotechnica.panther.bundle.contacts
 import us.neotechnica.panther.bundle.conversationCellViewData
 import us.neotechnica.panther.bundle.queriedContactPairs
 import us.neotechnica.panther.modules.common.contacts.models.DeviceContact
+import us.neotechnica.panther.modules.common.dependencies.contactNameService
 import us.neotechnica.panther.modules.common.extensions.ContactPairArchiveServiceStorageKey
 import us.neotechnica.panther.modules.common.extensions.emptyContactList
 import us.neotechnica.panther.modules.common.models.Contact
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.models.NumberPair
 import us.neotechnica.panther.modules.common.services.PermissionService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.content.user.extensions.uniquedByPhoneNumber
 import us.neotechnica.panther.modules.content.user.extensions.userIDs
 import us.neotechnica.panther.modules.content.user.extensions.withUser
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.networking.user.services.UserService
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.CacheDomain
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -49,6 +52,11 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
  * archive with the results, and caches the fetched contacts in memory.
  */
 object ContactService {
+    // MARK: - Dependencies
+
+    private val contactNameService: ContactNameService by Dependency { it.contactNameService }
+    private val permissionService: PermissionService by Dependency { it.commonServices.permission }
+
     // MARK: - Properties
 
     /** The service that persists and queries the contact pair archive. */
@@ -112,7 +120,7 @@ object ContactService {
      */
     fun deviceContactLookupUri(compiledNumberString: String): Uri? {
         val resolver = appContext?.contentResolver ?: return null
-        if (PermissionService.contactPermissionStatus != PermissionService.PermissionStatus.GRANTED) return null
+        if (permissionService.contactPermissionStatus != PermissionService.PermissionStatus.GRANTED) return null
 
         val filterUri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(compiledNumberString))
         val projection = arrayOf(ContactsContract.PhoneLookup._ID, ContactsContract.PhoneLookup.LOOKUP_KEY)
@@ -163,7 +171,7 @@ object ContactService {
 
     private fun fetchContactPairs(users: List<User>): List<ContactPair> {
         val resolver = appContext?.contentResolver
-        if (PermissionService.contactPermissionStatus != PermissionService.PermissionStatus.GRANTED || resolver == null) {
+        if (permissionService.contactPermissionStatus != PermissionService.PermissionStatus.GRANTED || resolver == null) {
             throw Exception("Not authorized for contacts.", isReportable = false, metadata = ExceptionMetadata(this))
         }
 
@@ -208,7 +216,7 @@ object ContactService {
                         .sortedBy { it.phoneNumber.callingCode }
                 if (numberPairs.isEmpty()) return@mapNotNull null
 
-                val (firstName, lastName) = ContactNameService.name(deviceContact)
+                val (firstName, lastName) = contactNameService.name(deviceContact)
                 ContactPair(
                     contact =
                         Contact(

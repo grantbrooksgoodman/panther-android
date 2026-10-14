@@ -55,7 +55,6 @@ class BuildInfoOverlayReducerTest {
             codeName = "Panther",
             finalName = "Hello",
             bundleVersion = "1.0.0",
-            environment = "development",
             milestone = Build.Milestone.BETA,
             buildDate = Date(0),
             firstCompileDate = Date(0),

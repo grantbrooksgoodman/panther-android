@@ -24,10 +24,13 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.modules.common.extensions.MetadataServiceStorageKey
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.networking.modules.database.interfaces.observe
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.comparator
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.ForcedUpdateModalDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -50,6 +53,11 @@ import kotlin.math.roundToLong
  * or the blocking forced-update modal.
  */
 object UpdateService : ForcedUpdateModalDelegate {
+    // MARK: - Dependencies
+
+    private val database: DatabaseDelegate by Dependency { it.networking.database }
+    private val metadataService: MetadataService by Dependency { it.commonServices.metadata }
+
     // MARK: - Types
 
     /** The kind of update to prompt for. */
@@ -73,7 +81,7 @@ object UpdateService : ForcedUpdateModalDelegate {
      * `null` if it has not been resolved.
      */
     override val installButtonRedirectURL: String?
-        get() = MetadataService.playStoreShareLink
+        get() = metadataService.playStoreShareLink
 
     private val hasUpdatedSinceLastForced: Boolean
         get() {
@@ -95,7 +103,7 @@ object UpdateService : ForcedUpdateModalDelegate {
             observationScope.launch {
                 Logger.log("Started observing forced update changes.")
                 try {
-                    Networking.config.databaseDelegate
+                    database
                         .observe<Map<String, Any>>(NetworkPath.shared.rawValue, prependingEnvironment = false)
                         .collect { dictionary ->
                             val playStoreBuildNumber =
@@ -158,10 +166,10 @@ object UpdateService : ForcedUpdateModalDelegate {
     private suspend fun checkForUpdates(): UpdateType? {
         // Revalidate first so the update decision is never made
         // against a stale, persisted build number.
-        MetadataService.resolveValues()
+        metadataService.resolveValues()
 
-        val playStoreBuildNumber = MetadataService.playStoreBuildNumber ?: return null
-        val overrideForceUpdate = MetadataService.shouldForceUpdateAndroid ?: return null
+        val playStoreBuildNumber = metadataService.playStoreBuildNumber ?: return null
+        val overrideForceUpdate = metadataService.shouldForceUpdateAndroid ?: return null
 
         val isUpdateAvailable = playStoreBuildNumber > Build.buildNumber
         val shouldPrompt =
@@ -191,7 +199,7 @@ object UpdateService : ForcedUpdateModalDelegate {
     private suspend fun presentUpdateCTA() {
         val installURL =
             installButtonRedirectURL ?: run {
-                MetadataService.resolveValues()
+                metadataService.resolveValues()
                 installButtonRedirectURL ?: return
             }
 

@@ -12,7 +12,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
-import us.neotechnica.panther.modules.networking.common.messageService
+import us.neotechnica.panther.modules.networking.common.extensions.messageService
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
 import us.neotechnica.panther.modules.networking.message.models.LocalAudioFilePath
 import us.neotechnica.panther.modules.networking.message.models.LocalMediaFilePath

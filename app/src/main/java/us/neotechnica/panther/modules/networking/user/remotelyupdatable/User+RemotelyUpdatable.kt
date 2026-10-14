@@ -9,11 +9,12 @@
 package us.neotechnica.panther.modules.networking.user.remotelyupdatable
 
 import us.neotechnica.panther.bundle.users
-import us.neotechnica.panther.modules.networking.common.encodeForWrite
+import us.neotechnica.panther.modules.networking.common.interfaces.encodeForWrite
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.common.models.WriteAction
@@ -87,12 +88,14 @@ suspend fun User.update(
 
     return when (val action = willWrite(to, key, newValue)) {
         is WriteAction.Encoded -> {
-            Networking.config.databaseDelegate.setValue(action.value, valueKeyPath)
+            DependencyValues.current.networking.database
+                .setValue(action.value, valueKeyPath)
             didWrite(newValue, key)
         }
         is WriteAction.Handled -> didWrite(action.updated, key)
         WriteAction.Proceed -> {
-            Networking.config.databaseDelegate.setValue(encodeForWrite(this, key.rawValue, to), valueKeyPath)
+            DependencyValues.current.networking.database
+                .setValue(encodeForWrite(this, key.rawValue, to), valueKeyPath)
             didWrite(newValue, key)
         }
     }
@@ -126,11 +129,12 @@ suspend fun User.updateValues(data: Map<UserUpdatableKey, Any>): User {
                 ?: encodeForWrite(this, key.rawValue, value)
     }
 
-    Networking.config.databaseDelegate.updateChildValues(
+    DependencyValues.current.networking.database.updateChildValues(
         key = "${NetworkPath.users.rawValue}/$id",
         data = childValues,
     )
-    SessionStore.upsertUser(updated)
+    DependencyValues.current.clientSession.store
+        .upsertUser(updated)
     return updated
 }
 
@@ -155,7 +159,10 @@ suspend fun User.willWrite(
                     currentData = blockedUserIDs,
                     at = "${NetworkPath.users.rawValue}/$id/${key.rawValue}",
                 )
-            if (updates != null) Networking.config.databaseDelegate.commit(updates)
+            if (updates != null) {
+                DependencyValues.current.networking.database
+                    .commit(updates)
+            }
             WriteAction.Handled(updated)
         }
         UserUpdatableKey.PUSH_TOKENS -> {
@@ -165,7 +172,10 @@ suspend fun User.willWrite(
                     currentData = pushTokens,
                     at = "${NetworkPath.users.rawValue}/$id/${key.rawValue}",
                 )
-            if (updates != null) Networking.config.databaseDelegate.commit(updates)
+            if (updates != null) {
+                DependencyValues.current.networking.database
+                    .commit(updates)
+            }
             WriteAction.Handled(updated)
         }
         else ->
@@ -182,7 +192,8 @@ fun User.didWrite(
     updated: User,
     key: UserUpdatableKey,
 ): User {
-    SessionStore.upsertUser(updated)
+    DependencyValues.current.clientSession.store
+        .upsertUser(updated)
     return updated
 }
 

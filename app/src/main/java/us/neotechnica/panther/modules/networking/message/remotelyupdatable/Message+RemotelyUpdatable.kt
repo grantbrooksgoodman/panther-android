@@ -9,14 +9,16 @@
 package us.neotechnica.panther.modules.networking.message.remotelyupdatable
 
 import us.neotechnica.panther.bundle.messages
-import us.neotechnica.panther.modules.networking.common.encodeForWrite
+import us.neotechnica.panther.modules.networking.common.interfaces.encodeForWrite
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.message.models.ReadReceipt
-import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.translation.models.TranslationReference
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 
@@ -63,7 +65,8 @@ suspend fun Message.update(
 
     val valueKeyPath = "${NetworkPath.messages.rawValue}/$id/${key.rawValue}"
 
-    Networking.config.databaseDelegate.setValue(encodeForWrite(this, key.rawValue, to), valueKeyPath)
+    DependencyValues.current.networking.database
+        .setValue(encodeForWrite(this, key.rawValue, to), valueKeyPath)
     return didWrite(newValue, key)
 }
 
@@ -75,6 +78,7 @@ fun Message.didWrite(
     updated: Message,
     key: MessageUpdatableKey,
 ): Message {
-    SessionStore.upsertMessages(setOf(updated))
+    DependencyValues.current.clientSession.store
+        .upsertMessages(setOf(updated))
     return updated
 }

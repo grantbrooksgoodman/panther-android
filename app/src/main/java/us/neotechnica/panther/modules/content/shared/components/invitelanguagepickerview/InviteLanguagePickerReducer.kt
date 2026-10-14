@@ -10,11 +10,13 @@ package us.neotechnica.panther.modules.content.shared.components.invitelanguagep
 
 import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheets
 import us.neotechnica.panther.modules.common.services.InviteService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import us.neotechnica.panther.subsystem.modules.localization.models.LocalizationSource
@@ -40,6 +42,10 @@ import kotlin.time.Duration.Companion.seconds
  *   invitation.
  */
 class InviteLanguagePickerReducer : Reducer<InviteLanguagePickerReducer.State, InviteLanguagePickerReducer.Action> {
+    // MARK: - Dependencies
+
+    private val inviteService: InviteService by Dependency { it.commonServices.invite }
+
     // MARK: - Actions
 
     /** The actions the invite language picker can process. */
@@ -130,7 +136,7 @@ class InviteLanguagePickerReducer : Reducer<InviteLanguagePickerReducer.State, I
                     val languageCode = state.selectedLanguageCode
                     Task.delayed(by = COMPOSE_INVITATION_DELAY) {
                         try {
-                            InviteService.composeInvitation(languageCode)
+                            inviteService.composeInvitation(languageCode)
                         } catch (exception: Exception) {
                             Logger.log(exception, with = AlertType.toast)
                         }

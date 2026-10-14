@@ -17,10 +17,10 @@ import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
 import us.neotechnica.panther.modules.common.constants.CommonConstants
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewStrings
 import us.neotechnica.panther.modules.content.user.constants.SystemMessageCellFloats
+import us.neotechnica.panther.modules.content.user.dependencies.chatPageViewService
 import us.neotechnica.panther.modules.content.user.dependencies.contextMenuActionHandlerService
 import us.neotechnica.panther.modules.content.user.models.MessageKind
 import us.neotechnica.panther.modules.content.user.services.AlternateMessageService
-import us.neotechnica.panther.modules.content.user.services.AudioMessagePlaybackService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
 import us.neotechnica.panther.modules.networking.message.models.Message
@@ -244,7 +244,7 @@ val Message.attributedSystemString: AnnotatedString?
 val Message.isPlayingMessage: Boolean
     get() {
         if (!contentType.isAudio || audioComponent == null) return false
-        val playingMessageID = AudioMessagePlaybackService.playingMessageID ?: return false
+        val playingMessageID = DependencyValues.current.chatPageViewService.audioMessagePlayback.playingMessageID ?: return false
         return playingMessageID == id
     }
 

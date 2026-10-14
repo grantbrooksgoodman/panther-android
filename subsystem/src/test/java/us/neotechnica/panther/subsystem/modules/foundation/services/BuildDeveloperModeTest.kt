@@ -56,7 +56,6 @@ class BuildDeveloperModeTest {
             codeName = "Hello",
             finalName = "Hello",
             bundleVersion = "1.0.0",
-            environment = "development",
             milestone = milestone,
             buildDate = Date(),
             firstCompileDate = Date(),

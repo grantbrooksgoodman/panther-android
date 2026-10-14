@@ -13,10 +13,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
+import us.neotechnica.panther.bundle.navigators.SettingsNavigatorState
+import us.neotechnica.panther.bundle.navigators.SettingsRoute
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.SettingsNavigatorState
-import us.neotechnica.panther.navigation.SettingsRoute
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception

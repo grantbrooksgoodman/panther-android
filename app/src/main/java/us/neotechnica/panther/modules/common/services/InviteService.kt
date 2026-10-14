@@ -28,20 +28,24 @@ import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootShee
 import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.extensions.ReviewServiceStorageKey
 import us.neotechnica.panther.modules.common.services.AnalyticsService.AnalyticsEvent
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.onboarding.dependencies.onboardingService
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewConstants
 import us.neotechnica.panther.modules.content.user.extensions.hasContactsBesidesCurrentUser
 import us.neotechnica.panther.modules.content.user.views.settingspageview.SettingsPageViewStrings
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.translation.extensions.value
+import us.neotechnica.panther.networking.modules.translation.interfaces.HostedTranslationDelegate
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
@@ -61,6 +65,15 @@ import kotlin.time.Duration.Companion.seconds
  * the share-sheet handlers.
  */
 object InviteService {
+    // MARK: - Dependencies
+
+    private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
+    private val contactService: ContactService by Dependency { it.commonServices.contact }
+    private val metadataService: MetadataService by Dependency { it.commonServices.metadata }
+    private val permissionService: PermissionService by Dependency { it.commonServices.permission }
+    private val translator: HostedTranslationDelegate by Dependency { it.networking.hostedTranslation }
+    private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
+
     // MARK: - Properties
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -75,9 +88,9 @@ object InviteService {
     private val canSuggestInvitation: Boolean
         get() {
             val sufficientAppOpenCount = (appOpenCount ?: 0) == 0 || appOpenCount == 1 || (appOpenCount ?: 0) % 2 == 0
-            val currentUser = UserSessionService.currentUser
+            val currentUser = userSession.currentUser
 
-            if (PermissionService.contactPermissionStatus != PermissionService.PermissionStatus.GRANTED) return false
+            if (permissionService.contactPermissionStatus != PermissionService.PermissionStatus.GRANTED) return false
             if (hasContactsBesidesCurrentUser()) return false
             if (!(currentUser?.conversations).isNullOrEmpty()) return false
             if (!(currentUser?.conversationIDs).isNullOrEmpty()) return false
@@ -110,9 +123,9 @@ object InviteService {
      * @throws Exception if metadata resolution or translation fails.
      */
     suspend fun composeInvitation(languageCode: String?) {
-        val appShareLink = MetadataService.appShareLink
+        val appShareLink = metadataService.appShareLink
         if (appShareLink == null) {
-            MetadataService.resolveValues()
+            metadataService.resolveValues()
             return composeInvitation(languageCode)
         }
 
@@ -120,13 +133,13 @@ object InviteService {
             "Hey, let's chat on ⌘${Build.finalName}⌘! It's a simple messaging app that allows us to " +
                 "easily talk to each other in our native languages!"
 
-        AnalyticsService.logEvent(AnalyticsEvent.INVITE)
+        analyticsService.logEvent(AnalyticsEvent.INVITE)
         if (languageCode == "en") {
             return presentActivityViewController(appShareLink, promptMessage.sanitized)
         }
 
         val translation =
-            Networking.config.hostedTranslationDelegate.translate(
+            translator.translate(
                 TranslationInput(promptMessage),
                 LanguagePair(from = "en", to = languageCode ?: RuntimeStorage.languageCode),
                 hudConfig = HUDConfig(appearsAfter = Duration.ZERO, isModal = true),
@@ -177,7 +190,7 @@ object InviteService {
         if (!canSuggestInvitation) return false
 
         try {
-            ContactService.syncContactPairArchive()
+            contactService.syncContactPairArchive()
         } catch (exception: Exception) {
             Logger.log(exception, with = AlertType.toast)
             return false
@@ -256,7 +269,7 @@ object InviteService {
         val context = appContext ?: return
         val chooserTitle =
             runCatching {
-                Networking.config.hostedTranslationDelegate
+                translator
                     .resolve(SettingsPageViewStrings)
                     .value(SettingsPageViewStrings.inviteFriendsButtonText)
             }.getOrDefault(SettingsPageViewConstants.INVITE_FRIENDS_BUTTON_TEXT)
@@ -279,7 +292,7 @@ object InviteService {
         text: String,
     ): String = "$appShareLink\n$text"
 
-    private fun hasContactsBesidesCurrentUser(): Boolean = ContactService.hasContactsBesidesCurrentUser
+    private fun hasContactsBesidesCurrentUser(): Boolean = contactService.hasContactsBesidesCurrentUser
 
     private fun Throwable.toException(): Exception = this as? Exception ?: Exception.from(this, ExceptionMetadata(this))
 

@@ -19,8 +19,8 @@ import org.junit.Before
 import org.junit.Test
 import us.neotechnica.panther.bundle.sessionStoreDidChange
 import us.neotechnica.panther.modules.content.user.extensions.empty
-import us.neotechnica.panther.modules.networking.common.SessionStoreStorageKey
-import us.neotechnica.panther.modules.networking.common.sessionStore
+import us.neotechnica.panther.modules.networking.common.extensions.SessionStoreStorageKey
+import us.neotechnica.panther.modules.networking.common.extensions.sessionStore
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.message.models.Message
 import us.neotechnica.panther.modules.networking.message.serializable.decode

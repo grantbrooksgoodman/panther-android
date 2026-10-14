@@ -9,9 +9,12 @@
 package us.neotechnica.panther.modules.content.user.components.conversationcellview
 
 import androidx.compose.ui.graphics.Color
+import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
+import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.designsystem.modules.foundation.extensions.darker
 import us.neotechnica.panther.designsystem.modules.foundation.extensions.lighter
 import us.neotechnica.panther.modules.common.services.AnalyticsService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewFloats
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewStrings
 import us.neotechnica.panther.modules.content.user.extensions.empty
@@ -22,19 +25,18 @@ import us.neotechnica.panther.modules.content.user.models.ConversationCellViewDa
 import us.neotechnica.panther.modules.content.user.services.ConversationCellViewService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
-import us.neotechnica.panther.modules.session.state.services.SessionStore
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentNavigatorState
-import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.effect.cancellable
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
@@ -64,6 +66,11 @@ import kotlin.time.Duration.Companion.seconds
  *   single reload.
  */
 class ConversationCellReducer : Reducer<ConversationCellReducer.State, ConversationCellReducer.Action> {
+    // MARK: - Dependencies
+
+    private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
+    private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
+
     // MARK: - Properties
 
     // Scopes reload-task cancellation to this reducer instance; the
@@ -199,7 +206,9 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
          * store – an empty placeholder if it no longer exists.
          */
         val conversation: Conversation
-            get() = SessionStore.getConversation(conversationIDKey) ?: Conversation.empty
+            get() =
+                DependencyValues.current.clientSession.store
+                    .getConversation(conversationIDKey) ?: Conversation.empty
 
         /**
          * The text the date label displays, or a redaction placeholder
@@ -319,7 +328,7 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
             is Action.DeleteConversationReturned -> {
                 val exception = action.exception
                 if (exception == null) {
-                    AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.DELETE_CONVERSATION)
+                    analyticsService.logEvent(AnalyticsService.AnalyticsEvent.DELETE_CONVERSATION)
                 } else {
                     Logger.log(exception, with = AlertType.toast)
                 }
@@ -422,7 +431,7 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
     private fun deleteConversationEffect(conversation: Conversation): Effect<Action> =
         Effect.run { send ->
             try {
-                ConversationSessionService.deleteConversation(conversation)
+                conversationSession.deleteConversation(conversation)
                 send(Action.DeleteConversationReturned(null))
             } catch (exception: Exception) {
                 send(Action.DeleteConversationReturned(exception))

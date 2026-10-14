@@ -22,20 +22,21 @@ import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.networking.common.visibleForCurrentUser
+import us.neotechnica.panther.modules.networking.common.extensions.visibleForCurrentUser
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpdatableKey
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.updateValues
-import us.neotechnica.panther.modules.session.entity.services.UserSessionService
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.languageExonym
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.Timeout
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.translator.models.Translation
@@ -59,6 +60,8 @@ import kotlin.time.Duration.Companion.seconds
 class ChangeLanguagePageViewService(
     private val dependencies: Dependencies = Dependencies(),
 ) {
+    // MARK: - Dependencies
+
     // MARK: - Types
 
     /**
@@ -75,7 +78,7 @@ class ChangeLanguagePageViewService(
                 isModal = false,
             )
         },
-        val currentUser: () -> User? = { UserSessionService.currentUser },
+        val currentUser: () -> User? = { DependencyValues.current.clientSession.entity.user.currentUser },
         val hideHUD: () -> Unit = { HUD.hide() },
         val presentActionSheet: suspend (ActionSheet, List<ActionSheet.TranslationOptionKey>) -> Unit = { sheet, translating ->
             sheet.present(translating = translating)
@@ -86,7 +89,10 @@ class ChangeLanguagePageViewService(
                 onCompletion = ResetCompletionProcedure.EXIT_GRACEFULLY,
             )
         },
-        val resolveCurrentUser: suspend () -> Unit = { UserSessionService.resolveCurrentUser(User.DataType.entries.toSet()) },
+        val resolveCurrentUser: suspend () -> Unit = {
+            DependencyValues.current.clientSession.entity.user
+                .resolveCurrentUser(User.DataType.entries.toSet())
+        },
         val showProgressHUD: (String) -> Unit = { text -> HUD.showProgress(text = text, isModal = true) },
         val updateValues: suspend (User, Map<UserUpdatableKey, Any>) -> User = { user, data -> user.updateValues(data) },
     )

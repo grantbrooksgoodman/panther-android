@@ -11,10 +11,13 @@ package us.neotechnica.panther.modules.common.services
 import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.UserUpdatableKey
 import us.neotechnica.panther.modules.networking.user.remotelyupdatable.update
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.networking.modules.database.interfaces.getValues
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
@@ -27,11 +30,15 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
  * which they are signed in.
  */
 object PushTokenService {
+    // MARK: - Dependencies
+
+    private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
+
     // MARK: - Properties
 
     private val currentTokenRef = LockIsolated<String?>(null)
 
-    private val database get() = Networking.config.databaseDelegate
+    private val database: DatabaseDelegate by Dependency { it.networking.database }
 
     // MARK: - Computed Properties
 
@@ -92,7 +99,7 @@ object PushTokenService {
      *   fails.
      */
     suspend fun updatePushTokensForCurrentUser() {
-        val currentUser = UserSessionService.currentUser
+        val currentUser = userSession.currentUser
         val token = currentToken
         if (currentUser == null || token == null) {
             throw Exception(
@@ -128,7 +135,7 @@ object PushTokenService {
      *   update fails.
      */
     suspend fun prunePushTokensForCurrentUser() {
-        val currentUser = UserSessionService.currentUser ?: return
+        val currentUser = userSession.currentUser ?: return
         val currentUserPushTokens = currentUser.pushTokens?.toSet() ?: return
         if (currentUserPushTokens.isEmpty()) return
 

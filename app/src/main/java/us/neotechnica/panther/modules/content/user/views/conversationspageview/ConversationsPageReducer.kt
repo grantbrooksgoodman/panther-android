@@ -11,39 +11,33 @@ package us.neotechnica.panther.modules.content.user.views.conversationspageview
 import us.neotechnica.panther.bundle.Application
 import us.neotechnica.panther.bundle.conversationsPageReappeared
 import us.neotechnica.panther.bundle.conversationsSearchQuery
+import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
+import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
-import us.neotechnica.panther.modules.content.user.constants.ConversationsPageViewFloats
 import us.neotechnica.panther.modules.content.user.dependencies.conversationsPageViewService
 import us.neotechnica.panther.modules.content.user.extensions.filteredAndSorted
 import us.neotechnica.panther.modules.content.user.extensions.isMock
 import us.neotechnica.panther.modules.content.user.extensions.isVisibleForCurrentUser
 import us.neotechnica.panther.modules.content.user.extensions.queried
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.modules.session.entity.services.UserSessionService
+import us.neotechnica.panther.modules.session.clientSession
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.RootNavigatorState
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentNavigatorState
-import us.neotechnica.panther.navigation.UserContentRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkEnvironment
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
-import us.neotechnica.panther.subsystem.modules.effect.cancellable
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
-import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedStates
 import java.util.UUID
-import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * The reducer that drives the conversations page.
@@ -247,10 +241,14 @@ class ConversationsPageReducer : Reducer<ConversationsPageReducer.State, Convers
 
         private val resolvedConversations: List<Conversation>
             get() {
-                val allConversations = (UserSessionService.currentUser?.conversations ?: emptyList()).filteredAndSorted
+                val allConversations =
+                    (
+                        DependencyValues.current.clientSession.entity.user.currentUser
+                            ?.conversations ?: emptyList()
+                    ).filteredAndSorted
 
                 if (allConversations.isEmpty()) {
-                    val currentConversation = ConversationSessionService.currentConversation
+                    val currentConversation = DependencyValues.current.clientSession.entity.conversation.currentConversation
                     return if (currentConversation != null &&
                         !currentConversation.isMock &&
                         currentConversation.isVisibleForCurrentUser
@@ -391,80 +389,5 @@ class ConversationsPageReducer : Reducer<ConversationsPageReducer.State, Convers
         val sharedEvents = DependencyValues.current.sharedEvents
         sharedEvents.conversationsPageReappeared.send(Unit)
         return ReduceResult(state.copy(conversationsChangeToken = UUID.randomUUID()))
-    }
-
-    private fun animationAmountEffect(currentAnimationAmount: Float): Effect<Action> =
-        Effect.task(delay = ANIMATION_AMOUNT_DELAY) {
-            Action.ComposeToolbarButtonAnimationAmountSet(
-                if (currentAnimationAmount == ConversationsPageViewFloats.COMPOSE_TOOLBAR_BUTTON_ANIMATION_AMOUNT) {
-                    1f
-                } else {
-                    ConversationsPageViewFloats.COMPOSE_TOOLBAR_BUTTON_ANIMATION_AMOUNT
-                },
-            )
-        }
-
-    private fun reloadDataEffect(): Effect<Action> =
-        Effect.run { send ->
-            try {
-                viewService.reloadData()
-                send(Action.ReloadDataReturned)
-            } catch (exception: Exception) {
-                send(Action.ReloadDataFailed(exception))
-            }
-        }
-
-    private fun handleChatPageStoreChangeTask(): Effect<Action> =
-        Effect
-            .task<Action>(delay = HANDLE_CHAT_PAGE_STORE_CHANGE_DELAY) { Action.HandleChatPageStoreChange }
-            .cancellable(TASK_ID_HANDLE_CHAT_PAGE_STORE_CHANGE, cancelInFlight = true)
-
-    private fun resolveEffect(): Effect<Action> =
-        Effect.run { send ->
-            try {
-                send(Action.ResolveReturned(Networking.config.hostedTranslationDelegate.resolve(ConversationsPageViewStrings)))
-            } catch (exception: Exception) {
-                send(Action.ResolveFailed(exception))
-            }
-        }
-
-    // MARK: - Companion
-
-    companion object {
-        private val ANIMATION_AMOUNT_DELAY = 1.seconds
-        private val HANDLE_CHAT_PAGE_STORE_CHANGE_DELAY = 250.milliseconds
-        private const val TASK_ID_HANDLE_CHAT_PAGE_STORE_CHANGE = "ConversationsPageReducer/handleChatPageStoreChange"
-    }
-}
-
-/**
- * In-memory memo for the resolved conversation list, keyed by the
- * page's change token and search query. One entry suffices: the home
- * page is the sole resolver at any time.
- */
-private object ConversationsListMemo {
-    private data class Entry(
-        val token: UUID,
-        val searchQuery: String,
-        val value: List<Conversation>,
-    )
-
-    private val entry = LockIsolated<Entry?>(null)
-
-    fun value(
-        token: UUID,
-        searchQuery: String,
-    ): List<Conversation>? {
-        val current = entry.wrappedValue ?: return null
-        if (current.token != token || current.searchQuery != searchQuery) return null
-        return current.value
-    }
-
-    fun store(
-        value: List<Conversation>,
-        token: UUID,
-        searchQuery: String,
-    ) {
-        entry.wrappedValue = Entry(token, searchQuery, value)
     }
 }

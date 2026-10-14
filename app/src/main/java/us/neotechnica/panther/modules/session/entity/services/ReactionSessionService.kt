@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.modules.common.services.NotificationService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.isMock
 import us.neotechnica.panther.modules.content.user.extensions.isOutboxMessage
@@ -28,6 +29,7 @@ import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.models.ReactionSessionServiceEffectID
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -44,6 +46,10 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
  * interleave between the write and the drain.
  */
 object ReactionSessionService {
+    // MARK: - Dependencies
+
+    private val notificationService: NotificationService by Dependency { it.commonServices.notification }
+
     // MARK: - Properties
 
     private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -180,7 +186,7 @@ object ReactionSessionService {
             )
         }
 
-        NotificationService.notify(
+        notificationService.notify(
             users = listOf(user),
             ofReaction = ofReaction,
             message = to,

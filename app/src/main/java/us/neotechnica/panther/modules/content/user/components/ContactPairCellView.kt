@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
@@ -31,8 +32,7 @@ import us.neotechnica.panther.modules.content.user.extensions.users
 import us.neotechnica.panther.modules.content.user.services.ChatPageStateService
 import us.neotechnica.panther.modules.content.user.services.ConversationCellViewService
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
-import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.navigation.UserContentNavigatorState
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
@@ -128,13 +128,18 @@ private val isCurrentConversationPresented: Boolean
             DependencyValues.current.navigation.state.value.userContent.stack
                 .lastOrNull()
         return topPath is UserContentNavigatorState.SeguePaths.ChatInfo &&
-            topPath.conversationIDKey == ConversationSessionService.currentConversation?.id?.key
+            topPath.conversationIDKey ==
+            DependencyValues.current.clientSession.entity.conversation.currentConversation
+                ?.id
+                ?.key
     }
 
 private fun isSelectionEnabled(contactPair: ContactPair): Boolean {
     val participantUserIDs =
         if (isCurrentConversationPresented) {
-            ConversationSessionService.currentConversation?.participants?.map { it.userID }
+            DependencyValues.current.clientSession.entity.conversation.currentConversation
+                ?.participants
+                ?.map { it.userID }
         } else {
             null
         }

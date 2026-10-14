@@ -26,7 +26,6 @@ import us.neotechnica.panther.modules.content.user.constants.ChatPageViewService
 import us.neotechnica.panther.modules.content.user.services.DeliveryProgressIndicatorService
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
-import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 
 // MARK: - Constants Accessors
@@ -86,6 +85,10 @@ internal fun rememberRegisteredDeliveryProgressIndicatorService(): DeliveryProgr
 }
 
 /** Returns whether any outbox entry is currently sending. */
-internal fun anyOutboxSending(): Boolean = MessageOutboxService.allEntries.any { it.state == OutboxEntry.State.SENDING }
+internal fun anyOutboxSending(): Boolean =
+    DependencyValues.current.clientSession.outbox.allEntries.any {
+        it.state ==
+            OutboxEntry.State.SENDING
+    }
 
 private const val TRACK_ALPHA = 0.24f

@@ -8,11 +8,13 @@
 
 package us.neotechnica.panther.modules.content.user.views.usercontentcontainerview
 
+import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
+import us.neotechnica.panther.bundle.navigators.UserContentRoute
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentNavigatorState
-import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
@@ -26,6 +28,10 @@ import java.util.UUID
  * conversation's metadata changes.
  */
 class UserContentContainerReducer : Reducer<UserContentContainerReducer.State, UserContentContainerReducer.Action> {
+    // MARK: - Dependencies
+
+    private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
+
     // MARK: - Action
 
     sealed interface Action {
@@ -54,7 +60,7 @@ class UserContentContainerReducer : Reducer<UserContentContainerReducer.State, U
     ): ReduceResult<State, Action> =
         when (action) {
             Action.ChatInfoToolbarButtonTapped -> {
-                val conversationIDKey = ConversationSessionService.currentConversation?.id?.key
+                val conversationIDKey = conversationSession.currentConversation?.id?.key
                 if (conversationIDKey != null) {
                     DependencyValues.current.navigation.navigate(
                         Route.UserContent(

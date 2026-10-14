@@ -8,12 +8,10 @@
 
 package us.neotechnica.panther.bundle
 
-import us.neotechnica.panther.modules.common.contacts.services.ContactPairArchiveService
-import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.models.ContactImageCache
 import us.neotechnica.panther.modules.common.services.CommonPropertyLists
-import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.common.services.TextToSpeechServiceCache
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.dependencies.chatInfoPageViewService
 import us.neotechnica.panther.modules.content.user.dependencies.settingsPageViewService
 import us.neotechnica.panther.modules.content.user.extensions.UserDisplayNameCache
@@ -25,7 +23,7 @@ import us.neotechnica.panther.modules.networking.conversation.models.ActivityDes
 import us.neotechnica.panther.modules.networking.message.models.AudioFileDurationCache
 import us.neotechnica.panther.modules.networking.message.models.ReadReceiptCache
 import us.neotechnica.panther.modules.networking.user.services.UserService
-import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.CacheDomainListDelegate
@@ -94,15 +92,27 @@ val CacheDomain.Companion.contactImage: CacheDomain
 
 /** The cache domain for the `contactPairArchive` cache. */
 val CacheDomain.Companion.contactPairArchive: CacheDomain
-    get() = CacheDomain("contactPairArchive") { ContactPairArchiveService.clearArchive() }
+    get() =
+        CacheDomain("contactPairArchive") {
+            DependencyValues.current.commonServices.contact.contactPairArchive
+                .clearArchive()
+        }
 
 /** The cache domain for the `contactService` cache. */
 val CacheDomain.Companion.contactService: CacheDomain
-    get() = CacheDomain("contactService") { ContactService.clearCache() }
+    get() =
+        CacheDomain("contactService") {
+            DependencyValues.current.commonServices.contact
+                .clearCache()
+        }
 
 /** The cache domain for the `conversationArchive` cache. */
 val CacheDomain.Companion.conversationArchive: CacheDomain
-    get() = CacheDomain("conversationArchive") { SessionStore.clearConversationArchive() }
+    get() =
+        CacheDomain("conversationArchive") {
+            DependencyValues.current.clientSession.store
+                .clearConversationArchive()
+        }
 
 /** The cache domain for the `conversationCellViewData` cache. */
 val CacheDomain.Companion.conversationCellViewData: CacheDomain
@@ -110,7 +120,11 @@ val CacheDomain.Companion.conversationCellViewData: CacheDomain
 
 /** The cache domain for the `messageArchive` cache. */
 val CacheDomain.Companion.messageArchive: CacheDomain
-    get() = CacheDomain("messageArchive") { SessionStore.clearMessageArchive() }
+    get() =
+        CacheDomain("messageArchive") {
+            DependencyValues.current.clientSession.store
+                .clearMessageArchive()
+        }
 
 /** The cache domain for the `queriedContactPairs` cache. */
 val CacheDomain.Companion.queriedContactPairs: CacheDomain
@@ -126,7 +140,11 @@ val CacheDomain.Companion.readReceipt: CacheDomain
 
 /** The cache domain for the `regionDetailService` cache. */
 val CacheDomain.Companion.regionDetailService: CacheDomain
-    get() = CacheDomain("regionDetailService") { RegionDetailService.clearCache() }
+    get() =
+        CacheDomain("regionDetailService") {
+            DependencyValues.current.commonServices.regionDetail
+                .clearCache()
+        }
 
 /** The cache domain for the `settingsPageViewService` cache. */
 val CacheDomain.Companion.settingsPageViewService: CacheDomain
@@ -138,7 +156,11 @@ val CacheDomain.Companion.textToSpeechService: CacheDomain
 
 /** The cache domain for the `userArchive` cache. */
 val CacheDomain.Companion.userArchive: CacheDomain
-    get() = CacheDomain("userArchive") { SessionStore.clearUserArchive() }
+    get() =
+        CacheDomain("userArchive") {
+            DependencyValues.current.clientSession.store
+                .clearUserArchive()
+        }
 
 /** The cache domain for the `userDisplayName` cache. */
 val CacheDomain.Companion.userDisplayName: CacheDomain

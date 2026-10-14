@@ -1,5 +1,5 @@
 //
-//  GIFImage.kt
+//  GIFImageView.kt
 //  Panther Android
 //
 //  Created by Grant Brooks Goodman.
@@ -42,7 +42,7 @@ import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
  * @param modifier The modifier for this view.
  */
 @Composable
-fun GIFImage(
+fun GIFImageView(
     name: String,
     isActive: Boolean,
     modifier: Modifier = Modifier,

@@ -20,24 +20,27 @@ import kotlinx.coroutines.launch
 import us.neotechnica.panther.designsystem.modules.alertkit.interfaces.ReportDelegate
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
 import us.neotechnica.panther.modules.common.models.SystemInformation
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.navigation.descriptor
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
+import us.neotechnica.panther.networking.modules.storage.interfaces.StorageDelegate
 import us.neotechnica.panther.networking.modules.storage.models.HostedItemMetadata
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestampDateFormatter
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.ErrorReportDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHashOf
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.foundation.services.TimestampDateFormatter
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
@@ -57,6 +60,8 @@ import kotlin.time.Duration.Companion.seconds
 object ErrorReportingService : ReportDelegate, ErrorReportDelegate {
     // MARK: - Dependencies
 
+    private val metadataService: MetadataService by Dependency { it.commonServices.metadata }
+    private val storage: StorageDelegate by Dependency { it.networking.storage }
     private val timestampDateFormatter: TimestampDateFormatter by Dependency { it.timestampDateFormatter }
 
     // MARK: - Properties
@@ -151,7 +156,7 @@ object ErrorReportingService : ReportDelegate, ErrorReportDelegate {
         exception: Exception,
     ): Boolean {
         try {
-            Networking.config.storageDelegate.upload(
+            storage.upload(
                 recordBytes,
                 metadata =
                     HostedItemMetadata(
@@ -234,7 +239,7 @@ object ErrorReportingService : ReportDelegate, ErrorReportDelegate {
 
     private fun toastAction(parentDirectoryName: String): (() -> Unit)? {
         if (!Build.isDeveloperModeEnabled) return null
-        val urlStringPrefix = MetadataService.storageReferenceURL ?: return null
+        val urlStringPrefix = metadataService.storageReferenceURL ?: return null
 
         val urlString =
             urlStringPrefix +

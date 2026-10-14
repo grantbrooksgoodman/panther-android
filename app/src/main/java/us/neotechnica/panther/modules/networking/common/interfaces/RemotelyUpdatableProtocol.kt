@@ -6,12 +6,14 @@
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
-package us.neotechnica.panther.modules.networking.common
+package us.neotechnica.panther.modules.networking.common.interfaces
 
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList
 import us.neotechnica.panther.networking.modules.common.interfaces.Serializable
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 
@@ -33,7 +35,8 @@ internal fun encodeForWrite(
             )
         value is List<*> && value.all { it is Serializable<*> } ->
             value.filterIsInstance<Serializable<*>>().mapNotNull { it.encoded }.ifEmpty { bangQualifiedEmptyList }
-        Networking.config.databaseDelegate.isEncodable(value) -> value
+        DependencyValues.current.networking.database
+            .isEncodable(value) -> value
         else -> throw Exception.Networking.notSerialized(
             mapOf(key to value),
             ExceptionMetadata(sender),

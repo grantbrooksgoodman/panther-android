@@ -8,7 +8,8 @@
 
 package us.neotechnica.panther.modules.common.extensions
 
-import us.neotechnica.panther.modules.common.services.ConnectionStatusService
+import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 
 /**
@@ -19,16 +20,25 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Build
  */
 val Build.isEmulator: Boolean
     get() =
-        android.os.Build.FINGERPRINT.startsWith("generic") ||
-            android.os.Build.FINGERPRINT.startsWith("unknown") ||
-            android.os.Build.MODEL.contains("google_sdk") ||
-            android.os.Build.MODEL.contains("Emulator") ||
-            android.os.Build.MODEL.contains("Android SDK built for") ||
-            android.os.Build.MANUFACTURER.contains("Genymotion") ||
-            android.os.Build.HARDWARE.contains("goldfish") ||
-            android.os.Build.HARDWARE.contains("ranchu") ||
-            android.os.Build.PRODUCT.contains("sdk")
+        android.os.Build.FINGERPRINT
+            .startsWith("generic") ||
+            android.os.Build.FINGERPRINT
+                .startsWith("unknown") ||
+            android.os.Build.MODEL
+                .contains("google_sdk") ||
+            android.os.Build.MODEL
+                .contains("Emulator") ||
+            android.os.Build.MODEL
+                .contains("Android SDK built for") ||
+            android.os.Build.MANUFACTURER
+                .contains("Genymotion") ||
+            android.os.Build.HARDWARE
+                .contains("goldfish") ||
+            android.os.Build.HARDWARE
+                .contains("ranchu") ||
+            android.os.Build.PRODUCT
+                .contains("sdk")
 
 /** A Boolean value that indicates whether the device is online. */
 val Build.isOnline: Boolean
-    get() = ConnectionStatusService.isOnline
+    get() = DependencyValues.current.commonServices.connectionStatus.isOnline

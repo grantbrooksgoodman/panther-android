@@ -164,7 +164,6 @@ class ForcedUpdateModalPageReducerTest {
             codeName = codeName,
             finalName = finalName,
             bundleVersion = "1.0.0",
-            environment = "development",
             milestone = Build.Milestone.BETA,
             buildDate = Date(0),
             firstCompileDate = Date(0),

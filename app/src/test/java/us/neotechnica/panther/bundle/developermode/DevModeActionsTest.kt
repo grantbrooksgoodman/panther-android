@@ -53,9 +53,11 @@ class DevModeActionsTest {
 
     @After
     fun tearDown() {
-        DevModeService.registerAppActionDelegate(object : DevModeAppActionDelegate {
-            override val appActions: List<DevModeAction> = emptyList()
-        })
+        DevModeService.registerAppActionDelegate(
+            object : DevModeAppActionDelegate {
+                override val appActions: List<DevModeAction> = emptyList()
+            },
+        )
         AlertPresenter.dismiss()
         Dispatchers.resetMain()
     }

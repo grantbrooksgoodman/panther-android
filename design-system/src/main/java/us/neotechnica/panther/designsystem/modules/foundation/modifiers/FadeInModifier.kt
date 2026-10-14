@@ -8,9 +8,7 @@
 
 package us.neotechnica.panther.designsystem.modules.foundation.modifiers
 
-import androidx.compose.animation.core.EaseIn
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.delay
+import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -40,7 +39,7 @@ fun Modifier.fadeIn(
     composed {
         var isVisible by remember { mutableStateOf(false) }
         val opacity by animateFloatAsState(
-            animationSpec = tween(duration.inWholeMilliseconds.toInt(), easing = EaseIn),
+            animationSpec = SystemAnimation.easeIn(duration),
             label = "fadeIn",
             targetValue = if (isVisible) 1f else 0f,
         )

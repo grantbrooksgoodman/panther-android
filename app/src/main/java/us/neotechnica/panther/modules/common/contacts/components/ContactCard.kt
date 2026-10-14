@@ -34,9 +34,10 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.components.PageSheetView
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.common.contacts.services.ContactService
 import us.neotechnica.panther.modules.common.models.PhoneNumber
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.components.AvatarImageView
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 
 /**
  * A contact identified for display.
@@ -93,7 +94,11 @@ fun rememberContactCardPresenter(): ContactCardPresenter {
 
     return ContactCardPresenter(
         onTap = { phoneNumber, displayName ->
-            val uri = phoneNumber?.compiledNumberString?.let { ContactService.deviceContactLookupUri(it) }
+            val uri =
+                phoneNumber?.compiledNumberString?.let {
+                    DependencyValues.current.commonServices.contact
+                        .deviceContactLookupUri(it)
+                }
             if (uri != null) {
                 runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             } else {
@@ -143,7 +148,7 @@ private fun ContactDetailView(
             Components.Text(
                 ADD_TO_CONTACTS_TITLE,
                 foregroundColor = if (isDarkModeActive) Color.Black else Color.White,
-                font = Font.systemSemibold()
+                font = Font.systemSemibold(),
             )
         }
     }

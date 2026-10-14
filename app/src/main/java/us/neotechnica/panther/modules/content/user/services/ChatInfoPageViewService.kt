@@ -19,6 +19,8 @@ import us.neotechnica.panther.bundle.Application
 import us.neotechnica.panther.bundle.chatInfoPageLoadingStateUpdated
 import us.neotechnica.panther.bundle.currentConversationActivityChanged
 import us.neotechnica.panther.bundle.currentConversationMetadataChanged
+import us.neotechnica.panther.bundle.navigators.ChatRoute
+import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.bundle.shouldNotifyOfConversationAvailability
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
@@ -39,21 +41,17 @@ import us.neotechnica.panther.modules.networking.conversation.models.Conversatio
 import us.neotechnica.panther.modules.networking.conversation.remotelyupdatable.ConversationUpdatableKey
 import us.neotechnica.panther.modules.networking.conversation.remotelyupdatable.updateValues
 import us.neotechnica.panther.modules.networking.user.models.User
-import us.neotechnica.panther.modules.session.entity.services.ActivitySessionService
-import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
-import us.neotechnica.panther.modules.session.state.services.SessionStore
-import us.neotechnica.panther.navigation.ChatRoute
-import us.neotechnica.panther.navigation.Route
-import us.neotechnica.panther.navigation.UserContentRoute
+import us.neotechnica.panther.modules.session.clientSession
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.StoredItemKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
@@ -75,6 +73,8 @@ import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 class ChatInfoPageViewService(
     private val dependencies: Dependencies = Dependencies(),
 ) {
+    // MARK: - Dependencies
+
     // MARK: - Types
 
     /** A change the user chose to make to the conversation's metadata. */
@@ -125,15 +125,19 @@ class ChatInfoPageViewService(
             )
         },
         val contactPair: (User) -> ContactPair? = { it.contactPair },
-        val currentConversation: () -> Conversation? = { ConversationSessionService.currentConversation },
+        val currentConversation: () -> Conversation? = { DependencyValues.current.clientSession.entity.conversation.currentConversation },
         val currentUserID: () -> String? = { User.currentUserID },
         val dismissSheets: () -> Unit = { Application.dismissSheets() },
         val navigate: (Route) -> Unit = { DependencyValues.current.navigation.navigate(it) },
         val presentConfirmationAlert: suspend (ConfirmationAlert, List<ConfirmationAlert.TranslationOptionKey>) -> Boolean =
             { alert, translating -> alert.present(translating = translating) },
-        val removeConversation: (String) -> Unit = { SessionStore.removeConversation(idKey = it) },
+        val removeConversation: (String) -> Unit = {
+            DependencyValues.current.clientSession.store
+                .removeConversation(idKey = it)
+        },
         val removeFromConversation: suspend (String, Conversation) -> Unit = { userID, conversation ->
-            ActivitySessionService.removeFromConversation(userID, conversation)
+            DependencyValues.current.clientSession.entity.activity
+                .removeFromConversation(userID, conversation)
         },
         val resignFirstResponders: () -> Unit = { KeyboardService.resignFirstResponders() },
         val resolveUsers: suspend (Conversation) -> Unit = { it.resolveUsers(forceUpdate = true) },

@@ -8,6 +8,8 @@
 
 package us.neotechnica.panther.modules.content.onboarding.views.authcodepageview
 
+import us.neotechnica.panther.bundle.navigators.OnboardingNavigatorState
+import us.neotechnica.panther.bundle.navigators.OnboardingRoute
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardService
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
@@ -15,20 +17,20 @@ import us.neotechnica.panther.modules.content.onboarding.components.InstructionV
 import us.neotechnica.panther.modules.content.onboarding.dependencies.onboardingService
 import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
 import us.neotechnica.panther.navigation.Navigation
-import us.neotechnica.panther.navigation.OnboardingNavigatorState
-import us.neotechnica.panther.navigation.OnboardingRoute
-import us.neotechnica.panther.navigation.Route
+import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
-import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.auth.extensions.notReportableForAuthCodes
+import us.neotechnica.panther.networking.modules.auth.interfaces.AuthDelegate
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.translation.extensions.value
+import us.neotechnica.panther.networking.modules.translation.interfaces.HostedTranslationDelegate
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.effect.merge
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
 import kotlin.time.Duration.Companion.milliseconds
@@ -64,8 +66,10 @@ import kotlin.time.Duration.Companion.milliseconds
 class AuthCodePageReducer : Reducer<AuthCodePageReducer.State, AuthCodePageReducer.Action> {
     // MARK: - Dependencies
 
+    private val auth: AuthDelegate by Dependency { it.networking.auth }
     private val navigation: Navigation by Dependency { it.navigation }
     private val onboardingService: OnboardingService by Dependency { it.onboardingService }
+    private val translator: HostedTranslationDelegate by Dependency { it.networking.hostedTranslation }
 
     // MARK: - Actions
 
@@ -201,7 +205,7 @@ class AuthCodePageReducer : Reducer<AuthCodePageReducer.State, AuthCodePageReduc
                     Effect.task {
                         try {
                             Action.AuthenticateUserReturned(
-                                Networking.config.authDelegate.authenticateUser(
+                                auth.authenticateUser(
                                     authID = onboardingService.authID ?: "",
                                     verificationCode = verificationCode,
                                 ),
@@ -237,7 +241,7 @@ class AuthCodePageReducer : Reducer<AuthCodePageReducer.State, AuthCodePageReduc
     private fun resolveEffect(): Effect<Action> =
         Effect.run { send ->
             try {
-                send(Action.ResolveReturned(Networking.config.hostedTranslationDelegate.resolve(AuthCodePageViewStrings)))
+                send(Action.ResolveReturned(translator.resolve(AuthCodePageViewStrings)))
             } catch (exception: Exception) {
                 send(Action.ResolveFailed(exception))
             }

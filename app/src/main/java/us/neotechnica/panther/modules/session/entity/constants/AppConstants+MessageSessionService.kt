@@ -1,5 +1,5 @@
 //
-//  AppConstants+MessageSessionService.kt
+//  AppConstants+DependencyValues.current.clientSession.entity.message.kt
 //  Panther Android
 //
 //  Created by Grant Brooks Goodman.

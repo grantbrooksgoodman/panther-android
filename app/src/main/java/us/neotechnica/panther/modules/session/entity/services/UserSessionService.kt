@@ -24,24 +24,27 @@ import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.filteringSystemMessages
 import us.neotechnica.panther.modules.content.user.extensions.ignoredConversationIDKeys
-import us.neotechnica.panther.modules.networking.common.allDataTypes
-import us.neotechnica.panther.modules.networking.common.merge
-import us.neotechnica.panther.modules.networking.common.visibleForCurrentUser
+import us.neotechnica.panther.modules.networking.common.extensions.allDataTypes
+import us.neotechnica.panther.modules.networking.common.extensions.merge
+import us.neotechnica.panther.modules.networking.common.extensions.visibleForCurrentUser
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
 import us.neotechnica.panther.modules.networking.conversation.services.ConversationService
 import us.neotechnica.panther.modules.networking.user.models.DeviceID
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.networking.user.services.UserService
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.state.services.SelfWriteRegistry
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.modules.session.sync.models.SyncSession
 import us.neotechnica.panther.modules.session.sync.services.ConversationObserverService
-import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.networking.modules.database.interfaces.observe
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.foundation.models.Coalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -61,6 +64,12 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
  */
 @Suppress("LargeClass")
 object UserSessionService {
+    // MARK: - Dependencies
+
+    private val conversationObserver: ConversationObserverService by Dependency { it.clientSession.sync.conversationObserver }
+    private val database: DatabaseDelegate by Dependency { it.networking.database }
+    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
+
     // MARK: - Properties
 
     private val conversationCoalescer = SingleSlotCoalescer<Unit>(Coalescer.Policy.REPLACE)
@@ -80,7 +89,7 @@ object UserSessionService {
     val currentUser: User?
         get() {
             val currentUserID = currentUserID ?: return null
-            return SessionStore.users[currentUserID]
+            return sessionStore.users[currentUserID]
         }
 
     // MARK: - Resolve Current User
@@ -144,7 +153,7 @@ object UserSessionService {
                             domain = LoggerDomain.userSession,
                         )
 
-                        Networking.config.databaseDelegate
+                        database
                             .observe<Map<String, Any?>>(
                                 listOf(NetworkPath.users.rawValue, currentUserID).joinToString("/"),
                             ).collect { dictionary ->
@@ -194,7 +203,7 @@ object UserSessionService {
 
     private fun commitConversationsToMemory(conversations: Set<Conversation>) {
         // Resolved from archive or network; bypasses RemotelyUpdatable.update.
-        SessionStore.upsertConversations(conversations)
+        sessionStore.upsertConversations(conversations)
     }
 
     private fun conversationsDidChange(dictionary: Map<String, Any?>): Boolean {
@@ -222,7 +231,7 @@ object UserSessionService {
         }
 
         for (idKey in removedIDKeys) {
-            SessionStore.removeConversation(idKey)
+            sessionStore.removeConversation(idKey)
         }
 
         if (currentConversationIDStrings == updatedConversationIDStrings) return false
@@ -281,8 +290,8 @@ object UserSessionService {
      */
     private fun isKnownVersion(conversationID: ConversationID): Boolean =
         SelfWriteRegistry.contains(conversationID) ||
-            SessionStore.getConversation(conversationID) != null ||
-            ConversationObserverService.isActivelyObserving(conversationID.key)
+            sessionStore.getConversation(conversationID) != null ||
+            conversationObserver.isActivelyObserving(conversationID.key)
 
     /** Fetches the current user from the server and upserts the result to the session store. */
     private suspend fun resolveCurrentUser() {
@@ -319,21 +328,21 @@ object UserSessionService {
         val conversationsNeedingUpdate = mutableSetOf<Conversation>()
         val decodedConversations = mutableSetOf<Conversation>()
 
-        val ignoredConversationIDKeys = SessionStore.ignoredConversationIDKeys
+        val ignoredConversationIDKeys = sessionStore.ignoredConversationIDKeys
         conversationIDs = conversationIDs.filter { it.key !in ignoredConversationIDKeys }
 
         for (conversationID in conversationIDs) {
-            val exactMatch = SessionStore.getConversation(conversationID)
+            val exactMatch = sessionStore.getConversation(conversationID)
             if (exactMatch != null) {
                 decodedConversations.merge(listOf(exactMatch))
                 continue
             }
 
-            val keyMatch = SessionStore.getConversation(conversationID.key)
+            val keyMatch = sessionStore.getConversation(conversationID.key)
             if (keyMatch == null) {
                 conversationsNeedingFetch.add(conversationID)
             } else if (SelfWriteRegistry.contains(conversationID) ||
-                ConversationObserverService.isActivelyObserving(conversationID.key)
+                conversationObserver.isActivelyObserving(conversationID.key)
             ) {
                 // Self-written or actively observed: the owning
                 // pipeline settles the store; no network sync needed.
@@ -451,7 +460,7 @@ object UserSessionService {
                 .flatMap { conversation -> conversation.participants.map { it.userID } }
                 .toSet()
                 .minus(setOfNotNull(User.currentUserID))
-                .filter { SessionStore.users[it] == null }
+                .filter { sessionStore.users[it] == null }
 
         if (missingUserIDs.isEmpty()) return
 

@@ -24,19 +24,26 @@ import us.neotechnica.panther.modules.common.extensions.deleteConversations
 import us.neotechnica.panther.modules.common.extensions.matches
 import us.neotechnica.panther.modules.common.extensions.resetPushTokens
 import us.neotechnica.panther.modules.content.user.extensions.ignoredConversationIDKeys
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.Networking
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import kotlin.time.Duration.Companion.seconds
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action as AlertKitAction
 
 /** The destructive Developer Mode actions grouped under the Danger Zone. */
 object DangerZone {
+    // MARK: - Dependencies
+
+    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
+    private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
+
     // MARK: - Types
 
     private enum class Action {
@@ -124,8 +131,8 @@ object DangerZone {
     // MARK: - Delete Conversations
 
     private suspend fun presentDeleteConversationsActionSheet() {
-        val currentUser = UserSessionService.currentUser
-        val ignoredConversationIDKeys = SessionStore.ignoredConversationIDKeys
+        val currentUser = userSession.currentUser
+        val ignoredConversationIDKeys = sessionStore.ignoredConversationIDKeys
         val allForCurrentUserCount =
             ((currentUser?.conversationIDs?.map { it.key } ?: emptyList()) + ignoredConversationIDKeys).distinct().size
 

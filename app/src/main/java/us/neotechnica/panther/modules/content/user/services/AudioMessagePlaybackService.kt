@@ -23,11 +23,14 @@ import kotlinx.coroutines.launch
 import us.neotechnica.panther.modules.common.services.AudioFocusService
 import us.neotechnica.panther.modules.common.services.HapticsService
 import us.neotechnica.panther.modules.common.services.TextToSpeechService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceFloats
 import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.networking.message.models.AudioMessageReference
 import us.neotechnica.panther.modules.networking.message.models.Message
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 
 // MARK: - Constants Accessors
 
@@ -42,6 +45,12 @@ private typealias PlaybackFloats = ChatPageViewServiceFloats.AudioMessagePlaybac
  * which would add a dependency without benefit for single-file playback.
  */
 object AudioMessagePlaybackService {
+    // MARK: - Dependencies
+
+    private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
+    private val hapticsService: HapticsService by Dependency { it.commonServices.haptics }
+    private val textToSpeechService: TextToSpeechService by Dependency { it.commonServices.audio.textToSpeech }
+
     // MARK: - Properties
 
     private val audioFocus = AudioFocusService { stopPlayback() }
@@ -64,7 +73,7 @@ object AudioMessagePlaybackService {
 
     /** The message currently playing, or `null`. */
     val playingMessage: Message?
-        get() = mutablePlayingMessageID?.let { id -> ConversationSessionService.displayedMessages.value.firstOrNull { it.id == id } }
+        get() = mutablePlayingMessageID?.let { id -> conversationSession.displayedMessages.value.firstOrNull { it.id == id } }
 
     /** The playback progress of the current message, in `0.0...1.0`. */
     val progress: Float
@@ -96,12 +105,12 @@ object AudioMessagePlaybackService {
     ) {
         if (mutablePlayingMessageID == message.id) return stopPlayback()
 
-        TextToSpeechService.stop()
+        textToSpeechService.stop()
 
         val audioFile = if (message.isFromCurrentUser) audioReference.original else audioReference.translated
         val file = audioFile.localPathFile ?: return
 
-        HapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
+        hapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
         play(message.id, file.absolutePath)
     }
 
@@ -161,7 +170,7 @@ object AudioMessagePlaybackService {
     }
 
     private fun nextAudioMessage(afterMessageID: String): Message? {
-        val messages = ConversationSessionService.displayedMessages.value
+        val messages = conversationSession.displayedMessages.value
         val index = messages.indexOfFirst { it.id == afterMessageID }
         if (index < 0) return null
         return messages.getOrNull(index + 1)?.takeIf { it.contentType.isAudio }

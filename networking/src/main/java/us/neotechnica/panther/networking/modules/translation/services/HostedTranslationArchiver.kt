@@ -29,7 +29,6 @@ import us.neotechnica.panther.networking.modules.translation.models.TranslationC
 import us.neotechnica.panther.networking.modules.translation.models.TranslationDataSample
 import us.neotechnica.panther.networking.modules.translation.models.TranslationValidator
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHashOf
-import us.neotechnica.panther.subsystem.modules.foundation.models.AlertType
 import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -37,6 +36,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.AlertType
 import us.neotechnica.panther.translator.Translator
 import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.Translation

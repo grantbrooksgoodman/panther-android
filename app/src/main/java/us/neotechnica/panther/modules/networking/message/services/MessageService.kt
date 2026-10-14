@@ -18,7 +18,7 @@ import us.neotechnica.panther.bundle.messages
 import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.modules.common.extensions.shortened
 import us.neotechnica.panther.modules.common.models.AudioFileExtension
-import us.neotechnica.panther.modules.networking.common.BatchFailureStrategy
+import us.neotechnica.panther.modules.networking.common.models.BatchFailureStrategy
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationMetadata
 import us.neotechnica.panther.modules.networking.message.models.HostedContentType
@@ -28,11 +28,14 @@ import us.neotechnica.panther.modules.networking.message.models.RichMessageConte
 import us.neotechnica.panther.modules.networking.message.serializable.decode
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.networking.modules.database.interfaces.getValues
 import us.neotechnica.panther.networking.modules.translation.extensions.reference
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestampDateFormatter
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.compiledException
@@ -67,7 +70,7 @@ object MessageService {
 
     private val coalescer = Coalescer<String, Message>()
 
-    private val database get() = Networking.config.databaseDelegate
+    private val database: DatabaseDelegate by Dependency { it.networking.database }
 
     // MARK: - Message Creation
 

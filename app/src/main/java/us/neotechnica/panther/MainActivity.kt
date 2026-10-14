@@ -31,16 +31,22 @@ import us.neotechnica.panther.designsystem.modules.foundation.views.root.RootWin
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.designsystem.modules.theming.views.PantherTheme
 import us.neotechnica.panther.modules.common.services.AnalyticsService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
 import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.navigation.PendingChatNavigation
 import us.neotechnica.panther.navigation.RootView
 import us.neotechnica.panther.networking.modules.common.modifiers.IndicatesNetworkActivity
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 
 class MainActivity : ComponentActivity() {
+    // MARK: - Dependencies
+
+    private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -99,7 +105,7 @@ class MainActivity : ComponentActivity() {
         if (isFinishing) {
             ClientSession.store.flushNow()
             UICacheInvalidationService.refreshNotificationExtensionNameMap()
-            AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.TERMINATE_APP)
+            analyticsService.logEvent(AnalyticsService.AnalyticsEvent.TERMINATE_APP)
         }
     }
 

@@ -13,8 +13,8 @@ import us.neotechnica.panther.bundle.messages
 import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.modules.content.user.extensions.currentUserParticipant
 import us.neotechnica.panther.modules.content.user.extensions.filteringSystemMessages
-import us.neotechnica.panther.modules.networking.common.encodeForWrite
-import us.neotechnica.panther.modules.networking.common.uniquedByID
+import us.neotechnica.panther.modules.networking.common.extensions.uniquedByID
+import us.neotechnica.panther.modules.networking.common.interfaces.encodeForWrite
 import us.neotechnica.panther.modules.networking.conversation.models.Activity
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
@@ -22,10 +22,12 @@ import us.neotechnica.panther.modules.networking.conversation.models.Conversatio
 import us.neotechnica.panther.modules.networking.conversation.models.Participant
 import us.neotechnica.panther.modules.networking.conversation.models.ReactionMetadata
 import us.neotechnica.panther.modules.networking.message.models.Message
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.state.services.PendingTranslationArchive
 import us.neotechnica.panther.modules.session.state.services.SelfWriteRegistry
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.common.models.WriteAction
@@ -73,7 +75,8 @@ fun Conversation.modifyKey(
             // here too so hydrated display arrays can't leak their IDs.
             val filtered = messages.uniquedByID.filteringSystemMessages
             // Messages set via updateValues bypass Message.didWrite.
-            SessionStore.upsertMessages(filtered.toSet())
+            DependencyValues.current.clientSession.store
+                .upsertMessages(filtered.toSet())
             updateIDHash(copy(messageIDs = filtered.map { it.id }.distinct()))
         }
 
@@ -133,10 +136,12 @@ suspend fun Conversation.updateValues(data: Map<ConversationUpdatableKey, Any>):
     updates.putAll(buildParticipantUpdates(updated))
 
     SelfWriteRegistry.record(updated.id)
-    Networking.config.databaseDelegate.commit(updates)
+    DependencyValues.current.networking.database
+        .commit(updates)
 
     // updateValues bypasses didWrite; this is its only upsert.
-    SessionStore.upsertConversation(updated)
+    DependencyValues.current.clientSession.store
+        .upsertConversation(updated)
     return updated
 }
 
@@ -161,12 +166,14 @@ suspend fun Conversation.update(
 
     return when (val action = willWrite(to, key, newValue)) {
         is WriteAction.Encoded -> {
-            Networking.config.databaseDelegate.setValue(action.value, valueKeyPath)
+            DependencyValues.current.networking.database
+                .setValue(action.value, valueKeyPath)
             didWrite(newValue, key)
         }
         is WriteAction.Handled -> didWrite(action.updated, key)
         WriteAction.Proceed -> {
-            Networking.config.databaseDelegate.setValue(encodeForWrite(this, key.rawValue, to), valueKeyPath)
+            DependencyValues.current.networking.database
+                .setValue(encodeForWrite(this, key.rawValue, to), valueKeyPath)
             didWrite(newValue, key)
         }
     }
@@ -182,7 +189,8 @@ suspend fun Conversation.update(
 ): Conversation {
     val valueKeyPath = "${NetworkPath.conversations.rawValue}/${id.key}/${key.rawValue}"
     val committed =
-        Networking.config.databaseDelegate.runTransaction(valueKeyPath, block = applyingRaw)
+        DependencyValues.current.networking.database
+            .runTransaction(valueKeyPath, block = applyingRaw)
             ?: throw Exception.Networking.typeMismatch(
                 key.rawValue,
                 null,
@@ -302,7 +310,8 @@ suspend fun Conversation.willWrite(
     }
 
     SelfWriteRegistry.record(conversation.id)
-    Networking.config.databaseDelegate.commit(updates)
+    DependencyValues.current.networking.database
+        .commit(updates)
     return WriteAction.Handled(conversation)
 }
 
@@ -320,7 +329,8 @@ suspend fun Conversation.didWrite(
 ): Conversation {
     // willWrite(.messages) already commits hash and user tokens.
     if (key == ConversationUpdatableKey.MESSAGES || updated.id.hash == id.hash) {
-        SessionStore.upsertConversation(updated)
+        DependencyValues.current.clientSession.store
+            .upsertConversation(updated)
         return updated
     }
 
@@ -330,8 +340,10 @@ suspend fun Conversation.didWrite(
     updates.putAll(buildParticipantUpdates(updated))
 
     SelfWriteRegistry.record(updated.id)
-    Networking.config.databaseDelegate.commit(updates)
-    SessionStore.upsertConversation(updated)
+    DependencyValues.current.networking.database
+        .commit(updates)
+    DependencyValues.current.clientSession.store
+        .upsertConversation(updated)
     return updated
 }
 

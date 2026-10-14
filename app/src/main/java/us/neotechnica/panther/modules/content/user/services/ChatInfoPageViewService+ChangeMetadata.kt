@@ -14,9 +14,10 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.TextFieldAttr
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAlert
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
-import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action as AlertKitAction
 
@@ -35,7 +36,7 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.Action as Ale
  *   canceled or made no change.
  */
 suspend fun ChatInfoPageViewService.presentChangeMetadataActionSheet(): ChatInfoPageViewService.MetadataChangeType? {
-    val conversation = ConversationSessionService.currentConversation
+    val conversation = DependencyValues.current.clientSession.entity.conversation.currentConversation
 
     var choice: MetadataChoice? = null
     val actions =

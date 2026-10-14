@@ -12,10 +12,13 @@ import us.neotechnica.panther.bundle.metadataService
 import us.neotechnica.panther.bundle.shared
 import us.neotechnica.panther.modules.common.extensions.MetadataServiceStorageKey
 import us.neotechnica.panther.networking.Networking
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.networking.modules.database.interfaces.getValues
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
@@ -32,6 +35,10 @@ import java.net.URI
  * converge on authoritative data without blocking on the fetch.
  */
 object MetadataService {
+    // MARK: - Dependencies
+
+    private val database: DatabaseDelegate by Dependency { it.networking.database }
+
     // MARK: - Types
 
     private enum class MetadataServiceKey(
@@ -148,7 +155,7 @@ object MetadataService {
         coalescer {
             if (!canRevalidate) return@coalescer
             assignValues(
-                Networking.config.databaseDelegate.getValues<Map<String, Any>>(
+                database.getValues<Map<String, Any>>(
                     NetworkPath.shared.rawValue,
                     prependingEnvironment = false,
                     cacheStrategy = CacheStrategy.RETURN_CACHE_ON_FAILURE,

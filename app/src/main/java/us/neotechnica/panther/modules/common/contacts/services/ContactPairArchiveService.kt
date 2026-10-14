@@ -19,6 +19,8 @@ import us.neotechnica.panther.modules.common.extensions.compiledNumberStrings
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.common.services.PhoneNumberService
+import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.CacheDomain
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -40,6 +42,10 @@ import java.util.Date
  * persisted across launches.
  */
 object ContactPairArchiveService {
+    // MARK: - Dependencies
+
+    private val phoneNumberService: PhoneNumberService by Dependency { it.commonServices.phoneNumber }
+
     // MARK: - Properties
 
     private val cachedArchive = LockIsolated<List<ContactPair>?>(null)
@@ -186,7 +192,7 @@ object ContactPairArchiveService {
         for (contactPair in archive) {
             val phoneNumbers = contactPair.contact.phoneNumbers
             val numberStrings = phoneNumbers.compiledNumberStrings.distinct()
-            val possibleHashes = PhoneNumberService.possibleHashes(numberStrings) ?: emptyList()
+            val possibleHashes = phoneNumberService.possibleHashes(numberStrings) ?: emptyList()
             for (hash in possibleHashes) {
                 json.put(hash, contactPair.contact.fullName)
             }

@@ -16,6 +16,7 @@ import kotlinx.coroutines.withContext
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.services.AnalyticsService
 import us.neotechnica.panther.modules.common.services.HapticsService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.extensions.drainEffects
 import us.neotechnica.panther.modules.content.user.extensions.isMock
 import us.neotechnica.panther.modules.content.user.extensions.uniquedByID
@@ -32,6 +33,7 @@ import us.neotechnica.panther.modules.session.entity.services.MessageSessionServ
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -50,6 +52,15 @@ import java.util.UUID
  * that value.
  */
 object MessageDeliveryService {
+    // MARK: - Dependencies
+
+    private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
+    private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
+    private val hapticsService: HapticsService by Dependency { it.commonServices.haptics }
+    private val messageSession: MessageSessionService by Dependency { it.clientSession.entity.message }
+    private val outbox: MessageOutboxService by Dependency { it.clientSession.outbox }
+    private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
+
     // MARK: - Properties
 
     private val internalIsSendingMessage = MutableStateFlow(false)
@@ -68,7 +79,7 @@ object MessageDeliveryService {
     val isSendingMessage: StateFlow<Boolean> = internalIsSendingMessage.asStateFlow()
 
     private val conversation: Conversation?
-        get() = ConversationSessionService.currentConversation
+        get() = conversationSession.currentConversation
 
     private val conversationContext: Pair<Conversation?, Boolean>
         get() = (if (conversation?.isMock ?: true) null else conversation) to isPenPalsConversation
@@ -129,10 +140,10 @@ object MessageDeliveryService {
         val recipients = users
         if (recipients.isEmpty() || text.isBlank()) return
 
-        HapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
+        hapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
 
         val currentConversation = conversation
-        val currentUser = UserSessionService.currentUser
+        val currentUser = userSession.currentUser
         var outboxEntryID: String? = null
         if (isExistingConversation && currentConversation != null && currentUser != null) {
             val entry =
@@ -151,7 +162,7 @@ object MessageDeliveryService {
                     transcription = null,
                 )
             outboxEntryID = entry.id
-            MessageOutboxService.enqueue(entry)
+            outbox.enqueue(entry)
         }
 
         val startedConversationIDKey = beginSend()
@@ -159,19 +170,19 @@ object MessageDeliveryService {
         try {
             val (contextConversation, contextIsPenPalsConversation) = conversationContext
             val updated =
-                MessageSessionService.sendTextMessage(
+                messageSession.sendTextMessage(
                     text = text.trimEnd(),
                     toUsers = recipients,
                     inConversation = contextConversation,
                     isPenPalsConversation = contextIsPenPalsConversation,
                 )
-            outboxEntryID?.let { MessageOutboxService.remove(it) }
-            AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.SEND_TEXT_MESSAGE)
+            outboxEntryID?.let { outbox.remove(it) }
+            analyticsService.logEvent(AnalyticsService.AnalyticsEvent.SEND_TEXT_MESSAGE)
             setCurrentConversationIfApplicable(updated)
         } catch (exception: Exception) {
             val id = outboxEntryID
             if (id != null) {
-                MessageOutboxService.markFailed(id)
+                outbox.markFailed(id)
                 Logger.log(exception)
             } else {
                 throw exception
@@ -193,13 +204,13 @@ object MessageDeliveryService {
         val recipients = users
         if (recipients.isEmpty()) return
 
-        HapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
+        hapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
 
         val currentConversation = conversation
-        val currentUser = UserSessionService.currentUser
+        val currentUser = userSession.currentUser
         var outboxEntryID: String? = null
         if (isExistingConversation && currentConversation != null && currentUser != null) {
-            val stagedFileName = mediaFile.localPathFile?.let { MessageOutboxService.storePayloadFile(from = it) }
+            val stagedFileName = mediaFile.localPathFile?.let { outbox.storePayloadFile(from = it) }
             if (stagedFileName == null) {
                 Logger.log(Exception("Failed to stage media payload.", metadata = ExceptionMetadata(this)))
             } else {
@@ -219,7 +230,7 @@ object MessageDeliveryService {
                         transcription = null,
                     )
                 outboxEntryID = entry.id
-                MessageOutboxService.enqueue(entry)
+                outbox.enqueue(entry)
             }
         }
 
@@ -228,19 +239,19 @@ object MessageDeliveryService {
         val (contextConversation, contextIsPenPalsConversation) = conversationContext
         try {
             val updated =
-                MessageSessionService.sendMediaMessage(
+                messageSession.sendMediaMessage(
                     mediaFile = mediaFile,
                     toUsers = recipients,
                     inConversation = contextConversation,
                     isPenPalsConversation = contextIsPenPalsConversation,
                 )
-            outboxEntryID?.let { MessageOutboxService.remove(it) }
-            AnalyticsService.logEvent(AnalyticsService.AnalyticsEvent.SEND_MEDIA_MESSAGE)
+            outboxEntryID?.let { outbox.remove(it) }
+            analyticsService.logEvent(AnalyticsService.AnalyticsEvent.SEND_MEDIA_MESSAGE)
             setCurrentConversationIfApplicable(updated)
         } catch (exception: Exception) {
             val id = outboxEntryID
             if (id != null) {
-                MessageOutboxService.markFailed(id)
+                outbox.markFailed(id)
                 Logger.log(exception)
             } else {
                 throw exception
@@ -253,9 +264,9 @@ object MessageDeliveryService {
     // MARK: - Auxiliary
 
     private fun setCurrentConversationIfApplicable(conversation: Conversation) {
-        val current = ConversationSessionService.currentConversation
+        val current = conversationSession.currentConversation
         if (current != null && !current.isMock && current.id.key != conversation.id.key) return
-        ConversationSessionService.setCurrentConversation(conversation)
+        conversationSession.setCurrentConversation(conversation)
     }
 
     private suspend fun beginSend(): String? {
