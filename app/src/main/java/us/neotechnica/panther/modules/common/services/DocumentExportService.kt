@@ -54,9 +54,13 @@ object DocumentExportService {
         launcher = launch
     }
 
-    /** Clears the registered launcher. */
-    fun unregisterLauncher() {
-        launcher = null
+    /**
+     * Clears the registered launcher, if it is the given one.
+     *
+     * @param launch The launcher to clear.
+     */
+    fun unregisterLauncher(launch: (Intent) -> Unit) {
+        if (launcher === launch) launcher = null
     }
 
     // MARK: - Present Export Controller

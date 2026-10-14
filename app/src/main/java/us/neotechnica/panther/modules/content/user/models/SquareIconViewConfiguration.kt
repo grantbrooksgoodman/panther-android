@@ -10,6 +10,7 @@ package us.neotechnica.panther.modules.content.user.models
 
 import androidx.annotation.DrawableRes
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpSize
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
@@ -41,20 +42,29 @@ data class SquareIconViewConfiguration(
     /** The content overlaid on a square icon. */
     sealed interface OverlayConfiguration {
         /**
-         * An image resource drawn as a template – tinted with its
-         * foreground color – with its frame size relative to the icon.
+         * An image resource, with its foreground color, frame size
+         * relative to the icon, and font weight.
+         *
+         * The resource is drawn as a template, tinted with its
+         * foreground color. A resource has no weight variants, so
+         * [weight] has no effect on it.
          */
         data class Resource(
             @DrawableRes val resourceID: Int,
             val foregroundColor: Color = SquareIconViewColors.overlaySymbolForeground,
             val framePercentOfTotalSize: Float = SquareIconViewFloats.OVERLAY_FRAME_HEIGHT_MULTIPLIER,
+            val weight: FontWeight? = null,
         ) : OverlayConfiguration
 
-        /** A symbol, with its foreground color and frame size relative to the icon. */
+        /**
+         * A symbol, with its foreground color, frame size relative to
+         * the icon, and font weight.
+         */
         data class Symbol(
             val name: String,
             val foregroundColor: Color = SquareIconViewColors.overlaySymbolForeground,
             val framePercentOfTotalSize: Float = SquareIconViewFloats.OVERLAY_FRAME_HEIGHT_MULTIPLIER,
+            val weight: FontWeight? = null,
         ) : OverlayConfiguration
 
         /** A text string, with its font and foreground color. */

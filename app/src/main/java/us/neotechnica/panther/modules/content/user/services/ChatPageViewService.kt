@@ -14,11 +14,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
+import us.neotechnica.panther.modules.content.user.dependencies.chatInfoPageViewService
 import us.neotechnica.panther.modules.content.user.views.chatpageview.ChatPageView
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
 import us.neotechnica.panther.modules.session.state.services.retry
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import kotlin.time.Duration.Companion.milliseconds
@@ -73,7 +75,7 @@ object ChatPageViewService {
      */
     val shouldRespondToViewLifecycleEvent: Boolean
         get() =
-            !ChatInfoPageViewService.isPreviewingMedia &&
+            !DependencyValues.current.chatInfoPageViewService.isPreviewingMedia &&
                 !MediaActionHandlerService.isPresentingPickerController &&
                 !MediaMessagePreviewService.isPreviewingMedia
 

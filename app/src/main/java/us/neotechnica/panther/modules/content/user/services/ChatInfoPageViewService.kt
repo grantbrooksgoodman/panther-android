@@ -11,12 +11,16 @@ package us.neotechnica.panther.modules.content.user.services
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.Application
 import us.neotechnica.panther.bundle.chatInfoPageLoadingStateUpdated
 import us.neotechnica.panther.bundle.currentConversationActivityChanged
 import us.neotechnica.panther.bundle.currentConversationMetadataChanged
 import us.neotechnica.panther.bundle.shouldNotifyOfConversationAvailability
+import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ConfirmationAlert
 import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardService
@@ -26,13 +30,18 @@ import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.content.user.extensions.withUser
 import us.neotechnica.panther.modules.content.user.models.ChatParticipant
+import us.neotechnica.panther.modules.content.user.models.MediaItemViewData
 import us.neotechnica.panther.modules.content.user.models.MessageDeliveryServiceEffectID
+import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.conversation.models.Activity
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationMetadata
+import us.neotechnica.panther.modules.networking.conversation.remotelyupdatable.ConversationUpdatableKey
+import us.neotechnica.panther.modules.networking.conversation.remotelyupdatable.updateValues
 import us.neotechnica.panther.modules.networking.user.models.User
 import us.neotechnica.panther.modules.session.entity.services.ActivitySessionService
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
+import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.navigation.ChatRoute
 import us.neotechnica.panther.navigation.Route
 import us.neotechnica.panther.navigation.UserContentRoute
@@ -46,17 +55,26 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.StoredItemKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
+import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 
 /**
- * Handles the chat info page's user interactions.
+ * The service that handles the chat info page's user interactions.
  *
- * Loads the current conversation's participants and responds to the
- * chat info page's controls – changing the conversation's name and
- * photo, removing participants, leaving the conversation, and
- * previewing media.
+ * Use [ChatInfoPageViewService] to load the current conversation's
+ * participants and to respond to the chat info page's controls –
+ * changing the conversation's name and photo, removing participants,
+ * leaving the conversation, and previewing media.
+ *
+ * Resolve the service through
+ * [DependencyValues.chatInfoPageViewService][us.neotechnica.panther.modules.content.user.dependencies.chatInfoPageViewService].
+ *
+ * @param dependencies The collaborators the service resolves its work
+ *   through. The default resolves the live services.
  */
-object ChatInfoPageViewService {
+class ChatInfoPageViewService(
+    private val dependencies: Dependencies = Dependencies(),
+) {
     // MARK: - Types
 
     /** A change the user chose to make to the conversation's metadata. */
@@ -78,58 +96,127 @@ object ChatInfoPageViewService {
         data object SelectPhotoFromLibrary : MetadataChangeType
     }
 
+    /**
+     * A media preview the chat info page presents.
+     *
+     * @property filePaths The relative paths of the files available to
+     *   preview.
+     * @property startingIndex The index of the file to show first.
+     * @property title The preview's title.
+     */
+    data class MediaPreview(
+        val filePaths: List<String>,
+        val startingIndex: Int,
+        val title: String,
+    )
+
+    /**
+     * The collaborators the service resolves its work through.
+     *
+     * Each property defaults to the live service; a test replaces the
+     * ones it exercises.
+     */
+    data class Dependencies(
+        val addEffectUponIsSendingMessage: (() -> Unit) -> Unit = { effect ->
+            MessageDeliveryService.addEffectUponIsSendingMessage(
+                state = false,
+                id = MessageDeliveryServiceEffectID.updateChatInfoPageView,
+                effect = effect,
+            )
+        },
+        val contactPair: (User) -> ContactPair? = { it.contactPair },
+        val currentConversation: () -> Conversation? = { ConversationSessionService.currentConversation },
+        val currentUserID: () -> String? = { User.currentUserID },
+        val dismissSheets: () -> Unit = { Application.dismissSheets() },
+        val navigate: (Route) -> Unit = { DependencyValues.current.navigation.navigate(it) },
+        val presentConfirmationAlert: suspend (ConfirmationAlert, List<ConfirmationAlert.TranslationOptionKey>) -> Boolean =
+            { alert, translating -> alert.present(translating = translating) },
+        val removeConversation: (String) -> Unit = { SessionStore.removeConversation(idKey = it) },
+        val removeFromConversation: suspend (String, Conversation) -> Unit = { userID, conversation ->
+            ActivitySessionService.removeFromConversation(userID, conversation)
+        },
+        val resignFirstResponders: () -> Unit = { KeyboardService.resignFirstResponders() },
+        val resolveUsers: suspend (Conversation) -> Unit = { it.resolveUsers(forceUpdate = true) },
+        val sendChatInfoPageLoadingStateUpdated: () -> Unit = {
+            DependencyValues
+                .current
+                .sharedEvents
+                .chatInfoPageLoadingStateUpdated
+                .send(Unit)
+        },
+        val sendCurrentConversationActivityChanged: () -> Unit = {
+            DependencyValues
+                .current
+                .sharedEvents
+                .currentConversationActivityChanged
+                .send(Unit)
+        },
+        val sendCurrentConversationMetadataChanged: () -> Unit = {
+            DependencyValues
+                .current
+                .sharedEvents
+                .currentConversationMetadataChanged
+                .send(Unit)
+        },
+        val storeShouldNotifyOfConversationAvailability: (Boolean) -> Unit = {
+            RuntimeStorage.store(it, StoredItemKey.shouldNotifyOfConversationAvailability)
+        },
+        val updateValues: suspend (Conversation, Map<ConversationUpdatableKey, Any>) -> Conversation = { conversation, data ->
+            conversation.updateValues(data)
+        },
+    )
+
     // MARK: - Properties
+
+    private val cachedChatParticipantsForUserIDs = LockIsolated<Map<String, ChatParticipant>?>(null)
+    private val mutableMediaPreview = MutableStateFlow<MediaPreview?>(null)
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    /**
+     * The media preview the chat info page presents, or `null` if
+     * none is presented.
+     */
+    val mediaPreview: StateFlow<MediaPreview?> = mutableMediaPreview.asStateFlow()
 
     /** A Boolean value that indicates whether a media preview is presented. */
     var isPreviewingMedia = false
         private set
 
-    // MARK: - Set Is Previewing Media
-
-    /**
-     * Records whether a media preview is presented over the chat info
-     * page.
-     *
-     * @param isPreviewingMedia A Boolean value that indicates whether a
-     *   preview is presented.
-     */
-    fun setIsPreviewingMedia(isPreviewingMedia: Boolean) {
-        this.isPreviewingMedia = isPreviewingMedia
-    }
-
-    private val cachedChatParticipantsForUserIDs = LockIsolated<Map<String, ChatParticipant>?>(null)
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-
     // MARK: - Get Chat Participants
 
     /**
      * Returns the current conversation's participants, prepared for
-     * display, sorted by display name – names beginning with a letter
-     * first.
+     * display.
      *
      * Each participant combines their user record with a matching
-     * contact pair. Resolved participants are cached in memory per
-     * user.
+     * contact pair, when one exists. Results are cached in memory per
+     * user. When the conversation's users are not all resolved, they
+     * are resolved from the network first.
      *
-     * @return The participants.
+     * @return The participants, sorted by display name – names
+     *   beginning with a letter first.
      *
-     * @throws Exception if no current conversation is set.
+     * @throws Exception if no current conversation is set, or if
+     *   participant resolution fails.
      */
-    fun getChatParticipants(): List<ChatParticipant> {
+    suspend fun getChatParticipants(): List<ChatParticipant> {
         val conversation =
-            ConversationSessionService.currentConversation
+            dependencies.currentConversation()
                 ?: throw Exception("No current conversation.", metadata = ExceptionMetadata(this))
+
+        val users = conversation.users
+        if (users.isNullOrEmpty() || conversation.participants.size - 1 != users.size) {
+            dependencies.resolveUsers(conversation)
+            return getChatParticipants()
+        }
 
         val cache = cachedChatParticipantsForUserIDs.wrappedValue ?: emptyMap()
         val resolved = mutableMapOf<String, ChatParticipant>()
         val chatParticipants =
-            conversation.users.orEmpty().map { user ->
+            users.map { user ->
                 cache[user.id] ?: run {
-                    val participant =
-                        ChatParticipant(
-                            displayName = user.displayName,
-                            contactPair = user.contactPair ?: ContactPair.withUser(user, name = user.displayName),
-                        )
+                    val contactPair = dependencies.contactPair(user) ?: ContactPair.withUser(user, name = user.displayName)
+                    val participant = ChatParticipant(displayName = contactPair.contact.fullName, contactPair = contactPair)
                     resolved[user.id] = participant
                     participant
                 }
@@ -151,46 +238,80 @@ object ChatInfoPageViewService {
      * it if they accept.
      *
      * Leaving removes the current user from the conversation, dismisses
-     * all presented sheets, and returns to the conversations list.
-     * Failures surface as a toast.
+     * all presented sheets, removes the conversation from the session
+     * store, and returns to the conversations list. Failures surface as
+     * a toast.
      *
      * @param conversation The conversation to leave.
      */
     fun leaveConversationButtonTapped(conversation: Conversation?) {
         serviceScope.launch {
             conversation ?: return@launch
-            val currentUserID = User.currentUserID ?: return@launch
-
             var conversationName = "⌘${conversation.metadata.name}⌘"
-            if (conversationName.sanitizedName.isBangQualifiedEmpty) conversationName = "Conversation"
+            if (conversationName.sanitized.isBangQualifiedEmpty) conversationName = "Conversation"
 
+            val currentUserID = dependencies.currentUserID() ?: return@launch
             val didConfirm =
-                ConfirmationAlert(
-                    title = "Leave $conversationName",
-                    message = "Are you sure you'd like to leave this conversation?",
-                    confirmButtonStyle = ActionStyle.DESTRUCTIVE_PREFERRED,
-                ).present(
-                    translating =
-                        listOf(
-                            ConfirmationAlert.TranslationOptionKey.ConfirmButtonTitle,
-                            ConfirmationAlert.TranslationOptionKey.Message,
-                            ConfirmationAlert.TranslationOptionKey.Title,
-                        ),
+                dependencies.presentConfirmationAlert(
+                    ConfirmationAlert(
+                        title = "Leave $conversationName",
+                        message = "Are you sure you'd like to leave this conversation?",
+                        cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
+                        confirmButtonStyle = ActionStyle.DESTRUCTIVE_PREFERRED,
+                    ),
+                    listOf(
+                        ConfirmationAlert.TranslationOptionKey.ConfirmButtonTitle,
+                        ConfirmationAlert.TranslationOptionKey.Message,
+                        ConfirmationAlert.TranslationOptionKey.Title,
+                    ),
                 )
             if (!didConfirm) return@launch
 
-            val sharedEvents = DependencyValues.current.sharedEvents
-            sharedEvents.chatInfoPageLoadingStateUpdated.send(Unit)
-            RuntimeStorage.store(false, StoredItemKey.shouldNotifyOfConversationAvailability)
+            dependencies.sendChatInfoPageLoadingStateUpdated()
+            dependencies.storeShouldNotifyOfConversationAvailability(false)
 
             try {
-                ActivitySessionService.removeFromConversation(currentUserID, conversation)
-                Application.dismissSheets()
-                DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
+                dependencies.removeFromConversation(currentUserID, conversation)
+                dependencies.dismissSheets()
+                dependencies.removeConversation(conversation.id.key)
+                dependencies.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
             } catch (exception: Exception) {
                 Logger.log(exception, with = AlertType.toast)
             }
         }
+    }
+
+    /**
+     * Previews the conversation's media files, starting at the given
+     * index.
+     *
+     * The preview stays presented until [mediaPreviewDismissed] is
+     * called.
+     *
+     * @param metadata The display metadata of the tapped item.
+     * @param filePaths The relative paths of the files available to
+     *   preview.
+     * @param startingIndex The index of the file to show first.
+     */
+    @Suppress("UnusedParameter", "UNUSED_PARAMETER")
+    fun mediaItemViewTapped(
+        metadata: MediaItemViewData,
+        filePaths: List<String>,
+        startingIndex: Int,
+    ) {
+        isPreviewingMedia = true
+        mutableMediaPreview.value =
+            MediaPreview(
+                filePaths = filePaths,
+                startingIndex = startingIndex,
+                title = LocalizedStringKey.Attachment.localized(),
+            )
+    }
+
+    /** Responds to the media preview being dismissed. */
+    fun mediaPreviewDismissed() {
+        mutableMediaPreview.value = null
+        isPreviewingMedia = false
     }
 
     /**
@@ -213,26 +334,26 @@ object ChatInfoPageViewService {
             val user = chatParticipant.firstUser ?: return@launch
 
             val didConfirm =
-                ConfirmationAlert(
-                    title = user.displayName,
-                    message = "Are you sure you'd like to remove this person from the conversation?",
-                    confirmButtonStyle = ActionStyle.DESTRUCTIVE_PREFERRED,
-                ).present(
-                    translating =
-                        listOf(
-                            ConfirmationAlert.TranslationOptionKey.ConfirmButtonTitle,
-                            ConfirmationAlert.TranslationOptionKey.Message,
-                        ),
+                dependencies.presentConfirmationAlert(
+                    ConfirmationAlert(
+                        title = user.displayName,
+                        message = "Are you sure you'd like to remove this person from the conversation?",
+                        cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
+                        confirmButtonStyle = ActionStyle.DESTRUCTIVE_PREFERRED,
+                    ),
+                    listOf(
+                        ConfirmationAlert.TranslationOptionKey.ConfirmButtonTitle,
+                        ConfirmationAlert.TranslationOptionKey.Message,
+                    ),
                 )
             if (!didConfirm) return@launch
 
-            val sharedEvents = DependencyValues.current.sharedEvents
-            DependencyValues.current.navigation.navigate(Route.Chat(ChatRoute.Sheet(null)))
-            sharedEvents.chatInfoPageLoadingStateUpdated.send(Unit)
+            dependencies.navigate(Route.Chat(ChatRoute.Sheet(null)))
+            dependencies.sendChatInfoPageLoadingStateUpdated()
 
             try {
-                ActivitySessionService.removeFromConversation(user.id, conversation)
-                sharedEvents.currentConversationActivityChanged.send(Unit)
+                dependencies.removeFromConversation(user.id, conversation)
+                dependencies.sendCurrentConversationActivityChanged()
             } catch (exception: Exception) {
                 Logger.log(exception, with = AlertType.toast)
             }
@@ -247,32 +368,38 @@ object ChatInfoPageViewService {
      * @param action The activity action describing the change.
      * @param newMetadata The metadata to apply.
      *
-     * @throws Exception if the update fails.
+     * @throws Exception if the activity cannot be synthesized, or if
+     *   the update fails.
      */
     suspend fun updateMetadata(
         conversation: Conversation,
         action: Activity.Action,
         newMetadata: ConversationMetadata,
     ) {
-        ActivitySessionService.updateMetadata(conversation, action, newMetadata)
+        val activity =
+            Activity.from(action)
+                ?: throw Exception("Failed to synthesize activity.", metadata = ExceptionMetadata(this))
+
+        val newActivities = ((conversation.activities ?: emptyList()) + activity).filter { it != Activity.empty }
+        dependencies.updateValues(
+            conversation,
+            mapOf(
+                ConversationUpdatableKey.ACTIVITIES to newActivities,
+                ConversationUpdatableKey.METADATA to newMetadata,
+            ),
+        )
     }
 
-    // MARK: - View Lifecycle
-
     /**
-     * Responds to the chat info page appearing by dismissing the
-     * keyboard and scheduling a metadata change notification for when
-     * any in-flight message send completes.
+     * Responds to the chat info page appearing.
+     *
+     * This method dismisses the keyboard and schedules a metadata
+     * change notification for when any in-flight message send
+     * completes.
      */
     fun viewAppeared() {
-        KeyboardService.resignFirstResponders()
-        MessageDeliveryService.addEffectUponIsSendingMessage(
-            state = false,
-            id = MessageDeliveryServiceEffectID.updateChatInfoPageView,
-        ) {
-            val sharedEvents = DependencyValues.current.sharedEvents
-            sharedEvents.currentConversationMetadataChanged.send(Unit)
-        }
+        dependencies.resignFirstResponders()
+        dependencies.addEffectUponIsSendingMessage { dependencies.sendCurrentConversationMetadataChanged() }
     }
 
     /** Responds to the chat info page finishing its initial load. */
@@ -285,6 +412,3 @@ object ChatInfoPageViewService {
         cachedChatParticipantsForUserIDs.wrappedValue = null
     }
 }
-
-private val String.sanitizedName: String
-    get() = replace("⌘", "").replace("⁂", "").replace("※", "")

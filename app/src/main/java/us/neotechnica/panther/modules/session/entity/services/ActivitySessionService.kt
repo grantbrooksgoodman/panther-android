@@ -13,7 +13,6 @@ import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.networking.conversation.models.Activity
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
-import us.neotechnica.panther.modules.networking.conversation.models.ConversationMetadata
 import us.neotechnica.panther.modules.networking.conversation.models.MessageRecipientConsentAcknowledgementData
 import us.neotechnica.panther.modules.networking.conversation.models.Participant
 import us.neotechnica.panther.modules.networking.conversation.models.PenPalsSharingData
@@ -172,40 +171,6 @@ object ActivitySessionService {
     }
 
     // MARK: - Update Metadata
-
-    /**
-     * Applies the given metadata to the given conversation, recording
-     * the given action as an activity.
-     *
-     * @param conversation The conversation to update.
-     * @param action The action describing the metadata change.
-     * @param newMetadata The metadata to apply.
-     *
-     * @return The updated conversation.
-     *
-     * @throws Exception if the activity cannot be synthesized or the
-     *   write fails.
-     */
-    suspend fun updateMetadata(
-        conversation: Conversation,
-        action: Activity.Action,
-        newMetadata: ConversationMetadata,
-    ): Conversation {
-        val activity =
-            Activity.from(action)
-                ?: throw Exception(
-                    "Failed to synthesize activity.",
-                    metadata = ExceptionMetadata(this),
-                )
-
-        val newActivities = ((conversation.activities ?: emptyList()) + activity).filter { it != Activity.empty }
-        return conversation.updateValues(
-            mapOf(
-                ConversationUpdatableKey.ACTIVITIES to newActivities,
-                ConversationUpdatableKey.METADATA to newMetadata,
-            ),
-        )
-    }
 
     // MARK: - Companion
 

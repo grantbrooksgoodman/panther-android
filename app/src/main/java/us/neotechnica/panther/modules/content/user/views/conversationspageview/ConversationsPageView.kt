@@ -63,13 +63,13 @@ import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.ContextMenuHost
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
+import us.neotechnica.panther.designsystem.modules.componentkit.models.LocalSwipeActionsCoordinator
+import us.neotechnica.panther.designsystem.modules.componentkit.models.SwipeActionsCoordinator
 import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.shared.components.SearchBar
-import us.neotechnica.panther.modules.content.user.components.conversationcellview.ConversationCellSwipeCoordinator
 import us.neotechnica.panther.modules.content.user.components.conversationcellview.ConversationCellView
-import us.neotechnica.panther.modules.content.user.components.conversationcellview.LocalConversationCellSwipeCoordinator
 import us.neotechnica.panther.modules.content.user.components.conversationcellview.buildConversationCellViewModel
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewFloats
 import us.neotechnica.panther.modules.content.user.constants.ConversationsPageViewColors
@@ -118,7 +118,7 @@ fun ConversationsPageView(
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
     val focusManager = LocalFocusManager.current
-    val swipeCoordinator = remember { ConversationCellSwipeCoordinator() }
+    val swipeCoordinator = remember { SwipeActionsCoordinator() }
     val endSearch: () -> Unit = {
         viewModel.send(ConversationsPageReducer.Action.SearchQueryChanged(""))
         viewModel.send(ConversationsPageReducer.Action.IsSearchingChanged(false))
@@ -137,7 +137,7 @@ fun ConversationsPageView(
     }
 
     ContextMenuHost(modifier = modifier.then(swipeCoordinator.dismissalModifier())) {
-        CompositionLocalProvider(LocalConversationCellSwipeCoordinator provides swipeCoordinator) {
+        CompositionLocalProvider(LocalSwipeActionsCoordinator provides swipeCoordinator) {
             StatefulView(state = state.viewState) {
                 // The host fills the screen so the cell context menu's scrim covers
                 // the system bars; the content insets itself below the status bar

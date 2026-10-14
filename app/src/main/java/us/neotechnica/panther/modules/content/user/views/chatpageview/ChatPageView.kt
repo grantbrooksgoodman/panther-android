@@ -25,9 +25,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.FocusRequester
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -223,6 +225,16 @@ private fun ChatInputBar(
     val isSendButtonEnabled by inputBarService.isSendButtonEnabled.collectAsState()
     val isAttachMediaButtonEnabled by inputBarService.isAttachMediaButtonEnabled.collectAsState()
     val isShowingSendingUI by inputBarService.isShowingSendingUI.collectAsState()
+    val shouldBecomeFirstResponder by inputBarService.shouldBecomeFirstResponder.collectAsState()
+    val focusRequester = remember { FocusRequester() }
+
+    // A standing first-responder request is honored once the field has
+    // had its first layout pass.
+    LaunchedEffect(shouldBecomeFirstResponder) {
+        if (!shouldBecomeFirstResponder) return@LaunchedEffect
+        withFrameNanos {}
+        focusRequester.requestFocus()
+    }
 
     var hasAppeared by remember { mutableStateOf(false) }
     val appearanceDurationMillis = (PageFloats.INPUT_BAR_APPEARANCE_ANIMATION_DURATION * MILLISECONDS_PER_SECOND).toInt()
@@ -247,6 +259,7 @@ private fun ChatInputBar(
         isAttachEnabled = isAttachMediaButtonEnabled,
         images = InputBarConfigService.images(),
         onFocusChanged = { inputBarService.setIsFirstResponder(it) },
+        focusRequester = focusRequester,
         modifier = Modifier.alpha(alpha),
     )
 }

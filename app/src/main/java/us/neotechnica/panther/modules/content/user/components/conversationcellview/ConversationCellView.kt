@@ -12,7 +12,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.AnchoredDraggableState
 import androidx.compose.foundation.gestures.DraggableAnchors
-import androidx.compose.foundation.gestures.animateTo
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,7 +35,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -51,19 +49,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.conversationsPageReappeared
 import us.neotechnica.panther.bundle.conversationsSearchQuery
 import us.neotechnica.panther.bundle.reloadingConversationIDKeys
 import us.neotechnica.panther.bundle.sessionStoreDidChange
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.MessageContextMenu
+import us.neotechnica.panther.designsystem.modules.componentkit.components.SwipeActionsCoordinationEffect
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAction
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMenuAlignment
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.componentkit.models.SFSymbol
 import us.neotechnica.panther.designsystem.modules.componentkit.models.TextFit
+import us.neotechnica.panther.designsystem.modules.componentkit.modifiers.swipeActionsDraggable
 import us.neotechnica.panther.designsystem.modules.foundation.constants.StackFloats
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
@@ -137,7 +136,7 @@ fun ConversationCellView(
     val swipeOffset = draggableState.offset.takeIf { !it.isNaN() } ?: 0f
     val cellBounds = remember { mutableStateOf(Rect.Zero) }
 
-    SwipeCoordinationEffect(draggableState, cellBounds)
+    SwipeActionsCoordinationEffect(draggableState, SwipeAnchor.SETTLED, cellBounds)
 
     Box(
         modifier =
@@ -196,39 +195,6 @@ fun ConversationCellView(
             }
         }
     }
-}
-
-// Reports the cell's revealed swipe actions to the page's coordinator,
-// which closes them when the page is touched outside them.
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun SwipeCoordinationEffect(
-    draggableState: AnchoredDraggableState<SwipeAnchor>,
-    cellBounds: State<Rect>,
-) {
-    val coordinator = LocalConversationCellSwipeCoordinator.current ?: return
-    val id = remember { Any() }
-    val scope = rememberCoroutineScope()
-
-    LaunchedEffect(draggableState.settledValue) {
-        if (draggableState.settledValue == SwipeAnchor.SETTLED) return@LaunchedEffect coordinator.cellClosed(id)
-        coordinator.cellOpened(
-            id = id,
-            bounds = { cellBounds.value },
-            actionBounds = {
-                val bounds = cellBounds.value
-                val offset = draggableState.offset.takeIf { !it.isNaN() } ?: 0f
-                if (offset > 0f) {
-                    Rect(bounds.left, bounds.top, bounds.left + offset, bounds.bottom)
-                } else {
-                    Rect(bounds.right + offset, bounds.top, bounds.right, bounds.bottom)
-                }
-            },
-            close = { scope.launch { draggableState.animateTo(SwipeAnchor.SETTLED) } },
-        )
-    }
-
-    DisposableEffect(coordinator) { onDispose { coordinator.cellClosed(id) } }
 }
 
 /**

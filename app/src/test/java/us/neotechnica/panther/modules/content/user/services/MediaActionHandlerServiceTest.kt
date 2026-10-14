@@ -32,9 +32,6 @@ class MediaActionHandlerServiceTest {
 
     @After
     fun tearDown() {
-        ContentPickerService.camera.unregisterLauncher()
-        ContentPickerService.document.unregisterLauncher()
-        ContentPickerService.media.unregisterLauncher()
         MediaActionHandlerService.onMediaMessageSent = null
     }
 
@@ -49,12 +46,13 @@ class MediaActionHandlerServiceTest {
         assertFalse(picker.canPresent)
         assertEquals(0, presentations)
 
-        picker.registerLauncher { presentations += 1 }
+        val launch = { presentations += 1 }
+        picker.registerLauncher(launch)
         picker.present()
         assertTrue(picker.canPresent)
         assertEquals(1, presentations)
 
-        picker.unregisterLauncher()
+        picker.unregisterLauncher(launch)
         picker.present()
         assertEquals(1, presentations)
     }

@@ -9,6 +9,7 @@
 package us.neotechnica.panther.modules.content.user.components
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -71,24 +72,30 @@ fun RegisterContentPickerLaunchers() {
         }
 
     DisposableEffect(Unit) {
-        ContentPickerService.media.registerLauncher {
+        val launchMedia = {
             mediaLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
         }
-        ContentPickerService.document.registerLauncher {
-            documentLauncher.launch(DocumentPickerService.allowedMimeTypes)
-        }
-        ContentPickerService.camera.registerLauncher {
+        val launchDocument = { documentLauncher.launch(DocumentPickerService.allowedMimeTypes) }
+        val launchCamera = {
             val uri = captureUri(context)
             cameraUri = uri
             cameraLauncher.launch(uri)
         }
-        DocumentExportService.registerLauncher { intent -> exportLauncher.launch(intent) }
+        val launchExport = { intent: Intent -> exportLauncher.launch(intent) }
 
+        ContentPickerService.media.registerLauncher(launchMedia)
+        ContentPickerService.document.registerLauncher(launchDocument)
+        ContentPickerService.camera.registerLauncher(launchCamera)
+        DocumentExportService.registerLauncher(launchExport)
+
+        // Only this composition's launchers are cleared: a page that
+        // registered its own launchers while this one was leaving keeps
+        // them.
         onDispose {
-            ContentPickerService.media.unregisterLauncher()
-            ContentPickerService.document.unregisterLauncher()
-            ContentPickerService.camera.unregisterLauncher()
-            DocumentExportService.unregisterLauncher()
+            ContentPickerService.media.unregisterLauncher(launchMedia)
+            ContentPickerService.document.unregisterLauncher(launchDocument)
+            ContentPickerService.camera.unregisterLauncher(launchCamera)
+            DocumentExportService.unregisterLauncher(launchExport)
         }
     }
 }

@@ -9,6 +9,7 @@
 package us.neotechnica.panther.modules.content.user.extensions
 
 import us.neotechnica.panther.modules.common.constants.CommonConstants
+import us.neotechnica.panther.modules.content.user.models.MediaItemViewData
 import us.neotechnica.panther.modules.localization.models.LocalizedStringKey
 import us.neotechnica.panther.modules.networking.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.conversation.models.ConversationID
@@ -19,6 +20,7 @@ import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.formattedShortString
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHashOf
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import kotlin.random.Random
@@ -78,6 +80,48 @@ val Conversation.isVisibleForCurrentUser: Boolean
         if (currentUserParticipant.hasDeletedConversation) return false
         if (participants.any { it.userID in (blockedUserIDs ?: emptyList()) }) return false
         return true
+    }
+
+/**
+ * The metadata for the conversation's shared media, one entry per
+ * media message, sorted from newest to oldest.
+ *
+ * A media message whose sender cannot be resolved is omitted.
+ */
+val Conversation.mediaItemMetadata: List<MediaItemViewData>
+    get() {
+        val clientSession = DependencyValues.current.clientSession
+        val users = (users ?: emptyList()) + listOfNotNull(clientSession.entity.user.currentUser)
+        val messages = (messages?.filter { it.richContent?.mediaComponent != null } ?: emptyList()).sortedByDescendingSentDate
+
+        return messages.mapNotNull { mediaMessage ->
+            val mediaFile = mediaMessage.richContent?.mediaComponent ?: return@mapNotNull null
+            val user =
+                users.firstOrNull { it.id == mediaMessage.fromAccountID }
+                    ?: clientSession.store.users[mediaMessage.fromAccountID]
+                    ?: return@mapNotNull null
+
+            var senderLabelText = LocalizedStringKey.FromYou.localized().replaceFirstChar { it.lowercase() }
+            if (user.id != User.currentUserID) {
+                senderLabelText = LocalizedStringKey.FromUser.localized().replace("⌘", user.displayName)
+            }
+
+            var mediaTypeLabelText = LocalizedStringKey.Attachment.localized()
+            if (mediaFile.fileExtension.isDocument) {
+                mediaTypeLabelText = "${LocalizedStringKey.File.localized()} • ${mediaFile.fileExtension.rawValue}"
+            } else if (mediaFile.fileExtension.isImage) {
+                mediaTypeLabelText = LocalizedStringKey.Image.localized()
+            } else if (mediaFile.fileExtension.isVideo) {
+                mediaTypeLabelText = LocalizedStringKey.Video.localized()
+            }
+
+            MediaItemViewData(
+                file = mediaFile,
+                mediaTypeLabelText = mediaTypeLabelText,
+                senderLabelText = senderLabelText,
+                timestampLabelText = mediaMessage.sentDate.formattedShortString,
+            )
+        }
     }
 
 /**

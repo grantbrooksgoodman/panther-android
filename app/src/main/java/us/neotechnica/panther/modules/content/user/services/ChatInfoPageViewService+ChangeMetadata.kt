@@ -20,19 +20,22 @@ import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifi
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action as AlertKitAction
 
+// MARK: - Present Change Metadata Action Sheet
+
 /**
- * Presents the change-metadata action sheet for the conversation's
- * name and photo, returning the change the user chose.
+ * Presents an action sheet for changing the conversation's name and
+ * photo.
  *
- * Choosing to change the name presents a text input alert; choosing
- * to change the photo offers the camera or the photo library. The
- * remove-photo option appears only when the conversation has a photo.
+ * Choosing to change the name presents a text input alert – names
+ * containing reserved characters are rejected; choosing to change the
+ * photo offers the camera or the photo library. The remove photo
+ * option appears only when the conversation has a photo.
  *
- * @return The chosen metadata change, or `null` if the sheet was
- *   canceled.
+ * @return The change the user chose; otherwise, `null` if they
+ *   canceled or made no change.
  */
-internal suspend fun ChatInfoPageViewService.presentChangeMetadataActionSheet(): ChatInfoPageViewService.MetadataChangeType? {
-    val conversation = ConversationSessionService.currentConversation ?: return null
+suspend fun ChatInfoPageViewService.presentChangeMetadataActionSheet(): ChatInfoPageViewService.MetadataChangeType? {
+    val conversation = ConversationSessionService.currentConversation
 
     var choice: MetadataChoice? = null
     val actions =
@@ -40,88 +43,49 @@ internal suspend fun ChatInfoPageViewService.presentChangeMetadataActionSheet():
             AlertKitAction("Change name") { choice = MetadataChoice.CHANGE_NAME },
             AlertKitAction("Change photo") { choice = MetadataChoice.CHANGE_PHOTO },
         )
-    if (conversation.metadata.imageData != null) {
+    if (conversation?.metadata?.imageData != null) {
         actions.add(
             AlertKitAction("Remove photo", style = ActionStyle.DESTRUCTIVE) { choice = MetadataChoice.REMOVE_PHOTO },
         )
     }
 
     ActionSheet(
-        title = "Change name and photo",
         actions = actions,
         cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
-    ).present(
-        translating =
-            listOf(
-                ActionSheet.TranslationOptionKey.Actions(),
-                ActionSheet.TranslationOptionKey.Title,
-            ),
-    )
+    ).present(translating = listOf(ActionSheet.TranslationOptionKey.Actions()))
 
     return when (choice) {
         MetadataChoice.CHANGE_NAME -> presentChangeNameAlert(conversation)
-        MetadataChoice.CHANGE_PHOTO -> presentPhotoSourceSheet()
+        MetadataChoice.CHANGE_PHOTO -> presentChangePhotoAlert()
         MetadataChoice.REMOVE_PHOTO ->
-            ChatInfoPageViewService.MetadataChangeType.RemovePhoto(
-                conversation.metadata.copyWith(nilImageData = true),
-            )
+            conversation?.let {
+                ChatInfoPageViewService.MetadataChangeType.RemovePhoto(it.metadata.copyWith(nilImageData = true))
+            }
         null -> null
     }
 }
 
 // MARK: - Auxiliary
 
-/** A metadata change the user chose from the change-metadata action sheet. */
+// A choice made from the change-metadata action sheet.
 private enum class MetadataChoice {
     CHANGE_NAME,
     CHANGE_PHOTO,
     REMOVE_PHOTO,
 }
 
-/**
- * Presents the photo-source action sheet, offering the camera or the
- * photo library, and returns the chosen change, or `null` if canceled.
- */
-private suspend fun presentPhotoSourceSheet(): ChatInfoPageViewService.MetadataChangeType? {
-    var choice: ChatInfoPageViewService.MetadataChangeType? = null
-    ActionSheet(
-        title = "Change name and photo",
-        actions =
-            listOf(
-                AlertKitAction("Take photo") { choice = ChatInfoPageViewService.MetadataChangeType.SelectPhotoFromCamera },
-                AlertKitAction("Choose photo from library") {
-                    choice = ChatInfoPageViewService.MetadataChangeType.SelectPhotoFromLibrary
-                },
-            ),
-        cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
-    ).present(
-        translating =
-            listOf(
-                ActionSheet.TranslationOptionKey.Actions(),
-                ActionSheet.TranslationOptionKey.Title,
-            ),
-    )
-    return choice
-}
-
-/**
- * Presents the change-name text input alert, live-disabling the
- * confirm button while the field contains reserved characters, and
- * returns the resulting metadata change, or `null` when canceled or a
- * no-op.
- */
-private suspend fun presentChangeNameAlert(conversation: Conversation): ChatInfoPageViewService.MetadataChangeType? {
-    val currentName =
-        conversation.metadata.name
-            .takeUnless { it.isBangQualifiedEmpty }
-            .orEmpty()
+// Presents the change-name text input alert, disabling its confirm
+// button while the field contains reserved characters, and returns the
+// resulting metadata change, or `null` when canceled or unchanged.
+private suspend fun presentChangeNameAlert(conversation: Conversation?): ChatInfoPageViewService.MetadataChangeType? {
+    val conversationName = conversation?.metadata?.name?.takeUnless { it.isBangQualifiedEmpty }
     val textInputAlert =
         TextInputAlert(
             message = "Choose a new name for this conversation:",
             attributes =
                 TextFieldAttributes(
                     clearButtonMode = TextFieldAttributes.ClearButtonMode.ALWAYS,
-                    sampleText = currentName,
+                    sampleText = conversationName,
                 ),
             cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
             confirmButtonTitle = LocalizedStringKey.Done.localized(),
@@ -135,14 +99,31 @@ private suspend fun presentChangeNameAlert(conversation: Conversation): ChatInfo
         }
     }
 
-    val input =
-        textInputAlert.present(translating = listOf(TextInputAlert.TranslationOptionKey.Message)) ?: return null
+    val name = textInputAlert.present(translating = listOf(TextInputAlert.TranslationOptionKey.Message))
+    if (conversation == null || name == null) return null
+    if (name == conversation.metadata.name) return null
+    if (name.isBangQualifiedEmpty && conversation.metadata.name.isBangQualifiedEmpty) return null
 
-    if (input.any { it in "⌘:" }) return null
-    if (input == conversation.metadata.name) return null
-    if (input.isBangQualifiedEmpty && conversation.metadata.name.isBangQualifiedEmpty) return null
+    val sanitizedName = if (name.isBangQualifiedEmpty) BANG_QUALIFIED_EMPTY else name
+    return ChatInfoPageViewService.MetadataChangeType.Name(conversation.metadata.copyWith(name = sanitizedName.trim()))
+}
 
-    val trimmed = input.trim()
-    val newName = if (trimmed.isBangQualifiedEmpty) BANG_QUALIFIED_EMPTY else trimmed
-    return ChatInfoPageViewService.MetadataChangeType.Name(conversation.metadata.copyWith(name = newName))
+// Presents the change-photo action sheet, offering the camera or the
+// photo library, and returns the chosen change, or `null` if canceled.
+private suspend fun presentChangePhotoAlert(): ChatInfoPageViewService.MetadataChangeType? {
+    var photoChangeType: ChatInfoPageViewService.MetadataChangeType? = null
+    val takePhotoAction =
+        AlertKitAction("Take photo") {
+            photoChangeType = ChatInfoPageViewService.MetadataChangeType.SelectPhotoFromCamera
+        }
+    val chooseFromLibraryAction =
+        AlertKitAction("Choose photo from library") {
+            photoChangeType = ChatInfoPageViewService.MetadataChangeType.SelectPhotoFromLibrary
+        }
+
+    ActionSheet(
+        actions = listOf(takePhotoAction, chooseFromLibraryAction),
+        cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
+    ).present(translating = listOf(ActionSheet.TranslationOptionKey.Actions()))
+    return photoChangeType
 }

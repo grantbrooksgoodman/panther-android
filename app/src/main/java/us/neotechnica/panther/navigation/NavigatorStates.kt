@@ -98,7 +98,11 @@ data class ChatNavigatorState(
 ) {
     /** The sheet destinations presented over the chat flow. */
     sealed interface SheetPaths : Paths {
+        data object CameraPicker : SheetPaths
+
         data object ContactSelector : SheetPaths
+
+        data object PhotoPicker : SheetPaths
     }
 }
 

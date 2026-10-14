@@ -8,84 +8,136 @@
 
 package us.neotechnica.panther.modules.content.user.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.AnchoredDraggableState
+import androidx.compose.foundation.gestures.DraggableAnchors
+import androidx.compose.foundation.gestures.animateTo
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
-import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.IntOffset
+import kotlinx.coroutines.launch
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.components.DisclosureIndicator
+import us.neotechnica.panther.designsystem.modules.componentkit.components.SwipeActionsCoordinationEffect
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
+import us.neotechnica.panther.designsystem.modules.componentkit.modifiers.swipeActionsDraggable
+import us.neotechnica.panther.designsystem.modules.foundation.constants.StackFloats
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewFloats
+import us.neotechnica.panther.modules.content.user.constants.ChatParticipantViewColors
+import us.neotechnica.panther.modules.content.user.constants.ChatParticipantViewFloats
+import us.neotechnica.panther.modules.content.user.constants.ChatParticipantViewStrings
 import us.neotechnica.panther.modules.content.user.models.ChatParticipant
-import us.neotechnica.panther.subsystem.modules.foundation.services.Build
+import kotlin.math.roundToInt
+
+// MARK: - Constants Accessors
+
+private typealias ParticipantColors = ChatParticipantViewColors
+private typealias ParticipantFloats = ChatParticipantViewFloats
+private typealias ParticipantStrings = ChatParticipantViewStrings
+
+// MARK: - Types
+
+private enum class SwipeAnchor {
+    SETTLED,
+    TRAILING,
+}
 
 /**
- * A participant row for the chat info page.
+ * A row describing a participant in a conversation.
  *
- * Shows the participant's avatar, name, and a user-info badge
- * (tappable only in developer mode), and opens the participant's
- * contact card on a row tap. A non-`null` [onRemove] enables a trailing
- * remove swipe.
+ * Use [ChatParticipantView] to display a participant's avatar, display
+ * name, and user info badge, with an optional swipe-to-delete action.
+ * A trailing swipe reveals a held delete button; the row never
+ * deletes on a full swipe.
  *
- * @param participant The participant to display.
- * @param onTap The action performed on a row tap.
- * @param onUserInfoBadgeTapped The action performed when the user-info
- *   badge is tapped in developer mode.
- * @param onRemove The action performed when the row is swiped to remove
- *   the participant, or `null` to disable the remove swipe.
+ * @param participant The participant the row describes.
+ * @param deleteAction The action the revealed delete button performs.
+ *   Pass `null` to omit the swipe action.
+ * @param userInfoBadgeViewAction The action performed when the user
+ *   taps the user info badge. Pass `null` for no action.
+ * @param onTap The action performed when the user taps the row.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChatParticipantView(
     participant: ChatParticipant,
+    deleteAction: (() -> Unit)?,
+    userInfoBadgeViewAction: (() -> Unit)?,
     onTap: () -> Unit,
-    onUserInfoBadgeTapped: () -> Unit,
-    onRemove: (() -> Unit)?,
 ) {
-    val remove = onRemove
-    if (remove == null) {
-        RowContent(participant, onTap, onUserInfoBadgeTapped)
+    if (deleteAction == null) {
+        RowContent(participant, userInfoBadgeViewAction, onTap)
         return
     }
 
-    val dismissState = rememberSwipeToDismissBoxState()
-    val currentRemove by rememberUpdatedState(remove)
+    val colors = LocalPantherColors.current
+    val deleteButtonWidth = with(LocalDensity.current) { ParticipantFloats.deleteButtonWidth.toPx() }
+    val draggableState =
+        remember {
+            AnchoredDraggableState(
+                initialValue = SwipeAnchor.SETTLED,
+                anchors =
+                    DraggableAnchors {
+                        SwipeAnchor.SETTLED at 0f
+                        SwipeAnchor.TRAILING at -deleteButtonWidth
+                    },
+            )
+        }
+    val swipeOffset = draggableState.offset.takeIf { !it.isNaN() } ?: 0f
+    val rowBounds = remember { mutableStateOf(Rect.Zero) }
+    val scope = rememberCoroutineScope()
 
-    // A swipe that settles dismissed triggers the removal flow once – the
-    // flow presents its own confirmation – and the row then returns to rest.
-    LaunchedEffect(dismissState.settledValue) {
-        if (dismissState.settledValue != SwipeToDismissBoxValue.EndToStart) return@LaunchedEffect
-        currentRemove()
-        dismissState.reset()
-    }
+    SwipeActionsCoordinationEffect(draggableState, SwipeAnchor.SETTLED, rowBounds)
 
-    SwipeToDismissBox(
-        state = dismissState,
-        enableDismissFromStartToEnd = false,
-        backgroundContent = { RemoveSwipeBackground() },
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min)
+                .onGloballyPositioned { rowBounds.value = it.boundsInRoot() },
     ) {
-        RowContent(participant, onTap, onUserInfoBadgeTapped)
+        DeleteButton(
+            onClick = {
+                scope.launch { draggableState.animateTo(SwipeAnchor.SETTLED) }
+                deleteAction()
+            },
+            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+        )
+
+        Box(
+            modifier =
+                Modifier
+                    .offset { IntOffset(swipeOffset.roundToInt(), 0) }
+                    .background(colors.groupedRowBackground)
+                    .swipeActionsDraggable(draggableState, enabled = true),
+        ) {
+            RowContent(participant, userInfoBadgeViewAction, onTap)
+        }
     }
 }
 
@@ -94,59 +146,55 @@ fun ChatParticipantView(
 @Composable
 private fun RowContent(
     participant: ChatParticipant,
+    userInfoBadgeViewAction: (() -> Unit)?,
     onTap: () -> Unit,
-    onUserInfoBadgeTapped: () -> Unit,
 ) {
     val colors = LocalPantherColors.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(StackFloats.defaultSpacing),
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(colors.groupedRowBackground)
                 .clickable(onClick = onTap)
-                .padding(horizontal = ChatInfoPageViewFloats.cardHorizontalPadding, vertical = ChatInfoPageViewFloats.rowVerticalPadding),
+                .padding(
+                    horizontal = ChatInfoPageViewFloats.cardHorizontalPadding,
+                    vertical = ChatInfoPageViewFloats.rowVerticalPadding,
+                ),
     ) {
         AvatarImageView(
-            remember(participant.contactPair) {
-                participant.contactPair.contact.image
-                    ?.asImageBitmap()
-            },
-            size = DpSize(ChatInfoPageViewFloats.rowAvatarSize, ChatInfoPageViewFloats.rowAvatarSize),
+            remember(participant.contactPair) { participant.thumbnailImage?.asImageBitmap() },
+            size = DpSize(ParticipantFloats.avatarImageViewSizeWidth, ParticipantFloats.avatarImageViewSizeHeight),
+            modifier = Modifier.padding(end = ParticipantFloats.avatarImageViewTrailingPadding),
         )
         Components.Text(
             participant.displayName,
             foregroundColor = colors.titleText,
             font = Font.systemSemibold(),
-            modifier = Modifier.padding(start = ChatInfoPageViewFloats.rowTextStartPadding),
         )
         participant.firstUser?.let { user ->
-            Box(modifier = Modifier.padding(start = ChatInfoPageViewFloats.languageBadgeStartPadding)) {
-                UserInfoBadgeView(
-                    user = user,
-                    action = if (Build.isDeveloperModeEnabled) onUserInfoBadgeTapped else null,
-                )
-            }
+            UserInfoBadgeView(user = user, action = userInfoBadgeViewAction)
         }
         Spacer(modifier = Modifier.weight(1f))
         DisclosureIndicator(foregroundColor = colors.subtitleText)
     }
 }
 
+// MARK: - Delete Button
+
 @Composable
-private fun RemoveSwipeBackground() {
+private fun DeleteButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Box(
-        contentAlignment = Alignment.CenterEnd,
+        contentAlignment = Alignment.Center,
         modifier =
-            Modifier
-                .fillMaxSize()
-                .background(ChatInfoPageViewColors.destructive)
-                .padding(horizontal = ChatInfoPageViewFloats.cardHorizontalPadding),
+            modifier
+                .width(ParticipantFloats.deleteButtonWidth)
+                .background(ParticipantColors.deleteButtonTint)
+                .clickable(onClick = onClick),
     ) {
-        Components.Symbol(
-            "trash",
-            foregroundColor = Color.White,
-            modifier = Modifier.size(ChatInfoPageViewFloats.chevronGlyphSize),
-        )
+        Components.Symbol(ParticipantStrings.DELETE_BUTTON_IMAGE_SYSTEM_NAME, foregroundColor = Color.White)
     }
 }

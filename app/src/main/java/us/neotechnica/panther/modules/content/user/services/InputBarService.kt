@@ -71,6 +71,7 @@ class InputBarService(
     private val mutableIsFirstResponder = MutableStateFlow(false)
     private val mutableIsSendButtonEnabled = MutableStateFlow(false)
     private val mutableIsShowingSendingUI = MutableStateFlow(false)
+    private val mutableShouldBecomeFirstResponder = MutableStateFlow(false)
     private val mutableText = MutableStateFlow("")
 
     // MARK: - Computed Properties
@@ -86,6 +87,12 @@ class InputBarService(
 
     /** Whether the input bar presents its sending state. */
     val isShowingSendingUI: StateFlow<Boolean> = mutableIsShowingSendingUI.asStateFlow()
+
+    /**
+     * Whether the input field has been asked to become the first
+     * responder and has not yet taken focus.
+     */
+    val shouldBecomeFirstResponder: StateFlow<Boolean> = mutableShouldBecomeFirstResponder.asStateFlow()
 
     /** The input field's text. */
     val text: StateFlow<String> = mutableText.asStateFlow()
@@ -133,6 +140,18 @@ class InputBarService(
         mutableIsAttachMediaButtonEnabled.value = isEnabled
     }
 
+    // MARK: - Become First Responder
+
+    /**
+     * Asks the input field to become the first responder.
+     *
+     * The request stands until the field takes focus, so it survives
+     * the field being recreated.
+     */
+    fun becomeFirstResponder() {
+        mutableShouldBecomeFirstResponder.value = true
+    }
+
     // MARK: - Set Is First Responder
 
     /**
@@ -143,6 +162,7 @@ class InputBarService(
      */
     fun setIsFirstResponder(isFirstResponder: Boolean) {
         mutableIsFirstResponder.value = isFirstResponder
+        if (isFirstResponder) mutableShouldBecomeFirstResponder.value = false
     }
 
     // MARK: - Set Send Button Is Enabled

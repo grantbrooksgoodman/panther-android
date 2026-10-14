@@ -14,11 +14,11 @@ import us.neotechnica.panther.modules.common.models.ContactImageCache
 import us.neotechnica.panther.modules.common.services.CommonPropertyLists
 import us.neotechnica.panther.modules.common.services.RegionDetailService
 import us.neotechnica.panther.modules.common.services.TextToSpeechServiceCache
+import us.neotechnica.panther.modules.content.user.dependencies.chatInfoPageViewService
 import us.neotechnica.panther.modules.content.user.extensions.UserDisplayNameCache
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewDataCache
 import us.neotechnica.panther.modules.content.user.models.QueriedContactPairCache
 import us.neotechnica.panther.modules.content.user.models.QueriedConversationCache
-import us.neotechnica.panther.modules.content.user.services.ChatInfoPageViewService
 import us.neotechnica.panther.modules.content.user.services.MediaMessagePreviewService
 import us.neotechnica.panther.modules.content.user.services.SettingsPageViewService
 import us.neotechnica.panther.modules.networking.conversation.models.ActivityDescriptionCache
@@ -27,6 +27,7 @@ import us.neotechnica.panther.modules.networking.message.models.ReadReceiptCache
 import us.neotechnica.panther.modules.networking.user.services.UserService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.CacheDomainListDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.models.CacheDomain
 
@@ -77,7 +78,7 @@ val CacheDomain.Companion.audioFileDuration: CacheDomain
 
 /** The cache domain for the `chatInfoPageViewService` cache. */
 val CacheDomain.Companion.chatInfoPageViewService: CacheDomain
-    get() = CacheDomain("chatInfoPageViewService") { ChatInfoPageViewService.clearCache() }
+    get() = CacheDomain("chatInfoPageViewService") { DependencyValues.current.chatInfoPageViewService.clearCache() }
 
 /** The cache domain for the `mediaMessagePreviewService` cache. */
 val CacheDomain.Companion.mediaMessagePreviewService: CacheDomain

@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.models
 
+import android.graphics.Bitmap
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.networking.user.models.User
 
@@ -27,4 +28,8 @@ data class ChatParticipant(
     /** The first user associated with the participant's contact pair. */
     val firstUser: User?
         get() = contactPair.numberPairs.flatMap { it.users }.firstOrNull()
+
+    /** The participant's thumbnail image – the contact's image, if any. */
+    val thumbnailImage: Bitmap?
+        get() = contactPair.contact.image
 }

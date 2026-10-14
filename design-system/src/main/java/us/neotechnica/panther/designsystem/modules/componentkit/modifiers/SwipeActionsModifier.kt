@@ -1,12 +1,12 @@
 //
-//  ConversationCellView+SwipeGesture.kt
+//  SwipeActionsModifier.kt
 //  Panther Android
 //
 //  Created by Grant Brooks Goodman.
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
-package us.neotechnica.panther.modules.content.user.components.conversationcellview
+package us.neotechnica.panther.designsystem.modules.componentkit.modifiers
 
 import androidx.compose.foundation.gestures.AnchoredDraggableState
 import androidx.compose.foundation.gestures.animateTo
@@ -29,23 +29,23 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.sign
 
-// MARK: - Swipe Gesture
+// MARK: - Swipe Actions Draggable
 
 /**
- * Drags a conversation cell's swipe actions open or closed with
- * horizontal swipes, leaving any other gesture to scroll the list.
+ * Drags a list row's swipe actions open or closed with horizontal
+ * swipes, leaving any other gesture to scroll the list.
  *
  * A swipe begins only once its horizontal movement passes the touch
  * slop while at least twice its vertical movement, so a scroll that
- * drifts sideways never reveals the actions. On release, the cell
+ * drifts sideways never reveals the actions. On release, the row
  * settles as `anchoredDraggable` settles it: a fling moves it to the
  * next anchor in the fling's direction, and a slower release to the
  * nearest anchor.
  *
- * @param state The state of the cell's swipe offset.
- * @param enabled Whether the cell responds to swipes.
+ * @param state The state of the row's swipe offset.
+ * @param enabled Whether the row responds to swipes.
  */
-internal fun <T> Modifier.swipeActionsDraggable(
+fun <T> Modifier.swipeActionsDraggable(
     state: AnchoredDraggableState<T>,
     enabled: Boolean,
 ): Modifier =
@@ -133,6 +133,6 @@ private fun <T> AnchoredDraggableState<T>.settleTarget(
 // must be when it passes the touch slop.
 private const val HORIZONTAL_DOMINANCE_RATIO = 2f
 
-// The speed, per second, past which a release flings the cell to the
+// The speed, per second, past which a release flings the row to the
 // next anchor – `anchoredDraggable`'s minimum fling velocity.
 private val MIN_FLING_VELOCITY = 125.dp
