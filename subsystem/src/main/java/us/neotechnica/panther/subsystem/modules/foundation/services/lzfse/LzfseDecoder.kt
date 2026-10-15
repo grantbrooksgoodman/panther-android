@@ -42,7 +42,9 @@ internal object LzfseDecoder {
             offset =
                 when (magic) {
                     LzfseBlockMagic.ENDOFSTREAM -> return output.toByteArray()
+
                     LzfseBlockMagic.UNCOMPRESSED -> decodeUncompressedBlock(source, offset, output)
+
                     LzfseBlockMagic.COMPRESSED_LZVN -> decodeLzvnBlock(source, offset, output)
 
                     LzfseBlockMagic.COMPRESSED_V1,
@@ -117,10 +119,12 @@ internal object LzfseDecoder {
 
             when (lzvnOpcodeTable[opcode]) {
                 LzvnOpcode.EOS -> return dst
+
                 LzvnOpcode.NOP -> {
                     src += 1
                     continue
                 }
+
                 LzvnOpcode.UDEF -> throw LzfseException("Invalid LZVN opcode: $opcode.")
 
                 LzvnOpcode.SML_D -> {
@@ -129,6 +133,7 @@ internal object LzfseDecoder {
                     distance = (extract(opcode, 0, 3) shl BITS_PER_BYTE) or byte(src + 1)
                     src += 2
                 }
+
                 LzvnOpcode.MED_D -> {
                     literalLength = extract(opcode, MATCH_LENGTH_SHIFT, 2)
                     val opc23 = byte(src + 1) or (byte(src + 2) shl BITS_PER_BYTE)
@@ -136,29 +141,35 @@ internal object LzfseDecoder {
                     distance = extract(opc23, 2, 14)
                     src += 3
                 }
+
                 LzvnOpcode.LRG_D -> {
                     literalLength = extract(opcode, LITERAL_LENGTH_SHIFT, 2)
                     matchLength = extract(opcode, MATCH_LENGTH_SHIFT, 3) + MATCH_LENGTH_BIAS
                     distance = byte(src + 1) or (byte(src + 2) shl BITS_PER_BYTE)
                     src += 3
                 }
+
                 LzvnOpcode.PRE_D -> {
                     literalLength = extract(opcode, LITERAL_LENGTH_SHIFT, 2)
                     matchLength = extract(opcode, MATCH_LENGTH_SHIFT, 3) + MATCH_LENGTH_BIAS
                     src += 1
                 }
+
                 LzvnOpcode.SML_M -> {
                     matchLength = extract(opcode, 0, 4)
                     src += 1
                 }
+
                 LzvnOpcode.LRG_M -> {
                     matchLength = byte(src + 1) + LARGE_BIAS
                     src += 2
                 }
+
                 LzvnOpcode.SML_L -> {
                     literalLength = extract(opcode, 0, 4)
                     src += 1
                 }
+
                 LzvnOpcode.LRG_L -> {
                     literalLength = byte(src + 1) + LARGE_BIAS
                     src += 2

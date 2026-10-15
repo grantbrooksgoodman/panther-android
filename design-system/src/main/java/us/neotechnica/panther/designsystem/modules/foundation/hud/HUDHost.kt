@@ -131,7 +131,9 @@ private fun HUDCard(presentation: HUDPresenter.Presentation) {
         ) {
             when (presentation) {
                 is HUDPresenter.Presentation.Progress -> CircularProgressIndicator(modifier = Modifier.size(ICON_SIZE.dp))
+
                 is HUDPresenter.Presentation.Success -> StatusIcon(Icons.Filled.CheckCircle, SUCCESS_COLOR)
+
                 is HUDPresenter.Presentation.Flash ->
                     when (presentation.image) {
                         HUD.HUDImage.SUCCESS -> StatusIcon(Icons.Filled.CheckCircle, SUCCESS_COLOR)

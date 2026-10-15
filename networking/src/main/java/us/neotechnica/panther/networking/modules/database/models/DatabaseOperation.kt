@@ -78,6 +78,7 @@ internal sealed interface DatabaseOperation : EncodedHashable {
 internal fun jsonIdentifier(value: Any?): String =
     when (value) {
         null -> "null"
+
         is Map<*, *> ->
             value.entries
                 .map { "${it.key}=${jsonIdentifier(it.value)}" }

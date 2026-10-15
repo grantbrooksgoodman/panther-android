@@ -45,6 +45,7 @@ fun Message.modifyKey(
     when (key) {
         MessageUpdatableKey.READ_RECEIPTS ->
             (value as? List<*>)?.filterIsInstance<ReadReceipt>()?.let { copy(readReceipts = it) }
+
         MessageUpdatableKey.TRANSLATION_REFERENCES ->
             (value as? List<*>)?.filterIsInstance<TranslationReference>()?.let { copy(translationReferences = it) }
     }

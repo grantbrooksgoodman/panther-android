@@ -170,7 +170,9 @@ suspend fun Conversation.update(
                 .setValue(action.value, valueKeyPath)
             didWrite(newValue, key)
         }
+
         is WriteAction.Handled -> didWrite(action.updated, key)
+
         WriteAction.Proceed -> {
             DependencyValues.current.networking.database
                 .setValue(encodeForWrite(this, key.rawValue, to), valueKeyPath)
@@ -207,6 +209,7 @@ suspend fun Conversation.update(
                         committed,
                         ExceptionMetadata(this),
                     )
+
             else -> committed
         }
 

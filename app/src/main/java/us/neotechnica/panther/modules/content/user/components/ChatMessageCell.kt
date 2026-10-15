@@ -167,10 +167,13 @@ private fun MessageContent(
                     row.isFailed -> {
                         { onFailedIndicatorTapped(message.id) }
                     }
+
                     isMedia -> {
                         { MediaMessagePreviewService.didTapImage(message, controller?.isPresenting == true) }
                     }
+
                     isText -> messageLabel::handleGesture
+
                     else -> null
                 },
             header = { SenderNameLabel(row) },

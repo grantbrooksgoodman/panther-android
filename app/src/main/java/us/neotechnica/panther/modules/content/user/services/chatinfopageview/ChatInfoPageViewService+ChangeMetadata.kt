@@ -57,11 +57,14 @@ suspend fun ChatInfoPageViewService.presentChangeMetadataActionSheet(): ChatInfo
 
     return when (choice) {
         MetadataChoice.CHANGE_NAME -> presentChangeNameAlert(conversation)
+
         MetadataChoice.CHANGE_PHOTO -> presentChangePhotoAlert()
+
         MetadataChoice.REMOVE_PHOTO ->
             conversation?.let {
                 ChatInfoPageViewService.MetadataChangeType.RemovePhoto(it.metadata.copyWith(nilImageData = true))
             }
+
         null -> null
     }
 }

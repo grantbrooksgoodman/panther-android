@@ -93,14 +93,22 @@ sealed interface MediaFileExtension {
             val rawValue = string.trim().lowercase()
             return when {
                 rawValue == AudioFileExtension.CAF.rawValue -> Audio(AudioFileExtension.CAF)
+
                 rawValue == AudioFileExtension.M4A.rawValue -> Audio(AudioFileExtension.M4A)
+
                 rawValue == DocumentFileExtension.Pdf.rawValue -> Document(DocumentFileExtension.Pdf)
+
                 rawValue == ImageFileExtension.JPEG.rawValue -> Image(ImageFileExtension.JPEG)
+
                 rawValue == ImageFileExtension.JPG.rawValue -> Image(ImageFileExtension.JPG)
+
                 rawValue == ImageFileExtension.PNG.rawValue -> Image(ImageFileExtension.PNG)
+
                 rawValue == VideoFileExtension.MP4.rawValue -> Video(VideoFileExtension.MP4)
+
                 rawValue.isNotEmpty() && rawValue.all { it.isLetterOrDigit() } ->
                     Document(DocumentFileExtension.PlainText(rawValue))
+
                 else -> null
             }
         }

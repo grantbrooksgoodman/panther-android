@@ -104,6 +104,7 @@ private class CounterReducer : Reducer<CounterReducer.State, CounterReducer.Acti
                 )
 
             Action.ResetReturned -> ReduceResult(state.copy(count = 0))
+
             Action.Ticked -> ReduceResult(state.copy(ticks = state.ticks + 1))
         }
 }

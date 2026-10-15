@@ -69,13 +69,21 @@ object SwiftJSONEncoder {
         for (character in string) {
             when (character) {
                 '"' -> builder.append("\\\"")
+
                 '\\' -> builder.append("\\\\")
+
                 '/' -> builder.append("\\/")
+
                 '\b' -> builder.append("\\b")
+
                 '\u000C' -> builder.append("\\f")
+
                 '\n' -> builder.append("\\n")
+
                 '\r' -> builder.append("\\r")
+
                 '\t' -> builder.append("\\t")
+
                 else ->
                     if (character < ' ') {
                         builder.append("\\u%04x".format(character.code))

@@ -112,9 +112,10 @@ object InviteService {
      * Composes an app invitation and presents the system share sheet for
      * sending it.
      *
-     * The invitation contains the app's share link and a prompt message
-     * translated into the given language. If the app share link has not
-     * yet been resolved, remote metadata is resolved first.
+     * The invitation contains the app's Play Store share link and a
+     * prompt message translated into the given language. If the Play
+     * Store share link has not yet been resolved, remote metadata is
+     * resolved first.
      *
      * @param languageCode The language code into which to translate the
      *   invitation message. Pass `null` to target the system language.
@@ -123,8 +124,8 @@ object InviteService {
      * @throws Exception if metadata resolution or translation fails.
      */
     suspend fun composeInvitation(languageCode: String?) {
-        val appShareLink = metadataService.appShareLink
-        if (appShareLink == null) {
+        val playStoreShareLink = metadataService.playStoreShareLink
+        if (playStoreShareLink == null) {
             metadataService.resolveValues()
             return composeInvitation(languageCode)
         }
@@ -135,7 +136,7 @@ object InviteService {
 
         analyticsService.logEvent(AnalyticsEvent.INVITE)
         if (languageCode == "en") {
-            return presentActivityViewController(appShareLink, promptMessage.sanitized)
+            return presentActivityViewController(playStoreShareLink, promptMessage.sanitized)
         }
 
         val translation =
@@ -145,7 +146,7 @@ object InviteService {
                 hudConfig = HUDConfig(appearsAfter = Duration.ZERO, isModal = true),
             )
 
-        presentActivityViewController(appShareLink, translation.output.sanitized)
+        presentActivityViewController(playStoreShareLink, translation.output.sanitized)
     }
 
     // MARK: - Present Invitation Prompt

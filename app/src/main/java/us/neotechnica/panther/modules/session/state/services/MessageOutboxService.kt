@@ -215,12 +215,14 @@ object MessageOutboxService {
                 .flatMap { entry ->
                     when (val payload = entry.payload) {
                         is OutboxEntry.Payload.Audio -> listOf(payload.inputFileName)
+
                         is OutboxEntry.Payload.Media -> {
                             // Media payloads may carry a thumbnail sibling;
                             // reference it so collection preserves both.
                             val thumbnailName = payloadFileURL(payload.fileName)?.thumbnailPath?.name
                             if (thumbnailName == null) listOf(payload.fileName) else listOf(payload.fileName, thumbnailName)
                         }
+
                         is OutboxEntry.Payload.Text -> emptyList()
                     }
                 }.toSet()

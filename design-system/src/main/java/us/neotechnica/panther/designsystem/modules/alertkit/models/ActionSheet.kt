@@ -218,7 +218,9 @@ class ActionSheet(
                 }
 
                 TranslationOptionKey.CancelButtonTitle -> inputs.add(TranslationInput(cancelButtonTitle))
+
                 TranslationOptionKey.Message -> message?.let { inputs.add(TranslationInput(it)) }
+
                 TranslationOptionKey.Title -> title?.let { inputs.add(TranslationInput(it)) }
             }
         }

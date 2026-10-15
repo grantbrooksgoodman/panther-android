@@ -65,12 +65,14 @@ private fun encodePayload(payload: OutboxEntry.Payload): Map<String, Any?> =
     when (payload) {
         is OutboxEntry.Payload.Audio ->
             mapOf(KEY_PAYLOAD_TYPE to PAYLOAD_AUDIO, KEY_INPUT_FILE_NAME to payload.inputFileName)
+
         is OutboxEntry.Payload.Media ->
             mapOf(
                 KEY_PAYLOAD_TYPE to PAYLOAD_MEDIA,
                 KEY_FILE_NAME to payload.fileName,
                 KEY_FILE_EXTENSION to payload.fileExtension.rawValue,
             )
+
         is OutboxEntry.Payload.Text ->
             mapOf(KEY_PAYLOAD_TYPE to PAYLOAD_TEXT, KEY_VALUE to payload.value)
     }
@@ -80,12 +82,15 @@ private fun decodePayload(map: Map<String, Any?>): OutboxEntry.Payload? {
     val payloadMap = map[KEY_PAYLOAD] as? Map<String, Any?> ?: return null
     return when (payloadMap[KEY_PAYLOAD_TYPE] as? String) {
         PAYLOAD_AUDIO -> (payloadMap[KEY_INPUT_FILE_NAME] as? String)?.let { OutboxEntry.Payload.Audio(it) }
+
         PAYLOAD_MEDIA -> {
             val fileName = payloadMap[KEY_FILE_NAME] as? String ?: return null
             val fileExtension = MediaFileExtension.from(payloadMap[KEY_FILE_EXTENSION] as? String ?: return null) ?: return null
             OutboxEntry.Payload.Media(fileName, fileExtension)
         }
+
         PAYLOAD_TEXT -> (payloadMap[KEY_VALUE] as? String)?.let { OutboxEntry.Payload.Text(it) }
+
         else -> null
     }
 }
@@ -124,6 +129,7 @@ private fun decodeLegacyPayload(obj: JsonObject): OutboxEntry.Payload? {
         return when (payloadObject[KEY_PAYLOAD_TYPE]?.jsonPrimitive?.content) {
             PAYLOAD_AUDIO ->
                 payloadObject[KEY_INPUT_FILE_NAME]?.jsonPrimitive?.content?.let { OutboxEntry.Payload.Audio(it) }
+
             PAYLOAD_MEDIA -> {
                 val fileName = payloadObject[KEY_FILE_NAME]?.jsonPrimitive?.content ?: return null
                 val fileExtension =
@@ -131,8 +137,10 @@ private fun decodeLegacyPayload(obj: JsonObject): OutboxEntry.Payload? {
                         ?: return null
                 OutboxEntry.Payload.Media(fileName, fileExtension)
             }
+
             PAYLOAD_TEXT ->
                 payloadObject[KEY_VALUE]?.jsonPrimitive?.content?.let { OutboxEntry.Payload.Text(it) }
+
             else -> null
         }
     }

@@ -255,7 +255,9 @@ internal class HealthEstimator {
 
         return when (pathState.radioTechnology) {
             RadioTechnology.INTERMEDIATE -> score.coerceAtMost(configuration.intermediateRadioScoreCap)
+
             RadioTechnology.LEGACY -> score.coerceAtMost(configuration.legacyRadioScoreCap)
+
             RadioTechnology.MODERN,
             RadioTechnology.UNKNOWN,
             -> score

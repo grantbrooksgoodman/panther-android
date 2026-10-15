@@ -24,6 +24,10 @@ max_line_length = 160
 # against the >60-character expansion rule in STYLE_RULES_ANDROID.md §10.
 ktlint_standard_function-signature = disabled
 
+# Swift switch cases take no braces, and iOS SwiftFormat adds none. This rule
+# braces every branch of a `when` once any branch spans several lines.
+ktlint_standard_when-entry-bracing = disabled
+
 [**/lzfse/LzfseTables.kt]
 # iOS SwiftFormat keeps several values per row in a list wrapped before its
 # first element. This rule puts every value of these lookup tables on its

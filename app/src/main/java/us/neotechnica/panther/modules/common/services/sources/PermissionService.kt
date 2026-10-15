@@ -103,6 +103,7 @@ object PermissionService {
     suspend fun requestPermission(type: PermissionType): PermissionStatus =
         when (type) {
             PermissionType.CONTACTS -> requestSystemPermission(Manifest.permission.READ_CONTACTS, type)
+
             PermissionType.NOTIFICATIONS ->
                 if (SystemBuild.VERSION.SDK_INT >= SystemBuild.VERSION_CODES.TIRAMISU) {
                     requestSystemPermission(Manifest.permission.POST_NOTIFICATIONS, type)

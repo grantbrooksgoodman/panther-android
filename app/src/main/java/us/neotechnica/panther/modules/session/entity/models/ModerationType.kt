@@ -35,7 +35,9 @@ enum class ModerationType(
                         "You will no longer receive messages from any chat in which you and any of these " +
                         "users are participants. This can be changed later in Settings.\n\n" +
                         "The other users will not know you have blocked them."
+
                 REPORT -> "Are you sure you'd like to report all users in this conversation for improper conduct?"
+
                 UNBLOCK -> ""
             }
 
@@ -48,7 +50,9 @@ enum class ModerationType(
                         "You will no longer receive messages from any chat in which you and this " +
                         "user are participants. This can be changed later in Settings.\n\n" +
                         "The other user will not know you have blocked them."
+
                 REPORT -> "Are you sure you'd like to report this user for improper conduct?"
+
                 UNBLOCK -> ""
             }
 }

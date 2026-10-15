@@ -93,6 +93,7 @@ internal suspend fun PointerInputScope.detectMessageTapGestures(
         }
 
         PressResult.Cancelled -> onTap?.invoke(firstUp.position)
+
         PressResult.LongPressed -> Unit
     }
 }

@@ -33,10 +33,13 @@ internal fun encodeForWrite(
                 mapOf(key to value),
                 ExceptionMetadata(sender),
             )
+
         value is List<*> && value.all { it is Serializable<*> } ->
             value.filterIsInstance<Serializable<*>>().mapNotNull { it.encoded }.ifEmpty { bangQualifiedEmptyList }
+
         DependencyValues.current.networking.database
             .isEncodable(value) -> value
+
         else -> throw Exception.Networking.notSerialized(
             mapOf(key to value),
             ExceptionMetadata(sender),

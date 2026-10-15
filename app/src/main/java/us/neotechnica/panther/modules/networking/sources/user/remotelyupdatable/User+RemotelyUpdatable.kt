@@ -54,18 +54,25 @@ fun User.modifyKey(
     when (key) {
         UserUpdatableKey.AI_ENHANCED_TRANSLATIONS_ENABLED ->
             (value as? Boolean)?.let { copy(aiEnhancedTranslationsEnabled = it) }
+
         UserUpdatableKey.BLOCKED_USER_IDS ->
             (value as? List<*>)?.filterIsInstance<String>()?.let { copy(blockedUserIDs = it) }
+
         UserUpdatableKey.CONVERSATION_IDS ->
             (value as? List<*>)?.filterIsInstance<ConversationID>()?.let { copy(conversationIDs = it) }
+
         UserUpdatableKey.DEVICE_ID ->
             (value as? String)?.let { copy(deviceID = it) }
+
         UserUpdatableKey.LANGUAGE_CODE ->
             (value as? String)?.let { copy(languageCode = it) }
+
         UserUpdatableKey.MESSAGE_RECIPIENT_CONSENT_REQUIRED ->
             (value as? Boolean)?.let { copy(messageRecipientConsentRequired = it) }
+
         UserUpdatableKey.PREVIOUS_LANGUAGE_CODES ->
             (value as? List<*>)?.filterIsInstance<String>()?.let { copy(previousLanguageCodes = it) }
+
         UserUpdatableKey.PUSH_TOKENS ->
             (value as? List<*>)?.filterIsInstance<String>()?.let { copy(pushTokens = it) }
     }
@@ -92,7 +99,9 @@ suspend fun User.update(
                 .setValue(action.value, valueKeyPath)
             didWrite(newValue, key)
         }
+
         is WriteAction.Handled -> didWrite(action.updated, key)
+
         WriteAction.Proceed -> {
             DependencyValues.current.networking.database
                 .setValue(encodeForWrite(this, key.rawValue, to), valueKeyPath)
@@ -165,6 +174,7 @@ suspend fun User.willWrite(
             }
             WriteAction.Handled(updated)
         }
+
         UserUpdatableKey.PUSH_TOKENS -> {
             val updates =
                 merge(
@@ -178,6 +188,7 @@ suspend fun User.willWrite(
             }
             WriteAction.Handled(updated)
         }
+
         else ->
             (value as? Date)?.let {
                 WriteAction.Encoded(DependencyValues.current.timestampDateFormatter.format(it))

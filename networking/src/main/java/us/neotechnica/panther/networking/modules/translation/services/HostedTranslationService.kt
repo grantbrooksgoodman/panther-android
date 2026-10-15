@@ -479,6 +479,12 @@ class HostedTranslationService private constructor() : HostedTranslationDelegate
         val shared = HostedTranslationService()
 
         private const val TARGET_LANGUAGE_CONFIDENCE = 0.8f
-        private val TRANSLATOR_TIMEOUT = 10.seconds
+
+        // When the HTTP fast paths fail, translation falls back to web
+        // views. A platform whose page never yields a result spends the
+        // web-view harness's full 10-second evaluation window before the
+        // next platform is tried, so the budget covers one exhausted
+        // platform and a successful one, with room to spare.
+        private val TRANSLATOR_TIMEOUT = 30.seconds
     }
 }

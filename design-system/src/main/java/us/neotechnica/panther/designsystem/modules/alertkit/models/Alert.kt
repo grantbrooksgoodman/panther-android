@@ -194,6 +194,7 @@ class Alert(
                 }
 
                 TranslationOptionKey.Message -> message?.let { inputs.add(TranslationInput(it)) }
+
                 TranslationOptionKey.Title -> title?.let { inputs.add(TranslationInput(it)) }
             }
         }

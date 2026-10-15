@@ -43,6 +43,18 @@
             android:name="google_analytics_adid_collection_enabled"
             android:value="false" />
 
+        <!-- While the app is in the background, FCM posts notification
+             messages itself. Without these, it posts them to its own
+             fallback channel with the launcher icon. The channel ID
+             matches PantherMessagingService.MESSAGES_CHANNEL_ID, and
+             PantherApplication creates the channel at launch. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="messages" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_notification" />
+
         <!-- The activity handles appearance, size, text size, display
              size, and input device changes itself; recreating it would
              re-run the signed-in session's first-appearance work,

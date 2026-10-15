@@ -294,6 +294,7 @@ private fun ContentView(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             when (centerItem) {
                 is HeaderView.CenterItemType.Image -> CenterImage(centerItem.attributes, attributes)
+
                 is HeaderView.CenterItemType.Text -> {
                     CenterText(centerItem.attributes, attributes)
                     centerItem.subtitle?.let { CenterText(it, attributes) }

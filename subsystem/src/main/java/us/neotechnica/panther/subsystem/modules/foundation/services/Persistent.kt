@@ -264,11 +264,14 @@ object Persistent {
     private fun resolveKeys(strategy: KeyPreservationStrategy): List<PersistentStorageKey> =
         when (strategy) {
             is KeyPreservationStrategy.Custom -> strategy.keys.distinct()
+
             KeyPreservationStrategy.None -> emptyList()
+
             is KeyPreservationStrategy.PermanentAndSubsystemKeys -> {
                 val permanentKeys = AppSubsystem.delegates.permanentPersistentStorageKeys?.permanentKeys ?: emptyList()
                 ((strategy.plus ?: emptyList()) + permanentKeys + PersistentStorageKey.subsystemKeys).distinct()
             }
+
             is KeyPreservationStrategy.SubsystemKeys ->
                 ((strategy.plus ?: emptyList()) + PersistentStorageKey.subsystemKeys).distinct()
         }
@@ -289,8 +292,11 @@ object Persistent {
     private fun fromJsonElement(element: JsonElement): Any? =
         when (element) {
             is JsonNull -> null
+
             is JsonObject -> element.mapValues { fromJsonElement(it.value) }
+
             is JsonArray -> element.map { fromJsonElement(it) }
+
             is JsonPrimitive ->
                 when {
                     element.isString -> element.content

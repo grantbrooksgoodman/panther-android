@@ -29,13 +29,13 @@ object InviteQRCodePageViewService {
     // MARK: - Computed Properties
 
     /**
-     * A QR code image encoding the app's share link, or `null` if the
-     * link has not been resolved or generation fails.
+     * A QR code image encoding the app's Play Store share link, or
+     * `null` if the link has not been resolved or generation fails.
      */
     val appShareQRCodeImage: Bitmap?
         get() {
-            val appShareLink = metadataService.appShareLink ?: return null
-            return generateQRCode(from = appShareLink, outputSize = OUTPUT_SIZE)
+            val playStoreShareLink = metadataService.playStoreShareLink ?: return null
+            return generateQRCode(from = playStoreShareLink, outputSize = OUTPUT_SIZE)
         }
 
     // MARK: - Auxiliary

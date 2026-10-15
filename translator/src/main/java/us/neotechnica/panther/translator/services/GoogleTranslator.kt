@@ -22,8 +22,9 @@ import java.net.URLEncoder
  * Translates using Google Translate.
  *
  * A lightweight JSON endpoint responds far faster than loading and
- * scraping the full web app, so [translate] tries it first and falls
- * back to the [BaseTranslator] web-view harness on any failure.
+ * scraping the full web app, so [translate] uses it alone. The
+ * [BaseTranslator] web-view fallback is currently disabled: when the
+ * endpoint fails, the error propagates and the next platform is tried.
  */
 internal class GoogleTranslator : BaseTranslator(TranslationPlatform.GOOGLE) {
     // MARK: - Translate
@@ -36,13 +37,18 @@ internal class GoogleTranslator : BaseTranslator(TranslationPlatform.GOOGLE) {
             translateWithApi(input, languagePair)
         } catch (error: Exception) {
             Translator.config.loggerDelegate?.log(
-                "API fast path failed, falling back to web view: ${Translator.descriptor(error)}",
+                "API fast path failed; skipping the web view fallback: ${Translator.descriptor(error)}",
                 sender = this,
                 fileName = "GoogleTranslator.kt",
                 function = "translate",
                 line = 0,
             )
-            super.translate(input, languagePair)
+
+            // TODO: Restore the web-view fallback, `super.translate(input, languagePair)`, once Google's
+            //  result can be extracted again. The page loads, but evaluation never yields a usable
+            //  result before the harness's 10-second threshold, so the fallback only delayed the
+            //  next platform.
+            throw error
         }
 
     // MARK: - Evaluate JavaScript

@@ -33,8 +33,10 @@ import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
+import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
+import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.common.models.NetworkServices
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
@@ -103,7 +105,10 @@ object NotificationService {
      * Notification content is localized to each recipient's language,
      * and each recipient's hosted badge number is incremented
      * atomically. Recipients who have not registered for push
-     * notifications are skipped; stale push tokens are erased.
+     * notifications are skipped; stale push tokens are erased. Each
+     * recipient's push tokens are read from the database at send time,
+     * not taken from the given users, whose copies may predate a
+     * reinstall or a new sign-in.
      *
      * @param users The users to notify.
      * @param ofReaction The reaction the notification describes; pass
@@ -232,6 +237,23 @@ object NotificationService {
                 }
         }
 
+    /**
+     * The push tokens in a user's hosted push token map, or `null` if
+     * the value holds none.
+     *
+     * @param hostedValue The value stored at the user's push tokens
+     *   path.
+     */
+    internal fun pushTokens(hostedValue: Any?): List<String>? {
+        val pushTokens =
+            (hostedValue as? Map<*, *>)
+                ?.keys
+                ?.filterIsInstance<String>()
+                ?.sorted()
+                .orEmpty()
+        return if (pushTokens.isBangQualifiedEmpty) null else pushTokens
+    }
+
     @Suppress("LongParameterList")
     private suspend fun notify(
         user: User,
@@ -267,7 +289,7 @@ object NotificationService {
             )?.toInt() ?: 0
 
         val pushTokens =
-            user.pushTokens
+            currentPushTokens(user)
                 ?: throw Exception(
                     "The specified user has not registered for push notifications.",
                     metadata = ExceptionMetadata(this),
@@ -393,6 +415,26 @@ object NotificationService {
                 ),
             metadata = ExceptionMetadata(this),
         )
+    }
+
+    // A recipient is fetched into the session store once and never
+    // refreshed, so its cached push tokens go stale when the recipient
+    // reinstalls, clears data, or signs in again. Read them from the
+    // database instead, falling back to the cached ones only if the
+    // read fails.
+    private suspend fun currentPushTokens(user: User): List<String>? {
+        val pushTokensPath =
+            listOf(
+                NetworkPath.users.rawValue,
+                user.id,
+                User.SerializableKey.PUSH_TOKENS.rawValue,
+            ).joinToString("/")
+
+        return try {
+            pushTokens(networking.database.getValues(pushTokensPath, cacheStrategy = CacheStrategy.DISREGARD_CACHE))
+        } catch (exception: Exception) {
+            if (exception.isEqual(to = AppException.Networking.Database.noValueExists)) null else user.pushTokens
+        }
     }
 
     private suspend fun updateHostedBadgeNumber(

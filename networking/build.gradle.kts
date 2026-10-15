@@ -34,7 +34,6 @@ dependencies {
     api(libs.firebase.messaging)
     api(libs.firebase.storage)
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services)

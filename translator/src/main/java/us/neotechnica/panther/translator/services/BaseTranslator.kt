@@ -6,12 +6,15 @@
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
+@file:Suppress("FileLength")
+
 package us.neotechnica.panther.translator.services
 
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.SystemClock
 import android.view.ViewGroup
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -22,6 +25,8 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
@@ -49,7 +54,9 @@ import kotlin.coroutines.resume
  * window-less web view does not reliably run timers or observers),
  * waits for the result to render – signaled by a result-observer web
  * message or page load – then extracts it with the platform's
- * JavaScript selector, retrying against the alternate selector.
+ * JavaScript selector, retrying against the alternate selector. If
+ * the web view's renderer process crashes or is killed to reclaim
+ * memory, the translation fails instead of taking the app down with it.
  *
  * Subclasses override [configureWebView] to inject extra scripts and
  * [extractOutput] to customize result extraction.
@@ -142,6 +149,7 @@ internal open class BaseTranslator(
         val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
         val ready = CompletableDeferred<Unit>()
         val failure = CompletableDeferred<TranslationError>()
+        val rendererGone = CompletableDeferred<TranslationError>()
 
         return try {
             installResultObserver(webView) { if (!ready.isCompleted) ready.complete(Unit) }
@@ -151,6 +159,7 @@ internal open class BaseTranslator(
                 harnessClient(
                     onReady = { if (!ready.isCompleted) ready.complete(Unit) },
                     onFailure = { error -> if (!failure.isCompleted) failure.complete(error) },
+                    onRendererGone = { error -> if (!rendererGone.isCompleted) rendererGone.complete(error) },
                 )
 
             rootView?.addView(webView)
@@ -161,11 +170,23 @@ internal open class BaseTranslator(
                     select<TranslationError?> {
                         ready.onAwait { null }
                         failure.onAwait { it }
+                        rendererGone.onAwait { it }
                     }
                 } ?: if (ready.isCompleted) null else TranslationError.TimedOut
             if (navigationError != null) throw navigationError
 
-            beginEvaluatingTranslationResult(webView)
+            // A dead renderer never answers a pending script evaluation,
+            // so race the evaluation against the loss of the renderer.
+            coroutineScope {
+                val evaluation = async { beginEvaluatingTranslationResult(webView) }
+                select {
+                    evaluation.onAwait { it }
+                    rendererGone.onAwait { error ->
+                        evaluation.cancel()
+                        throw error
+                    }
+                }
+            }
         } finally {
             rootView?.removeView(webView)
             webView.destroy()
@@ -250,9 +271,15 @@ internal open class BaseTranslator(
         platform.resultObserverScript?.let { addDocumentStartScript(webView, it) }
     }
 
+    // The webkit Lint check reports every `WebViewClient()` constructor
+    // call – a Kotlin object expression's supertype call included –
+    // whether or not the client overrides `onRenderProcessGone`. This
+    // one does.
+    @SuppressLint("MissingOnRenderProcessGone")
     private fun harnessClient(
         onReady: () -> Unit,
         onFailure: (TranslationError) -> Unit,
+        onRendererGone: (TranslationError) -> Unit,
     ): WebViewClient =
         object : WebViewClient() {
             override fun onPageFinished(
@@ -278,6 +305,20 @@ internal open class BaseTranslator(
                     ),
                 )
             }
+
+            // Returning true keeps the app alive when the renderer
+            // crashes or is killed to reclaim memory. The web view can't
+            // be used again, so it leaves the hierarchy and is destroyed
+            // here; the harness's own cleanup then finds nothing to do.
+            override fun onRenderProcessGone(
+                view: WebView,
+                detail: RenderProcessGoneDetail,
+            ): Boolean {
+                (view.parent as? ViewGroup)?.removeView(view)
+                view.destroy()
+                onRendererGone(renderProcessGoneError(detail))
+                return true
+            }
         }
 
     // MARK: - Auxiliary
@@ -286,6 +327,15 @@ internal open class BaseTranslator(
         suspendCancellableCoroutine { continuation ->
             evaluateJavascript(script) { value -> continuation.resume(decodeJavascriptString(value)) }
         }
+
+    private fun renderProcessGoneError(detail: RenderProcessGoneDetail): TranslationError =
+        TranslationError.Unknown(
+            if (detail.didCrash()) {
+                "The web view's renderer process crashed."
+            } else {
+                "The web view's renderer process was killed to reclaim memory."
+            },
+        )
 
     private fun decodeJavascriptString(raw: String?): String? {
         if (raw == null || raw == "null") return null
@@ -307,6 +357,22 @@ internal open class BaseTranslator(
         private const val EVALUATION_THRESHOLD_MILLIS = 10_000L
         private const val NAVIGATION_TIMEOUT_MILLIS = 10_000L
         private const val PREWARM_UNLOAD_DELAY_MILLIS = 2_000L
+
+        // Keeps the app alive if a prewarm web view's renderer dies; the
+        // delayed unload then finds the web view already destroyed. The
+        // Lint suppression is the same false positive as the harness
+        // client's.
+        @SuppressLint("MissingOnRenderProcessGone")
+        private val prewarmClient =
+            object : WebViewClient() {
+                override fun onRenderProcessGone(
+                    view: WebView,
+                    detail: RenderProcessGoneDetail,
+                ): Boolean {
+                    view.destroy()
+                    return true
+                }
+            }
 
         /**
          * Warms the DNS and TLS sessions for the given platforms'
@@ -336,6 +402,7 @@ internal open class BaseTranslator(
                     val activity = Translator.config.currentActivityProvider?.invoke() ?: return@launch
                     for (platform in platforms) {
                         val webView = WebView(activity)
+                        webView.webViewClient = prewarmClient
                         webView.loadUrl(platform.prewarmURL)
 
                         launch {

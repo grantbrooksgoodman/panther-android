@@ -12,6 +12,12 @@ subprojects {
     apply(plugin = "org.jlleitschuh.gradle.ktlint")
     apply(plugin = "io.gitlab.arturbosch.detekt")
 
+    // The ktlint Gradle plugin bundles an older engine; pin the one
+    // `.editorconfig` is written against.
+    extensions.configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
+        version.set(rootProject.libs.versions.ktlintEngine)
+    }
+
     extensions.configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
         buildUponDefaultConfig = true
         config.setFrom(rootProject.files("config/detekt/detekt.yml"))
@@ -19,7 +25,7 @@ subprojects {
 
     tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
         // detekt 1.23.x embeds a Kotlin compiler that rejects the newer --jvm-target
-        // value auto-detected from the AGP 9 / Kotlin 2.2 toolchain; pin to a supported one.
+        // value auto-detected from the AGP 9 / Kotlin 2.4 toolchain; pin to a supported one.
         jvmTarget = "17"
     }
 

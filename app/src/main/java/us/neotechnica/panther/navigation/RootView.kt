@@ -88,12 +88,15 @@ fun RootView(modifier: Modifier = Modifier) {
             // their centered content up to stay clear of it.
             RootNavigatorState.ModalPaths.Onboarding ->
                 OnboardingContainerView(Modifier.fillMaxSize().systemBarsPadding().imePadding())
+
             RootNavigatorState.ModalPaths.Splash ->
                 SplashPageView(
                     viewModel = remember { ViewModel(SplashPageReducer.State(), SplashPageReducer()) },
                     modifier = Modifier.fillMaxSize().systemBarsPadding(),
                 )
+
             RootNavigatorState.ModalPaths.UserContent -> UserContentContainerView(Modifier.fillMaxSize())
+
             null -> Box(Modifier.fillMaxSize())
         }
     }

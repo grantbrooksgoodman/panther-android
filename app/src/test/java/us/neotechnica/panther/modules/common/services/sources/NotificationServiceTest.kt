@@ -54,6 +54,24 @@ class NotificationServiceTest {
         assertNull(NotificationService.notificationBody(unmatched, user(languageCode = "ja")))
     }
 
+    // MARK: - Push Tokens
+
+    @Test
+    fun `push tokens are the sorted keys of the hosted push token map`() {
+        assertEquals(
+            listOf("tokenA", "tokenB"),
+            NotificationService.pushTokens(mapOf("tokenB" to true, "tokenA" to true)),
+        )
+    }
+
+    @Test
+    fun `a hosted value without push tokens holds none`() {
+        assertNull(NotificationService.pushTokens(null))
+        assertNull(NotificationService.pushTokens(emptyMap<String, Boolean>()))
+        assertNull(NotificationService.pushTokens("!"))
+        assertNull(NotificationService.pushTokens(mapOf("!" to true)))
+    }
+
     // MARK: - Delivery Failures
 
     @Test

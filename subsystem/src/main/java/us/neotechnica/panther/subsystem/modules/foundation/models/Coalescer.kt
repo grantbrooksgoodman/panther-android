@@ -142,10 +142,12 @@ class Coalescer<Key : Any, Output>(
                         Logger.log("Coalescing task with existing in-flight operation.", domain = LoggerDomain.concurrency)
                         return@withLock lane.task
                     }
+
                     Policy.REPLACE -> {
                         Logger.log("Replacing existing in-flight operation.", domain = LoggerDomain.concurrency)
                         lane.task.cancel()
                     }
+
                     Policy.RERUN -> {
                         Logger.log("Scheduling rerun of in-flight operation.", domain = LoggerDomain.concurrency)
                         val pending = lane.rerun ?: CompletableDeferred()
