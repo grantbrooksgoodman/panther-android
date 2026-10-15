@@ -25,6 +25,7 @@ object ChatPageHeaderViewFloats {
     const val AVATAR_IMAGE_VIEW_BADGE_COUNT_COMPARATOR = 2
 
     /** The frame size of the avatar view name label chevron symbol. */
+    @Suppress("VariableMaxLength")
     val avatarViewNameLabelChevronSymbolFrameSize: Dp = 12.dp
 
     /** The font size of the avatar view name label. */
@@ -66,6 +67,7 @@ object ChatPageHeaderViewFloats {
 /** The colors of the chat page header view. */
 object ChatPageHeaderViewColors {
     /** The foreground color of the avatar view name label chevron symbol. */
+    @Suppress("VariableMaxLength")
     val avatarViewNameLabelChevronSymbolForeground = Color(0xFFAEAEB2)
 
     /** The color of the background view gradient. */
@@ -81,5 +83,6 @@ object ChatPageHeaderViewColors {
 /** The string constants of the chat page header view. */
 object ChatPageHeaderViewStrings {
     /** The system name of the avatar view name label chevron image. */
+    @Suppress("VariableMaxLength")
     const val AVATAR_VIEW_NAME_LABEL_CHEVRON_SYMBOL_IMAGE_SYSTEM_NAME = "chevron.compact.right"
 }

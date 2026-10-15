@@ -41,6 +41,7 @@ import java.io.File
  * being replaced on select, highlighting, and the label representation.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
+@Suppress("ClassNaming")
 class RecipientBarContactSelectionUIServiceTest {
     // MARK: - Setup
 

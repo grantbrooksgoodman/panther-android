@@ -6,6 +6,8 @@
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
+@file:Suppress("FileLength")
+
 package us.neotechnica.panther.networking.modules.translation.services
 
 import androidx.lifecycle.DefaultLifecycleObserver

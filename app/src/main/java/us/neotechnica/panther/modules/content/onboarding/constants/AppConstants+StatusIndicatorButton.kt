@@ -49,6 +49,7 @@ object StatusIndicatorButtonColors {
     val grantedStatusImageSecondaryForeground = Color.Green
 
     /** The secondary foreground color of the undetermined status image. */
+    @Suppress("VariableMaxLength")
     val undeterminedStatusImageSecondaryForeground = Color(0xFFFF9500)
 
     /** The foreground color of the determined status label. */

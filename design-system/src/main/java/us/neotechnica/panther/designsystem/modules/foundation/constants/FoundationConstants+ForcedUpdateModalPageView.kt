@@ -27,9 +27,11 @@ object ForcedUpdateModalPageViewFloats {
     const val APP_ICON_IMAGE_MAX_WIDTH = 120f
 
     /** The maximum frame height of the app icon image overlay symbol. */
+    @Suppress("VariableMaxLength")
     const val APP_ICON_IMAGE_OVERLAY_SYMBOL_FRAME_MAX_HEIGHT = 40f
 
     /** The maximum frame width of the app icon image overlay symbol. */
+    @Suppress("VariableMaxLength")
     const val APP_ICON_IMAGE_OVERLAY_SYMBOL_FRAME_MAX_WIDTH = 40f
 
     /** The horizontal offset of the app icon image overlay symbol. */

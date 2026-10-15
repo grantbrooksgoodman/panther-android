@@ -69,6 +69,7 @@ object MessageInputBarFloats {
     val middleContentViewPaddingRight: Dp = 8.dp
 
     /** The amount by which the send button's trailing inset is reduced. */
+    @Suppress("VariableMaxLength")
     val sendButtonTrailingAnchorConstraintConstantDecrement: Dp = 15.dp
 
     /** The left inset of the text container. */

@@ -6,6 +6,8 @@
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
+@file:Suppress("FileLength")
+
 package us.neotechnica.panther.modules.content.shared.services
 
 import kotlinx.coroutines.CoroutineScope
@@ -577,6 +579,7 @@ object SplashPageViewService {
         return LoadingIndicatorStyle.BAR
     }
 
+    @Suppress("FunctionMaxLength")
     private suspend fun resolveCurrentUserDataWhenNetworkRecovers() {
         for (attempt in 1..MAXIMUM_DEFERRED_RESOLUTION_ATTEMPTS) {
             currentCoroutineContext().ensureActive()
@@ -608,7 +611,10 @@ object SplashPageViewService {
     // MARK: - Companion
 
     private const val CACHED_USER_PROGRESS = 0.9f
+
+    @Suppress("VariableMaxLength")
     private const val CONVERSATION_COUNT_TEMPORARY_CACHE_THRESHOLD = 20
+
     private const val MAXIMUM_DEFERRED_RESOLUTION_ATTEMPTS = 15
     private const val QUICK_LOAD_TIMEOUT_PROGRESS_THRESHOLD = 0.6f
     private const val SMALL_PROGRESS_INCREMENT = 0.02f

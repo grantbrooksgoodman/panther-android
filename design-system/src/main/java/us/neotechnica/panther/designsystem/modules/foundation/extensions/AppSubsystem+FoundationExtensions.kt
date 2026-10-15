@@ -37,6 +37,7 @@ val AppSubsystem.Delegates.buildInfoOverlayDotIndicatorColor: BuildInfoOverlayDo
  * @param buildInfoOverlayDotIndicatorColorDelegate The delegate to
  *   register.
  */
+@Suppress("FunctionMaxLength")
 fun AppSubsystem.Delegates.registerBuildInfoOverlayDotIndicatorColorDelegate(
     buildInfoOverlayDotIndicatorColorDelegate: BuildInfoOverlayDotIndicatorColorDelegate,
 ) {

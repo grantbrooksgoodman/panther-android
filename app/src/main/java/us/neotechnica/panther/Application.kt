@@ -346,7 +346,10 @@ object Application {
     // MARK: - Constants
 
     internal const val BUILD_INFO_ASSET = "build_info.properties"
+
+    @Suppress("VariableMaxLength")
     private const val BUILD_INFO_OVERLAY_SETUP_DELAY_MILLISECONDS = 50L
+
     internal const val CODE_NAME = "Panther"
     internal const val FINAL_NAME = "Hello"
     internal const val APP_STORE_BUILD_NUMBER = 0

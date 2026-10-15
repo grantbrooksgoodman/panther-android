@@ -128,6 +128,7 @@ val Conversation.mediaItemMetadata: List<MediaItemViewData>
  * A copy of the conversation whose messages are limited to those sent
  * after the current user joined it.
  */
+@Suppress("VariableMaxLength")
 val Conversation.withMessagesOffsetFromCurrentUserAdditionDate: Conversation
     get() {
         val sessionStore = DependencyValues.current.clientSession.store

@@ -208,6 +208,7 @@ object AppSubsystem {
          * @param permanentPersistentStorageKeyDelegate The delegate
          *   to register.
          */
+        @Suppress("FunctionMaxLength")
         fun registerPermanentPersistentStorageKeyDelegate(
             permanentPersistentStorageKeyDelegate: PermanentPersistentStorageKeyDelegate,
         ) {

@@ -25,6 +25,7 @@ object SplashPageViewFloats {
     const val PROGRESS_BAR_FADE_IN_DELAY_MILLISECONDS = 1750L
 
     /** The duration, in milliseconds, of the progress bar fade in. */
+    @Suppress("VariableMaxLength")
     const val PROGRESS_BAR_FADE_IN_DURATION_MILLISECONDS = 500
 
     /** The frame height of the image. */

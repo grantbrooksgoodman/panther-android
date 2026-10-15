@@ -16,10 +16,10 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import us.neotechnica.panther.subsystem.modules.foundation.services.Task
-import java.io.File
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
+import us.neotechnica.panther.subsystem.modules.foundation.services.Task
+import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SplashPageViewServiceTest {

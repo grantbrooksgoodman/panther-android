@@ -2,6 +2,7 @@
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.kotlin.compose) apply false
+    alias(libs.plugins.kotlin.jvm) apply false
     alias(libs.plugins.android.library) apply false
     alias(libs.plugins.ktlint) apply false
     alias(libs.plugins.detekt) apply false
@@ -20,5 +21,24 @@ subprojects {
         // detekt 1.23.x embeds a Kotlin compiler that rejects the newer --jvm-target
         // value auto-detected from the AGP 9 / Kotlin 2.2 toolchain; pin to a supported one.
         jvmTarget = "17"
+    }
+
+    // Run the project's own rules (the `panther` rule set in
+    // config/detekt/detekt.yml) in every module, including the one that
+    // defines them.
+    dependencies {
+        add("detektPlugins", project(":detekt-rules"))
+    }
+
+    // The equivalents of the iOS "Run SwiftFormat" and "Run SwiftLint" build
+    // phases. Every Kotlin compilation first formats the module's sources with
+    // ktlint, then lints them with ktlint and detekt once it finishes. Lint
+    // errors fail the build; findings weighted 0 in detekt.yml are reported
+    // without failing it.
+    val formatTasks = tasks.matching { it.name.endsWith("SourceSetFormat") }
+    val lintTasks = tasks.matching { it.name.endsWith("SourceSetCheck") || it.name == "detekt" }
+    tasks.matching { it.name.startsWith("compile") && it.name.endsWith("Kotlin") }.configureEach {
+        dependsOn(formatTasks)
+        finalizedBy(lintTasks)
     }
 }

@@ -23,6 +23,7 @@ object ConversationCellViewFloats {
     val chevronImageAndDateLabelHStackSpacing: Dp = 0.dp
 
     /** The percentage by which the chevron image's foreground color is adjusted. */
+    @Suppress("VariableMaxLength")
     const val CHEVRON_IMAGE_FOREGROUND_COLOR_ADJUSTMENT_PERCENTAGE = 75f
 
     /** The maximum frame width of the chevron image. */
@@ -59,6 +60,7 @@ object ConversationCellViewFloats {
     val separatorInset: Dp = 86.dp
 
     /** The percentage by which the subtitle label's foreground color is adjusted. */
+    @Suppress("VariableMaxLength")
     const val SUBTITLE_LABEL_FOREGROUND_COLOR_ADJUSTMENT_PERCENTAGE = 3f
 
     /** The line limit of the subtitle label. */
@@ -129,6 +131,7 @@ object ConversationCellViewStrings {
     const val CHEVRON_IMAGE_SYSTEM_NAME = "chevron.forward"
 
     /** The system name of the delete conversation button image. */
+    @Suppress("VariableMaxLength")
     const val DELETE_CONVERSATION_BUTTON_IMAGE_SYSTEM_NAME = "trash"
 
     /** The text of the redacted date label. */

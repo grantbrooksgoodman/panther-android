@@ -131,6 +131,7 @@ fun List<Conversation>.queried(searchTerm: String): List<Conversation> {
                 .trim()
                 .contains(normalizedSearchTerm)
 
+        @Suppress("VariableMaxLength")
         val cellViewDataTitleLabelTextContainsSearchTerm =
             ConversationCellViewData(conversation)
                 ?.titleLabelText

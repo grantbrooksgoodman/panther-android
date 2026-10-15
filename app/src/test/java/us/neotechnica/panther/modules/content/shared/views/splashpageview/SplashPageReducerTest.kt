@@ -15,12 +15,12 @@ import org.junit.Before
 import org.junit.Test
 import us.neotechnica.panther.modules.content.shared.services.SplashPageViewService
 import us.neotechnica.panther.navigation.RootNavigatorState
+import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
-import us.neotechnica.panther.navigation.navigation
 import java.io.File
 
 class SplashPageReducerTest {

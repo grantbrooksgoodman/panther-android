@@ -16,12 +16,15 @@ object MessageSessionServiceFloats {
     const val ADD_MESSAGE_DELIVERY_PROGRESS_INCREMENT = 0.2f
 
     /** The delivery progress added when the conversation is created. */
+    @Suppress("VariableMaxLength")
     const val CREATE_CONVERSATION_DELIVERY_PROGRESS_INCREMENT = 0.2f
 
     /** The delivery progress added when the message is created. */
+    @Suppress("VariableMaxLength")
     const val CREATE_MESSAGE_DELIVERY_PROGRESS_INCREMENT = 0.2f
 
     /** The confidence above which language recognition counts as a match. */
+    @Suppress("VariableMaxLength")
     const val LANGUAGE_RECOGNITION_SERVICE_MATCH_CONFIDENCE_THRESHOLD = 0.8f
 
     /** The delivery progress added when the recipients are notified. */

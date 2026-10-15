@@ -47,7 +47,7 @@ object DeviceID {
 
                 val existingID = read()
                 var resolvedID = existingID ?: (androidID() ?: UUID.randomUUID().toString())
-                resolvedID = "and_${resolvedID}"
+                resolvedID = "and_$resolvedID"
                 if (existingID == null) save(resolvedID)
 
                 reference.value = resolvedID

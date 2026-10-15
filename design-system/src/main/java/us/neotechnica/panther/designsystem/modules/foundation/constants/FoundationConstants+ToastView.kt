@@ -18,6 +18,7 @@ object ToastViewFloats {
     const val BANNER_CORNER_RADIUS = 8f
 
     /** The opacity of the banner dismiss button's foreground. */
+    @Suppress("VariableMaxLength")
     const val BANNER_DISMISS_BUTTON_FOREGROUND_COLOR_OPACITY = 0.7f
 
     /** The minimum size of the banner dismiss button. */
@@ -30,6 +31,7 @@ object ToastViewFloats {
     const val BANNER_MESSAGE_LABEL_FONT_SIZE = 12f
 
     /** The opacity of the banner message label's foreground. */
+    @Suppress("VariableMaxLength")
     const val BANNER_MESSAGE_LABEL_FOREGROUND_COLOR_OPACITY = 0.6f
 
     /** The width of the banner's accent strip. */
@@ -54,6 +56,7 @@ object ToastViewFloats {
     const val BANNER_TITLE_LABEL_FONT_SIZE = 14f
 
     /** The opacity of the banner title label's foreground. */
+    @Suppress("VariableMaxLength")
     const val BANNER_TITLE_LABEL_FOREGROUND_COLOR_OPACITY = 0.6f
 
     /** The padding of a toast from the bottom edge. */

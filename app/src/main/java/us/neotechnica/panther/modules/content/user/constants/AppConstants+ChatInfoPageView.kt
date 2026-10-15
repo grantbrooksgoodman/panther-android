@@ -102,6 +102,7 @@ object ChatInfoPageViewFloats {
     val chevronGlyphSize: Dp = 16.dp
 
     /** The horizontal padding of the leave conversation list row view. */
+    @Suppress("VariableMaxLength")
     val leaveConversationListRowViewHorizontalPadding: Dp = 20.dp
 
     /** The duration of the list transition animation. */
@@ -132,6 +133,7 @@ object ChatInfoPageViewFloats {
      * The horizontal padding of the segmented control, or its leading
      * padding when it is not elongated.
      */
+    @Suppress("VariableMaxLength")
     val segmentedControlHorizontalOrLeadingPadding: Dp = 20.dp
 
     /** The top padding of the segmented control. */

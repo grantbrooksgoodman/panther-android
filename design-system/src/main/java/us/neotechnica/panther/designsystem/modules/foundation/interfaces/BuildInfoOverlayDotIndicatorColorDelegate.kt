@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Color
  * Register your conformance through
  * `AppSubsystem.delegates.registerBuildInfoOverlayDotIndicatorColorDelegate`.
  */
+@Suppress("ClassNaming")
 interface BuildInfoOverlayDotIndicatorColorDelegate {
     /** The color to use for the Developer Mode indicator dot. */
     val developerModeIndicatorDotColor: Color

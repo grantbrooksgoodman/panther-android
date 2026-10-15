@@ -6,6 +6,8 @@
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
+@file:Suppress("FileLength")
+
 package us.neotechnica.panther.modules.content.user.services
 
 import kotlinx.coroutines.CoroutineScope
@@ -566,7 +568,10 @@ class ConversationsPageViewService(
         const val MILLISECONDS_PER_SECOND = 1000L
         val OFFLINE_MODE_TOAST_DURATION = 10.seconds
         val PROMPT_DELAY = 1.seconds
+
+        @Suppress("VariableMaxLength")
         const val SECONDS_PER_CONVERSATION_SUFFIX_THRESHOLD = 0.05f
+
         val SECONDS_TO_LOAD_TOAST_DELAY = 1.seconds
         val SECONDS_TO_LOAD_TOAST_DURATION = 10.seconds
         const val TASK_ID_SHOW_SECONDS_TO_LOAD_TOAST = "ConversationsPageViewService/showSecondsToLoadToast"

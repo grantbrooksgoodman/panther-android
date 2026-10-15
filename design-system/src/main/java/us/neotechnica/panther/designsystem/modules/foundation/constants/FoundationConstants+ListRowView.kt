@@ -62,6 +62,7 @@ object ListRowViewColors {
     val BUTTON_STYLE_DARK_PRESSED_BACKGROUND = Color(0xFF3A3A3C)
 
     /** The background color of a button row in light mode. */
+    @Suppress("VariableMaxLength")
     val BUTTON_STYLE_LIGHT_NOT_PRESSED_BACKGROUND = Color.White
 
     /** The background color of a pressed button row in light mode. */

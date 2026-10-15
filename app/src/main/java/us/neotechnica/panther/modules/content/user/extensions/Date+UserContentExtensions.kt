@@ -40,6 +40,7 @@ private typealias DateStrings = UserContentExtensionsStrings.Date
  * or a full date – with the time appended. The day portion renders
  * bold; the caller supplies the color.
  */
+@Suppress("VariableMaxLength")
 val Date.chatPageMessageSeparatorAttributedDateString: AnnotatedString?
     get() {
         val calendar = Calendar.getInstance()

@@ -1,6 +1,13 @@
 # Baseline detekt overlay. buildUponDefaultConfig = true is set in the root
 # build script, so this file only records intentional deviations from detekt's
-# defaults, encoding STYLE_RULES_ANDROID.md §14 and §16.
+# defaults, encoding STYLE_RULES_ANDROID.md §14 and §16. Where a rule has
+# an iOS SwiftLint counterpart, its options mirror the iOS .swiftlint.yml.
+
+build:
+  weights:
+    # SwiftLint's todo rule is a warning on iOS, so TODO and FIXME
+    # comments are still reported but don't fail the build.
+    ForbiddenComment: 0
 
 complexity:
   ComplexCondition:
@@ -9,6 +16,12 @@ complexity:
     threshold: 12
   CyclomaticComplexMethod:
     threshold: 20
+    # SwiftLint ignores_case_statements. detekt can only skip `when`
+    # entries without braces.
+    ignoreSimpleWhenEntries: true
+    # SwiftLint doesn't count closures; detekt would count each `let`,
+    # `apply`, `forEach`, and similar call.
+    ignoreNestingFunctions: true
   LargeClass:
     threshold: 250
   LongMethod:
@@ -20,6 +33,8 @@ complexity:
     # §16 allows up to five parameters, so six-or-more triggers.
     constructorThreshold: 20
     functionThreshold: 6
+    # SwiftLint ignores_default_parameters.
+    ignoreDefaultParameters: true
   TooManyFunctions:
     # §16 governs type size by body length (LargeClass), not by
     # function count; the delegate interfaces mirror iOS surfaces.
@@ -35,6 +50,15 @@ exceptions:
     active: false
 
 naming:
+  ClassNaming:
+    # §16 and SwiftLint type_name: at most 40 characters.
+    classPattern: '[A-Z][a-zA-Z0-9]{0,39}'
+  FunctionMaxLength:
+    # §16 and SwiftLint identifier_name: at most 40 characters. Tests are
+    # exempt because their names are backticked sentences.
+    active: true
+    maximumFunctionNameLength: 40
+    excludes: ['**/test/**', '**/androidTest/**']
   FunctionNaming:
     # Jetpack Compose @Composable functions are conventionally PascalCase.
     ignoreAnnotated: ['Composable']
@@ -43,14 +67,33 @@ naming:
     # naming convention (STYLE_RULES_ANDROID §2/§6), so a single top-level
     # (Consumer)Floats object need not match its file name.
     active: false
+  VariableMaxLength:
+    # §16 and SwiftLint identifier_name: at most 40 characters.
+    active: true
+    maximumVariableNameLength: 40
+
+# The project's own rules, defined in the :detekt-rules module.
+panther:
+  active: true
+  FileLength:
+    # §16 and SwiftLint file_length: at most 400 lines, comments included.
+    active: true
+    threshold: 400
+  MultilineParameters:
+    # §10.2 and SwiftLint multiline_parameters with
+    # max_number_of_single_line_parameters: 1.
+    active: true
+    maxSingleLineParameters: 1
 
 style:
   MagicNumber:
     # Design-token property declarations (e.g. Color(0xFF...)) read fine inline.
     ignorePropertyDeclaration: true
   MaxLineLength:
-    # §16: line-length limit is 160.
+    # §16: line-length limit is 160, with comments exempt (SwiftLint
+    # ignores_comments).
     maxLineLength: 160
+    excludeCommentStatements: true
   ReturnCount:
     # §14 endorses guard-style early returns (`?: return`), which the
     # structural `canDecode` validators use throughout.

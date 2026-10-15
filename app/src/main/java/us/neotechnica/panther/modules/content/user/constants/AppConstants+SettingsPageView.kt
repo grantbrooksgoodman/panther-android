@@ -6,6 +6,8 @@
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
+@file:Suppress("VariableMaxLength")
+
 package us.neotechnica.panther.modules.content.user.constants
 
 import androidx.compose.ui.graphics.Color

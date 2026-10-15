@@ -24,6 +24,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetad
  * Serializes as `"<userID>: <flag>"`, where the flag is `"!"`
  * when consent is acknowledged and `"false"` otherwise.
  */
+@Suppress("ClassNaming")
 data class MessageRecipientConsentAcknowledgementData(
     /** The identifier of the acknowledging user. */
     val userID: String,

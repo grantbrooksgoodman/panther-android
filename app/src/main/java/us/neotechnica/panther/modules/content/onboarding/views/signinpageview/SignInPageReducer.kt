@@ -6,6 +6,8 @@
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
+@file:Suppress("FileLength")
+
 package us.neotechnica.panther.modules.content.onboarding.views.signinpageview
 
 import us.neotechnica.panther.bundle.currentUserID

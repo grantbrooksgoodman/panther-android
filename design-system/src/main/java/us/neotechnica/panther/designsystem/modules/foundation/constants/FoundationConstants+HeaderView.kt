@@ -21,6 +21,7 @@ object HeaderViewFloats {
     const val BACK_BUTTON_IMAGE_SIZE_WIDTH = 12f
 
     /** The minimum height of a full-screen-cover header. */
+    @Suppress("VariableMaxLength")
     const val FULL_SCREEN_COVER_SIZE_CLASS_FRAME_MIN_HEIGHT = 44f
 
     /** The horizontal padding. */
@@ -30,6 +31,7 @@ object HeaderViewFloats {
     const val IMAGE_MAX_HEIGHT = 30f
 
     /** The character count at which the center text counts as long. */
+    @Suppress("VariableMaxLength")
     const val LONG_CENTER_ITEM_TEXT_CHARACTER_COUNT_THRESHOLD = 20f
 
     /** The line limit of long center text. */

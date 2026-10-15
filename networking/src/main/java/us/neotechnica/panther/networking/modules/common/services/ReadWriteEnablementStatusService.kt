@@ -17,6 +17,7 @@ import us.neotechnica.panther.subsystem.modules.shared.models.isForcedUpdateRequ
 internal object ReadWriteEnablementStatusService {
     // MARK: - Methods
 
+    @Suppress("FunctionMaxLength")
     suspend fun listenForReadWriteEnablementStatusChanges() {
         AppSubsystem.delegates.forcedUpdateModal ?: return
         SharedState { it.isForcedUpdateRequired }

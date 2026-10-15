@@ -29,15 +29,19 @@ object SystemAnimationFloats {
     const val ALERT_TRANSITION_SPRING_STIFFNESS = 522.35f
 
     /** The duration, in milliseconds, of the ease-in, ease-out, and ease-in-out animations. */
+    @Suppress("VariableMaxLength")
     const val DEFAULT_TIMING_CURVE_DURATION_MILLISECONDS = 350
 
     /** The duration, in milliseconds, of Material's alert or action sheet dismissal. */
+    @Suppress("VariableMaxLength")
     const val MATERIAL_ALERT_DISMISSAL_DURATION_MILLISECONDS = 250
 
     /** The duration, in milliseconds, of Material's alert or action sheet presentation. */
+    @Suppress("VariableMaxLength")
     const val MATERIAL_ALERT_PRESENTATION_DURATION_MILLISECONDS = 300
 
     /** The duration, in milliseconds, of a navigation push or pop on Android. */
+    @Suppress("VariableMaxLength")
     const val MATERIAL_NAVIGATION_TRANSITION_DURATION_MILLISECONDS = 250
 
     /** The opacity of Material's scrim behind a bottom sheet. */

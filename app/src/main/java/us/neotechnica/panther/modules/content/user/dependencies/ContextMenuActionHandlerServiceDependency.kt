@@ -14,6 +14,7 @@ import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.Dep
 
 // MARK: - Dependency
 
+@Suppress("ClassNaming")
 private object ContextMenuActionHandlerServiceDependency : DependencyKey<ContextMenuActionHandlerService> {
     override fun resolve(dependencies: DependencyValues): ContextMenuActionHandlerService = ContextMenuActionHandlerService()
 }

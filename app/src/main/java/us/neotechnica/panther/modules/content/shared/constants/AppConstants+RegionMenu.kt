@@ -26,6 +26,7 @@ object RegionMenuFloats {
     val buttonLabelImageFrameWidth: Dp = 40.dp
 
     /** The corner radius of the button label stack's background. */
+    @Suppress("VariableMaxLength")
     val buttonLabelVStackBackgroundRectangleCornerRadius: Dp = 6.dp
 
     /** The blur radius of the button label stack's shadow. */

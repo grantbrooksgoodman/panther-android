@@ -340,6 +340,7 @@ class ConversationMetadata(
                 )
             }
 
+            @Suppress("VariableMaxLength")
             val messageRecipientConsentAcknowledgementData =
                 encodedConsent.map { MessageRecipientConsentAcknowledgementData.decode(it) }
             val penPalsSharingData = encodedSharing.map { PenPalsSharingData.decode(it) }

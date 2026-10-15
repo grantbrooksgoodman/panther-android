@@ -45,7 +45,9 @@ data class OutboxEntry(
     /** The content of an outbox entry. */
     sealed class Payload {
         /** An audio message, carrying the file name of its recorded input. */
-        data class Audio(val inputFileName: String) : Payload()
+        data class Audio(
+            val inputFileName: String,
+        ) : Payload()
 
         /** A media message, carrying its file name and extension. */
         data class Media(
@@ -54,7 +56,9 @@ data class OutboxEntry(
         ) : Payload()
 
         /** A text message, carrying its text. */
-        data class Text(val value: String) : Payload()
+        data class Text(
+            val value: String,
+        ) : Payload()
     }
 
     /** The delivery state of an outbox entry. */

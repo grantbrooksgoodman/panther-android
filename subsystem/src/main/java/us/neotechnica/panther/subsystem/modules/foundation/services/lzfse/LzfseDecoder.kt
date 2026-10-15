@@ -117,7 +117,10 @@ internal object LzfseDecoder {
 
             when (lzvnOpcodeTable[opcode]) {
                 LzvnOpcode.EOS -> return dst
-                LzvnOpcode.NOP -> { src += 1; continue }
+                LzvnOpcode.NOP -> {
+                    src += 1
+                    continue
+                }
                 LzvnOpcode.UDEF -> throw LzfseException("Invalid LZVN opcode: $opcode.")
 
                 LzvnOpcode.SML_D -> {
@@ -144,10 +147,22 @@ internal object LzfseDecoder {
                     matchLength = extract(opcode, MATCH_LENGTH_SHIFT, 3) + MATCH_LENGTH_BIAS
                     src += 1
                 }
-                LzvnOpcode.SML_M -> { matchLength = extract(opcode, 0, 4); src += 1 }
-                LzvnOpcode.LRG_M -> { matchLength = byte(src + 1) + LARGE_BIAS; src += 2 }
-                LzvnOpcode.SML_L -> { literalLength = extract(opcode, 0, 4); src += 1 }
-                LzvnOpcode.LRG_L -> { literalLength = byte(src + 1) + LARGE_BIAS; src += 2 }
+                LzvnOpcode.SML_M -> {
+                    matchLength = extract(opcode, 0, 4)
+                    src += 1
+                }
+                LzvnOpcode.LRG_M -> {
+                    matchLength = byte(src + 1) + LARGE_BIAS
+                    src += 2
+                }
+                LzvnOpcode.SML_L -> {
+                    literalLength = extract(opcode, 0, 4)
+                    src += 1
+                }
+                LzvnOpcode.LRG_L -> {
+                    literalLength = byte(src + 1) + LARGE_BIAS
+                    src += 2
+                }
             }
 
             repeat(literalLength) {

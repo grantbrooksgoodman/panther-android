@@ -60,6 +60,7 @@ object ActivitySessionService {
                     metadata = ExceptionMetadata(this),
                 )
 
+        @Suppress("VariableMaxLength")
         val newMessageRecipientConsentAcknowledgementData =
             conversation.metadata.messageRecipientConsentAcknowledgementData +
                 MessageRecipientConsentAcknowledgementData(

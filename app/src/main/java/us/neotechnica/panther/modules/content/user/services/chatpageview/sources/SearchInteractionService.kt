@@ -45,6 +45,7 @@ class SearchInteractionService(
      * cell is not yet available, the interaction is retried once
      * after a brief delay.
      */
+    @Suppress("FunctionMaxLength")
     suspend fun triggerFocusedMessageCellInteractionIfNeeded() {
         if (!ChatPageStateService.isPresented || hasTriggeredInteractionOnce) return
         triggerCellInteraction()
@@ -69,6 +70,7 @@ class SearchInteractionService(
     // MARK: - Companion
 
     companion object {
+        @Suppress("VariableMaxLength")
         private const val TRIGGER_FOCUSED_MESSAGE_CELL_INTERACTION_DELAY_MILLISECONDS = 500L
     }
 }

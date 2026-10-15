@@ -60,6 +60,7 @@ object ChatPageViewService {
 
     // MARK: - Properties
 
+    @Suppress("VariableMaxLength")
     private val mutableDidLoadMoreMessagesFromScrollToTop = MutableStateFlow(false)
     private val mutableNavigationTitle = MutableStateFlow<String?>(null)
 

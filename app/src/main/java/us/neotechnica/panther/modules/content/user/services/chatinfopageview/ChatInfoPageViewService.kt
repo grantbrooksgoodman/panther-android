@@ -6,6 +6,8 @@
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
+@file:Suppress("FileLength")
+
 package us.neotechnica.panther.modules.content.user.services.chatinfopageview
 
 import kotlinx.coroutines.CoroutineScope

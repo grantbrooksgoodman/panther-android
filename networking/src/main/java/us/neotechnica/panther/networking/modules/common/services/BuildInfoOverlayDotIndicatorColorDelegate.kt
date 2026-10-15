@@ -25,6 +25,7 @@ import us.neotechnica.panther.designsystem.modules.foundation.interfaces.BuildIn
  * - **Staging**: orange
  * - **Production**: red
  */
+@Suppress("ClassNaming")
 object BuildInfoOverlayDotIndicatorColorDelegate : AppSubsystemBuildInfoOverlayDotIndicatorColorDelegate {
     // MARK: - Computed Properties
 

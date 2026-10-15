@@ -18,6 +18,7 @@ internal object MessageContextReactionRowFloats {
     val reactionButtonHeight: Dp = 35.dp
     val stackViewSpacing: Dp = 8.dp
 
+    @Suppress("VariableMaxLength")
     const val REACTION_BUTTON_TITLE_LABEL_SYSTEM_FONT_SIZE = 15f
     const val VIEW_ALPHA = 0.8f
 }

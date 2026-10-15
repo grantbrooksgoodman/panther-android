@@ -21,14 +21,18 @@ sealed interface WriteAction<out T> {
      * Write the specified pre-encoded value directly, bypassing the
      * standard encoding ladder.
      */
-    data class Encoded(val value: Any?) : WriteAction<Nothing>
+    data class Encoded(
+        val value: Any?,
+    ) : WriteAction<Nothing>
 
     /**
      * The conformer has already performed the database write. The
      * default implementation skips its own write and proceeds
      * directly to `didWrite` with the given updated instance.
      */
-    data class Handled<T>(val updated: T) : WriteAction<T>
+    data class Handled<T>(
+        val updated: T,
+    ) : WriteAction<T>
 
     /** Proceed with the standard encoding ladder. */
     data object Proceed : WriteAction<Nothing>

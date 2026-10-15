@@ -189,5 +189,6 @@ internal class ForcedUpdateModalPageReducer : Reducer<ForcedUpdateModalPageReduc
     }
 }
 
+@Suppress("VariableMaxLength")
 private const val HIDE_INTERACTIVE_CONTENT_INTERVAL_MILLISECONDS = 100L
 private const val TRANSLATION_TIMEOUT_SECONDS = 10L

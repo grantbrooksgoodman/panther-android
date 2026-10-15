@@ -24,6 +24,7 @@ object BuildInfoOverlayViewFloats {
     const val DEVELOPER_MODE_INDICATOR_FRAME_WIDTH = 8f
 
     /** The trailing padding of the developer mode indicator. */
+    @Suppress("VariableMaxLength")
     const val DEVELOPER_MODE_INDICATOR_TRAILING_PADDING = -6f
 
     /** The frame height of the send feedback button. */

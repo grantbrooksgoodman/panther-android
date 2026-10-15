@@ -6,6 +6,8 @@
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
+@file:Suppress("FileLength")
+
 package us.neotechnica.panther.modules.session.entity.services
 
 import kotlinx.coroutines.CoroutineScope
@@ -414,6 +416,7 @@ object UserSessionService {
      * conversations that were loaded from the archive or freshly
      * fetched from the network.
      */
+    @Suppress("FunctionMaxLength")
     private suspend fun resolveMessagesOnCurrentUserConversations() {
         val conversations = currentUser?.conversations ?: return
 

@@ -312,6 +312,7 @@ data class ConversationCellViewData(
 object ConversationCellViewDataCache {
     // MARK: - Properties
 
+    @Suppress("VariableMaxLength")
     private val cachedDataByConversationIDForSearchQueries =
         LockIsolated<Map<String, Map<ConversationID, ConversationCellViewData>>?>(null)
 

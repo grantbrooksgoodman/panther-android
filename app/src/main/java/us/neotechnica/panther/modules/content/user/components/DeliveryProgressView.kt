@@ -74,6 +74,7 @@ fun DeliveryProgressView(
  * @return The registered delivery progress indicator service.
  */
 @Composable
+@Suppress("FunctionMaxLength")
 internal fun rememberRegisteredDeliveryProgressIndicatorService(): DeliveryProgressIndicatorService {
     val scope = rememberCoroutineScope()
     val service = remember { DeliveryProgressIndicatorService(scope) }

@@ -6,6 +6,8 @@
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
+@file:Suppress("FileLength")
+
 package us.neotechnica.panther.networking.modules.health.services
 
 import android.content.BroadcastReceiver
@@ -268,6 +270,7 @@ internal object NetworkHealthService : NetworkHealthDelegate {
     // first database latency sample – evidence the app actually
     // uses the realtime database. An observer attached eagerly
     // would itself keep the realtime connection alive.
+    @Suppress("FunctionMaxLength")
     private fun startConnectionStabilityMonitoringIfNeeded() {
         if (!Networking.config.networkHealthConfiguration.isConnectionStabilityMonitoringEnabled) return
         val shouldStart =
