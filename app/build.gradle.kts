@@ -86,6 +86,12 @@ android {
         compose = true
         buildConfig = true
     }
+
+    lint {
+        // Warnings that predate Lint joining the gate. Regenerate with
+        // `./gradlew updateLintBaseline` after fixing any of them.
+        baseline = file("lint-baseline.xml")
+    }
 }
 
 // --- Per-build build-number stamp (mirrors the iOS Run Script phase) ---

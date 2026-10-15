@@ -19,6 +19,12 @@ android {
     buildFeatures {
         compose = true
     }
+
+    lint {
+        // Warnings that predate Lint joining the gate. Regenerate with
+        // `./gradlew updateLintBaseline` after fixing any of them.
+        baseline = file("lint-baseline.xml")
+    }
 }
 
 dependencies {

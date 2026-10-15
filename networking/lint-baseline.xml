@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 9.4.1" type="baseline" client="gradle" dependencies="false" name="AGP (9.4.1)" variant="all" version="9.4.1">
+
+    <issue
+        id="InlinedApi"
+        message="Field requires version 16 of the U Extensions SDK (current min is 0): `android.net.NetworkCapabilities#NET_CAPABILITY_NOT_BANDWIDTH_CONSTRAINED`"
+        errorLine1="                !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_BANDWIDTH_CONSTRAINED)"
+        errorLine2="                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/us/neotechnica/panther/networking/modules/health/services/NetworkHealthService.kt"
+            line="364"
+            column="45"/>
+    </issue>
+
+    <issue
+        id="UseOfNonLambdaOffsetOverload"
+        message="State backed values should use the lambda overload of Modifier.offset"
+        errorLine1="                .offset(y = yOffset.dp)"
+        errorLine2="                 ~~~~~~">
+        <location
+            file="src/main/java/us/neotechnica/panther/networking/modules/common/components/networkactivityindicator/NetworkActivityIndicator.kt"
+            line="67"
+            column="18"/>
+    </issue>
+
+</issues>
