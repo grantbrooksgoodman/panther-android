@@ -9,9 +9,8 @@
 package us.neotechnica.panther.networking
 
 import android.content.Context
+import com.google.firebase.appcheck.AppCheckProviderFactory
 import com.google.firebase.appcheck.FirebaseAppCheck
-import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
-import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -88,27 +87,27 @@ object Networking {
     /**
      * Configures the framework and prepares it for use.
      *
-     * Call this method once at app launch. It installs the App
-     * Check provider factory – the debug provider for emulator and
-     * debug builds, Play Integrity otherwise – records the default
-     * environment, registers the networking Developer Mode
-     * actions, starts network health monitoring, and begins
-     * observing read/write enablement status. Firebase itself is
-     * initialized automatically by the `google-services` plugin.
+     * Call this method once at app launch. It installs the given
+     * App Check provider factory, records the default environment,
+     * registers the networking Developer Mode actions, starts
+     * network health monitoring, and begins observing read/write
+     * enablement status. Firebase itself is initialized
+     * automatically by the `google-services` plugin.
      *
      * @param context A context used to resolve the application
      *   context for persistent storage.
      * @param defaultEnvironment The environment to use when no
      *   runtime override has been persisted – typically derived
      *   from the build flavor.
-     * @param useDebugAppCheckProvider Whether to install the App
-     *   Check debug provider (required on emulators, where Play
-     *   Integrity cannot attest).
+     * @param appCheckProviderFactory The App Check provider factory
+     *   to install – typically the debug provider in debug builds,
+     *   which also attests emulators where Play Integrity can't, and
+     *   the Play Integrity provider in release builds.
      */
     fun initialize(
         context: Context,
         defaultEnvironment: NetworkEnvironment,
-        useDebugAppCheckProvider: Boolean,
+        appCheckProviderFactory: AppCheckProviderFactory,
     ) {
         applicationContext.wrappedValue = context.applicationContext
         config.setDefaultEnvironment(defaultEnvironment)
@@ -118,13 +117,7 @@ object Networking {
             at = 0,
         )
 
-        FirebaseAppCheck.getInstance().installAppCheckProviderFactory(
-            if (useDebugAppCheckProvider) {
-                DebugAppCheckProviderFactory.getInstance()
-            } else {
-                PlayIntegrityAppCheckProviderFactory.getInstance()
-            },
-        )
+        FirebaseAppCheck.getInstance().installAppCheckProviderFactory(appCheckProviderFactory)
 
         config.healthDelegate.startMonitoring()
 

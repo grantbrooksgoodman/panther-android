@@ -12,7 +12,6 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
-import android.os.Build
 
 /**
  * Holds transient audio focus on behalf of a service that plays or
@@ -21,9 +20,7 @@ import android.os.Build
  * Request focus before playback or speech begins and abandon it once
  * they end. Focus is requested for speech played as media, with
  * [audioAttributes]; when another app takes focus for good, the
- * service is told to stop. Audio focus requests exist on API 26 and
- * later – on earlier versions, requesting and abandoning focus do
- * nothing.
+ * service is told to stop.
  *
  * @property onFocusLost The action performed when the service loses
  *   audio focus to another app.
@@ -56,7 +53,6 @@ class AudioFocusService(
 
     /** Abandons the audio focus held, if any. */
     fun abandonFocus() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = audioManager ?: return
         focusRequest?.let { manager.abandonAudioFocusRequest(it) }
         focusRequest = null
@@ -64,7 +60,6 @@ class AudioFocusService(
 
     /** Requests transient audio focus. */
     fun requestFocus() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = audioManager ?: return
         val request =
             AudioFocusRequest

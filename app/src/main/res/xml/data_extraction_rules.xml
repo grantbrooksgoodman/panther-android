@@ -1,19 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
+   Backup and device-transfer rules for Android 12 and later;
+   backup_rules.xml holds the same rules for Android 11 and earlier.
+   Everything is backed up except the encrypted device identifier
+   preferences, whose Android Keystore key never leaves the device, and
+   downloaded media, which can be fetched again and would count against the
+   25 MB backup quota.
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <exclude domain="sharedpref" path="device_id.xml" />
+        <exclude domain="file" path="media" />
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <exclude domain="sharedpref" path="device_id.xml" />
+        <exclude domain="file" path="media" />
     </device-transfer>
-    -->
 </data-extraction-rules>

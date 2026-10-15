@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.networking.modules.health.models
 
+import android.annotation.SuppressLint
 import android.os.Build
 import android.telephony.TelephonyManager
 import androidx.annotation.RequiresApi
@@ -47,7 +48,11 @@ internal enum class RadioTechnology(
                 return runCatching { fromDataNetworkType() }.getOrDefault(UNKNOWN)
             }
 
+        // READ_BASIC_PHONE_STATE, a normal permission granted at
+        // install, covers this call on API 33 and later; `current`
+        // still reports UNKNOWN if the call throws.
         @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+        @SuppressLint("MissingPermission")
         private fun fromDataNetworkType(): RadioTechnology {
             val telephonyManager =
                 Networking

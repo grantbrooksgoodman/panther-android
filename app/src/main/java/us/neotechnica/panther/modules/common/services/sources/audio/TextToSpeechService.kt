@@ -52,7 +52,7 @@ object TextToSpeechService {
 
     /**
      * The character range of the spoken message currently being
-     * enunciated, or `null`. Reported only on API 26 and later.
+     * enunciated, or `null`.
      */
     val spokenRange: IntRange?
         get() = spokenRangeState

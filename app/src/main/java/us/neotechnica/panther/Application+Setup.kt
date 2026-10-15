@@ -9,6 +9,7 @@
 package us.neotechnica.panther
 
 import android.content.Context
+import us.neotechnica.panther.bundle.appCheckProviderFactory
 import us.neotechnica.panther.bundle.application
 import us.neotechnica.panther.modules.common.extensions.ApplicationStorageKey
 import us.neotechnica.panther.modules.common.extensions.isEmulator
@@ -69,7 +70,7 @@ internal fun Application.setUpNetworking(context: Context) {
     Networking.initialize(
         context = context,
         defaultEnvironment = NetworkEnvironment.from(BuildConfig.NETWORK_ENVIRONMENT),
-        useDebugAppCheckProvider = BuildConfig.DEBUG,
+        appCheckProviderFactory = appCheckProviderFactory,
     )
     Networking.config.registerActivityIndicatorDelegate(NetworkActivityIndicatorService)
     Networking.config.setNetworkHealthConfiguration(

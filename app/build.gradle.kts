@@ -1,8 +1,10 @@
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import java.io.FileInputStream
 import java.util.Properties
@@ -30,12 +32,9 @@ android {
 
     defaultConfig {
         applicationId = "us.neotechnica.panther"
-        minSdk = 24
+        minSdk = 28
         targetSdk = 37
-        versionCode = 1
         versionName = "1.0.0"
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
@@ -80,8 +79,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures {
         compose = true
@@ -89,18 +88,20 @@ android {
     }
 }
 
-// --- Per-compile build-number stamp (mirrors the iOS Run Script phase) ---
-// On every compile this increments version.properties and writes a
-// build_info.properties asset (wired into each variant's generated
-// assets) that the app reads at runtime through Build.initialize, so the
-// build number, build date, and first-compile date advance exactly as
-// they do on iOS via the Run Script build phase.
+// --- Per-build build-number stamp (mirrors the iOS Run Script phase) ---
+// Once per Gradle invocation, stampBuildInfo increments version.properties
+// and writes build_info.properties, which every variant packages as a
+// generated asset (through its copy<Variant>BuildInfo task) and the app
+// reads at runtime through Build.initialize. The build number, build date,
+// and first-compile date therefore advance exactly as they do on iOS via the
+// Run Script build phase, and every variant's versionCode is that same build
+// number, as the iOS CFBundleVersion is.
 abstract class StampBuildInfoTask : DefaultTask() {
     @get:Internal
     abstract val versionPropertiesFile: RegularFileProperty
 
-    @get:OutputDirectory
-    abstract val outputDirectory: DirectoryProperty
+    @get:OutputFile
+    abstract val buildInfoFile: RegularFileProperty
 
     @TaskAction
     fun stamp() {
@@ -123,20 +124,54 @@ abstract class StampBuildInfoTask : DefaultTask() {
             properties.store(it, "Auto-incremented per compile (mirrors the iOS Run Script build-number bump).")
         }
 
-        val assetFile = outputDirectory.get().asFile.resolve("build_info.properties")
+        val assetFile = buildInfoFile.get().asFile
         assetFile.parentFile.mkdirs()
         assetFile.writeText("buildNumber=$buildNumber\nbuildDate=$buildDate\nfirstCompileDate=$firstCompileDate\n")
     }
 }
 
+abstract class CopyBuildInfoTask : DefaultTask() {
+    @get:InputFile
+    abstract val buildInfoFile: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+
+    @TaskAction
+    fun copy() {
+        buildInfoFile.get().asFile.copyTo(
+            outputDirectory.get().asFile.resolve("build_info.properties"),
+            overwrite = true,
+        )
+    }
+}
+
+val stampBuildInfo =
+    tasks.register<StampBuildInfoTask>("stampBuildInfo") {
+        versionPropertiesFile.set(layout.projectDirectory.file("version.properties"))
+        buildInfoFile.set(layout.buildDirectory.file("generated/buildInfo/build_info.properties"))
+        outputs.upToDateWhen { false }
+    }
+
+val buildNumber =
+    stampBuildInfo
+        .flatMap { it.buildInfoFile }
+        .map { file ->
+            file.asFile
+                .readLines()
+                .first { it.startsWith("buildNumber=") }
+                .substringAfter("=")
+                .toInt()
+        }
+
 androidComponents {
     onVariants { variant ->
-        val stampTask =
-            tasks.register<StampBuildInfoTask>("stamp${variant.name.replaceFirstChar { it.uppercase() }}BuildInfo") {
-                versionPropertiesFile.set(layout.projectDirectory.file("version.properties"))
-                outputs.upToDateWhen { false }
+        val copyTask =
+            tasks.register<CopyBuildInfoTask>("copy${variant.name.replaceFirstChar { it.uppercase() }}BuildInfo") {
+                buildInfoFile.set(stampBuildInfo.flatMap { it.buildInfoFile })
             }
-        variant.sources.assets?.addGeneratedSourceDirectory(stampTask, StampBuildInfoTask::outputDirectory)
+        variant.sources.assets?.addGeneratedSourceDirectory(copyTask, CopyBuildInfoTask::outputDirectory)
+        variant.outputs.forEach { it.versionCode.set(buildNumber) }
     }
 }
 
@@ -165,10 +200,7 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.kotlinx.serialization.json)
     testImplementation(libs.org.json)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.androidx.junit)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
+    debugImplementation(libs.firebase.appcheck.debug)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    releaseImplementation(libs.firebase.appcheck.playintegrity)
 }

@@ -8,8 +8,11 @@
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
+/.idea/deploymentTargetSelector.xml
+/.idea/deviceManager.xml
 .DS_Store
-/build
+# Build outputs of the root project and every module.
+build/
 /captures
 .externalNativeBuild
 .cxx

@@ -12,7 +12,6 @@ import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.ImageDecoder
 import android.graphics.drawable.AnimatedImageDrawable
-import android.os.Build
 import android.widget.ImageView
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
@@ -34,8 +33,8 @@ import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
  * dark artwork remains visible. The filter is re-applied whenever the
  * active theme changes.
  *
- * **Note:** Animated playback requires API 28 or later; on earlier
- * releases the static wordmark is shown instead.
+ * **Note:** If the resource can't be found or decoded, the static
+ * wordmark is shown instead.
  *
  * @param name The name of the GIF resource in `res/raw`.
  * @param isActive Whether the GIF is currently playing.
@@ -58,7 +57,7 @@ fun GIFImageView(
         factory = { viewContext ->
             ImageView(viewContext).apply {
                 scaleType = ImageView.ScaleType.FIT_XY
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && resourceID != 0) {
+                if (resourceID != 0) {
                     runCatching {
                         val source = ImageDecoder.createSource(viewContext.resources, resourceID)
                         setImageDrawable(ImageDecoder.decodeDrawable(source))

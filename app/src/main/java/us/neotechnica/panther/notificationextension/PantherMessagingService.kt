@@ -15,7 +15,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -284,9 +283,8 @@ class PantherMessagingService : FirebaseMessagingService() {
         /** The identifier of the messages notification channel. */
         const val MESSAGES_CHANNEL_ID = "messages"
 
-        /** Creates the messages notification channel (idempotent; API 26+). */
+        /** Creates the messages notification channel (idempotent). */
         fun createChannel(context: Context) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
             val manager = context.getSystemService(NotificationManager::class.java) ?: return
             val channel =
                 NotificationChannel(
