@@ -11,6 +11,7 @@
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/app" />
             <option value="$PROJECT_DIR$/design-system" />
+            <option value="$PROJECT_DIR$/detekt-rules" />
             <option value="$PROJECT_DIR$/networking" />
             <option value="$PROJECT_DIR$/subsystem" />
             <option value="$PROJECT_DIR$/translator" />
