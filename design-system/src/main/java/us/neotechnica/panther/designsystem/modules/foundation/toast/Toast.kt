@@ -9,9 +9,14 @@
 package us.neotechnica.panther.designsystem.modules.foundation.toast
 
 import androidx.compose.ui.graphics.Color
+import kotlinx.coroutines.CancellationException
 import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.firstOutput
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.TranslationInput
 import kotlin.time.Duration
 
@@ -139,7 +144,11 @@ data class Toast(
 
     // MARK: - Translation
 
-    private suspend fun translated(keys: List<TranslationOptionKey>): Toast {
+    private suspend fun translated(
+        keys: List<TranslationOptionKey>,
+        languagePair: LanguagePair,
+    ): Toast {
+        val translationDelegate = AlertKitConfig.translationDelegate ?: return this
         val inputs = mutableListOf<TranslationInput>()
         for (key in keys.distinct()) {
             when (key) {
@@ -149,7 +158,13 @@ data class Toast(
         }
         if (inputs.isEmpty()) return this
 
-        val translations = AlertKitConfig.getTranslations(inputs.distinctBy { it.value })
+        val translations =
+            translationDelegate.getTranslations(
+                inputs = inputs.distinctBy { it.value },
+                languagePair = languagePair,
+                hudConfig = AlertKitConfig.translationHUDConfig,
+                timeoutConfig = AlertKitConfig.translationTimeoutConfig,
+            )
         return copy(
             title = title?.let { translations.firstOutput(it) },
             message = translations.firstOutput(message),
@@ -179,23 +194,46 @@ data class Toast(
 
         /**
          * Translates the toast's content according to [translating],
-         * then presents it. Falls back to the untranslated toast if
-         * translation fails.
+         * then presents it.
+         *
+         * When [translating] is empty, or no translation delegate is
+         * registered, the toast is shown immediately with its original
+         * strings. If translation fails, the original untranslated
+         * toast is shown as a fallback and the error is logged.
          *
          * @param toast The toast to present.
          * @param translating The parts of the toast to translate.
+         * @param languagePair The language pair for translation. The
+         *   default translates from the configured source language to
+         *   the configured target language.
          * @param onTap A closure executed when the user taps the toast,
          *   or `null` for a non-interactive toast.
          */
         suspend fun show(
             toast: Toast,
             translating: List<TranslationOptionKey>,
+            languagePair: LanguagePair =
+                LanguagePair(
+                    from = AlertKitConfig.sourceLanguageCode,
+                    to = AlertKitConfig.targetLanguageCode,
+                ),
             onTap: (() -> Unit)? = null,
         ) {
             if (translating.isEmpty() || AlertKitConfig.translationDelegate == null) {
                 return ToastPresenter.show(toast, onTap)
             }
-            ToastPresenter.show(runCatching { toast.translated(translating) }.getOrDefault(toast), onTap)
+
+            val translated =
+                try {
+                    toast.translated(translating, languagePair)
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
+                } catch (throwable: Throwable) {
+                    Logger.log(Exception.from(throwable, ExceptionMetadata(this)))
+                    toast
+                }
+
+            ToastPresenter.show(translated, onTap)
         }
 
         /** Dismisses the currently visible toast, if any. */

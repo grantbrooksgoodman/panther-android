@@ -68,6 +68,12 @@ class Alert(
     private var messageAttributes: AttributedStringConfig? = null
     private var titleAttributes: AttributedStringConfig? = null
 
+    // MARK: - Init
+
+    init {
+        require(actions.isNotEmpty()) { "Modal alerts are not supported" }
+    }
+
     // MARK: - Methods
 
     /**
@@ -154,7 +160,7 @@ class Alert(
             ),
     ): Unit =
         AlertKitConfig.presentWithTranslation(
-            shouldTranslate = translating.isNotEmpty() && AlertKitConfig.translationDelegate != null,
+            shouldTranslate = translating.isNotEmpty(),
             presentDirectly = { present() },
             translate = { translate(translating) },
             presentTranslated = { it.present(translating = emptyList()) },

@@ -22,10 +22,13 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAler
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.languageName
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.lowercasedTrimmingWhitespaceAndNewlines
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.systemLanguageCode
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.StoredItemKey
 import us.neotechnica.panther.subsystem.modules.foundation.models.overriddenLanguageCode
 import us.neotechnica.panther.subsystem.modules.foundation.services.BuildInfoOverlay
 import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import java.util.Locale
@@ -59,14 +62,19 @@ object DevModeSubsystemActions {
                             CoreUtilities.clearCaches()
                             HUD.showSuccess(text = "Cleared Caches")
                         }
+                    val eraseApplicationSupportDirectoryAction =
+                        Action("Erase Application Support Directory") {
+                            erasing { CoreUtilities.eraseApplicationSupportDirectory() }
+                            HUD.showSuccess(text = "Erased Application Support Directory")
+                        }
                     val eraseDocumentsDirectoryAction =
                         Action("Erase Documents Directory") {
-                            CoreUtilities.eraseDocumentsDirectory()
+                            erasing { CoreUtilities.eraseDocumentsDirectory() }
                             HUD.showSuccess(text = "Erased Documents Directory")
                         }
                     val eraseTemporaryDirectoryAction =
                         Action("Erase Temporary Directory") {
-                            CoreUtilities.eraseTemporaryDirectory()
+                            erasing { CoreUtilities.eraseTemporaryDirectory() }
                             HUD.showSuccess(text = "Erased Temporary Directory")
                         }
                     val resetPreferencesAction =
@@ -77,9 +85,10 @@ object DevModeSubsystemActions {
                     val eraseAllAction =
                         Action("Erase All Content & Settings", style = ActionStyle.DESTRUCTIVE_PREFERRED) {
                             CoreUtilities.clearCaches()
-                            CoreUtilities.eraseDocumentsDirectory()
-                            CoreUtilities.eraseTemporaryDirectory()
                             Persistent.reset()
+                            erasing { CoreUtilities.eraseApplicationSupportDirectory() }
+                            erasing { CoreUtilities.eraseDocumentsDirectory() }
+                            erasing { CoreUtilities.eraseTemporaryDirectory() }
                             HUD.showSuccess()
                         }
 
@@ -88,6 +97,7 @@ object DevModeSubsystemActions {
                         actions =
                             listOf(
                                 clearCachesAction,
+                                eraseApplicationSupportDirectoryAction,
                                 eraseDocumentsDirectoryAction,
                                 eraseTemporaryDirectoryAction,
                                 resetPreferencesAction,
@@ -112,6 +122,15 @@ object DevModeSubsystemActions {
         }
 
     // MARK: - Auxiliary
+
+    // Runs a directory erasure, surfacing a failure as a toast.
+    private fun erasing(erase: () -> Unit) {
+        try {
+            erase()
+        } catch (exception: Exception) {
+            Logger.log(exception, with = Logger.AlertType.toast)
+        }
+    }
 
     private suspend fun overrideLanguageCode() {
         if (RuntimeStorage.retrieve(StoredItemKey.overriddenLanguageCode) != null) {
@@ -186,7 +205,7 @@ object DevModeSubsystemActions {
     private fun restoreLanguageCode(showSuccess: Boolean) {
         RuntimeStorage.remove(StoredItemKey.overriddenLanguageCode)
         CoreUtilities.restoreDeviceLanguageCode()
-        AlertKitConfig.overrideTargetLanguageCode(Locale.getDefault().language)
+        AlertKitConfig.overrideTargetLanguageCode(systemLanguageCode)
         if (showSuccess) HUD.showSuccess()
     }
 

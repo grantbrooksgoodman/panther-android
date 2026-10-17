@@ -165,7 +165,7 @@ private fun FailurePage(
                 onClick = {
                     scope.launch {
                         if (!Build.isOnline) return@launch ConnectionAlert.present()
-                        AppSubsystem.delegates.errorReport?.fileReport(exception.hydrated)
+                        AppSubsystem.delegates.errorReport?.fileReport(exception)
                     }
                 },
             ) {

@@ -33,7 +33,6 @@ import us.neotechnica.panther.networking.modules.storage.models.HostedItemMetada
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestampDateFormatter
-import us.neotechnica.panther.subsystem.modules.foundation.interfaces.ErrorReportDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHashOf
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
@@ -57,7 +56,7 @@ import kotlin.time.Duration.Companion.seconds
  * with custom storage metadata describing the error, build, device,
  * language, current user, and visible view.
  */
-object ErrorReportingService : ReportDelegate, ErrorReportDelegate {
+object ErrorReportingService : ReportDelegate {
     // MARK: - Dependencies
 
     private val metadataService: MetadataService by Dependency { it.commonServices.metadata }

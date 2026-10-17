@@ -142,12 +142,12 @@ object Logger {
              * A toast notification that is only shown in prerelease
              * builds.
              *
-             * Returns `null` when the current build milestone is
+             * Resolves once, on first access after the build has been
+             * configured: `null` when the build milestone is
              * [Build.Milestone.GENERAL_RELEASE], effectively silencing the
              * alert in production.
              */
-            val toastInPrerelease: AlertType?
-                get() = toastInPrerelease()
+            val toastInPrerelease: AlertType? by lazy { toastInPrerelease() }
 
             /**
              * Returns a toast notification with the given style, or
@@ -346,8 +346,8 @@ object Logger {
      * The entry includes the exception's descriptor, error code, user
      * info (if any), source location, and a timestamp. When the
      * exception is reportable and [reportsErrorsAutomatically] is
-     * enabled, the exception is also forwarded to the registered error
-     * report delegate.
+     * enabled, the exception's [Exception.hydrated] form is also
+     * forwarded to the registered error report delegate.
      *
      * @param exception The exception to log.
      * @param domain The domain to log to. Defaults to the general
@@ -388,7 +388,7 @@ object Logger {
         currentTimeLastCalled.wrappedValue = System.currentTimeMillis()
 
         if (reportsErrorsAutomatically && exception.isReportable) {
-            AppSubsystem.delegates.errorReport?.fileReport(exception)
+            AppSubsystem.delegates.errorReport?.fileReport(exception.hydrated)
         }
 
         with?.let { presentationDelegate?.present(it, exception, null) }

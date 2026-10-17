@@ -194,8 +194,9 @@ private suspend fun switchTo(environment: NetworkEnvironment) {
     Networking.config.setEnvironment(environment)
 
     CoreUtilities.clearCaches()
+    runCatching { CoreUtilities.eraseApplicationSupportDirectory() }
     runCatching { CoreUtilities.eraseDocumentsDirectory() }
-    CoreUtilities.eraseTemporaryDirectory()
+    runCatching { CoreUtilities.eraseTemporaryDirectory() }
     Persistent.reset()
 
     Alert(

@@ -44,6 +44,7 @@ object CacheDomainList : CacheDomainListDelegate {
                 CacheDomain.audioFileDuration,
                 CacheDomain.chatInfoPageViewService,
                 CacheDomain.commonPropertyLists,
+                CacheDomain.contactImage,
                 CacheDomain.contactPairArchive,
                 CacheDomain.contactService,
                 CacheDomain.conversationArchive,

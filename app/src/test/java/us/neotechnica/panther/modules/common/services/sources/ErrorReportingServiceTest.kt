@@ -38,6 +38,21 @@ class ErrorReportingServiceTest {
     }
 
     @Test
+    fun `the automatic report path files the hydrated exception into a shorthand directory`() {
+        val exception = Exception("Failed to resolve required values.", metadata = ExceptionMetadata(this))
+
+        val hydrated = exception.hydrated
+        val errorCode = hydrated.id.take(4).uppercase()
+
+        assertEquals(exception.descriptor, hydrated.userInfo?.get("Descriptor"))
+        assertEquals(exception.code, hydrated.userInfo?.get("ErrorCode"))
+        assertEquals(
+            "${errorCode}_FAILED_TO_RESOLVE",
+            ErrorReportingService.parentDirectoryName(hydrated, errorCode),
+        )
+    }
+
+    @Test
     fun `an exception without a descriptor entry keeps the bare error code`() {
         assertEquals("AB12", ErrorReportingService.parentDirectoryName(exception(null), "AB12"))
     }

@@ -26,6 +26,7 @@ import us.neotechnica.panther.networking.modules.translation.interfaces.HostedTr
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.effect.Effect
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.systemLanguageCode
 import us.neotechnica.panther.subsystem.modules.foundation.models.CacheDomain
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -34,7 +35,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
-import java.util.Locale
 
 /**
  * The reducer that drives the language selection page of the
@@ -116,7 +116,7 @@ class SelectLanguagePageReducer : Reducer<SelectLanguagePageReducer.State, Selec
         internal val selectedLanguageCode: String
             get() =
                 CoreUtilities
-                    .localizedLanguageCodeDictionary(Locale.getDefault().language)
+                    .localizedLanguageCodeDictionary(systemLanguageCode)
                     ?.entries
                     ?.firstOrNull { it.value == selectedLanguageName }
                     ?.key

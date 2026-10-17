@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.networking.sources.translation.delegates
 
+import us.neotechnica.panther.subsystem.AppSubsystem
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHashOf
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
@@ -19,6 +20,7 @@ import us.neotechnica.panther.translator.models.TranslationInput
 import java.util.concurrent.Executors
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.TranslationArchiverDelegate as SubsystemTranslationArchiverDelegate
 
 /**
  * The persistent translation archive.
@@ -35,7 +37,9 @@ import kotlin.concurrent.withLock
  * [Translator.config][us.neotechnica.panther.translator.Translator.config],
  * superseding the in-memory `LocalTranslationArchiver` default.
  */
-class LocalTranslationArchiverDelegate : TranslationArchiverDelegate {
+class LocalTranslationArchiverDelegate :
+    TranslationArchiverDelegate,
+    SubsystemTranslationArchiverDelegate {
     // MARK: - Properties
 
     private val ioLock = ReentrantLock()
@@ -223,9 +227,14 @@ class LocalTranslationArchiverDelegate : TranslationArchiverDelegate {
     // MARK: - Companion
 
     companion object {
-        /** Registers a fresh persistent archiver with the translator. */
+        /**
+         * Registers a fresh persistent archiver with the translator
+         * and, for cache clearing, with the subsystem.
+         */
         fun registerWithDependencies() {
-            Translator.config.registerArchiverDelegate(LocalTranslationArchiverDelegate())
+            val archiver = LocalTranslationArchiverDelegate()
+            Translator.config.registerArchiverDelegate(archiver)
+            AppSubsystem.delegates.registerTranslationArchiverDelegate(archiver)
         }
 
         private const val KEY_ORIGINAL = "original"

@@ -8,12 +8,12 @@
 
 package us.neotechnica.panther.subsystem.modules.foundation.services
 
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.systemLanguageCode
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.StoredItemKey
 import us.neotechnica.panther.subsystem.modules.foundation.models.languageCode
 import us.neotechnica.panther.subsystem.modules.foundation.models.languageCodeDictionary
 import us.neotechnica.panther.subsystem.modules.foundation.models.overriddenLanguageCode
-import java.util.Locale
 
 /**
  * A thread-safe, in-memory key-value store for data that should
@@ -59,7 +59,7 @@ object RuntimeStorage {
         get() =
             (retrieve(StoredItemKey.overriddenLanguageCode) as? String)
                 ?: (retrieve(StoredItemKey.languageCode) as? String)
-                ?: Locale.getDefault().language
+                ?: systemLanguageCode
 
     /**
      * The mapping of supported language codes to language names.

@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.subsystem
 
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.ApplicationSuspensionDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.CacheDomainListDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.ErrorReportDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.ExceptionMetadataDelegate
@@ -15,6 +16,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.interfaces.ForcedUpda
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.HUDDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.LoggerDomainSubscriptionDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.PermanentPersistentStorageKeyDelegate
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.TranslationArchiverDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 
 /**
@@ -51,6 +53,8 @@ object AppSubsystem {
     object Delegates {
         // MARK: - Properties
 
+        private val _applicationSuspension = LockIsolated<ApplicationSuspensionDelegate?>(null)
+
         private val _cacheDomainList = LockIsolated<CacheDomainListDelegate?>(null)
 
         private val _errorReport = LockIsolated<ErrorReportDelegate?>(null)
@@ -65,7 +69,18 @@ object AppSubsystem {
 
         private val _permanentPersistentStorageKeys = LockIsolated<PermanentPersistentStorageKeyDelegate?>(null)
 
+        private val _translationArchiver = LockIsolated<TranslationArchiverDelegate?>(null)
+
         // MARK: - Computed Properties
+
+        /**
+         * The delegate that returns the app to the Home screen.
+         *
+         * When this property is `null`, a graceful exit terminates
+         * the process without suspending the app first.
+         */
+        val applicationSuspension: ApplicationSuspensionDelegate?
+            get() = _applicationSuspension.wrappedValue
 
         /**
          * The delegate that supplies the app's cache domains.
@@ -139,7 +154,26 @@ object AppSubsystem {
         val permanentPersistentStorageKeys: PermanentPersistentStorageKeyDelegate?
             get() = _permanentPersistentStorageKeys.wrappedValue
 
+        /**
+         * The delegate that clears the local translation archive.
+         *
+         * When this property is `null`, clearing the
+         * `localTranslationArchive` cache domain has no effect.
+         */
+        val translationArchiver: TranslationArchiverDelegate?
+            get() = _translationArchiver.wrappedValue
+
         // MARK: - Methods
+
+        /**
+         * Registers the specified application suspension delegate.
+         *
+         * @param applicationSuspensionDelegate The delegate to
+         *   register.
+         */
+        fun registerApplicationSuspensionDelegate(applicationSuspensionDelegate: ApplicationSuspensionDelegate) {
+            _applicationSuspension.wrappedValue = applicationSuspensionDelegate
+        }
 
         /**
          * Registers the specified cache domain list delegate.
@@ -213,6 +247,16 @@ object AppSubsystem {
             permanentPersistentStorageKeyDelegate: PermanentPersistentStorageKeyDelegate,
         ) {
             _permanentPersistentStorageKeys.wrappedValue = permanentPersistentStorageKeyDelegate
+        }
+
+        /**
+         * Registers the specified translation archiver delegate.
+         *
+         * @param translationArchiverDelegate The delegate to
+         *   register.
+         */
+        fun registerTranslationArchiverDelegate(translationArchiverDelegate: TranslationArchiverDelegate) {
+            _translationArchiver.wrappedValue = translationArchiverDelegate
         }
     }
 }

@@ -79,6 +79,12 @@ class ActionSheet(
     private var messageAttributes: AttributedStringConfig? = null
     private var titleAttributes: AttributedStringConfig? = null
 
+    // MARK: - Init
+
+    init {
+        require(actions.isNotEmpty()) { "Modal alerts are not supported" }
+    }
+
     // MARK: - Methods
 
     /**
@@ -151,7 +157,7 @@ class ActionSheet(
             ),
     ): Unit =
         AlertKitConfig.presentWithTranslation(
-            shouldTranslate = translating.isNotEmpty() && AlertKitConfig.translationDelegate != null,
+            shouldTranslate = translating.isNotEmpty(),
             presentDirectly = { presentActions() },
             translate = { translate(translating) },
             presentTranslated = { it.present(translating = emptyList()) },

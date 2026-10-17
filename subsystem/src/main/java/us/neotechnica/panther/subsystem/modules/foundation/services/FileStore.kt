@@ -26,9 +26,19 @@ object FileStore {
     private var appContext: Context? = null
 
     @Volatile
+    private var testApplicationSupportDirectory: File? = null
+
+    @Volatile
     private var testDirectory: File? = null
 
     // MARK: - Computed Properties
+
+    /**
+     * The app's Application Support directory – the files directory
+     * excluded from backups – or `null` before initialization.
+     */
+    val applicationSupportDirectory: File?
+        get() = testApplicationSupportDirectory ?: appContext?.noBackupFilesDir
 
     /** The root documents directory, or `null` before initialization. */
     val documentsDirectory: File?
@@ -48,9 +58,21 @@ object FileStore {
         appContext = context.applicationContext
     }
 
-    /** Prepares the file store with a temporary directory for tests. */
-    fun initializeForTesting(directory: File) {
+    /**
+     * Prepares the file store with temporary directories for tests.
+     *
+     * @param directory The directory that stands in for the
+     *   documents directory.
+     * @param applicationSupportDirectory The directory that stands
+     *   in for the Application Support directory. The default is
+     *   [directory].
+     */
+    fun initializeForTesting(
+        directory: File,
+        applicationSupportDirectory: File = directory,
+    ) {
         testDirectory = directory
+        testApplicationSupportDirectory = applicationSupportDirectory
     }
 
     // MARK: - Accessors

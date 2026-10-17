@@ -1003,11 +1003,19 @@ internal class CoreStorage {
     private fun wrap(throwable: Throwable): Exception {
         (throwable as? Exception)?.let { return it }
 
+        val storageErrorCode = (throwable as? StorageException)?.errorCode
         val staticErrorCode =
-            when ((throwable as? StorageException)?.errorCode) {
+            when (storageErrorCode) {
                 StorageException.ERROR_OBJECT_NOT_FOUND -> STORAGE_ITEM_DOES_NOT_EXIST_ERROR_CODE
+
                 StorageException.ERROR_UNKNOWN -> GENERIC_STORAGE_ERROR_CODE
-                else -> return Exception.from(throwable, ExceptionMetadata(this))
+
+                else ->
+                    return Exception.from(
+                        throwable,
+                        userInfo = storageErrorCode?.let { mapOf(Exception.UserInfo.NS_ERROR_CODE.rawValue to it) },
+                        metadata = ExceptionMetadata(this),
+                    )
             }
 
         return Exception(

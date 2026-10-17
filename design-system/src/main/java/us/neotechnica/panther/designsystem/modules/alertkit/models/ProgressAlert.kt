@@ -340,7 +340,7 @@ class ProgressAlert(
 
     private suspend fun resolvedContent(translating: List<TranslationOptionKey>): PresentationContent =
         AlertKitConfig.presentWithTranslation(
-            shouldTranslate = translating.isNotEmpty() && AlertKitConfig.translationDelegate != null,
+            shouldTranslate = translating.isNotEmpty(),
             presentDirectly = { presentationContent },
             translate = { translate(translating) },
             presentTranslated = { it },

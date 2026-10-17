@@ -9,6 +9,8 @@
 package us.neotechnica.panther.subsystem.modules.foundation.services
 
 import android.os.Debug
+import us.neotechnica.panther.subsystem.AppSubsystem
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.systemLanguageCode
 import us.neotechnica.panther.subsystem.modules.foundation.models.CacheDomain
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -58,6 +60,16 @@ object CoreUtilities {
      */
     fun clearCaches(domains: List<CacheDomain>? = null) {
         (domains ?: CacheDomain.allCases).forEach { it.clear() }
+    }
+
+    /**
+     * Erases every file in the app's Application Support directory.
+     *
+     * @throws Exception if the operation fails.
+     */
+    fun eraseApplicationSupportDirectory() {
+        val directory = FileStore.applicationSupportDirectory ?: return
+        eraseDirectory(directory)
     }
 
     /**
@@ -111,7 +123,7 @@ object CoreUtilities {
      * language.
      */
     fun restoreDeviceLanguageCode() {
-        setLanguageCode(Locale.getDefault().language)
+        setLanguageCode(systemLanguageCode)
     }
 
     /**
@@ -136,12 +148,17 @@ object CoreUtilities {
     }
 
     /**
-     * Terminates the app after the given delay.
+     * Returns to the Home screen before terminating the app.
      *
-     * @param terminateAfter The delay before the process exits. The
-     *   default is one second.
+     * The app suspends immediately through the registered
+     * [ApplicationSuspensionDelegate][us.neotechnica.panther.subsystem.modules.foundation.interfaces.ApplicationSuspensionDelegate],
+     * then terminates after the specified duration.
+     *
+     * @param terminateAfter The delay between suspending and
+     *   terminating. The default is one second.
      */
     fun exitGracefully(terminateAfter: Duration = 1.seconds) {
+        AppSubsystem.delegates.applicationSuspension?.suspendToHome()
         Task.delayed(by = terminateAfter) { exitProcess(0) }
     }
 

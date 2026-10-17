@@ -9,6 +9,8 @@
 package us.neotechnica.panther
 
 import android.content.Context
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import us.neotechnica.panther.bundle.CacheDomainList
 import us.neotechnica.panther.bundle.ExceptionMetadataService
 import us.neotechnica.panther.bundle.LoggerDomainSubscription
@@ -38,7 +40,6 @@ import us.neotechnica.panther.modules.common.services.sources.AnalyticsService
 import us.neotechnica.panther.modules.common.services.sources.CommonPropertyLists
 import us.neotechnica.panther.modules.common.services.sources.DefaultAttributeDetectionServiceDelegate
 import us.neotechnica.panther.modules.common.services.sources.DocumentExportService
-import us.neotechnica.panther.modules.common.services.sources.ErrorReportingService
 import us.neotechnica.panther.modules.common.services.sources.InviteService
 import us.neotechnica.panther.modules.common.services.sources.LoggerPresentationService
 import us.neotechnica.panther.modules.common.services.sources.RegionDetailService
@@ -70,6 +71,7 @@ import us.neotechnica.panther.networking.modules.storage.interfaces.StorageDeleg
 import us.neotechnica.panther.subsystem.AppSubsystem
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.systemLanguageCode
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
@@ -85,8 +87,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import us.neotechnica.panther.subsystem.modules.localization.services.LocalizedStringResolver
 import us.neotechnica.panther.translator.Translator
 import java.util.Date
-import java.util.Locale
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * The app's bootstrap configuration and shared application
@@ -142,17 +144,6 @@ object Application {
     /** The moment the current launch began loading. */
     var loadStartDate: Date = Date()
 
-    private var appContext: Context? = null
-
-    // The two-letter language code of the device, falling back to
-    // "en" when unavailable.
-    private val systemLanguageCode: String
-        get() {
-            val languageCode = Locale.getDefault().language
-            if (languageCode.length < 2) return "en"
-            return languageCode.take(2)
-        }
-
     // MARK: - Initialization
 
     /**
@@ -169,7 +160,6 @@ object Application {
      *   context.
      */
     fun initialize(context: Context) {
-        appContext = context.applicationContext
         Font.usesSanFrancisco = USE_IOS_STYLING
         SFSymbol.usesSFSymbols = USE_IOS_STYLING
         SystemAnimation.usesAppleAnimations = USE_IOS_STYLING
@@ -225,7 +215,9 @@ object Application {
         }
 
         CoreUtilities.clearCaches()
-        eraseDirectories()
+        runCatching { CoreUtilities.eraseApplicationSupportDirectory() }
+        runCatching { CoreUtilities.eraseDocumentsDirectory() }
+        runCatching { CoreUtilities.eraseTemporaryDirectory() }
 
         Persistent.reset(
             preserving =
@@ -263,8 +255,9 @@ object Application {
     }
 
     /**
-     * Presents the splash page behind an activity indicator overlay,
-     * then terminates the app after a one-second delay.
+     * Hides the status bar, presents the splash page behind an
+     * activity indicator overlay, then returns to the Home screen and
+     * terminates the app after a one-second delay.
      *
      * Use [beginGracefulExit] to complete a flow that requires the app
      * to restart – such as clearing caches – after the user has been
@@ -272,11 +265,12 @@ object Application {
      * exit flows share this sequence.
      */
     fun beginGracefulExit() {
+        setStatusBarHidden()
         Overlay.addOverlay(activityIndicator = Overlay.OverlayActivityIndicatorConfiguration.largeWhite)
         DependencyValues.current.navigation.navigate(
             Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.Splash)),
         )
-        CoreUtilities.exitGracefully()
+        Task.delayed(by = GRACEFUL_EXIT_DELAY_SECONDS.seconds) { CoreUtilities.exitGracefully() }
     }
 
     // MARK: - Auxiliary
@@ -284,7 +278,6 @@ object Application {
     private fun initializeServices(context: Context) {
         analyticsService.initialize(context)
         LocalizedStringResolver.initialize(context)
-        RuntimeStorage.languageCodeDictionary = LocalizedStringResolver.languageDisplayNames()
         Persistent.initialize(context)
         FileStore.initialize(context)
         SoundPlayer.initialize(context)
@@ -310,7 +303,6 @@ object Application {
         AppSubsystem.delegates.registerForcedUpdateModalDelegate(UpdateService)
         AppSubsystem.delegates.registerLoggerDomainSubscriptionDelegate(LoggerDomainSubscription)
         AppSubsystem.delegates.registerPermanentPersistentStorageKeyDelegate(PermanentKeyDelegate)
-        AppSubsystem.delegates.registerErrorReportDelegate(ErrorReportingService)
         DevModeService.registerAppActionDelegate(AppActions)
         LocalTranslationArchiverDelegate.registerWithDependencies()
         Translator.config.registerLoggerDelegate(TranslationLogger)
@@ -323,6 +315,7 @@ object Application {
 
     private fun setUpSubsystem() {
         CoreUtilities.setLanguageCode(systemLanguageCode)
+        LocalizedStringResolver.initialize()
 
         Task.delayed(by = BUILD_INFO_OVERLAY_SETUP_DELAY_MILLISECONDS.milliseconds) {
             val hidesBuildInfoOverlay = Persistent.booleanOrNull(PersistentStorageKey.hidesBuildInfoOverlay)
@@ -336,11 +329,13 @@ object Application {
         }
     }
 
-    private fun eraseDirectories() {
-        val context = appContext ?: return
-        context.filesDir?.listFiles()?.forEach { it.deleteRecursively() }
-        context.noBackupFilesDir?.listFiles()?.forEach { it.deleteRecursively() }
-        context.cacheDir?.listFiles()?.forEach { it.deleteRecursively() }
+    private fun setStatusBarHidden() {
+        val activity = Translator.config.currentActivityProvider?.invoke() ?: return
+        activity.runOnUiThread {
+            WindowCompat
+                .getInsetsController(activity.window, activity.window.decorView)
+                .hide(WindowInsetsCompat.Type.statusBars())
+        }
     }
 
     // MARK: - Constants
@@ -349,6 +344,8 @@ object Application {
 
     @Suppress("VariableMaxLength")
     private const val BUILD_INFO_OVERLAY_SETUP_DELAY_MILLISECONDS = 50L
+
+    private const val GRACEFUL_EXIT_DELAY_SECONDS = 1
 
     internal const val CODE_NAME = "Panther"
     internal const val FINAL_NAME = "Hello"

@@ -10,6 +10,7 @@ package us.neotechnica.panther.subsystem.modules.foundation.extensions
 
 import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
+import java.security.MessageDigest
 import java.util.Locale
 import kotlin.math.ceil
 
@@ -77,6 +78,43 @@ val String.languageName: String?
 /** The string lowercased with whitespace and newlines removed. */
 val String.lowercasedTrimmingWhitespaceAndNewlines: String
     get() = lowercase().trim()
+
+// Derives a four-character code from the string: stop words
+// removed, letters only, lowercased, SHA-256, first two + last
+// two hex characters, uppercased.
+internal val String.errorCode: String
+    get() {
+        if (isEmpty()) return "0000"
+
+        val stopWords =
+            setOf(
+                "a",
+                "an",
+                "is",
+                "that",
+                "the",
+                "this",
+                "was",
+            )
+
+        val joinedWords =
+            split(" ")
+                .filter { it.lowercase() !in stopWords }
+                .joinToString("")
+
+        val lettersOnly =
+            joinedWords
+                .replace(Regex("[^A-Za-z]"), "")
+                .lowercase()
+
+        val digest = MessageDigest.getInstance("SHA-256")
+        val hexString =
+            digest
+                .digest(lettersOnly.toByteArray(Charsets.UTF_8))
+                .joinToString("") { "%02x".format(it) }
+
+        return (hexString.take(2) + hexString.takeLast(2)).uppercase()
+    }
 
 // MARK: - Auxiliary
 

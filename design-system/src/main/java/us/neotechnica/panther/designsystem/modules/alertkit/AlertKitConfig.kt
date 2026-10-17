@@ -14,6 +14,7 @@ import us.neotechnica.panther.designsystem.modules.alertkit.interfaces.ReportDel
 import us.neotechnica.panther.designsystem.modules.alertkit.interfaces.TranslationDelegate
 import us.neotechnica.panther.designsystem.modules.alertkit.models.HUDConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TranslationTimeoutConfig
+import us.neotechnica.panther.subsystem.AppSubsystem
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
@@ -22,6 +23,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStora
 import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.Translation
 import us.neotechnica.panther.translator.models.TranslationInput
+import us.neotechnica.panther.translator.services.TranslationService
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -127,23 +129,30 @@ object AlertKitConfig {
     /**
      * Registers the delegate that files error reports.
      *
+     * The delegate also becomes the subsystem's error report
+     * delegate, so the logger's automatic reports file through the
+     * same object as AlertKit's.
+     *
      * @param reportDelegate The delegate to register.
      */
     fun registerReportDelegate(reportDelegate: ReportDelegate) {
         this.reportDelegate = reportDelegate
+        AppSubsystem.delegates.registerErrorReportDelegate(reportDelegate)
     }
 
     // MARK: - Internal
 
+    // Translates through the registered delegate, or through the
+    // translation service when none is registered.
     internal suspend fun getTranslations(inputs: List<TranslationInput>): List<Translation> {
-        val delegate = translationDelegate ?: return emptyList()
+        val languagePair = LanguagePair(from = sourceLanguageCode, to = targetLanguageCode)
         return try {
-            delegate.getTranslations(
+            translationDelegate?.getTranslations(
                 inputs = inputs,
-                languagePair = LanguagePair(from = sourceLanguageCode, to = targetLanguageCode),
+                languagePair = languagePair,
                 hudConfig = translationHUDConfig,
                 timeoutConfig = translationTimeoutConfig,
-            )
+            ) ?: TranslationService.getTranslations(inputs, languagePair)
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (throwable: Throwable) {

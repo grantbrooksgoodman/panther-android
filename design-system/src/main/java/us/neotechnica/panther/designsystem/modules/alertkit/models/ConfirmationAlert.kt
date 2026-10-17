@@ -154,7 +154,7 @@ class ConfirmationAlert(
             ),
     ): Boolean =
         AlertKitConfig.presentWithTranslation(
-            shouldTranslate = translating.isNotEmpty() && AlertKitConfig.translationDelegate != null,
+            shouldTranslate = translating.isNotEmpty(),
             presentDirectly = { present() },
             translate = { translate(translating) },
             presentTranslated = { it.present(translating = emptyList()) },

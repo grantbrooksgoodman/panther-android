@@ -38,11 +38,20 @@ class CacheDomain(
         /** The cache domain for localized string lookups. */
         val localization = CacheDomain("localization") { LocalizedStringResolver.clearCache() }
 
+        /**
+         * The cache domain for the local translation archive, cleared
+         * through the registered
+         * [TranslationArchiverDelegate][us.neotechnica.panther.subsystem.modules.foundation.interfaces.TranslationArchiverDelegate].
+         */
+        val localTranslationArchive =
+            CacheDomain("localTranslationArchive") { AppSubsystem.delegates.translationArchiver?.clearArchive() }
+
         /** The subsystem's own built-in cache domains. */
         val subsystemCases: List<CacheDomain> =
             listOf(
                 encodedHash,
                 localization,
+                localTranslationArchive,
             )
 
         /** Every registered cache domain, combining app and subsystem domains. */

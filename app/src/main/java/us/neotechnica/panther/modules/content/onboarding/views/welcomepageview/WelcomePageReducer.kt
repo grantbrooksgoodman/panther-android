@@ -30,6 +30,7 @@ import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.effect.cancel
 import us.neotechnica.panther.subsystem.modules.effect.cancellable
 import us.neotechnica.panther.subsystem.modules.effect.merge
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.systemLanguageCode
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
@@ -38,7 +39,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStora
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
-import java.util.Locale
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -152,7 +152,7 @@ class WelcomePageReducer : Reducer<WelcomePageReducer.State, WelcomePageReducer.
                 val newState =
                     state.copy(
                         welcomeLabelText =
-                            LocalizedStringKey.WelcomeToHello.localized(languageCode = Locale.getDefault().language),
+                            LocalizedStringKey.WelcomeToHello.localized(languageCode = systemLanguageCode),
                     )
 
                 CoreUtilities.restoreDeviceLanguageCode()

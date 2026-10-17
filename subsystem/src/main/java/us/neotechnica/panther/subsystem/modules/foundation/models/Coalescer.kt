@@ -60,7 +60,10 @@ class Coalescer<Key : Any, Output>(
         /** Subsequent callers share the in-flight operation's result. */
         COALESCE,
 
-        /** The in-flight operation is cancelled and replaced by a new one. */
+        /**
+         * The in-flight operation is cancelled and replaced by a new
+         * one; every waiting caller receives the replacement's result.
+         */
         REPLACE,
 
         /**
@@ -74,9 +77,13 @@ class Coalescer<Key : Any, Output>(
         RERUN,
     }
 
+    // A lane's callers await `settlement`, which the lane's current
+    // task completes; replacing the task keeps the settlement, so the
+    // displaced task's callers receive the replacement's result.
     private class Lane<Output>(
         val id: UUID,
         val task: Deferred<Output>,
+        val settlement: CompletableDeferred<Output>,
         val rerun: CompletableDeferred<Output>?,
         val rerunOperation: (suspend () -> Output)?,
     )
@@ -106,7 +113,7 @@ class Coalescer<Key : Any, Output>(
     suspend operator fun invoke(
         key: Key,
         operation: suspend () -> Output,
-    ): Output = withContext(NonCancellable) { task(key, operation).await() }
+    ): Output = withContext(NonCancellable) { settlement(key, operation).await() }
 
     /**
      * Submits an operation for the given key, abandoning the wait if
@@ -127,11 +134,11 @@ class Coalescer<Key : Any, Output>(
     suspend fun submitUnlessCancelled(
         key: Key,
         operation: suspend () -> Output,
-    ): Output = task(key, operation).await()
+    ): Output = settlement(key, operation).await()
 
     // MARK: - Auxiliary
 
-    private suspend fun task(
+    private suspend fun settlement(
         key: Key,
         operation: suspend () -> Output,
     ): Deferred<Output> =
@@ -139,36 +146,38 @@ class Coalescer<Key : Any, Output>(
             lanes[key]?.let { lane ->
                 when (policy) {
                     Policy.COALESCE -> {
-                        Logger.log("Coalescing task with existing in-flight operation.", domain = LoggerDomain.concurrency)
-                        return@withLock lane.task
+                        log("Coalescing task with existing in-flight operation.", key, lane)
+                        return@withLock lane.settlement
                     }
 
                     Policy.REPLACE -> {
-                        Logger.log("Replacing existing in-flight operation.", domain = LoggerDomain.concurrency)
+                        log("Cancelling previous in-flight operation to prioritize last caller.", key, lane)
                         lane.task.cancel()
+                        return@withLock startTask(key, operation, lane.settlement)
                     }
 
                     Policy.RERUN -> {
-                        Logger.log("Scheduling rerun of in-flight operation.", domain = LoggerDomain.concurrency)
+                        log("Scheduling rerun of in-flight operation for last caller.", key, lane)
                         val pending = lane.rerun ?: CompletableDeferred()
-                        lanes[key] = Lane(lane.id, lane.task, pending, operation)
+                        lanes[key] = Lane(lane.id, lane.task, lane.settlement, pending, operation)
                         return@withLock pending
                     }
                 }
             }
 
-            startTask(key, operation)
+            startTask(key, operation, CompletableDeferred())
         }
 
     private fun startTask(
         key: Key,
         operation: suspend () -> Output,
+        settlement: CompletableDeferred<Output>,
     ): Deferred<Output> {
         val id = UUID.randomUUID()
         val task = scope.async { operation() }
-        lanes[key] = Lane(id, task, null, null)
+        lanes[key] = Lane(id, task, settlement, null, null)
         task.invokeOnCompletion { scope.launch { handleCompletion(key, id) } }
-        return task
+        return settlement
     }
 
     private suspend fun handleCompletion(
@@ -177,7 +186,16 @@ class Coalescer<Key : Any, Output>(
     ) {
         mutex.withLock {
             val lane = lanes[key] ?: return
+            // A replaced task no longer owns the lane; its settlement
+            // belongs to the replacement.
             if (lane.id != id) return
+
+            val cause = lane.task.getCompletionExceptionOrNull()
+            if (cause == null) {
+                lane.settlement.complete(lane.task.getCompleted())
+            } else {
+                lane.settlement.completeExceptionally(cause)
+            }
 
             val rerun = lane.rerun
             val rerunOperation = lane.rerunOperation
@@ -186,12 +204,28 @@ class Coalescer<Key : Any, Output>(
                 return
             }
 
-            val rerunTask = startTask(key, rerunOperation)
-            scope.launch {
-                runCatching { rerunTask.await() }
-                    .onSuccess { rerun.complete(it) }
-                    .onFailure { rerun.completeExceptionally(it) }
-            }
+            log("Rerunning operation for callers that arrived during the previous run.", key, lane)
+            startTask(key, rerunOperation, rerun)
         }
+    }
+
+    private fun log(
+        text: String,
+        key: Key,
+        lane: Lane<Output>,
+    ) {
+        Logger.log(
+            Exception(
+                text,
+                isReportable = false,
+                userInfo =
+                    mapOf(
+                        "Key" to key,
+                        "TaskID" to lane.id,
+                    ),
+                metadata = ExceptionMetadata(this),
+            ),
+            domain = LoggerDomain.concurrency,
+        )
     }
 }

@@ -96,7 +96,7 @@ fun ToastHost() {
         if (presented != null) view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
         val duration = ephemeralDuration ?: return@LaunchedEffect
         delay(duration)
-        ToastPresenter.hide()
+        ToastPresenter.dismiss()
     }
 
     val appearanceEdge =
@@ -128,13 +128,13 @@ fun ToastHost() {
             visible = presented != null,
         ) {
             presented?.let { current ->
-                val onDismiss = { ToastPresenter.hide() }
+                val onDismiss = { ToastPresenter.dismiss() }
                 val onTap =
                     current.onTap?.let { tap ->
                         {
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             tap()
-                            ToastPresenter.hide()
+                            ToastPresenter.dismiss()
                         }
                     }
 

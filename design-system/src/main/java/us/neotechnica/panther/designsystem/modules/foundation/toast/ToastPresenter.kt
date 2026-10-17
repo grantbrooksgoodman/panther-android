@@ -10,6 +10,7 @@ package us.neotechnica.panther.designsystem.modules.foundation.toast
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +18,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
-import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.BuildInfoOverlay
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
@@ -33,7 +33,7 @@ import kotlin.time.Duration.Companion.seconds
  * [ToastHost][us.neotechnica.panther.designsystem.modules.foundation.toast.ToastHost]
  * composable renders it. Only one toast is presented at a time;
  * presenting another toast defers it until the current one
- * dismisses and no modal display or overlay blocks interaction.
+ * dismisses and no modal display blocks interaction.
  */
 object ToastPresenter {
     // MARK: - Types
@@ -54,7 +54,27 @@ object ToastPresenter {
     /** The toast currently requested for presentation, or `null`. */
     val current: StateFlow<PresentedToast?> = mutableCurrent.asStateFlow()
 
+    private var hideJob: Job? = null
+
     // MARK: - Methods
+
+    /**
+     * Dismisses the current toast as the user or its duration would,
+     * then completes the dismissal one second later through [hide].
+     *
+     * The toast leaves the screen immediately and frees the slot for
+     * the next toast; the build-info overlay returns once the
+     * dismissal animation has finished.
+     */
+    fun dismiss() {
+        mutableCurrent.value = null
+        hideJob?.cancel()
+        hideJob =
+            scope.launch {
+                delay(POST_DISMISS_HIDE_DELAY)
+                if (mutableCurrent.value == null) hide()
+            }
+    }
 
     /**
      * Dismisses the current toast, if any, restoring the build-info
@@ -84,7 +104,7 @@ object ToastPresenter {
             return
         }
 
-        val isBlocked = HUD.isBlockingUserInteraction || Overlay.isVisible.value
+        val isBlocked = HUD.isBlockingUserInteraction
         if (isBlocked || mutableCurrent.value != null) {
             scope.launch {
                 delay(if (isBlocked) BLOCKED_RETRY_INTERVAL else SHOWING_RETRY_INTERVAL)
@@ -113,5 +133,6 @@ object ToastPresenter {
 
     private val BLOCKED_RETRY_INTERVAL = 100.milliseconds
     private val BUILD_INFO_OVERLAY_HIDE_DELAY = 500.milliseconds
+    private val POST_DISMISS_HIDE_DELAY = 1.seconds
     private val SHOWING_RETRY_INTERVAL = 1.seconds
 }

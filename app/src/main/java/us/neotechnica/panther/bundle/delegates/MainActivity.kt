@@ -37,7 +37,9 @@ import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.navigation.PendingChatNavigation
 import us.neotechnica.panther.navigation.RootView
 import us.neotechnica.panther.networking.modules.common.modifiers.IndicatesNetworkActivity
+import us.neotechnica.panther.subsystem.AppSubsystem
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.ApplicationSuspensionDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
@@ -79,6 +81,16 @@ class MainActivity : ComponentActivity() {
         // Registered before the content, every in-app Back handler takes
         // precedence over it.
         onBackPressedDispatcher.addCallback(this) { moveTaskToBack(true) }
+
+        // A graceful exit returns to the Home screen before the process
+        // terminates.
+        AppSubsystem.delegates.registerApplicationSuspensionDelegate(
+            object : ApplicationSuspensionDelegate {
+                override fun suspendToHome() {
+                    runOnUiThread { moveTaskToBack(true) }
+                }
+            },
+        )
 
         enableEdgeToEdge()
         setContent {

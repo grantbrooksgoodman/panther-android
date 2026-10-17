@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.designsystem.modules.alertkit.interfaces
 
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.ErrorReportDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 
 /**
@@ -17,8 +18,11 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
  * [AlertKitConfig.registerReportDelegate][us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig.registerReportDelegate]
  * to handle the "Send Error Report" action of an
  * [ErrorAlert][us.neotechnica.panther.designsystem.modules.alertkit.models.ErrorAlert].
+ * Registration also installs the delegate as the subsystem's
+ * [ErrorReportDelegate], so automatic reports, toast taps, error
+ * alerts, and the failure page all file through one object.
  */
-interface ReportDelegate {
+interface ReportDelegate : ErrorReportDelegate {
     // MARK: - Methods
 
     /**
@@ -26,5 +30,5 @@ interface ReportDelegate {
      *
      * @param exception The exception to report.
      */
-    fun fileReport(exception: Exception)
+    override fun fileReport(exception: Exception)
 }

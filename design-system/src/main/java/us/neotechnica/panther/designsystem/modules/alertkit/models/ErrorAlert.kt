@@ -127,7 +127,7 @@ class ErrorAlert(
             ),
     ): Unit =
         AlertKitConfig.presentWithTranslation(
-            shouldTranslate = translating.isNotEmpty() && AlertKitConfig.translationDelegate != null,
+            shouldTranslate = translating.isNotEmpty(),
             presentDirectly = { present() },
             translate = { translate(translating) },
             presentTranslated = { it.present(translating = emptyList()) },
@@ -158,6 +158,6 @@ class ErrorAlert(
             }
         }
 
-        return inputs.nonDefaultUnique.filter { it.value.isNotBlank() }
+        return inputs.nonDefaultUnique
     }
 }

@@ -17,8 +17,12 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
+import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.BuildInfoOverlay
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 
@@ -61,6 +65,35 @@ class ToastPresenterTest {
             ToastPresenter.hide()
             advanceTimeBy(1_100)
             assertEquals(second, ToastPresenter.current.value?.toast)
+        }
+
+    @Test
+    fun `dismissing a toast frees the slot at once and restores the overlay a second later`() =
+        runTest(dispatcher) {
+            Persistent.setBoolean(PersistentStorageKey.hidesBuildInfoOverlay, false)
+            BuildInfoOverlay.hide(persistSetting = false)
+
+            ToastPresenter.show(Toast(message = "Shown"), onTap = null)
+            ToastPresenter.dismiss()
+
+            assertEquals(null, ToastPresenter.current.value)
+            assertTrue(BuildInfoOverlay.isHidden.value)
+
+            advanceTimeBy(1_100)
+            assertFalse(BuildInfoOverlay.isHidden.value)
+            BuildInfoOverlay.hide()
+        }
+
+    @Test
+    fun `a visible overlay does not defer a toast`() =
+        runTest(dispatcher) {
+            Overlay.addOverlay()
+            val toast = Toast(message = "Over the overlay")
+
+            ToastPresenter.show(toast, onTap = null)
+
+            assertEquals(toast, ToastPresenter.current.value?.toast)
+            Overlay.removeOverlay(animated = false)
         }
 
     @Test

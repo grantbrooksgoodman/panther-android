@@ -9,10 +9,11 @@
 package us.neotechnica.panther.subsystem.modules.foundation.models
 
 import us.neotechnica.panther.subsystem.AppSubsystem
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.errorCode
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.staticIdentifier
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.localization.models.Localized
 import us.neotechnica.panther.subsystem.modules.localization.models.SubsystemStringKey
-import java.security.MessageDigest
 
 /**
  * A structured error type that captures a human-readable
@@ -36,7 +37,8 @@ import java.security.MessageDigest
  * of its descriptor. This produces a short, deterministic
  * identifier that remains stable across builds for any given
  * descriptor string. You can also supply a static code through
- * the `userInfo` map's `"StaticErrorCode"` key.
+ * the `userInfo` map's `"StaticErrorCode"` key; exceptions created
+ * with [from] derive theirs from the throwable's type.
  *
  * ## User-Facing Descriptors
  *
@@ -70,6 +72,8 @@ class Exception(
     ) {
         DESCRIPTOR("Descriptor"),
         ERROR_CODE("ErrorCode"),
+        NS_ERROR_CODE("NSErrorCode"),
+        NS_ERROR_DOMAIN("NSErrorDomain"),
         STATIC_ERROR_CODE("StaticErrorCode"),
         USER_FACING_DESCRIPTOR("UserFacingDescriptor"),
     }
@@ -80,9 +84,49 @@ class Exception(
         /**
          * Creates an exception from a Kotlin [Throwable].
          *
-         * The throwable's message becomes the descriptor, and its
-         * fully qualified type name becomes the static error code, so
-         * every instance of the same throwable type shares one [code].
+         * The throwable's message becomes the descriptor. The static
+         * error code is derived from a `[domain:code]` identifier –
+         * the throwable's fully qualified type name, plus the value
+         * under the `"NSErrorCode"` user-info key when the caller
+         * supplies one – hashed to four characters, so every instance
+         * of the same throwable type shares one [code]. The type name
+         * is recorded under the `"NSErrorDomain"` user-info key.
+         *
+         * @param throwable The throwable to wrap.
+         * @param isReportable Whether the exception can be reported,
+         *   or `null` to resolve automatically.
+         * @param userInfo Additional supplementary information to
+         *   merge.
+         * @param underlyingExceptions An optional list of exceptions
+         *   that caused this one.
+         * @param metadata The source-location metadata for this
+         *   exception.
+         *
+         * @return The wrapping exception.
+         */
+        fun from(
+            throwable: Throwable,
+            isReportable: Boolean? = null,
+            userInfo: Map<String, Any>? = null,
+            underlyingExceptions: List<Exception>? = null,
+            metadata: ExceptionMetadata,
+        ): Exception {
+            val concatenatedUserInfo = (userInfo ?: emptyMap()).toMutableMap()
+            concatenatedUserInfo[UserInfo.NS_ERROR_DOMAIN.rawValue] = throwable.javaClass.name
+            concatenatedUserInfo[UserInfo.STATIC_ERROR_CODE.rawValue] =
+                throwable.staticIdentifier(userInfo?.get(UserInfo.NS_ERROR_CODE.rawValue)).errorCode
+
+            return Exception(
+                throwable.message ?: throwable.javaClass.simpleName,
+                isReportable = isReportable,
+                userInfo = concatenatedUserInfo,
+                underlyingExceptions = underlyingExceptions,
+                metadata = metadata,
+            )
+        }
+
+        /**
+         * Creates an exception from a Kotlin [Throwable].
          *
          * @param throwable The throwable to wrap.
          * @param metadata The source-location metadata for this
@@ -93,15 +137,7 @@ class Exception(
         fun from(
             throwable: Throwable,
             metadata: ExceptionMetadata,
-        ): Exception =
-            Exception(
-                throwable.message ?: throwable.javaClass.simpleName,
-                userInfo =
-                    mapOf(
-                        UserInfo.STATIC_ERROR_CODE.rawValue to "[${throwable.javaClass.name}]",
-                    ),
-                metadata = metadata,
-            )
+        ): Exception = from(throwable, isReportable = null, metadata = metadata)
 
         /**
          * Returns a non-reportable exception indicating the operation
@@ -356,43 +392,6 @@ class Exception(
         return result
     }
 }
-
-// Derives a four-character code from the descriptor: stop words
-// removed, letters only, lowercased, SHA-256, first two + last
-// two hex characters, uppercased.
-private val String.errorCode: String
-    get() {
-        if (isEmpty()) return "0000"
-
-        val stopWords =
-            setOf(
-                "a",
-                "an",
-                "is",
-                "that",
-                "the",
-                "this",
-                "was",
-            )
-
-        val joinedWords =
-            split(" ")
-                .filter { it.lowercase() !in stopWords }
-                .joinToString("")
-
-        val lettersOnly =
-            joinedWords
-                .replace(Regex("[^A-Za-z]"), "")
-                .lowercase()
-
-        val digest = MessageDigest.getInstance("SHA-256")
-        val hexString =
-            digest
-                .digest(lettersOnly.toByteArray(Charsets.UTF_8))
-                .joinToString("") { "%02x".format(it) }
-
-        return (hexString.take(2) + hexString.takeLast(2)).uppercase()
-    }
 
 // Returns a copy of the map with each key's first character
 // uppercased.

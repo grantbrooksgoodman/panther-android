@@ -10,6 +10,7 @@ package us.neotechnica.panther.subsystem.kernel
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.compiledException
@@ -29,9 +30,47 @@ class ExceptionTest {
     fun `from derives a static code from the throwable type`() {
         val first = Exception.from(IllegalStateException("first message"), ExceptionMetadata(this))
         val second = Exception.from(IllegalStateException("second message"), ExceptionMetadata(this))
+        val other = Exception.from(IllegalArgumentException("first message"), ExceptionMetadata(this))
 
-        assertEquals("[java.lang.IllegalStateException]", first.code)
+        assertTrue(first.code, first.code.matches(Regex("[0-9A-F]{4}")))
         assertEquals(first.code, second.code)
+        assertNotEquals(first.code, other.code)
+        assertEquals(first.code, first.userInfo?.get("StaticErrorCode"))
+        assertEquals("java.lang.IllegalStateException", first.userInfo?.get("NSErrorDomain"))
+        assertEquals("first message", first.descriptor)
+    }
+
+    @Test
+    fun `from carries a supplied error code in the identifier and user info`() {
+        val withCode =
+            Exception.from(
+                IllegalStateException("object not found"),
+                userInfo = mapOf("NSErrorCode" to -13010),
+                metadata = ExceptionMetadata(this),
+            )
+        val withoutCode = Exception.from(IllegalStateException("object not found"), ExceptionMetadata(this))
+
+        assertTrue(withCode.code, withCode.code.matches(Regex("[0-9A-F]{4}")))
+        assertEquals(-13010, withCode.userInfo?.get("NSErrorCode"))
+        assertEquals("java.lang.IllegalStateException", withCode.userInfo?.get("NSErrorDomain"))
+        // The identifier's digits do not contribute to the hash, so a
+        // numeric code shares its type's code.
+        assertEquals(withoutCode.code, withCode.code)
+    }
+
+    @Test
+    fun `the labelled from honours reportability and underlying exceptions`() {
+        val underlying = Exception("Underlying.", metadata = ExceptionMetadata(this))
+        val exception =
+            Exception.from(
+                IllegalStateException("outer"),
+                isReportable = false,
+                underlyingExceptions = listOf(underlying),
+                metadata = ExceptionMetadata(this),
+            )
+
+        assertFalse(exception.isReportable)
+        assertEquals(listOf(underlying), exception.underlyingExceptions)
     }
 
     @Test

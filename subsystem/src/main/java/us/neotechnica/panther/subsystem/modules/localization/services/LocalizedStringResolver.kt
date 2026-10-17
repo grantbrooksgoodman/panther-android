@@ -10,6 +10,11 @@ package us.neotechnica.panther.subsystem.modules.localization.services
 
 import android.content.Context
 import org.json.JSONObject
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
+import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.localization.interfaces.LocalizedStringKeyRepresentable
 import us.neotechnica.panther.subsystem.modules.localization.models.LocalizationSource
@@ -50,7 +55,12 @@ object LocalizedStringResolver {
     val languageCode: String
         get() = RuntimeStorage.languageCode
 
+    internal val supportedLanguageCodes: Set<String>
+        get() = languageDisplayNames().keys - UNSUPPORTED_LANGUAGE_CODES
+
     private val tables = ConcurrentHashMap<LocalizationSource, Map<String, Map<String, String>>>()
+
+    private val UNSUPPORTED_LANGUAGE_CODES = setOf("ba", "ceb", "jv", "la", "mr", "ms", "udm")
 
     @Volatile
     private var appContext: Context? = null
@@ -67,6 +77,40 @@ object LocalizedStringResolver {
      */
     fun initialize(context: Context) {
         appContext = context.applicationContext
+    }
+
+    /**
+     * Stores the supported languages and validates the active
+     * language code.
+     *
+     * Reads the subsystem table's `language_codes` entry, omitting the
+     * languages the app does not support, and stores the result in
+     * [RuntimeStorage.languageCodeDictionary]. When the active
+     * language code is not among them, the active language reverts to
+     * English and the event is logged.
+     *
+     * Call this method once at launch, after [initialize] and after
+     * the active language code has been set.
+     */
+    fun initialize() {
+        val supportedLanguages =
+            languageDisplayNames().filterKeys { it !in UNSUPPORTED_LANGUAGE_CODES }
+        RuntimeStorage.languageCodeDictionary = supportedLanguages
+
+        if (RuntimeStorage.languageCodeDictionary?.get(RuntimeStorage.languageCode) == null ||
+            supportedLanguages.isEmpty()
+        ) {
+            Logger.log(
+                Exception(
+                    "Unsupported language code; reverting to English.",
+                    userInfo = mapOf("LanguageCode" to RuntimeStorage.languageCode),
+                    metadata = ExceptionMetadata(this),
+                ),
+                domain = LoggerDomain.localization,
+            )
+
+            CoreUtilities.setLanguageCode(FALLBACK_LANGUAGE_CODE)
+        }
     }
 
     /**

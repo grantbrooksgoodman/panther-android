@@ -175,9 +175,16 @@ class Auth : AuthDelegate {
     // failures (invalid input, expired session) as non-reportable.
     private fun wrap(throwable: Throwable): Exception {
         (throwable as? Exception)?.let { return it }
-        val exception = Exception.from(throwable, ExceptionMetadata(this))
-        val errorCode = (throwable as? FirebaseAuthException)?.errorCode ?: return exception
-        return exception.appending(userInfo = mapOf(FIREBASE_AUTH_ERROR_CODE_KEY to errorCode))
+        val errorCode = (throwable as? FirebaseAuthException)?.errorCode ?: return Exception.from(throwable, ExceptionMetadata(this))
+        return Exception.from(
+            throwable,
+            userInfo =
+                mapOf(
+                    Exception.UserInfo.NS_ERROR_CODE.rawValue to errorCode,
+                    FIREBASE_AUTH_ERROR_CODE_KEY to errorCode,
+                ),
+            metadata = ExceptionMetadata(this),
+        )
     }
 
     private companion object {
