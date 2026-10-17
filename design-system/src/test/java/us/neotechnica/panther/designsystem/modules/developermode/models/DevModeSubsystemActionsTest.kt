@@ -67,9 +67,22 @@ class DevModeSubsystemActionsTest {
         }
 
     @Test
+    fun `the override sheet offers the two choices and an explicit cancel`() =
+        runTest(dispatcher) {
+            DevModeSubsystemActions.available
+                .first { it.title == "Override Language Code" }
+                .perform()
+            advanceUntilIdle()
+
+            val sheet = AlertPresenter.current.value as PresentedAlert.ActionSheet
+            assertEquals(listOf("Specify Language Code", "Set to Random Language Code"), sheet.actions.map { it.title })
+            assertEquals("Cancel", sheet.cancelButtonTitle)
+        }
+
+    @Test
     fun `the subsystem actions keep their order`() {
         assertEquals(
-            listOf("Erase Content & Settings", "Toggle Build Info Overlay", "Override Language Code"),
+            listOf("Erase Content & Settings", "Toggle Build Info Overlay", "Override Language Code", "View Logger Session Record"),
             DevModeSubsystemActions.available.map { it.title.replace(Regex("^(Show|Hide) "), "Toggle ").replace(Regex("^(Override|Restore) "), "Override ") },
         )
     }

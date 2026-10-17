@@ -14,12 +14,14 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 import us.neotechnica.panther.designsystem.modules.alertkit.services.AlertPresenter
+import us.neotechnica.panther.designsystem.modules.foundation.extensions.dismissSheets
 import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheets
 import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardService
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.designsystem.modules.foundation.views.root.RootWindowStatus
 import us.neotechnica.panther.subsystem.AppSubsystem
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
 import us.neotechnica.panther.subsystem.modules.effect.merge
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -29,6 +31,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
+import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 import us.neotechnica.panther.translator.Translator
 import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.Translation
@@ -155,6 +158,11 @@ internal class ForcedUpdateModalPageReducer : Reducer<ForcedUpdateModalPageReduc
         RootWindowStatus.setRootOverlayWindowAlpha(0f)
         AlertPresenter.dismiss()
         RootSheets.dismiss()
+        DependencyValues
+            .current
+            .sharedEvents
+            .dismissSheets
+            .send(Unit)
         KeyboardService.resignFirstResponders()
     }
 

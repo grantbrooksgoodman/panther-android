@@ -25,6 +25,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
+import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
+import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AlertPresenterTest {
@@ -35,11 +37,13 @@ class AlertPresenterTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
+        Persistent.initializeForTesting()
         AlertPresenter.dismiss()
     }
 
     @After
     fun tearDown() {
+        Overlay.removeOverlay(animated = false)
         AlertPresenter.dismiss()
         Dispatchers.resetMain()
     }
@@ -142,6 +146,36 @@ class AlertPresenterTest {
 
             AlertPresenter.dismiss()
             assertFalse(AlertPresenter.isPresenting)
+        }
+
+    @Test
+    fun `a modal overlay defers presentation until it is removed`() =
+        runTest(dispatcher) {
+            val alert = standardAlert("Deferred")
+            Overlay.addOverlay()
+
+            AlertPresenter.present(alert)
+            advanceTimeBy(1_000)
+            assertNull(AlertPresenter.current.value)
+
+            Overlay.removeOverlay(animated = false)
+            advanceTimeBy(200)
+            assertEquals(alert, AlertPresenter.current.value)
+        }
+
+    @Test
+    fun `a modal overlay dismisses the presented alert`() =
+        runTest(dispatcher) {
+            var displaced = false
+            AlertPresenter.present(standardAlert("Presented"), onDisplaced = { displaced = true })
+            runCurrent()
+
+            Overlay.addOverlay()
+            assertNull(AlertPresenter.current.value)
+            assertTrue(displaced)
+
+            Overlay.removeOverlay(animated = false)
+            advanceTimeBy(200)
         }
 
     // MARK: - Auxiliary

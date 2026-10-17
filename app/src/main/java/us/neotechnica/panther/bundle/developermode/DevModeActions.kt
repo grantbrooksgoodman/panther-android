@@ -73,12 +73,13 @@ object AppActions : DevModeAppActionDelegate {
                     val currentUser = userSession.currentUser
                     val actions = mutableListOf(DangerZone.resetPushTokensAction)
 
-                    if (currentUser?.previousLanguageCodes?.isNotEmpty() == true) {
+                    val hasPreviousLanguageCodes = currentUser?.previousLanguageCodes?.isNotEmpty() == true
+                    if (hasPreviousLanguageCodes) {
                         actions.add(0, DangerZone.clearPreviousLanguageCodesAction)
                     }
 
                     if (currentUser?.conversations != null) {
-                        actions.add(minOf(1, actions.size), DangerZone.deleteConversationsAction)
+                        actions.add(if (hasPreviousLanguageCodes) 1 else 0, DangerZone.deleteConversationsAction)
                     }
 
                     ActionSheet(

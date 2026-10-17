@@ -17,12 +17,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import us.neotechnica.panther.designsystem.modules.alertkit.services.AlertPresenter
-import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardService
-import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
+import us.neotechnica.panther.designsystem.modules.foundation.services.UserInteractionBlocker
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * The single source of truth for the heads-up display currently
@@ -84,7 +81,6 @@ object HUDPresenter {
     private val mutablePresentation = MutableStateFlow<Presentation?>(null)
     private val blockingUserInteraction = LockIsolated(false)
 
-    private var blockingJob: Job? = null
     private var pendingJob: Job? = null
 
     // MARK: - Computed Properties
@@ -104,13 +100,13 @@ object HUDPresenter {
      *
      * The host's exit animation fades the display out at once; [after]
      * delays the final teardown of any pending show, never the start of
-     * the dismissal.
+     * the dismissal. Interaction stays blocked while a modal overlay
+     * is visible.
      */
     fun hide(after: Duration = Duration.ZERO) {
         pendingJob?.cancel()
-        blockingJob?.cancel()
-        blockingJob = null
         blockingUserInteraction.wrappedValue = false
+        UserInteractionBlocker.unblockUserInteraction()
         // Clear the presentation now so the host begins its fade-out
         // immediately rather than keeping the display fully visible for
         // the delay.
@@ -162,27 +158,9 @@ object HUDPresenter {
         presentation: Presentation,
         isModal: Boolean,
     ) {
-        blockingUserInteraction.wrappedValue = isModal
         mutablePresentation.value = presentation
-        if (isModal) startBlockingInteractiveContent()
-    }
-
-    // While a modal display blocks interaction, repeatedly dismisses
-    // interactive content – the toast, any presented alert, and the
-    // keyboard – so nothing competes with the display. Root sheets
-    // stay presented.
-    private fun startBlockingInteractiveContent() {
-        if (blockingJob?.isActive == true) return
-        blockingJob =
-            scope.launch {
-                while (blockingUserInteraction.wrappedValue) {
-                    Toast.hide()
-                    AlertPresenter.dismiss()
-                    KeyboardService.resignFirstResponders()
-                    delay(BLOCKING_INTERVAL_MILLISECONDS.milliseconds)
-                }
-            }
+        if (!isModal) return
+        blockingUserInteraction.wrappedValue = true
+        UserInteractionBlocker.blockUserInteraction(dismissSheets = false)
     }
 }
-
-private const val BLOCKING_INTERVAL_MILLISECONDS = 100L

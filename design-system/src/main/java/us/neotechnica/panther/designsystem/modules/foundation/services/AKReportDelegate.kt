@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ErrorAlert
+import us.neotechnica.panther.designsystem.modules.foundation.extensions.leafViewDescriptor
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestampDateFormatter
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -25,6 +26,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.localization.models.Localized
 import us.neotechnica.panther.subsystem.modules.localization.models.SubsystemStringKey
+import us.neotechnica.panther.subsystem.modules.shared.models.SharedState
 import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.TranslationInput
 import java.util.Date
@@ -261,6 +263,8 @@ object ReportDelegate : AlertKitReportDelegate {
                 "project_id" to Build.projectID,
                 "timestamp" to DependencyValues.current.timestampDateFormatter.format(Date()),
             )
+
+        SharedState { it.leafViewDescriptor }.wrappedValue?.let { sections["view_id"] = it }
 
         if (exception != null) {
             val descriptor = exception.userInfo?.get(Exception.UserInfo.DESCRIPTOR.rawValue) as? String

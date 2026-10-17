@@ -126,6 +126,36 @@ class DevModeActionsTest {
         }
 
     @Test
+    fun `the Danger Zone puts the conversation deletion first without a language history`() =
+        runTest(dispatcher) {
+            val conversation = SessionTestEnvironment.conversation("c2", listOf("me", "b"))
+            SessionStore.upsertConversation(conversation)
+            environment.signIn(
+                User(
+                    id = "me",
+                    aiEnhancedTranslationsEnabled = false,
+                    blockedUserIDs = null,
+                    conversationIDs = listOf(conversation.id),
+                    deviceID = "device",
+                    isPenPalsParticipant = false,
+                    languageCode = "en",
+                    messageRecipientConsentRequired = false,
+                    phoneNumber = PhoneNumber("5550000001"),
+                    previousLanguageCodes = null,
+                    pushTokens = null,
+                ),
+            )
+
+            AppActions.appActions.last().perform()
+            advanceUntilIdle()
+
+            assertEquals(
+                listOf("Delete Conversations", "Reset Push Tokens"),
+                presentedSheet().actions.map { it.title },
+            )
+        }
+
+    @Test
     fun `the Danger Zone adds the language history clear first and the conversation deletion second`() =
         runTest(dispatcher) {
             val conversation = SessionTestEnvironment.conversation("c1", listOf("me", "a"))

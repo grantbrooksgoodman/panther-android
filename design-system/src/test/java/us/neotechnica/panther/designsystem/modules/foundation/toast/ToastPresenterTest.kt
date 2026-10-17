@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.designsystem.modules.foundation.toast
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -25,6 +26,7 @@ import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.BuildInfoOverlay
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
+import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ToastPresenterTest {
@@ -44,7 +46,9 @@ class ToastPresenterTest {
 
     @After
     fun tearDown() {
+        Overlay.removeOverlay(animated = false)
         ToastPresenter.hide()
+        Task.resetScope()
         Dispatchers.resetMain()
     }
 
@@ -85,15 +89,46 @@ class ToastPresenterTest {
         }
 
     @Test
-    fun `a visible overlay does not defer a toast`() =
+    fun `a non-modal overlay does not defer a toast`() =
         runTest(dispatcher) {
-            Overlay.addOverlay()
+            Overlay.addOverlay(isModal = false)
             val toast = Toast(message = "Over the overlay")
 
             ToastPresenter.show(toast, onTap = null)
 
             assertEquals(toast, ToastPresenter.current.value?.toast)
             Overlay.removeOverlay(animated = false)
+        }
+
+    @Test
+    fun `a modal overlay defers a toast until it is removed`() =
+        runTest(dispatcher) {
+            Overlay.addOverlay()
+            val toast = Toast(message = "Behind the overlay")
+
+            ToastPresenter.show(toast, onTap = null)
+            advanceTimeBy(500)
+            assertEquals(null, ToastPresenter.current.value)
+
+            Overlay.removeOverlay(animated = false)
+            advanceTimeBy(200)
+            assertEquals(toast, ToastPresenter.current.value?.toast)
+        }
+
+    @Test
+    fun `an animated removal unblocks after the fade`() =
+        runTest(dispatcher) {
+            Task.setScope(CoroutineScope(dispatcher))
+            Overlay.addOverlay()
+            val toast = Toast(message = "After the fade")
+
+            ToastPresenter.show(toast, onTap = null)
+            Overlay.removeOverlay()
+            advanceTimeBy(150)
+            assertEquals(null, ToastPresenter.current.value)
+
+            advanceTimeBy(200)
+            assertEquals(toast, ToastPresenter.current.value?.toast)
         }
 
     @Test

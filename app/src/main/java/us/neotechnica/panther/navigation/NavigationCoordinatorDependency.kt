@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.navigation
 
+import us.neotechnica.panther.designsystem.modules.foundation.extensions.leafViewDescriptor
 import us.neotechnica.panther.designsystem.modules.foundation.extensions.presentedViewsCount
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.interfaces.DependencyKey
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
@@ -21,14 +22,18 @@ import us.neotechnica.panther.subsystem.modules.shared.models.SharedState
  * coordinator.
  *
  * The coordinator starts on the splash modal and publishes the
- * number of presented views to the shared state on every change.
+ * number of presented views and the leaf view descriptor to the
+ * shared state on every change.
  */
 private object NavigationCoordinatorDependency : DependencyKey<Navigation> {
     override fun resolve(dependencies: DependencyValues): Navigation =
         NavigationCoordinator(
             RootNavigatorState(modal = RootNavigatorState.ModalPaths.Splash),
             navigating = RootNavigationService,
-        ) { SharedState { it.presentedViewsCount }.wrappedValue = it.presentedViewsCount }
+        ) {
+            SharedState { state -> state.leafViewDescriptor }.wrappedValue = it.descriptor
+            SharedState { state -> state.presentedViewsCount }.wrappedValue = it.presentedViewsCount
+        }
 }
 
 /** The app's navigation coordinator. */

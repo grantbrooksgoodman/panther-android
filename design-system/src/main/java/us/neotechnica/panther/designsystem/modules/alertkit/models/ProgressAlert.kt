@@ -6,18 +6,22 @@
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
+@file:Suppress("FileLength")
+
 package us.neotechnica.panther.designsystem.modules.alertkit.models
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.firstOutput
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.nonDefaultUnique
@@ -137,8 +141,7 @@ class ProgressAlert(
             return
         }
 
-        presentedAlert = null
-        onCancelHandler = null
+        cleanUp()
         scope.launch {
             AlertPresenter.current.first { it === presented }
             AlertPresenter.dismiss()
@@ -249,6 +252,13 @@ class ProgressAlert(
      * If the alert includes a cancel button, tapping it cancels the
      * collection and this method throws a `CancellationException`.
      *
+     * If the alert is dismissed out of band once presented – for
+     * example, by a modal display – the observed operation continues
+     * and this method returns when it completes. If the alert is
+     * never presented – because it was dismissed or withdrawn while
+     * still queued – the operation never starts and this method
+     * throws a `CancellationException`.
+     *
      * This method translates the alert's content before presentation
      * according to the specified keys. Each key identifies a part of
      * the alert to translate. To skip translation, pass an empty
@@ -260,7 +270,8 @@ class ProgressAlert(
      *   default includes all translatable content.
      *
      * @throws Throwable The error produced by the flow, or
-     *   `CancellationException` if the user cancels.
+     *   `CancellationException` if the user cancels or the alert is
+     *   never presented.
      */
     suspend fun present(
         observing: Flow<Double>,
@@ -271,35 +282,61 @@ class ProgressAlert(
                 TranslationOptionKey.Title,
             ),
     ) {
-        presentWith(resolvedContent(translating))
-        val presented = presentedAlert ?: return
-        AlertPresenter.current.first { it === presented }
+        val content = resolvedContent(translating)
+        val result: Result<Unit> =
+            suspendCancellableCoroutine { continuation ->
+                val guard =
+                    ContinuationGuard(
+                        continuation,
+                        fallbackValue = Result.failure(CancellationException()),
+                    )
 
-        var failure: Throwable? = null
-        coroutineScope {
-            val task =
-                launch {
-                    try {
-                        observing.collect { updateProgress(it) }
-                    } catch (throwable: Throwable) {
-                        failure = throwable
+                var didAppear = false
+                val alert =
+                    presentWith(
+                        content,
+                        onCancelTap = { guard.resume(Result.failure(CancellationException())) },
+                        onDisplaced = {
+                            if (didAppear) return@presentWith
+                            observationTask?.cancel()
+                            observationTask = null
+                            guard.resume(Result.failure(CancellationException()))
+                        },
+                    )
+
+                observationTask =
+                    scope.launch {
+                        AlertPresenter.current.first { it === alert }
+                        didAppear = presentedAlert === alert
+                        if (!didAppear) {
+                            guard.resume(Result.failure(CancellationException()))
+                            return@launch
+                        }
+
+                        try {
+                            observing.collect {
+                                ensureActive()
+                                updateProgress(it)
+                            }
+
+                            ensureActive()
+                            updateProgress(1.0)
+                            dismiss()
+                            guard.resume(Result.success(Unit))
+                        } catch (throwable: Throwable) {
+                            dismiss()
+                            guard.resume(Result.failure(throwable))
+                        }
                     }
-                }
 
-            observationTask = task
-            task.join()
-        }
+                continuation.invokeOnCancellation {
+                    observationTask?.cancel()
+                    AlertPresenter.withdraw(alert)
+                }
+            }
 
         observationTask = null
-        val collected = failure
-        if (collected == null) {
-            updateProgress(1.0)
-            dismiss()
-            return
-        }
-
-        dismiss()
-        throw collected
+        result.getOrThrow()
     }
 
     /** Advances the progress bar to [fractionCompleted], clamped to `0.0...1.0`. */
@@ -309,13 +346,23 @@ class ProgressAlert(
 
     // MARK: - Auxiliary
 
+    private fun cleanUp() {
+        presentedAlert = null
+        onCancelHandler = null
+    }
+
     private fun handleCancelActionTap() {
         observationTask?.cancel()
+        observationTask = null
         onCancelHandler?.invoke()
         dismiss()
     }
 
-    private fun presentWith(content: PresentationContent) {
+    private fun presentWith(
+        content: PresentationContent,
+        onCancelTap: (() -> Unit)? = null,
+        onDisplaced: (() -> Unit)? = null,
+    ): PresentedAlert.Progress {
         val alert =
             PresentedAlert.Progress(
                 title = content.title,
@@ -325,17 +372,32 @@ class ProgressAlert(
                 progress = progress.asStateFlow(),
                 messageAttributes = messageAttributes,
                 titleAttributes = titleAttributes,
-                onCancel = if (content.cancelButtonTitle == null) null else ({ handleCancelActionTap() }),
+                onCancel =
+                    if (content.cancelButtonTitle == null) {
+                        null
+                    } else {
+                        {
+                            handleCancelActionTap()
+                            onCancelTap?.invoke()
+                        }
+                    },
             )
 
         hasPresented = true
         presentedAlert = alert
-        AlertPresenter.present(alert)
+        AlertPresenter.present(alert) {
+            // Only an alert this instance still owns is displaced;
+            // a dismissal it requested itself is not.
+            if (presentedAlert === alert) cleanUp()
+            onDisplaced?.invoke()
+        }
 
         if (dismissesWhenPresented) {
             dismissesWhenPresented = false
             dismiss()
         }
+
+        return alert
     }
 
     private suspend fun resolvedContent(translating: List<TranslationOptionKey>): PresentationContent =

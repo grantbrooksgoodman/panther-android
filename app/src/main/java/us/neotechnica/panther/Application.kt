@@ -11,6 +11,10 @@ package us.neotechnica.panther
 import android.content.Context
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.CacheDomainList
 import us.neotechnica.panther.bundle.ExceptionMetadataService
 import us.neotechnica.panther.bundle.LoggerDomainSubscription
@@ -27,6 +31,7 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.HUDConfig
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.SFSymbol
 import us.neotechnica.panther.designsystem.modules.developermode.services.DevModeService
+import us.neotechnica.panther.designsystem.modules.foundation.extensions.dismissSheets
 import us.neotechnica.panther.designsystem.modules.foundation.extensions.registerBuildInfoOverlayDotIndicatorColorDelegate
 import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
@@ -85,6 +90,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import us.neotechnica.panther.subsystem.modules.localization.services.LocalizedStringResolver
+import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 import us.neotechnica.panther.translator.Translator
 import java.util.Date
 import kotlin.time.Duration.Companion.milliseconds
@@ -144,6 +150,8 @@ object Application {
     /** The moment the current launch began loading. */
     var loadStartDate: Date = Date()
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
     // MARK: - Initialization
 
     /**
@@ -168,6 +176,7 @@ object Application {
         registerDelegates()
         configureBuild(context)
         setUpSubsystem()
+        observeSharedEvents()
 
         Logger.log("Application launched.")
 
@@ -326,6 +335,15 @@ object Application {
             } else {
                 BuildInfoOverlay.show()
             }
+        }
+    }
+
+    // Fulfills app-wide sheet-dismissal requests sent through the
+    // `dismissSheets` shared event.
+    private fun observeSharedEvents() {
+        scope.launch {
+            DependencyValues.current.sharedEvents.dismissSheets.events
+                .collect { dismissSheets() }
         }
     }
 

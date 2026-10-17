@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
+import us.neotechnica.panther.designsystem.modules.foundation.services.UserInteractionBlocker
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.BuildInfoOverlay
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
@@ -104,7 +104,7 @@ object ToastPresenter {
             return
         }
 
-        val isBlocked = HUD.isBlockingUserInteraction
+        val isBlocked = UserInteractionBlocker.isBlockingUserInteraction
         if (isBlocked || mutableCurrent.value != null) {
             scope.launch {
                 delay(if (isBlocked) BLOCKED_RETRY_INTERVAL else SHOWING_RETRY_INTERVAL)

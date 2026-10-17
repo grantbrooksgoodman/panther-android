@@ -24,6 +24,7 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.AttributedStr
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ContinuationGuard
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextFieldAttributes
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
+import us.neotechnica.panther.designsystem.modules.foundation.services.UserInteractionBlocker
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -318,7 +319,7 @@ object AlertPresenter {
         queueJob =
             scope.launch {
                 while (pendingPresentations.isNotEmpty()) {
-                    if (HUD.isBlockingUserInteraction || mutableCurrent.value != null) {
+                    if (UserInteractionBlocker.isBlockingUserInteraction || mutableCurrent.value != null) {
                         delay(RETRY_INTERVAL_MILLISECONDS.milliseconds)
                         continue
                     }

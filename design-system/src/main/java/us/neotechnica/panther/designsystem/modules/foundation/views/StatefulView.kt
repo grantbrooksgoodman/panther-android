@@ -44,6 +44,8 @@ import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.foundation.constants.ForcedUpdateModalPageViewFloats
 import us.neotechnica.panther.designsystem.modules.foundation.models.ConnectionAlert
 import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
+import us.neotechnica.panther.designsystem.modules.foundation.views.failurepageview.FailurePageReducer
+import us.neotechnica.panther.designsystem.modules.foundation.views.failurepageview.FailurePageView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.subsystem.AppSubsystem
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -51,6 +53,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.localization.models.Localized
 import us.neotechnica.panther.subsystem.modules.localization.models.SubsystemStringKey
+import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -86,8 +89,18 @@ fun StatefulView(
         transitionSpec = { fadeIn(stateTransitionAnimationSpec()) togetherWith fadeOut(stateTransitionAnimationSpec()) },
     ) { target ->
         when (target) {
-            is ViewState.Error -> FailurePage(target.exception, exceptionRetryHandler)
+            is ViewState.Error ->
+                FailurePageView(
+                    remember(target.exception) {
+                        ViewModel(
+                            FailurePageReducer.State(target.exception, retryHandler = exceptionRetryHandler),
+                            FailurePageReducer(),
+                        )
+                    },
+                )
+
             ViewState.Loaded -> content()
+
             ViewState.Loading -> ProgressPage()
         }
     }
@@ -121,66 +134,9 @@ private fun ProgressPage() {
     }
 }
 
-// MARK: - Failure Page
-
-@Composable
-private fun FailurePage(
-    exception: Exception,
-    exceptionRetryHandler: (() -> Unit)?,
-) {
-    val colors = LocalPantherColors.current
-    val showReportButton = exception.isReportable && !Logger.reportsErrorsAutomatically
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(colors.background)
-                .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
-    ) {
-        Components.Symbol(
-            systemName = "exclamationmark.octagon.fill",
-            foregroundColor = FAILURE_GLYPH_COLOR,
-            modifier = Modifier.size(FAILURE_GLYPH_SIZE.dp),
-        )
-
-        Text(
-            exception.userFacingDescriptor,
-            color = colors.titleText,
-            fontSize = FAILURE_DESCRIPTOR_SIZE.sp,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
-        )
-
-        exceptionRetryHandler?.let {
-            TextButton(onClick = it) {
-                Text(Localized(SubsystemStringKey.TRY_AGAIN).wrappedValue, color = colors.accent)
-            }
-        }
-
-        if (showReportButton) {
-            val scope = rememberCoroutineScope()
-            TextButton(
-                onClick = {
-                    scope.launch {
-                        if (!Build.isOnline) return@launch ConnectionAlert.present()
-                        AppSubsystem.delegates.errorReport?.fileReport(exception)
-                    }
-                },
-            ) {
-                Text(Localized(SubsystemStringKey.REPORT_BUG).wrappedValue, color = colors.accent)
-            }
-        }
-    }
-}
-
 // The ease-in with which the view fades between states.
 private fun stateTransitionAnimationSpec(): FiniteAnimationSpec<Float> =
     SystemAnimation.easeIn(ForcedUpdateModalPageViewFloats.TRANSITION_ANIMATION_DURATION.toDouble().seconds)
 
-private const val FAILURE_GLYPH_SIZE = 120
-private const val FAILURE_DESCRIPTOR_SIZE = 22.5f
-private val FAILURE_GLYPH_COLOR = Color(0xFFFF3B30)
 private const val PROGRESS_SPINNER_DELAY_MILLIS = 500L
 private const val PROGRESS_SPINNER_FADE_MILLIS = 200

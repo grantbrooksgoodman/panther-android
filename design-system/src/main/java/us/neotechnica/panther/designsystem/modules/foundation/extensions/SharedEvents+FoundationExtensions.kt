@@ -11,6 +11,10 @@ package us.neotechnica.panther.designsystem.modules.foundation.extensions
 import us.neotechnica.panther.subsystem.modules.shared.models.EventStream
 import us.neotechnica.panther.subsystem.modules.shared.models.SharedEvents
 
+/** An event that requests dismissal of every presented sheet. */
+val SharedEvents.dismissSheets: EventStream<Unit>
+    get() = event("dismissSheets")
+
 /** An event that requests dismissal of the keyboard, resigning any active first responder. */
 val SharedEvents.resignFirstResponders: EventStream<Unit>
     get() = event("resignFirstResponders")

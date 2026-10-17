@@ -12,14 +12,23 @@ import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import us.neotechnica.panther.designsystem.modules.foundation.services.UserInteractionBlocker
+import us.neotechnica.panther.designsystem.modules.foundation.views.root.RootWindowStatus
+import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
+import us.neotechnica.panther.subsystem.modules.foundation.services.Task
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * A global, dimming activity overlay.
  *
  * Toggle it from anywhere with [addOverlay] and [removeOverlay]; the
  * [OverlayHost][us.neotechnica.panther.designsystem.modules.foundation.overlay.OverlayHost]
- * composable renders it over the current screen and, while a modal
- * overlay is visible, blocks input to the underlying UI.
+ * composable renders it over the current screen. While a modal
+ * overlay is visible, input to the underlying UI is blocked, the
+ * build-info overlay is hidden, and interactive content – the
+ * toast, any presented alert or sheet, and the keyboard – is
+ * dismissed; alerts and toasts requested meanwhile wait until the
+ * overlay is removed.
  */
 object Overlay {
     // MARK: - Types
@@ -39,6 +48,7 @@ object Overlay {
 
     // MARK: - Properties
 
+    private val blockingUserInteraction = LockIsolated(false)
     private val mutableActivityIndicator = MutableStateFlow<OverlayActivityIndicatorConfiguration?>(null)
     private val mutableAlpha = MutableStateFlow(DEFAULT_ALPHA)
     private val mutableAnimatesRemoval = MutableStateFlow(true)
@@ -66,6 +76,9 @@ object Overlay {
     /** Whether the overlay is currently shown. */
     val isVisible: StateFlow<Boolean> = mutableIsVisible.asStateFlow()
 
+    internal val isBlockingUserInteraction: Boolean
+        get() = blockingUserInteraction.wrappedValue
+
     // MARK: - Methods
 
     /**
@@ -85,6 +98,12 @@ object Overlay {
         backgroundColor: Color = Color.Black,
         isModal: Boolean = true,
     ) {
+        if (isModal) {
+            blockingUserInteraction.wrappedValue = true
+            UserInteractionBlocker.blockUserInteraction()
+            RootWindowStatus.setRootOverlayWindowAlpha(0f)
+        }
+
         mutableActivityIndicator.value = activityIndicator
         mutableAlpha.value = alpha
         mutableAnimatesRemoval.value = true
@@ -96,15 +115,30 @@ object Overlay {
     /**
      * Hides the overlay.
      *
+     * Input to the underlying UI and the build-info overlay return
+     * once the overlay has gone – immediately, or after the fade.
+     *
      * @param animated Whether the overlay fades out over 0.2
      *   seconds. Pass `false` to remove it immediately.
      */
     fun removeOverlay(animated: Boolean = true) {
         mutableAnimatesRemoval.value = animated
         mutableIsVisible.value = false
+
+        if (!animated) return removeViews()
+        Task.delayed(by = FADE_DURATION) { removeViews() }
+    }
+
+    // MARK: - Auxiliary
+
+    private fun removeViews() {
+        blockingUserInteraction.wrappedValue = false
+        UserInteractionBlocker.unblockUserInteraction()
+        RootWindowStatus.setRootOverlayWindowAlpha(1f)
     }
 
     // MARK: - Companion
 
     private const val DEFAULT_ALPHA = 1f
+    private val FADE_DURATION = 200.milliseconds
 }

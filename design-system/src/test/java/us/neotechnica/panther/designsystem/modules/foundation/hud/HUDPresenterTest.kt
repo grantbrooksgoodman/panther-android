@@ -19,11 +19,16 @@ import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.services.AlertPresenter
 import us.neotechnica.panther.designsystem.modules.alertkit.services.PresentedAlert
+import us.neotechnica.panther.designsystem.modules.foundation.overlay.Overlay
+import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheet
+import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheets
+import us.neotechnica.panther.designsystem.modules.foundation.services.UserInteractionBlocker
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -44,7 +49,9 @@ class HUDPresenterTest {
     @After
     fun tearDown() {
         HUDPresenter.hide()
+        Overlay.removeOverlay(animated = false)
         AlertPresenter.dismiss()
+        RootSheets.dismiss()
         Dispatchers.resetMain()
     }
 
@@ -76,6 +83,35 @@ class HUDPresenterTest {
             assertNull(AlertPresenter.current.value)
 
             HUDPresenter.hide()
+            advanceTimeBy(300)
+        }
+
+    @Test
+    fun `a modal progress display keeps root sheets presented`() =
+        runTest(dispatcher) {
+            RootSheets.present(RootSheet {})
+            HUDPresenter.showProgress(text = null, after = null, isModal = true)
+            advanceTimeBy(350)
+
+            assertNotNull(RootSheets.sheet.value)
+
+            HUDPresenter.hide()
+            advanceTimeBy(300)
+        }
+
+    @Test
+    fun `hiding under a modal overlay keeps interaction blocked`() =
+        runTest(dispatcher) {
+            Overlay.addOverlay()
+            HUDPresenter.showProgress(text = null, after = null, isModal = true)
+            assertTrue(UserInteractionBlocker.isBlockingUserInteraction)
+
+            HUDPresenter.hide()
+            assertFalse(HUDPresenter.isBlockingUserInteraction)
+            assertTrue(UserInteractionBlocker.isBlockingUserInteraction)
+
+            Overlay.removeOverlay(animated = false)
+            assertFalse(UserInteractionBlocker.isBlockingUserInteraction)
             advanceTimeBy(300)
         }
 }

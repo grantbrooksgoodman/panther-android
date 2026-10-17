@@ -8,11 +8,11 @@
 
 package us.neotechnica.panther.designsystem.modules.developermode.models
 
+import android.content.Intent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
@@ -20,10 +20,11 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.Alert
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextFieldAttributes
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAlert
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
+import us.neotechnica.panther.designsystem.modules.foundation.services.MailComposer
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.languageName
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.lowercasedTrimmingWhitespaceAndNewlines
-import us.neotechnica.panther.subsystem.modules.foundation.extensions.systemLanguageCode
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.StoredItemKey
 import us.neotechnica.panther.subsystem.modules.foundation.models.overriddenLanguageCode
 import us.neotechnica.panther.subsystem.modules.foundation.services.BuildInfoOverlay
@@ -31,6 +32,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilitie
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
+import us.neotechnica.panther.translator.Translator
 import java.util.Locale
 
 /**
@@ -51,6 +53,7 @@ object DevModeSubsystemActions {
                 eraseContentAndSettingsAction,
                 toggleBuildInfoOverlayAction,
                 overrideLanguageCodeAction,
+                viewLoggerSessionRecordAction,
             )
 
     private val eraseContentAndSettingsAction: DevModeAction
@@ -121,6 +124,19 @@ object DevModeSubsystemActions {
             }
         }
 
+    private val viewLoggerSessionRecordAction: DevModeAction
+        get() =
+            DevModeAction(title = "View Logger Session Record") {
+                try {
+                    viewLoggerSessionRecord()
+                } catch (throwable: Throwable) {
+                    Logger.log(
+                        throwable as? Exception ?: Exception.from(throwable, ExceptionMetadata(this)),
+                        with = Logger.AlertType.toast,
+                    )
+                }
+            }
+
     // MARK: - Auxiliary
 
     // Runs a directory erasure, surfacing a failure as a toast.
@@ -161,7 +177,12 @@ object DevModeSubsystemActions {
 
         ActionSheet(
             title = "Override Language Code",
-            actions = listOf(specifyLanguageCodeAction, setToRandomLanguageCodeAction),
+            actions =
+                listOf(
+                    specifyLanguageCodeAction,
+                    setToRandomLanguageCodeAction,
+                    Action("Cancel", style = ActionStyle.CANCEL) {},
+                ),
         ).present(translating = emptyList())
     }
 
@@ -197,15 +218,34 @@ object DevModeSubsystemActions {
         HUD.showSuccess()
     }
 
+    // Opens the current launch's session record in a text viewer.
+    private fun viewLoggerSessionRecord() {
+        val activity =
+            Translator.config.currentActivityProvider?.invoke()
+                ?: throw Exception("No current activity.", metadata = ExceptionMetadata(this))
+        val file =
+            Logger.sessionRecordFilePath?.takeIf { it.exists() }
+                ?: throw Exception("The session record file does not exist.", metadata = ExceptionMetadata(this))
+        val uri =
+            MailComposer.attachmentURI(
+                activity,
+                MailComposer.AttachmentData(file.readBytes(), file.name, SESSION_RECORD_MIME_TYPE),
+            ) ?: throw Exception("Failed to share the session record file.", metadata = ExceptionMetadata(this))
+
+        activity.startActivity(
+            Intent(Intent.ACTION_VIEW)
+                .setDataAndType(uri, SESSION_RECORD_MIME_TYPE)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+        )
+    }
+
     private fun setLanguageCode(languageCode: String) {
-        AlertKitConfig.overrideTargetLanguageCode(languageCode)
         CoreUtilities.setLanguageCode(languageCode, override = true)
     }
 
     private fun restoreLanguageCode(showSuccess: Boolean) {
         RuntimeStorage.remove(StoredItemKey.overriddenLanguageCode)
         CoreUtilities.restoreDeviceLanguageCode()
-        AlertKitConfig.overrideTargetLanguageCode(systemLanguageCode)
         if (showSuccess) HUD.showSuccess()
     }
 
@@ -214,3 +254,5 @@ object DevModeSubsystemActions {
     private val String.englishLanguageName: String?
         get() = Locale(this).getDisplayLanguage(Locale.ENGLISH).takeIf { it.isNotBlank() && it != this }
 }
+
+private const val SESSION_RECORD_MIME_TYPE = "text/plain"

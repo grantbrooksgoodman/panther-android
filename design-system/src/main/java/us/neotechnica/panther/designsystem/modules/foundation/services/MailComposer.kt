@@ -39,6 +39,20 @@ internal object MailComposer {
 
     // MARK: - Methods
 
+    fun attachmentURI(
+        context: Context,
+        attachment: AttachmentData,
+    ): Uri? =
+        runCatching {
+            val directory = File(context.cacheDir, ATTACHMENTS_DIRECTORY_NAME).apply { mkdirs() }
+            val file = File(directory, attachment.fileName).apply { writeBytes(attachment.data) }
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}$FILE_PROVIDER_AUTHORITY_SUFFIX",
+                file,
+            )
+        }.getOrNull()
+
     fun compose(
         subject: String,
         body: Pair<String, Boolean>?,
@@ -101,20 +115,6 @@ internal object MailComposer {
                 0,
             ).map { it.activityInfo.packageName }
             .distinct()
-
-    private fun attachmentURI(
-        context: Context,
-        attachment: AttachmentData,
-    ): Uri? =
-        runCatching {
-            val directory = File(context.cacheDir, ATTACHMENTS_DIRECTORY_NAME).apply { mkdirs() }
-            val file = File(directory, attachment.fileName).apply { writeBytes(attachment.data) }
-            FileProvider.getUriForFile(
-                context,
-                "${context.packageName}$FILE_PROVIDER_AUTHORITY_SUFFIX",
-                file,
-            )
-        }.getOrNull()
 }
 
 private const val ATTACHMENTS_DIRECTORY_NAME = "reports"

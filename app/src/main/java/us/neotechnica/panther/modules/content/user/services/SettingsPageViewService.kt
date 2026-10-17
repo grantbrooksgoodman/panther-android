@@ -31,7 +31,6 @@ import us.neotechnica.panther.bundle.navigators.OnboardingRoute
 import us.neotechnica.panther.bundle.navigators.SettingsNavigatorState
 import us.neotechnica.panther.bundle.navigators.SettingsRoute
 import us.neotechnica.panther.bundle.navigators.UserContentRoute
-import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.Action
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionSheet
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ActionStyle
@@ -551,14 +550,12 @@ class SettingsPageViewService(
             val currentUser = dependencies.currentUser() ?: return
             val languageName = currentUser.languageCode.languageExonym ?: currentUser.languageCode.uppercase()
 
-            AlertKitConfig.overrideTargetLanguageCode(currentUser.languageCode)
             RuntimeStorage.remove(StoredItemKey.overriddenLanguageCode)
             HUD.showSuccess(text = "Set to $languageName")
             dependencies.dismissSheets()
             return
         }
 
-        AlertKitConfig.overrideTargetLanguageCode("en")
         RuntimeStorage.store("en", StoredItemKey.overriddenLanguageCode)
         HUD.showSuccess(text = "Set to English")
         dependencies.dismissSheets()
