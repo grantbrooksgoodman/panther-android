@@ -33,13 +33,14 @@ import us.neotechnica.panther.designsystem.modules.theming.views.PantherTheme
 import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.common.services.sources.AnalyticsService
 import us.neotechnica.panther.modules.common.services.sources.NotificationService
-import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
+import us.neotechnica.panther.modules.content.user.dependencies.uiCacheInvalidationService
 import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.navigation.PendingChatNavigation
 import us.neotechnica.panther.navigation.RootView
 import us.neotechnica.panther.networking.modules.common.modifiers.IndicatesNetworkActivity
 import us.neotechnica.panther.subsystem.AppSubsystem
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.ApplicationSuspensionDelegate
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
@@ -130,7 +131,7 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         if (isFinishing) {
             ClientSession.store.flushNow()
-            UICacheInvalidationService.refreshNotificationExtensionNameMap()
+            DependencyValues.current.uiCacheInvalidationService.refreshNotificationExtensionNameMap()
             analyticsService.logEvent(AnalyticsService.AnalyticsEvent.TERMINATE_APP)
         }
     }

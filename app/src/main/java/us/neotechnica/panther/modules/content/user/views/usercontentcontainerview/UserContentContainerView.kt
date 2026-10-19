@@ -32,6 +32,7 @@ import us.neotechnica.panther.modules.content.user.views.chatpageview.ChatPageVi
 import us.neotechnica.panther.modules.content.user.views.conversationspageview.ConversationsPageReducer
 import us.neotechnica.panther.modules.content.user.views.conversationspageview.ConversationsPageView
 import us.neotechnica.panther.modules.content.user.views.conversationspageview.buildConversationsPageViewModel
+import us.neotechnica.panther.modules.content.user.views.conversationspageview.isCoveredByPush
 import us.neotechnica.panther.modules.content.user.views.newchatpageview.NewChatPageView
 import us.neotechnica.panther.modules.content.user.views.settingspageview.SettingsPageView
 import us.neotechnica.panther.navigation.RootNavigationService.Route
@@ -74,15 +75,17 @@ fun UserContentContainerView(modifier: Modifier = Modifier) {
         onDispose { conversationsViewModel.close() }
     }
 
-    // The conversations list is always composed; map its coverage by a pushed
-    // page to an appear/disappear lifecycle so returning to the root
-    // refreshes it.
-    LaunchedEffect(topPath == null) {
+    // The conversations list is always composed; map its coverage by a
+    // pushed chat to an appear/disappear lifecycle so returning from a
+    // chat refreshes it. Settings and New Chat are sheets on iOS, which
+    // leave the list's lifecycle alone.
+    val isCoveredByChat = isCoveredByPush(topPath)
+    LaunchedEffect(isCoveredByChat) {
         conversationsViewModel.send(
-            if (topPath == null) {
-                ConversationsPageReducer.Action.ViewAppeared
-            } else {
+            if (isCoveredByChat) {
                 ConversationsPageReducer.Action.ViewDisappeared
+            } else {
+                ConversationsPageReducer.Action.ViewAppeared
             },
         )
     }

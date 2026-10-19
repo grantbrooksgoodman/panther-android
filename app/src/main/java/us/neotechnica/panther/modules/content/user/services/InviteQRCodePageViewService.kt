@@ -20,8 +20,13 @@ import us.neotechnica.panther.modules.common.services.sources.MetadataService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 
-/** The service that generates the invite QR code page's content. */
-object InviteQRCodePageViewService {
+/**
+ * The service that generates the invite QR code page's content.
+ *
+ * Resolve the service through
+ * [DependencyValues.inviteQRCodePageViewService][us.neotechnica.panther.modules.content.user.dependencies.inviteQRCodePageViewService].
+ */
+class InviteQRCodePageViewService {
     // MARK: - Dependencies
 
     private val metadataService: MetadataService by Dependency { it.commonServices.metadata }
@@ -74,5 +79,7 @@ object InviteQRCodePageViewService {
 
     // MARK: - Companion
 
-    private const val OUTPUT_SIZE = 500
+    private companion object {
+        const val OUTPUT_SIZE = 500
+    }
 }

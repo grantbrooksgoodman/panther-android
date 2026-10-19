@@ -20,6 +20,7 @@ import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.common.services.sources.AnalyticsService
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewFloats
 import us.neotechnica.panther.modules.content.user.constants.ConversationCellViewStrings
+import us.neotechnica.panther.modules.content.user.dependencies.conversationCellViewService
 import us.neotechnica.panther.modules.content.user.extensions.empty
 import us.neotechnica.panther.modules.content.user.extensions.isEmpty
 import us.neotechnica.panther.modules.content.user.extensions.isRelevant
@@ -71,6 +72,7 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
     // MARK: - Dependencies
 
     private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
+    private val conversationCellViewService: ConversationCellViewService by Dependency { it.conversationCellViewService }
     private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
 
     // MARK: - Properties
@@ -372,7 +374,7 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
                 }
 
             Action.UserInfoBadgeTapped -> {
-                state.cellViewData.otherUser?.let { ConversationCellViewService.presentUserInfoAlert(it) }
+                state.cellViewData.otherUser?.let { conversationCellViewService.presentUserInfoAlert(it) }
                 ReduceResult(state)
             }
         }
@@ -409,7 +411,7 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
     private fun blockUsersEffect(conversation: Conversation): Effect<Action> =
         Effect.fireAndForget {
             try {
-                ConversationCellViewService.blockUsersButtonTapped(conversation)
+                conversationCellViewService.blockUsersButtonTapped(conversation)
             } catch (exception: Exception) {
                 Logger.log(exception)
             }
@@ -418,7 +420,7 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
     private fun reportUsersEffect(conversation: Conversation): Effect<Action> =
         Effect.fireAndForget {
             try {
-                ConversationCellViewService.reportUsersButtonTapped(conversation)
+                conversationCellViewService.reportUsersButtonTapped(conversation)
             } catch (exception: Exception) {
                 Logger.log(exception)
             }
@@ -426,7 +428,7 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
 
     private fun deleteConversationButtonEffect(title: String): Effect<Action> =
         Effect.run { send ->
-            val cancelled = ConversationCellViewService.presentDeletionActionSheet(title)
+            val cancelled = conversationCellViewService.presentDeletionActionSheet(title)
             send(Action.DeletionActionSheetDismissed(cancelled))
         }
 

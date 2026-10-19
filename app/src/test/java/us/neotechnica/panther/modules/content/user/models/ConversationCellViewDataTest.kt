@@ -32,6 +32,7 @@ import us.neotechnica.panther.modules.networking.sources.support.SessionTestEnvi
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.formattedShortString
 import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
+import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.localization.services.LocalizedStringResolver
@@ -211,10 +212,21 @@ class ConversationCellViewDataTest {
         assertEquals("Yesterday", yesterday.formattedShortString)
 
         val threeDaysAgo = Date(System.currentTimeMillis() - 3 * DAY_MILLISECONDS)
-        assertEquals(SimpleDateFormat("EEEE", Locale.US).format(threeDaysAgo), threeDaysAgo.formattedShortString)
+        val languageLocale = Locale.forLanguageTag(RuntimeStorage.languageCode)
+        assertEquals(SimpleDateFormat("EEEE", languageLocale).format(threeDaysAgo), threeDaysAgo.formattedShortString)
 
         val tenDaysAgo = Date(System.currentTimeMillis() - 10 * DAY_MILLISECONDS)
         assertEquals(DateFormat.getDateInstance(DateFormat.SHORT, Locale.US).format(tenDaysAgo), tenDaysAgo.formattedShortString)
+    }
+
+    @Test
+    fun `the weekday follows the app language on a non-English device`() {
+        val threeDaysAgo = Date(System.currentTimeMillis() - 3 * DAY_MILLISECONDS)
+
+        Locale.setDefault(Locale.GERMANY)
+        assertEquals(SimpleDateFormat("EEEE", Locale.ENGLISH).format(threeDaysAgo), threeDaysAgo.formattedShortString)
+        val tenDaysAgo = Date(System.currentTimeMillis() - 10 * DAY_MILLISECONDS)
+        assertEquals(DateFormat.getDateInstance(DateFormat.SHORT, Locale.GERMANY).format(tenDaysAgo), tenDaysAgo.formattedShortString)
     }
 
     // MARK: - Auxiliary

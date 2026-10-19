@@ -25,13 +25,13 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.content.user.constants.ContactPairCellViewFloats
+import us.neotechnica.panther.modules.content.user.dependencies.conversationCellViewService
 import us.neotechnica.panther.modules.content.user.extensions.containsBlockedUser
 import us.neotechnica.panther.modules.content.user.extensions.containsCurrentUser
 import us.neotechnica.panther.modules.content.user.extensions.isSelected
 import us.neotechnica.panther.modules.content.user.extensions.userIDs
 import us.neotechnica.panther.modules.content.user.extensions.users
 import us.neotechnica.panther.modules.content.user.services.ChatPageStateService
-import us.neotechnica.panther.modules.content.user.services.ConversationCellViewService
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
@@ -108,7 +108,7 @@ fun ContactPairCellView(
         contactPair.users.firstOrNull()?.let { user ->
             UserInfoBadgeView(
                 user = user,
-                action = if (Build.isDeveloperModeEnabled) ({ ConversationCellViewService.presentUserInfoAlert(user) }) else null,
+                action = if (Build.isDeveloperModeEnabled) ({ DependencyValues.current.conversationCellViewService.presentUserInfoAlert(user) }) else null,
             )
         }
     }

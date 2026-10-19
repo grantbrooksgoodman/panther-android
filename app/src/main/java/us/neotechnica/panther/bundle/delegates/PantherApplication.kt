@@ -26,8 +26,8 @@ import us.neotechnica.panther.modules.common.services.sources.AnalyticsService
 import us.neotechnica.panther.modules.common.services.sources.ConnectionStatusService
 import us.neotechnica.panther.modules.common.services.sources.NotificationService
 import us.neotechnica.panther.modules.common.services.sources.PushTokenService
+import us.neotechnica.panther.modules.content.user.dependencies.uiCacheInvalidationService
 import us.neotechnica.panther.modules.content.user.models.ConnectionStatusServiceEffectID
-import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
 import us.neotechnica.panther.modules.networking.sources.common.dependencies.firebaseMessaging
 import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.modules.session.state.services.retryAllEligible
@@ -92,7 +92,7 @@ class PantherApplication : Application() {
 
                 override fun onStop(owner: LifecycleOwner) {
                     ClientSession.store.flushNow()
-                    UICacheInvalidationService.refreshNotificationExtensionNameMap()
+                    DependencyValues.current.uiCacheInvalidationService.refreshNotificationExtensionNameMap()
                     outboxScope.launch {
                         val currentUser = ClientSession.entity.user.currentUser ?: return@launch
                         try {

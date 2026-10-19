@@ -21,6 +21,7 @@ import us.neotechnica.panther.bundle.conversation
 import us.neotechnica.panther.bundle.currentConversationMetadataChanged
 import us.neotechnica.panther.bundle.developermode.DangerZone
 import us.neotechnica.panther.bundle.mismatchedHashAndCallingCode
+import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
 import us.neotechnica.panther.bundle.notAuthorizedForContacts
 import us.neotechnica.panther.bundle.reloadingConversationIDKeys
 import us.neotechnica.panther.bundle.traitCollectionChanged
@@ -37,7 +38,9 @@ import us.neotechnica.panther.modules.content.user.extensions.hasContactsBesides
 import us.neotechnica.panther.modules.content.user.extensions.markStaleLocally
 import us.neotechnica.panther.modules.content.user.models.ChatPageStateServiceEffectID
 import us.neotechnica.panther.modules.content.user.models.ConnectionStatusServiceEffectID
+import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.content.user.models.MessageDeliveryServiceEffectID
+import us.neotechnica.panther.modules.content.user.services.chatpageview.ChatPageViewService
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.ReadReceiptService
 import us.neotechnica.panther.modules.networking.sources.common.extensions.allDataTypes
 import us.neotechnica.panther.modules.networking.sources.common.extensions.clearTemporaryCaches
@@ -50,6 +53,7 @@ import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
@@ -144,6 +148,10 @@ class ConversationsPageViewService(
             DependencyValues.current.commonServices.contact.hasContactsBesidesCurrentUser
         },
         val isChatPagePresented: () -> Boolean = { ChatPageStateService.isPresented },
+        val isNewChatPagePresented: () -> Boolean = {
+            DependencyValues.current.navigation.state.value.userContent.stack
+                .lastOrNull() == UserContentNavigatorState.SeguePaths.NewChat
+        },
         val isSendingMessage: () -> Boolean = { MessageDeliveryService.isSendingMessage.value },
         val lastContactSyncDate: () -> Date? = { DependencyValues.current.commonServices.contact.contactPairArchive.lastContactSyncDate },
         val notificationPermissionStatus: () -> PermissionService.PermissionStatus = {
@@ -469,6 +477,12 @@ class ConversationsPageViewService(
         }
 
         if (!matchesCurrentConversation(currentConversation.id.key)) return
+        // The chat title follows the conversation, except while the
+        // recipient bar names the new chat.
+        if (!dependencies.isNewChatPagePresented()) {
+            ConversationCellViewData(currentConversation)?.titleLabelText?.let { ChatPageViewService.setNavigationTitle(it) }
+        }
+
         val sharedEvents = DependencyValues.current.sharedEvents
         sharedEvents.currentConversationMetadataChanged.send(Unit)
     }

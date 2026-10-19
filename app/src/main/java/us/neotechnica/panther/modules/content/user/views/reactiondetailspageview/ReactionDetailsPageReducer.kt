@@ -19,6 +19,7 @@ import us.neotechnica.panther.modules.content.user.extensions.uniquedByID
 import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.capitalized
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
@@ -114,7 +115,7 @@ class ReactionDetailsPageReducer : Reducer<ReactionDetailsPageReducer.State, Rea
             get() {
                 val localizedString = LocalizedStringKey.ReactionDetails.localized().replace("…", "")
                 if (RuntimeStorage.languageCode != "en") return localizedString
-                return localizedString.split(" ").joinToString(" ") { word -> word.replaceFirstChar { it.uppercaseChar() } }
+                return localizedString.capitalized
             }
     }
 

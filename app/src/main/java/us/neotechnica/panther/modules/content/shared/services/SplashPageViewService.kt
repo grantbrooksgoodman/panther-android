@@ -40,10 +40,10 @@ import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.common.services.sources.AlertKitTranslationService
 import us.neotechnica.panther.modules.common.services.sources.ErrorReportingService
 import us.neotechnica.panther.modules.common.services.sources.contacts.ContactService
+import us.neotechnica.panther.modules.content.user.dependencies.uiCacheInvalidationService
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.syncIfNeeded
 import us.neotechnica.panther.modules.content.user.extensions.updateDeviceIDIfNeeded
-import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
 import us.neotechnica.panther.modules.networking.sources.common.extensions.populateTemporaryCaches
 import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.session.ClientSession
@@ -235,7 +235,7 @@ object SplashPageViewService {
 
         // Store Observation Setup
 
-        UICacheInvalidationService.startObserving()
+        DependencyValues.current.uiCacheInvalidationService.startObserving()
 
         // Offline User Setup
 

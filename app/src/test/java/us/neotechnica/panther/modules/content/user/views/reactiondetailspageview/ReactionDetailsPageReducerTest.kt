@@ -28,6 +28,7 @@ import us.neotechnica.panther.modules.networking.sources.support.MessageDecodeEn
 import us.neotechnica.panther.modules.networking.sources.support.SessionTestEnvironment
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.capitalized
 import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
 import us.neotechnica.panther.subsystem.modules.localization.models.LocalizationSource
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
@@ -124,9 +125,14 @@ class ReactionDetailsPageReducerTest {
             LocalizedStringKey.ReactionDetails
                 .localized()
                 .replace("…", "")
-                .split(" ")
-                .joinToString(" ") { word -> word.replaceFirstChar { it.uppercaseChar() } }
+                .capitalized
         assertEquals(expected, ReactionDetailsPageReducer.State().navigationTitle)
+    }
+
+    @Test
+    fun `capitalizing lowers interior capitals and keeps the separators`() {
+        assertEquals("Reaction Details", "rEACTION dETAILS".capitalized)
+        assertEquals("Reaction  Details", "reaction  DETAILS".capitalized)
     }
 
     // MARK: - Reduce

@@ -15,6 +15,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import us.neotechnica.panther.bundle.conversationsSearchQuery
+import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
 import us.neotechnica.panther.modules.content.user.constants.ConversationsPageViewFloats
 import us.neotechnica.panther.modules.networking.sources.support.MessageDecodeEnvironment
 import us.neotechnica.panther.navigation.RootNavigationService.Route
@@ -116,5 +117,13 @@ class ConversationsPageReducerTest {
 
         val second = reducer.reduce(first, ConversationsPageReducer.Action.ViewAppeared).state
         assertNotEquals(first.conversationsChangeToken, second.conversationsChangeToken)
+    }
+
+    @Test
+    fun `only a pushed chat covers the list for its lifecycle`() {
+        assertTrue(isCoveredByPush(UserContentNavigatorState.SeguePaths.Chat("c1")))
+        assertFalse(isCoveredByPush(UserContentNavigatorState.SeguePaths.Settings))
+        assertFalse(isCoveredByPush(UserContentNavigatorState.SeguePaths.NewChat))
+        assertFalse(isCoveredByPush(null))
     }
 }

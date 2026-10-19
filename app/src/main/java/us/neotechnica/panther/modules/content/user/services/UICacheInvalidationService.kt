@@ -47,8 +47,11 @@ import kotlin.time.Duration.Companion.milliseconds
  * read by the notification delivery path – consistent with the session
  * store. Changes are handled after a short delay; rapid successive
  * changes coalesce into a single invalidation.
+ *
+ * Resolve the service through
+ * [DependencyValues.uiCacheInvalidationService][us.neotechnica.panther.modules.content.user.dependencies.uiCacheInvalidationService].
  */
-object UICacheInvalidationService {
+class UICacheInvalidationService {
     // MARK: - Dependencies
 
     private val sessionStore: SessionStore by Dependency { it.clientSession.store }
@@ -157,8 +160,12 @@ object UICacheInvalidationService {
         )
     }
 
-    private const val GROUP_PARTICIPANT_THRESHOLD = 2
-    private val INVALIDATION_DELAY = 250.milliseconds
-    private val NAME_MAP_DELAY = 500.milliseconds
-    private const val SENDER = "UICacheInvalidationService"
+    // MARK: - Companion
+
+    private companion object {
+        const val GROUP_PARTICIPANT_THRESHOLD = 2
+        val INVALIDATION_DELAY = 250.milliseconds
+        val NAME_MAP_DELAY = 500.milliseconds
+        const val SENDER = "UICacheInvalidationService"
+    }
 }

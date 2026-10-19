@@ -22,13 +22,13 @@ import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewFloats
 import us.neotechnica.panther.modules.content.user.dependencies.chatInfoPageViewService
+import us.neotechnica.panther.modules.content.user.dependencies.conversationCellViewService
 import us.neotechnica.panther.modules.content.user.dependencies.inputBarService
 import us.neotechnica.panther.modules.content.user.extensions.mediaItemMetadata
 import us.neotechnica.panther.modules.content.user.extensions.withMessagesOffsetFromCurrentUserAdditionDate
 import us.neotechnica.panther.modules.content.user.models.ChatParticipant
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.content.user.models.MediaItemViewData
-import us.neotechnica.panther.modules.content.user.services.ConversationCellViewService
 import us.neotechnica.panther.modules.content.user.services.chatinfopageview.ChatInfoPageViewService
 import us.neotechnica.panther.modules.content.user.services.chatinfopageview.presentChangeMetadataActionSheet
 import us.neotechnica.panther.modules.content.user.services.chatpageview.ChatPageViewService
@@ -518,7 +518,7 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
             Action.TraitCollectionChanged -> ReduceResult(state)
 
             is Action.UserInfoBadgeTapped -> {
-                action.user?.let { ConversationCellViewService.presentUserInfoAlert(it) }
+                action.user?.let { DependencyValues.current.conversationCellViewService.presentUserInfoAlert(it) }
                 ReduceResult(state)
             }
 

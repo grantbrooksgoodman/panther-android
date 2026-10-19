@@ -82,7 +82,8 @@ private enum class MetadataChoice {
 // button while the field contains reserved characters, and returns the
 // resulting metadata change, or `null` when canceled or unchanged.
 private suspend fun presentChangeNameAlert(conversation: Conversation?): ChatInfoPageViewService.MetadataChangeType? {
-    val conversationName = conversation?.metadata?.name?.takeUnless { it.isBangQualifiedEmpty }
+    val conversation = conversation ?: return null
+    val conversationName = conversation.metadata.name.takeUnless { it.isBangQualifiedEmpty }
     val textInputAlert =
         TextInputAlert(
             message = "Choose a new name for this conversation:",

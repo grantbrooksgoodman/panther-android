@@ -53,6 +53,7 @@ import us.neotechnica.panther.modules.content.user.constants.MediaItemViewString
 import us.neotechnica.panther.modules.content.user.constants.UserContentExtensionsStrings
 import us.neotechnica.panther.modules.content.user.models.MediaItemViewData
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.MediaActionHandlerService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.MediaMessagePreviewService
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.saveMedia
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -188,7 +189,9 @@ private fun Thumbnail(metadata: MediaItemViewData) {
 private suspend fun saveFile(metadata: MediaItemViewData) {
     val file = metadata.file
     try {
-        if (file.fileExtension.isImage || file.fileExtension.isVideo) {
+        // An image that cannot be decoded exports as a document instead.
+        val isDecodableImage = file.fileExtension.isImage && MediaMessagePreviewService.image(file) != null
+        if (isDecodableImage || file.fileExtension.isVideo) {
             MediaActionHandlerService.saveMedia(file)
             HUD.showSuccess()
         } else {

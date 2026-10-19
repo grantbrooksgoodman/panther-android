@@ -39,6 +39,18 @@ val Float.durationString: String
 // MARK: - String
 
 /**
+ * A copy of the string with the first character of every word
+ * uppercased and the remaining characters lowercased.
+ *
+ * Words are separated by whitespace; the separators are kept.
+ */
+val String.capitalized: String
+    get() =
+        split(WORD_SEPARATOR_REGEX).joinToString("") { component ->
+            if (component.isBlank()) component else component.lowercase().replaceFirstChar { it.titlecase() }
+        }
+
+/**
  * A Boolean value that indicates whether the string contains at least
  * one letter.
  */
@@ -137,3 +149,5 @@ internal val String.errorCode: String
 
 private const val SECONDS_PER_HOUR = 3600
 private const val SECONDS_PER_MINUTE = 60
+
+private val WORD_SEPARATOR_REGEX = Regex("(?<=\\s)|(?=\\s)")

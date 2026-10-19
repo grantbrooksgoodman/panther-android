@@ -16,6 +16,7 @@ import org.junit.Before
 import org.junit.Test
 import us.neotechnica.panther.modules.common.services.sources.CommonPropertyLists
 import us.neotechnica.panther.modules.common.services.sources.RegionDetailService
+import us.neotechnica.panther.modules.content.user.dependencies.uiCacheInvalidationService
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewDataCache
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.sources.conversation.models.ConversationMetadata
@@ -23,6 +24,7 @@ import us.neotechnica.panther.modules.networking.sources.support.MessageDecodeEn
 import us.neotechnica.panther.modules.networking.sources.support.SessionTestEnvironment
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.notificationextension.NotificationExtensionConstants
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 
@@ -67,7 +69,7 @@ class UICacheInvalidationServiceTest {
         val unresolved = SessionTestEnvironment.conversation("c2", listOf("me", "x", "y"))
         SessionStore.upsertConversations(setOf(named, unresolved))
 
-        UICacheInvalidationService.refreshNotificationExtensionNameMap()
+        DependencyValues.current.uiCacheInvalidationService.refreshNotificationExtensionNameMap()
 
         val json =
             JSONObject(

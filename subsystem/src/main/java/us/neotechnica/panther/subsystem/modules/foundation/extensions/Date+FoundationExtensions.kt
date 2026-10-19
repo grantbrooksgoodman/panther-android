@@ -116,11 +116,13 @@ fun Date.weekdayString(
             WeekdaySymbolLength.VERY_SHORT -> VERY_SHORT_WEEKDAY_PATTERN_LENGTH
         }
 
-    return SimpleDateFormat(letter.toString().repeat(count), languageLocale).format(this)
+    // The app language's locale, whatever the device locale.
+    return SimpleDateFormat(letter.toString().repeat(count), Locale.forLanguageTag(RuntimeStorage.languageCode)).format(this)
 }
 
 // MARK: - Auxiliary
 
+// The short date keeps the device locale for English.
 private val languageLocale: Locale
     get() {
         val languageCode = RuntimeStorage.languageCode

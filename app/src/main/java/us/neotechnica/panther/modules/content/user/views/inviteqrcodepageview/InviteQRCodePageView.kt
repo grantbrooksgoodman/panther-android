@@ -35,8 +35,9 @@ import us.neotechnica.panther.designsystem.modules.foundation.extensions.doneBut
 import us.neotechnica.panther.designsystem.modules.foundation.views.StatefulView
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.modules.content.user.constants.InviteQRCodePageViewFloats
-import us.neotechnica.panther.modules.content.user.services.InviteQRCodePageViewService
+import us.neotechnica.panther.modules.content.user.dependencies.inviteQRCodePageViewService
 import us.neotechnica.panther.networking.modules.translation.extensions.value
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 
 // MARK: - Constants Accessors
@@ -57,7 +58,7 @@ fun InviteQRCodePageView(modifier: Modifier = Modifier) {
 
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
-    val qrCode = remember { InviteQRCodePageViewService.appShareQRCodeImage }
+    val qrCode = remember { DependencyValues.current.inviteQRCodePageViewService.appShareQRCodeImage }
 
     Box(modifier = modifier.fillMaxSize().background(colors.groupedContentBackground)) {
         StatefulView(state = state.viewState) {
