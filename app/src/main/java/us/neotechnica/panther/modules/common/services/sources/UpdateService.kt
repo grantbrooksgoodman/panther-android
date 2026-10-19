@@ -207,7 +207,7 @@ object UpdateService : ForcedUpdateModalDelegate {
         val installURL =
             installButtonRedirectURL ?: run {
                 metadataService.resolveValues()
-                installButtonRedirectURL ?: return
+                return presentUpdateCTA()
             }
 
         val updateAction =

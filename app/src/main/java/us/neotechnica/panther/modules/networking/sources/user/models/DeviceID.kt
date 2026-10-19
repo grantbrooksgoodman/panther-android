@@ -31,6 +31,9 @@ object DeviceID {
 
     // MARK: - Properties
 
+    /** The prefix every identifier minted on this platform carries. */
+    const val PREFIX = "and_"
+
     private const val ACCOUNT = "us.neotechnica.deviceID"
     private const val BACKUP_PREFERENCES_NAME = "device_id_backup"
     private const val PREFERENCES_NAME = "device_id"
@@ -60,7 +63,7 @@ object DeviceID {
                     return@withValue existingID
                 }
 
-                val newID = "and_${dependencies.androidID() ?: UUID.randomUUID()}"
+                val newID = "$PREFIX${dependencies.androidID() ?: UUID.randomUUID()}"
                 dependencies.save(newID)
                 reference.value = newID
                 newID

@@ -11,12 +11,12 @@
 package us.neotechnica.panther.modules.common.services.sources
 
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import us.neotechnica.panther.Application
 import us.neotechnica.panther.bundle.LocalizedStringKey
+import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
+import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.bundle.notRegisteredForPushNotifications
 import us.neotechnica.panther.bundle.stalePushToken
 import us.neotechnica.panther.bundle.users
@@ -25,12 +25,19 @@ import us.neotechnica.panther.modules.common.extensions.runCatchingException
 import us.neotechnica.panther.modules.common.services.CommonServices
 import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
+import us.neotechnica.panther.modules.content.user.models.ChatPageStateServiceEffectID
+import us.neotechnica.panther.modules.content.user.services.ChatPageStateService
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.sources.message.models.HostedContentType
 import us.neotechnica.panther.modules.networking.sources.message.models.Message
+import us.neotechnica.panther.modules.networking.sources.user.models.DeviceID
 import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.modules.session.clientSession
+import us.neotechnica.panther.navigation.PendingChatNavigation
+import us.neotechnica.panther.navigation.RootNavigationService.Route
+import us.neotechnica.panther.navigation.RootNavigatorState
+import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
@@ -40,7 +47,9 @@ import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.common.models.NetworkServices
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.compiledException
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.forEachConcurrently
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHashOf
 import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -168,6 +177,41 @@ object NotificationService {
             } catch (exception: Exception) {
                 if (!exception.isEqual(AppException.notRegisteredForPushNotifications)) throw exception
             }
+        }
+    }
+
+    // MARK: - Respond to Notification Tap
+
+    /**
+     * Opens the conversation a tapped notification names.
+     *
+     * On a signed-in activity already showing the user content, the
+     * stack pops to the conversation list and the chat is pushed – an
+     * open chat is dismissed first. Otherwise the key is held for the
+     * splash flow to consume after initialization.
+     *
+     * @param conversationIDKey The identifier key of the conversation
+     *   the notification names.
+     */
+    fun respondToNotificationTap(conversationIDKey: String) {
+        val navigation = DependencyValues.current.navigation
+        val isSignedIn = User.currentUserID != null && clientSession.entity.user.currentUser != null
+        if (!isSignedIn || navigation.state.value.modal != RootNavigatorState.ModalPaths.UserContent) {
+            return PendingChatNavigation.set(conversationIDKey)
+        }
+
+        PendingChatNavigation.consume()
+        val chatRoute =
+            Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePaths.Chat(conversationIDKey)))
+        navigation.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
+        if (!ChatPageStateService.isPresented) return navigation.navigate(chatRoute)
+
+        ChatPageStateService.addEffectUponIsPresented(
+            state = false,
+            id = ChatPageStateServiceEffectID.deeplinkToOtherChat,
+        ) {
+            Application.dismissSheets()
+            navigation.navigate(chatRoute)
         }
     }
 
@@ -304,6 +348,7 @@ object NotificationService {
                     body = body ?: BANG_QUALIFIED_EMPTY,
                     badgeNumber = newBadgeNumber,
                     pushToken = pushToken,
+                    deviceID = user.deviceID,
                     userInfo =
                         mapOf(
                             "conversationIDKey" to conversationIDKey,
@@ -329,29 +374,23 @@ object NotificationService {
         body: String,
         badgeNumber: Int,
         pushToken: String,
+        deviceID: String,
         userInfo: Map<String, String>,
         isReaction: Boolean,
     ) {
         val accessToken = generateAccessToken()
-
-        val notificationParameters = JSONObject().put("title", title)
-        if (!body.isBangQualifiedEmpty) notificationParameters.put("body", body)
-
-        val aps =
-            JSONObject()
-                .put("badge", badgeNumber)
-                .put("mutable-content", 1)
-                .put("sound", if (isReaction) "Reaction.caf" else "default")
-
         val payload =
             JSONObject().put(
                 "message",
-                JSONObject()
-                    .put("android", JSONObject().put("priority", "high"))
-                    .put("apns", JSONObject().put("payload", JSONObject().put("aps", aps)))
-                    .put("data", JSONObject(userInfo))
-                    .put("notification", notificationParameters)
-                    .put("token", pushToken),
+                fcmMessage(
+                    title = title,
+                    body = body,
+                    badgeNumber = badgeNumber,
+                    pushToken = pushToken,
+                    deviceID = deviceID,
+                    userInfo = userInfo,
+                    isReaction = isReaction,
+                ),
             )
 
         withContext(Dispatchers.IO) {
@@ -387,6 +426,52 @@ object NotificationService {
                 connection.disconnect()
             }
         }
+    }
+
+    /**
+     * Builds the FCM message for one recipient token.
+     *
+     * A recipient whose device identifier carries the Android prefix
+     * receives a data-only message – the title and body travel in
+     * `data`, so the app renders the notification itself – at high
+     * priority. Every other recipient receives the `notification` block
+     * and the APNs payload.
+     */
+    @Suppress("LongParameterList")
+    internal fun fcmMessage(
+        title: String,
+        body: String,
+        badgeNumber: Int,
+        pushToken: String,
+        deviceID: String,
+        userInfo: Map<String, String>,
+        isReaction: Boolean,
+    ): JSONObject {
+        val data = JSONObject(userInfo)
+        val message =
+            JSONObject()
+                .put("android", JSONObject().put("priority", "high"))
+                .put("token", pushToken)
+
+        if (deviceID.startsWith(DeviceID.PREFIX)) {
+            data.put(TITLE_KEY, title)
+            if (!body.isBangQualifiedEmpty) data.put(BODY_KEY, body)
+            return message.put("data", data)
+        }
+
+        val notificationParameters = JSONObject().put(TITLE_KEY, title)
+        if (!body.isBangQualifiedEmpty) notificationParameters.put(BODY_KEY, body)
+
+        val aps =
+            JSONObject()
+                .put("badge", badgeNumber)
+                .put("mutable-content", 1)
+                .put("sound", if (isReaction) "Reaction.caf" else "default")
+
+        return message
+            .put("apns", JSONObject().put("payload", JSONObject().put("aps", aps)))
+            .put("data", data)
+            .put("notification", notificationParameters)
     }
 
     internal fun sendNotificationException(
@@ -462,18 +547,14 @@ object NotificationService {
         )
     }
 
-    private suspend fun <T> List<T>.forEachConcurrently(action: suspend (T) -> Unit) {
-        coroutineScope {
-            map { async { action(it) } }.awaitAll()
-        }
-    }
-
     private val Int.isSuccessfulHTTPStatus: Boolean
         get() = this in HTTP_OK_MIN..HTTP_OK_MAX
 }
 
 // MARK: - Constants
 
+private const val BODY_KEY = "body"
+private const val TITLE_KEY = "title"
 private const val ACCESS_TOKEN_URL = "https://us-central1-jaguar-5d735.cloudfunctions.net/generateAccessToken"
 private const val BADGE_NUMBER_KEY = "badgeNumber"
 private const val FCM_SEND_URL = "https://fcm.googleapis.com/v1/projects/jaguar-5d735/messages:send"

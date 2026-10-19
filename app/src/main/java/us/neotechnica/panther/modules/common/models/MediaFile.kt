@@ -9,7 +9,11 @@
 package us.neotechnica.panther.modules.common.models
 
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.EncodedHashable
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import java.io.File
 import java.security.MessageDigest
 
@@ -65,9 +69,14 @@ data class MediaFile(
 
     // A streamed SHA-256 hex digest of the file's bytes, streamed rather
     // than loading the whole file into memory so large videos do not
-    // risk an OOM.
+    // risk an OOM. Files at these paths are effectively immutable once
+    // written, so a path + size + modification date key memoises the
+    // digest; a changed file produces a new key.
     private fun contentHash(): String? {
         val file = localPathFile?.takeIf { it.exists() } ?: return null
+        val cacheKey = "${file.absolutePath}|${file.length()}|${file.lastModified()}"
+        contentHashes.wrappedValue[cacheKey]?.let { return it }
+
         return runCatching {
             val digest = MessageDigest.getInstance("SHA-256")
             file.inputStream().use { stream ->
@@ -79,6 +88,10 @@ data class MediaFile(
                 }
             }
             digest.digest().joinToString("") { "%02x".format(it) }
+        }.onSuccess { contentHash ->
+            contentHashes.withValue { it.value = it.value + (cacheKey to contentHash) }
+        }.onFailure { throwable ->
+            Logger.log(Exception.from(throwable, ExceptionMetadata(this)))
         }.getOrNull()
     }
 
@@ -89,6 +102,8 @@ data class MediaFile(
         const val THUMBNAIL_IMAGE_NAME_SUFFIX = "-thumbnail.jpeg"
 
         private const val DIGEST_BUFFER_SIZE = 8192
+
+        private val contentHashes = LockIsolated(mapOf<String, String>())
 
         /**
          * Creates a media file from the given relative path, deriving its

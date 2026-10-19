@@ -255,11 +255,13 @@ object ErrorReportingService : ReportDelegate {
         }
     }
 
+    private val WHITESPACE_REGEX = Regex("\\s+")
+
     private val String.shorthandErrorDescriptor: String
         get() =
             trim { it.isPunctuation }
                 .uppercase()
-                .split(" ")
+                .split(WHITESPACE_REGEX)
                 .map { word -> word.filter { it.isLetter() }.trim() }
                 .filter { it.isNotBlank() }
                 .filterNot { it in SHORTHAND_EXCLUDED_WORDS }

@@ -64,10 +64,9 @@ object DefaultAttributeDetectionServiceDelegate : AttributeDetectionServiceDeleg
 
     // MARK: - Did Select Phone Number
 
-    /** Opens the selected phone number in the dialer. */
+    /** Opens the selected phone number's digits in the dialer. */
     override fun didSelectPhoneNumber(phoneNumber: String) {
-        val digits = phoneNumber.filter { it.isDigit() || it == '+' }
-        openURI(Uri.parse("tel:$digits"), Intent.ACTION_DIAL)
+        openURI(Uri.parse("tel:${phoneNumber.filter { it.isDigit() }}"), Intent.ACTION_DIAL)
     }
 
     // MARK: - Did Select URL

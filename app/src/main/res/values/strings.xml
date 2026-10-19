@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Hello</string>
+    <string name="reactions_channel_name">Reactions</string>
 </resources>

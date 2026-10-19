@@ -6,6 +6,8 @@
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
+@file:Suppress("FileLength")
+
 package us.neotechnica.panther.modules.common.models
 
 import com.google.i18n.phonenumbers.NumberParseException
@@ -112,6 +114,19 @@ class PhoneNumber(
                 Keys.NATIONAL_NUMBER_STRING.rawValue to nationalNumberString,
                 Keys.REGION_CODE.rawValue to regionCode,
             )
+
+    /**
+     * The persisted representation of the phone number, carrying every
+     * stored property – the [label] and [internalFormattedString]
+     * included – so an archived number reloads equal to the original.
+     */
+    val archived: Map<String, Any?>
+        get() =
+            encoded +
+                mapOf(
+                    ARCHIVE_KEY_INTERNAL_FORMATTED_STRING to internalFormattedString,
+                    ARCHIVE_KEY_LABEL to label,
+                )
 
     /**
      * The strings that collectively define this instance's identity
@@ -302,10 +317,13 @@ class PhoneNumber(
                 callingCode = callingCode,
                 nationalNumberString = nationalNumberString,
                 regionCode = regionCode,
-                label = null,
-                internalFormattedString = null,
+                label = data[ARCHIVE_KEY_LABEL] as? String,
+                internalFormattedString = data[ARCHIVE_KEY_INTERNAL_FORMATTED_STRING] as? String,
             )
         }
+
+        private const val ARCHIVE_KEY_INTERNAL_FORMATTED_STRING = "internalFormattedString"
+        private const val ARCHIVE_KEY_LABEL = "label"
 
         /**
          * Creates a phone number from the given string, deriving its
@@ -326,6 +344,7 @@ class PhoneNumber(
         operator fun invoke(
             string: String,
             label: String? = null,
+            internalFormattedString: String? = null,
         ): PhoneNumber {
             var numberValue = string.digits
             val deviceCallingCode = DependencyValues.current.commonServices.phoneNumber.deviceCallingCode
@@ -341,6 +360,11 @@ class PhoneNumber(
                 val derivedCallingCode =
                     possibleCallingCodes.firstOrNull { it == deviceCallingCode } ?: possibleCallingCodes.firstOrNull()
                 if (!derivedCallingCode.isNullOrBlank()) callingCode = derivedCallingCode
+            } else if (internalFormattedString != null) {
+                // The international form carries the calling code up
+                // front; in its E.164 form it is the code the digits
+                // begin with.
+                callingCode = callingCodeFromInternationalString(internalFormattedString)
             }
 
             var resolvedCallingCode = callingCode ?: deviceCallingCode
@@ -376,8 +400,26 @@ class PhoneNumber(
                 nationalNumberString = numberValue,
                 regionCode = regionCode ?: deviceRegionCode,
                 label = label,
-                internalFormattedString = null,
+                internalFormattedString = internalFormattedString,
             )
         }
+
+        private fun callingCodeFromInternationalString(internationalString: String): String? {
+            val firstComponent =
+                internationalString
+                    .split(" ")
+                    .firstOrNull()
+                    ?.digits
+                    .orEmpty()
+            if (firstComponent.isNotBlank() && firstComponent.length <= MAXIMUM_CALLING_CODE_LENGTH) return firstComponent
+
+            val digits = internationalString.digits
+            return DependencyValues.current.commonServices.phoneNumber
+                .possibleCallingCodes(digits)
+                ?.firstOrNull { digits.startsWith(it) }
+                ?.takeIf { it.isNotBlank() }
+        }
+
+        private const val MAXIMUM_CALLING_CODE_LENGTH = 3
     }
 }

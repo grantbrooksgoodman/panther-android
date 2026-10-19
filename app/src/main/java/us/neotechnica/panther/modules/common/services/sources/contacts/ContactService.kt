@@ -18,6 +18,7 @@ import us.neotechnica.panther.bundle.emptyContactList
 import us.neotechnica.panther.bundle.queriedContactPairs
 import us.neotechnica.panther.modules.common.dependencies.contactNameService
 import us.neotechnica.panther.modules.common.extensions.ContactPairArchiveServiceStorageKey
+import us.neotechnica.panther.modules.common.extensions.codePointOrder
 import us.neotechnica.panther.modules.common.models.Contact
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.common.models.DeviceContact
@@ -170,12 +171,12 @@ object ContactService {
     }
 
     private fun fetchContactPairs(users: List<User>): List<ContactPair> {
-        val resolver = appContext?.contentResolver
-        if (permissionService.contactPermissionStatus != PermissionService.PermissionStatus.GRANTED || resolver == null) {
+        val context = appContext
+        if (permissionService.contactPermissionStatus != PermissionService.PermissionStatus.GRANTED || context == null) {
             throw Exception("Not authorized for contacts.", isReportable = false, metadata = ExceptionMetadata(this))
         }
 
-        val deviceContacts = DeviceContactReader.read(resolver)
+        val deviceContacts = DeviceContactReader.read(context)
         val contactPairs = contactPairs(users, deviceContacts)
 
         val matchedDeviceContacts = deviceContacts.filter { deviceContact -> contactPairs.any { it.contact.id == deviceContact.id } }
@@ -206,30 +207,46 @@ object ContactService {
         users: List<User>,
         deviceContacts: List<DeviceContact>,
     ): List<ContactPair> {
-        val contactPairs =
-            deviceContacts.mapNotNull { deviceContact ->
-                val numberPairs =
-                    users
-                        .filter { deviceContact.matches(it.phoneNumber) }
-                        .map { NumberPair(phoneNumber = it.phoneNumber, userIDs = listOf(it.id)) }
-                        .distinct()
-                        .sortedBy { it.phoneNumber.callingCode }
-                if (numberPairs.isEmpty()) return@mapNotNull null
-
+        // Users are visited in order, and a contact several users
+        // match keeps its first position with their pairs merged.
+        val contactPairs = mutableListOf<ContactPair>()
+        for (user in users) {
+            for (deviceContact in deviceContacts.filter { it.matches(user.phoneNumber) }) {
                 val (firstName, lastName) = contactNameService.name(deviceContact)
-                ContactPair(
-                    contact =
-                        Contact(
-                            id = deviceContact.id,
-                            firstName = firstName,
-                            lastName = lastName,
-                            phoneNumbers = deviceContact.phoneNumbers,
-                            imageData = deviceContact.imageData,
-                        ),
-                    numberPairs = numberPairs,
-                )
-            }
+                val contactPair =
+                    ContactPair(
+                        contact =
+                            Contact(
+                                id = deviceContact.id,
+                                firstName = firstName,
+                                lastName = lastName,
+                                phoneNumbers = deviceContact.phoneNumbers,
+                                imageData = deviceContact.imageData,
+                            ),
+                        numberPairs = listOf(NumberPair(phoneNumber = user.phoneNumber, userIDs = listOf(user.id))),
+                    )
 
-        return contactPairs.distinct().sortedBy { it.contact.firstName }.uniquedByPhoneNumber
+                val existingIndex = contactPairs.indexOfFirst { it.contact == contactPair.contact }
+                if (existingIndex < 0) {
+                    contactPairs.add(contactPair)
+                    continue
+                }
+
+                val existingPair = contactPairs[existingIndex]
+                contactPairs[existingIndex] =
+                    ContactPair(
+                        contact = contactPair.contact,
+                        numberPairs =
+                            (existingPair.numberPairs + contactPair.numberPairs)
+                                .distinct()
+                                .sortedBy { it.phoneNumber.callingCode },
+                    )
+            }
+        }
+
+        return contactPairs
+            .distinct()
+            .sortedWith(compareBy(codePointOrder) { it.contact.firstName })
+            .uniquedByPhoneNumber
     }
 }

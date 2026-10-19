@@ -10,8 +10,10 @@ package us.neotechnica.panther.modules.common.services
 
 import us.neotechnica.panther.modules.common.services.sources.AccountDeletionService
 import us.neotechnica.panther.modules.common.services.sources.AnalyticsService
+import us.neotechnica.panther.modules.common.services.sources.AttributeDetectionService
 import us.neotechnica.panther.modules.common.services.sources.CommonPropertyLists
 import us.neotechnica.panther.modules.common.services.sources.ConnectionStatusService
+import us.neotechnica.panther.modules.common.services.sources.DocumentExportService
 import us.neotechnica.panther.modules.common.services.sources.HapticsService
 import us.neotechnica.panther.modules.common.services.sources.InviteService
 import us.neotechnica.panther.modules.common.services.sources.MetadataService
@@ -26,6 +28,7 @@ import us.neotechnica.panther.modules.common.services.sources.ReviewService
 import us.neotechnica.panther.modules.common.services.sources.UpdateService
 import us.neotechnica.panther.modules.common.services.sources.audio.AudioService
 import us.neotechnica.panther.modules.common.services.sources.contacts.ContactService
+import us.neotechnica.panther.modules.common.services.sources.contentpicker.ContentPickerService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.interfaces.DependencyKey
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 
@@ -43,6 +46,9 @@ object CommonServices {
     /** The analytics service. */
     val analytics get() = AnalyticsService
 
+    /** The service that handles taps on attributes detected in text. */
+    val attributeDetection get() = AttributeDetectionService
+
     /** The umbrella service for audio functionality. */
     val audio get() = AudioService
 
@@ -51,6 +57,12 @@ object CommonServices {
 
     /** The contact service. */
     val contact get() = ContactService
+
+    /** The service that presents the system content pickers. */
+    val contentPicker get() = ContentPickerService
+
+    /** The service that exports documents through the system picker. */
+    val documentExport get() = DocumentExportService
 
     /** The haptic feedback service. */
     val haptics get() = HapticsService

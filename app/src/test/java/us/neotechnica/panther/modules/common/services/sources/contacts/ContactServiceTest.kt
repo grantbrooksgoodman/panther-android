@@ -68,6 +68,22 @@ class ContactServiceTest {
     }
 
     @Test
+    fun `results sort first names by code point and merge a contact matched by several users`() {
+        val first = SessionTestEnvironment.user(id = "first", nationalNumber = "5550000001")
+        val second = SessionTestEnvironment.user(id = "second", nationalNumber = "5550000002")
+        val third = SessionTestEnvironment.user(id = "third", nationalNumber = "5550000003")
+        // A supplementary-plane initial sorts after a BMP initial by
+        // code point but before it by UTF-16 code unit.
+        val mathematical = deviceContact(id = "1", givenName = "\uD835\uDD38lice", familyName = "Smith", "5550000001", "5550000003")
+        val ligature = deviceContact(id = "2", givenName = "\uFB00red", familyName = "Smith", "5550000002")
+
+        val contactPairs = ContactService.contactPairs(listOf(first, second, third), listOf(mathematical, ligature))
+
+        assertEquals(listOf("2", "1"), contactPairs.map { it.contact.id })
+        assertEquals(listOf("first", "third"), contactPairs[1].numberPairs.flatMap { it.userIDs })
+    }
+
+    @Test
     fun `device contacts matching no user are dropped and results sort by first name`() {
         val user = SessionTestEnvironment.user(id = "user", nationalNumber = "5558885555")
         val stranger = deviceContact(id = "1", givenName = "Zed", familyName = "", "5550000000")

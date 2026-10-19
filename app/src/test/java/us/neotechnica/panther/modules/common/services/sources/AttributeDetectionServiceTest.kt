@@ -12,16 +12,19 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import us.neotechnica.panther.modules.common.interfaces.AttributeDetectionServiceDelegate
 import us.neotechnica.panther.modules.common.models.DetectedAttribute
 import java.util.Calendar
 import java.util.Date
+import java.util.regex.Pattern
 
 /**
  * Exercises attribute detection: links, phone numbers, and dates are
  * found with their ranges, and a tap on one reaches the delegate with
- * the tapped substring.
+ * the tapped substring. The platform patterns and the text
+ * classifier are replaced by stand-ins.
  */
 class AttributeDetectionServiceTest {
     // MARK: - Setup
@@ -55,9 +58,22 @@ class AttributeDetectionServiceTest {
         }
     }
 
+    @Before
+    fun setUp() {
+        AttributeDetectionService.setDependencies(
+            AttributeDetectionService.Dependencies(
+                urlPattern = URL_PATTERN,
+                phonePattern = PHONE_PATTERN,
+                isGlobalPhoneNumber = { it.matches(GLOBAL_PHONE_NUMBER) },
+                classifiedAttributes = ::classifiedDates,
+            ),
+        )
+    }
+
     @After
     fun tearDown() {
         AttributeDetectionService.registerDelegate(DefaultAttributeDetectionServiceDelegate)
+        AttributeDetectionService.setDependencies(null)
     }
 
     // MARK: - Detection
@@ -135,5 +151,21 @@ class AttributeDetectionServiceTest {
         AttributeDetectionService.handleGesture(text, text.length - 1)
 
         assertEquals("555-555-5555", delegate.selectedPhoneNumber)
+    }
+
+    // MARK: - Auxiliary
+
+    // The classifier stand-in: month-name dates.
+    private fun classifiedDates(text: String): List<DetectedAttribute> =
+        DATE_PATTERN
+            .findAll(text)
+            .mapNotNull { match -> AttributeDetectionService.parseDate(match.value)?.let { DetectedAttribute.Date(match.range, it) } }
+            .toList()
+
+    private companion object {
+        val DATE_PATTERN = Regex("(January|February|March|April|May|June|July|August|September|October|November|December) \\d{1,2}(st|nd|rd|th)?")
+        val GLOBAL_PHONE_NUMBER = Regex("\\+?[0-9.-]+")
+        val PHONE_PATTERN: Pattern = Pattern.compile("(\\+?\\d{1,3}[\\s.-]?)?(\\(?\\d{3}\\)?[\\s.-]?)\\d{3}[\\s.-]?\\d{4}")
+        val URL_PATTERN: Pattern = Pattern.compile("(https?://[^\\s]+|[a-z0-9-]+\\.(com|org|net)(/[^\\s]*)?)")
     }
 }

@@ -12,9 +12,13 @@ import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioAttributes
+import android.media.RingtoneManager
+import android.net.Uri
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -33,6 +37,7 @@ import us.neotechnica.panther.bundle.delegates.MainActivity
 import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
 import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.bundle.notifications
+import us.neotechnica.panther.designsystem.modules.foundation.services.SoundPlayer
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
 import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.common.services.sources.HapticsService
@@ -47,7 +52,6 @@ import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.navigation.PendingChatNavigation
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
-import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
@@ -92,17 +96,18 @@ class PantherMessagingService : FirebaseMessagingService() {
     // MARK: - Message
 
     override fun onMessageReceived(message: RemoteMessage) {
-        val conversationIDKey =
-            message.data[NotificationExtensionConstants.CONVERSATION_ID_KEY_USER_INFO_KEY] ?: return
-
         scope.launch(Dispatchers.Main) {
-            val lifecycleState = ProcessLifecycleOwner.get().lifecycle.currentState
-            if (!lifecycleState.isAtLeast(Lifecycle.State.STARTED)) {
-                return@launch showSystemNotification(message, conversationIDKey)
-            }
-
             try {
-                respondToInAppNotification(message)
+                // The `notification` block is absent from Android pushes;
+                // one sent with it (an older sender) still carries the
+                // same data keys.
+                val received = ReceivedNotification.from(message.data)
+                val lifecycleState = ProcessLifecycleOwner.get().lifecycle.currentState
+                if (!lifecycleState.isAtLeast(Lifecycle.State.STARTED)) {
+                    return@launch showSystemNotification(message, received)
+                }
+
+                respondToInAppNotification(message, received)
             } catch (exception: Exception) {
                 Logger.log(
                     exception,
@@ -114,13 +119,11 @@ class PantherMessagingService : FirebaseMessagingService() {
 
     // MARK: - Respond to In-app Notification
 
-    private fun respondToInAppNotification(message: RemoteMessage) {
-        val body = message.notification?.body ?: message.data[BODY_KEY].orEmpty()
-        Logger.log(
-            "Received notification.\n\"$body\"",
-            domain = LoggerDomain.notifications,
-        )
-
+    private fun respondToInAppNotification(
+        message: RemoteMessage,
+        received: ReceivedNotification,
+    ) {
+        val body = message.notification?.body ?: received.body
         val currentUser =
             clientSession.entity.user.currentUser
                 ?: throw Exception(
@@ -129,20 +132,7 @@ class PantherMessagingService : FirebaseMessagingService() {
                     metadata = ExceptionMetadata(this),
                 )
 
-        val conversationIDKey = message.data[NotificationExtensionConstants.CONVERSATION_ID_KEY_USER_INFO_KEY]
-        val reactionMessageID = message.data[NotificationExtensionConstants.REACTION_MESSAGE_ID_USER_INFO_KEY]
-        val recipientUserID = message.data[RECIPIENT_USER_ID_USER_INFO_KEY]
-        if (conversationIDKey == null ||
-            reactionMessageID == null ||
-            recipientUserID == null
-        ) {
-            throw Exception(
-                "Failed to resolve required values.",
-                metadata = ExceptionMetadata(this),
-            )
-        }
-
-        if (recipientUserID != currentUser.id) {
+        if (received.recipientUserID != currentUser.id) {
             throw Exception(
                 "Notification not intended for current user – ignoring.",
                 isReportable = false,
@@ -150,6 +140,7 @@ class PantherMessagingService : FirebaseMessagingService() {
             )
         }
 
+        val conversationIDKey = received.conversationIDKey
         val conversation = clientSession.store.getConversation(conversationIDKey)
         if (conversation == null || !conversation.isVisibleForCurrentUser) {
             throw Exception(
@@ -170,12 +161,12 @@ class PantherMessagingService : FirebaseMessagingService() {
         if (ChatPageStateService.isPresented &&
             currentConversationIDKey == conversationIDKey
         ) {
-            if (reactionMessageID.isBangQualifiedEmpty) return
+            if (!received.isReaction) return
             return hapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
         }
 
-        val title = enrichedTitle(message)
-        val focusedMessageID = if (reactionMessageID.isBangQualifiedEmpty) null else reactionMessageID
+        val title = enrichedTitle(message, received)
+        val focusedMessageID = if (received.isReaction) received.reactionMessageID else null
         val toast =
             Toast(
                 Toast.ToastType.Capsule(),
@@ -184,6 +175,8 @@ class PantherMessagingService : FirebaseMessagingService() {
                 perpetuation = Toast.PerpetuationStrategy.Ephemeral(IN_APP_TOAST_SECONDS.seconds),
             )
 
+        // The notification sound plays beside the toast.
+        playNotificationSound(this, isReaction = received.isReaction)
         Toast.show(toast) {
             val navigation = DependencyValues.current.navigation
             val chatRoute =
@@ -213,9 +206,9 @@ class PantherMessagingService : FirebaseMessagingService() {
 
     private fun showSystemNotification(
         message: RemoteMessage,
-        conversationIDKey: String,
+        received: ReceivedNotification,
     ) {
-        val body = message.notification?.body ?: message.data[BODY_KEY].orEmpty()
+        val conversationIDKey = received.conversationIDKey
         val subtitle =
             clientSession
                 .store
@@ -228,9 +221,10 @@ class PantherMessagingService : FirebaseMessagingService() {
         showNotification(
             this,
             conversationIDKey = conversationIDKey,
-            title = enrichedTitle(message),
-            body = body,
+            title = enrichedTitle(message, received),
+            body = message.notification?.body ?: received.body,
             subtitle = subtitle,
+            isReaction = received.isReaction,
         )
     }
 
@@ -242,14 +236,16 @@ class PantherMessagingService : FirebaseMessagingService() {
      * title when the suffix is empty. The payload title is used when
      * the sender is not a known contact.
      */
-    private fun enrichedTitle(message: RemoteMessage): String {
-        val payloadTitle = message.notification?.title ?: message.data[TITLE_KEY] ?: getString(R.string.app_name)
+    private fun enrichedTitle(
+        message: RemoteMessage,
+        received: ReceivedNotification,
+    ): String {
+        val payloadTitle = message.notification?.title ?: received.title ?: getString(R.string.app_name)
         val userNumberHash =
             message.data[NotificationExtensionConstants.USER_NUMBER_HASH_USER_INFO_KEY] ?: return payloadTitle
         val fullName = contactNameForNumberHash(userNumberHash) ?: return payloadTitle
 
-        val reactionMessageID = message.data[NotificationExtensionConstants.REACTION_MESSAGE_ID_USER_INFO_KEY]
-        if (reactionMessageID == null || reactionMessageID == BANG_QUALIFIED_EMPTY) return fullName
+        if (!received.isReaction) return fullName
 
         val reactionSuffix = message.data[NotificationExtensionConstants.REACTION_SUFFIX_USER_INFO_KEY].orEmpty()
         return if (reactionSuffix.isEmpty()) payloadTitle else "$fullName $reactionSuffix"
@@ -283,24 +279,58 @@ class PantherMessagingService : FirebaseMessagingService() {
         /** The identifier of the messages notification channel. */
         const val MESSAGES_CHANNEL_ID = "messages"
 
-        /** Creates the messages notification channel (idempotent). */
+        /** The identifier of the reactions notification channel. */
+        const val REACTIONS_CHANNEL_ID = "reactions"
+
+        /** Creates the messages and reactions notification channels (idempotent). */
         fun createChannel(context: Context) {
             val manager = context.getSystemService(NotificationManager::class.java) ?: return
-            val channel =
+            manager.createNotificationChannel(
                 NotificationChannel(
                     MESSAGES_CHANNEL_ID,
                     context.getString(R.string.app_name),
                     NotificationManager.IMPORTANCE_HIGH,
+                ),
+            )
+
+            val reactions =
+                NotificationChannel(
+                    REACTIONS_CHANNEL_ID,
+                    context.getString(R.string.reactions_channel_name),
+                    NotificationManager.IMPORTANCE_HIGH,
                 )
-            manager.createNotificationChannel(channel)
+            reactions.setSound(
+                reactionSoundURI(context),
+                AudioAttributes
+                    .Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build(),
+            )
+            manager.createNotificationChannel(reactions)
         }
 
+        /** Plays the reaction sound, or the default notification sound. */
+        private fun playNotificationSound(
+            context: Context,
+            isReaction: Boolean,
+        ) {
+            if (isReaction) return SoundPlayer.play(R.raw.reaction)
+            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            runCatching { RingtoneManager.getRingtone(context, uri)?.play() }
+        }
+
+        private fun reactionSoundURI(context: Context): Uri =
+            Uri.parse("${ContentResolver.SCHEME_ANDROID_RESOURCE}://${context.packageName}/${R.raw.reaction}")
+
+        @Suppress("LongParameterList")
         private fun showNotification(
             context: Context,
             conversationIDKey: String,
             title: String,
             body: String,
             subtitle: String?,
+            isReaction: Boolean,
         ) {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
                 PackageManager.PERMISSION_GRANTED
@@ -325,7 +355,7 @@ class PantherMessagingService : FirebaseMessagingService() {
 
             val builder =
                 NotificationCompat
-                    .Builder(context, MESSAGES_CHANNEL_ID)
+                    .Builder(context, if (isReaction) REACTIONS_CHANNEL_ID else MESSAGES_CHANNEL_ID)
                     .setSmallIcon(R.drawable.ic_stat_notification)
                     .setContentTitle(title)
                     .setContentText(body)
@@ -343,9 +373,6 @@ class PantherMessagingService : FirebaseMessagingService() {
 
         // MARK: - Constants
 
-        private const val BODY_KEY = "body"
         private const val IN_APP_TOAST_SECONDS = 5L
-        private const val RECIPIENT_USER_ID_USER_INFO_KEY = "recipientUserID"
-        private const val TITLE_KEY = "title"
     }
 }

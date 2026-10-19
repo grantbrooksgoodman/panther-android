@@ -8,8 +8,35 @@
 
 package us.neotechnica.panther.subsystem.modules.foundation.extensions
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+
+/**
+ * Performs an operation on each element of the list concurrently,
+ * running at most [maxConcurrentOperations] at a time.
+ *
+ * The first failure cancels the remaining operations and propagates.
+ *
+ * @param maxConcurrentOperations The maximum number of operations to
+ *   execute simultaneously. The default is 10.
+ * @param perform The operation to perform on each element.
+ */
+suspend fun <Element> List<Element>.forEachConcurrently(
+    maxConcurrentOperations: Int = DEFAULT_MAX_CONCURRENT_OPERATIONS,
+    perform: suspend (Element) -> Unit,
+) {
+    val semaphore = Semaphore(maxConcurrentOperations)
+    coroutineScope {
+        map { element -> async { semaphore.withPermit { perform(element) } } }.awaitAll()
+    }
+}
+
+private const val DEFAULT_MAX_CONCURRENT_OPERATIONS = 10
 
 /**
  * Returns the list unchanged, or throws when it is empty.

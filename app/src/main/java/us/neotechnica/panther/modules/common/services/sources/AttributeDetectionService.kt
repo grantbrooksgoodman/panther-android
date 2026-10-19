@@ -8,13 +8,24 @@
 
 package us.neotechnica.panther.modules.common.services.sources
 
+import android.content.Context
+import android.telephony.PhoneNumberUtils
+import android.util.Patterns
+import android.view.textclassifier.TextClassificationManager
+import android.view.textclassifier.TextClassifier
+import android.view.textclassifier.TextLinks
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import us.neotechnica.panther.modules.common.interfaces.AttributeDetectionServiceDelegate
 import us.neotechnica.panther.modules.common.models.DetectedAttribute
+import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
+import java.text.DateFormat
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import java.util.regex.Pattern
 
 /**
  * Use [AttributeDetectionService] to handle taps on attributes detected
@@ -27,9 +38,36 @@ import java.util.Locale
  * is used.
  */
 object AttributeDetectionService {
+    // MARK: - Types
+
+    /** The detectors the service runs over a text. */
+    internal class Dependencies(
+        val urlPattern: Pattern = Patterns.WEB_URL,
+        val phonePattern: Pattern = Patterns.PHONE,
+        val isGlobalPhoneNumber: (String) -> Boolean = PhoneNumberUtils::isGlobalPhoneNumber,
+        val classifiedAttributes: (String) -> List<DetectedAttribute> = ::classifiedAttributes,
+    )
+
     // MARK: - Properties
 
+    private var appContext: Context? = null
     private var delegate: AttributeDetectionServiceDelegate? = DefaultAttributeDetectionServiceDelegate
+    private var dependencies: Dependencies? = null
+
+    private val cachedAttributesForMessageIDs = LockIsolated(mapOf<String, Pair<String, List<DetectedAttribute>>>())
+
+    // MARK: - Initialization
+
+    /** Prepares the service with the application context. */
+    fun initialize(context: Context) {
+        appContext = context.applicationContext
+    }
+
+    /** Replaces the detectors and forgets every cached result. */
+    internal fun setDependencies(dependencies: Dependencies?) {
+        this.dependencies = dependencies
+        cachedAttributesForMessageIDs.wrappedValue = emptyMap()
+    }
 
     // MARK: - Register Delegate
 
@@ -48,6 +86,37 @@ object AttributeDetectionService {
 
     /**
      * Returns the dates, links, and phone numbers detected in the given
+     * message's text, computing them off the main thread once per
+     * message.
+     *
+     * @param text The text to inspect.
+     * @param messageID The identifier of the message the text belongs
+     *   to, under which the result is cached.
+     *
+     * @return The detected attributes, each with the character range it
+     *   occupies.
+     */
+    suspend fun attributes(
+        text: String,
+        messageID: String,
+    ): List<DetectedAttribute> {
+        cachedAttributes(text, messageID)?.let { return it }
+        val attributes = withContext(Dispatchers.Default) { detectAttributes(text) }
+        cachedAttributesForMessageIDs.withValue { it.value = it.value + (messageID to (text to attributes)) }
+        return attributes
+    }
+
+    /**
+     * Returns the attributes already computed for the given message's
+     * text, or `null` if none have been.
+     */
+    fun cachedAttributes(
+        text: String,
+        messageID: String,
+    ): List<DetectedAttribute>? = cachedAttributesForMessageIDs.wrappedValue[messageID]?.takeIf { it.first == text }?.second
+
+    /**
+     * Returns the dates, links, and phone numbers detected in the given
      * text, in order of appearance.
      *
      * @param text The text to inspect.
@@ -57,23 +126,21 @@ object AttributeDetectionService {
      */
     fun detectAttributes(text: String): List<DetectedAttribute> {
         if (text.isEmpty()) return emptyList()
+        val dependencies = resolvedDependencies()
 
         val attributes = mutableListOf<DetectedAttribute>()
-        URL_REGEX.findAll(text).forEach { match ->
-            attributes.add(DetectedAttribute.URL(match.range, normalizedURL(match.value)))
+
+        fun add(attribute: DetectedAttribute) {
+            if (!attributes.overlaps(attribute.range)) attributes.add(attribute)
         }
 
-        PHONE_NUMBER_REGEX.findAll(text).forEach { match ->
-            val digits = match.value.filter { it.isDigit() }
-            if (digits.length in MINIMUM_PHONE_NUMBER_DIGITS..MAXIMUM_PHONE_NUMBER_DIGITS && !attributes.overlaps(match.range)) {
-                attributes.add(DetectedAttribute.PhoneNumber(match.range, match.value.trim()))
-            }
+        dependencies.classifiedAttributes(text).forEach(::add)
+        matchRanges(dependencies.urlPattern, text).forEach { range ->
+            add(DetectedAttribute.URL(range, normalizedURL(text.substring(range))))
         }
-
-        DATE_REGEX.findAll(text).forEach { match ->
-            val date = parseDate(match.value) ?: return@forEach
-            if (!attributes.overlaps(match.range)) attributes.add(DetectedAttribute.Date(match.range, date))
-        }
+        matchRanges(dependencies.phonePattern, text)
+            .filter { isPlausiblePhoneNumber(text.substring(it), dependencies) }
+            .forEach { add(DetectedAttribute.PhoneNumber(it, text.substring(it).trim())) }
 
         return attributes.sortedBy { it.range.first }
     }
@@ -81,8 +148,8 @@ object AttributeDetectionService {
     // MARK: - Handle Gesture
 
     /**
-     * Handles a tap on the given text, notifying the delegate if the
-     * tapped character falls on a detected attribute.
+     * Handles a tap on the given text, notifying the delegate of every
+     * detected attribute the tapped character falls on.
      *
      * @param text The text that was tapped.
      * @param characterIndex The index of the tapped character.
@@ -91,8 +158,9 @@ object AttributeDetectionService {
         text: String,
         characterIndex: Int,
     ) {
-        val attribute = detectAttributes(text).firstOrNull { characterIndex in it.range } ?: return
-        handleSelection(attribute, text)
+        for (attribute in detectAttributes(text)) {
+            if (characterIndex in attribute.range) handleSelection(attribute, text)
+        }
     }
 
     /**
@@ -115,8 +183,33 @@ object AttributeDetectionService {
 
     // MARK: - Auxiliary
 
+    private fun resolvedDependencies(): Dependencies = dependencies ?: Dependencies().also { dependencies = it }
+
     private fun List<DetectedAttribute>.overlaps(range: IntRange): Boolean =
         any { it.range.first <= range.last && range.first <= it.range.last }
+
+    // Plausibly formatted: an optional leading plus, then digits,
+    // dots, and dashes once the grouping spaces and parentheses are
+    // set aside, with at least seven digits in all.
+    private fun isPlausiblePhoneNumber(
+        match: String,
+        dependencies: Dependencies,
+    ): Boolean =
+        dependencies.isGlobalPhoneNumber(match.filterNot { it.isWhitespace() || it == '(' || it == ')' }) &&
+            match.count { it.isDigit() } >= MINIMUM_PHONE_NUMBER_DIGITS
+
+    private fun matchRanges(
+        pattern: Pattern,
+        text: String,
+    ): List<IntRange> {
+        val ranges = mutableListOf<IntRange>()
+        val matcher = pattern.matcher(text)
+        while (matcher.find()) {
+            if (!matcher.group().isNullOrBlank()) ranges.add(matcher.start() until matcher.end())
+        }
+
+        return ranges
+    }
 
     private fun normalizedURL(value: String): String =
         if (value.startsWith("http://", ignoreCase = true) || value.startsWith("https://", ignoreCase = true)) {
@@ -125,10 +218,59 @@ object AttributeDetectionService {
             "https://$value"
         }
 
-    private fun parseDate(value: String): Date? {
+    // The date, link, and phone-number spans the system text
+    // classifier finds, or none when no classifier is reachable. A
+    // date span is kept only when its text parses in the device
+    // language or in English.
+    private fun classifiedAttributes(text: String): List<DetectedAttribute> {
+        val context = appContext ?: return emptyList()
+        return runCatching {
+            val manager = context.getSystemService(TextClassificationManager::class.java) ?: return emptyList()
+            val request =
+                TextLinks.Request
+                    .Builder(text)
+                    .setEntityConfig(
+                        TextClassifier.EntityConfig.createWithExplicitEntityList(
+                            listOf(
+                                TextClassifier.TYPE_DATE,
+                                TextClassifier.TYPE_DATE_TIME,
+                                TextClassifier.TYPE_PHONE,
+                                TextClassifier.TYPE_URL,
+                            ),
+                        ),
+                    ).build()
+
+            manager.textClassifier
+                .generateLinks(request)
+                .links
+                .mapNotNull { link ->
+                    val range = link.start until link.end
+                    val substring = text.substring(range)
+                    when (link.getEntity(0)) {
+                        TextClassifier.TYPE_DATE, TextClassifier.TYPE_DATE_TIME ->
+                            parseDate(substring)?.let { DetectedAttribute.Date(range, it) }
+
+                        TextClassifier.TYPE_PHONE -> DetectedAttribute.PhoneNumber(range, substring.trim())
+
+                        TextClassifier.TYPE_URL -> DetectedAttribute.URL(range, normalizedURL(substring))
+
+                        else -> null
+                    }
+                }
+        }.getOrDefault(emptyList())
+    }
+
+    /**
+     * Parses a date the classifier found, trying the device language's
+     * standard styles and then the English patterns.
+     */
+    internal fun parseDate(value: String): Date? {
         val trimmed = value.trim().replace(ORDINAL_SUFFIX_REGEX, "")
-        for (pattern in DATE_PATTERNS) {
-            val formatter = SimpleDateFormat(pattern, Locale.US).apply { isLenient = false }
+        val formatters =
+            DATE_STYLES.map { DateFormat.getDateInstance(it, Locale.getDefault()) } +
+                DATE_PATTERNS.map { SimpleDateFormat(it, Locale.US) }
+        for (formatter in formatters) {
+            formatter.isLenient = false
             val parsed =
                 try {
                     formatter.parse(trimmed)
@@ -138,8 +280,8 @@ object AttributeDetectionService {
 
             // Patterns without a year parse into 1970; shift those to the
             // current year.
-            if (!pattern.contains('y')) {
-                val calendar = Calendar.getInstance().apply { time = parsed }
+            val calendar = Calendar.getInstance().apply { time = parsed }
+            if (calendar.get(Calendar.YEAR) == EPOCH_YEAR) {
                 calendar.set(Calendar.YEAR, Calendar.getInstance().get(Calendar.YEAR))
                 return calendar.time
             }
@@ -150,8 +292,10 @@ object AttributeDetectionService {
         return null
     }
 
-    private const val MAXIMUM_PHONE_NUMBER_DIGITS = 15
+    private const val EPOCH_YEAR = 1970
     private const val MINIMUM_PHONE_NUMBER_DIGITS = 7
+
+    private val DATE_STYLES = listOf(DateFormat.SHORT, DateFormat.MEDIUM, DateFormat.LONG, DateFormat.FULL)
 
     private val DATE_PATTERNS =
         listOf(
@@ -170,23 +314,5 @@ object AttributeDetectionService {
             "d MMM",
         )
 
-    private val DATE_REGEX =
-        Regex(
-            "\\b(\\d{1,2}/\\d{1,2}(/\\d{2,4})?|" +
-                "(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\\.? \\d{1,2}(st|nd|rd|th)?(,? \\d{4})?|" +
-                "\\d{1,2}(st|nd|rd|th)? (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\\.?( \\d{4})?)\\b",
-            RegexOption.IGNORE_CASE,
-        )
-
     private val ORDINAL_SUFFIX_REGEX = Regex("(?<=\\d)(st|nd|rd|th)", RegexOption.IGNORE_CASE)
-
-    private val PHONE_NUMBER_REGEX =
-        Regex("(?<!\\d)(\\+?\\d{1,3}[\\s.-]?)?(\\(?\\d{2,4}\\)?[\\s.-]?)\\d{3,4}[\\s.-]?\\d{3,4}(?!\\d)")
-
-    private val URL_REGEX =
-        Regex(
-            "\\b((https?://|www\\.)[^\\s<>\"']+|" +
-                "[a-z0-9-]+(\\.[a-z0-9-]+)*\\.(com|org|net|edu|gov|io|co|us|uk|de|fr|es|it|app|dev|me|ai)(/[^\\s<>\"']*)?)",
-            RegexOption.IGNORE_CASE,
-        )
 }

@@ -94,7 +94,7 @@ class Contact(
                 Keys.ID.rawValue to id,
                 Keys.IMAGE_DATA.rawValue to imageData?.let { Base64.getEncoder().encodeToString(it) },
                 Keys.LAST_NAME.rawValue to lastName,
-                Keys.PHONE_NUMBERS.rawValue to phoneNumbers.map { it.encoded },
+                Keys.PHONE_NUMBERS.rawValue to phoneNumbers.map { it.archived },
             )
 
     /**

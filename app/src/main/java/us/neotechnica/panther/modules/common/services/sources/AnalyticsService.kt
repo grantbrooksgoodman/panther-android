@@ -102,10 +102,10 @@ object AnalyticsService {
      * Data collection is enabled on general-release builds in the
      * production environment.
      */
-    val shouldEnableDataCollection: Boolean
-        get() =
-            Networking.config.environment == NetworkEnvironment.PRODUCTION &&
-                Build.milestone == Build.Milestone.GENERAL_RELEASE
+    val shouldEnableDataCollection: Boolean by lazy {
+        Networking.config.environment == NetworkEnvironment.PRODUCTION &&
+            Build.milestone == Build.Milestone.GENERAL_RELEASE
+    }
 
     // MARK: - Log Event
 
@@ -133,9 +133,11 @@ object AnalyticsService {
             val parameters = userInfo.toMutableMap()
             additionalUserInfo?.let { parameters.putAll(it) }
 
+            // Lengths count code points, not UTF-16 units.
             for ((key, value) in parameters) {
-                if (value.length > MAX_PARAMETER_LENGTH) {
-                    parameters[key] = value.take(MAX_PARAMETER_LENGTH)
+                val codePoints = value.codePoints().toArray()
+                if (codePoints.size > MAX_PARAMETER_LENGTH) {
+                    parameters[key] = String(codePoints, 0, MAX_PARAMETER_LENGTH)
                 }
             }
 

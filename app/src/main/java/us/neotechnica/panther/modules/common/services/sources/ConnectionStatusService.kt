@@ -12,6 +12,10 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import us.neotechnica.panther.modules.content.user.models.ConnectionStatusServiceEffectID
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 
@@ -34,6 +38,7 @@ object ConnectionStatusService {
     private val uponConnectionChanged = LockIsolated(mapOf<ConnectionStatusServiceEffectID, () -> Unit>())
 
     private var connectivityManager: ConnectivityManager? = null
+    private val mainScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     // MARK: - Computed Properties
 
@@ -52,16 +57,22 @@ object ConnectionStatusService {
         online.wrappedValue = manager.hasInternet()
         awaitingConnectionRestoration.wrappedValue = !online.wrappedValue
 
+        // The callbacks arrive on a connectivity thread; the effects
+        // run on the main thread.
         manager.registerDefaultNetworkCallback(
             object : ConnectivityManager.NetworkCallback() {
-                override fun onAvailable(network: Network) = setOnline(manager.getNetworkCapabilities(network).hasInternet())
+                override fun onAvailable(network: Network) = post(manager.getNetworkCapabilities(network).hasInternet())
 
-                override fun onLost(network: Network) = setOnline(manager.hasInternet())
+                override fun onLost(network: Network) = post(manager.hasInternet())
 
                 override fun onCapabilitiesChanged(
                     network: Network,
                     networkCapabilities: NetworkCapabilities,
-                ) = setOnline(networkCapabilities.hasInternet())
+                ) = post(networkCapabilities.hasInternet())
+
+                private fun post(isOnline: Boolean) {
+                    mainScope.launch { reachabilityDidChange(isOnline) }
+                }
             },
         )
     }
@@ -97,12 +108,13 @@ object ConnectionStatusService {
 
     // MARK: - Auxiliary
 
-    private fun setOnline(value: Boolean) {
-        val wasOnline = online.wrappedValue
-        online.wrappedValue = value
-        if (value == wasOnline) return
-
-        if (!value) {
+    /**
+     * Records a reachability change and runs the effects: on every
+     * offline event, and once when the connection is restored.
+     */
+    internal fun reachabilityDidChange(isOnline: Boolean) {
+        online.wrappedValue = isOnline
+        if (!isOnline) {
             runEffects()
             awaitingConnectionRestoration.wrappedValue = true
             return
@@ -114,7 +126,11 @@ object ConnectionStatusService {
     }
 
     private fun runEffects() {
-        uponConnectionChanged.wrappedValue.values.forEach { it() }
+        // Snapshot the registry first so an effect that registers or
+        // removes another does not disturb the iteration.
+        uponConnectionChanged.wrappedValue.values
+            .toList()
+            .forEach { it() }
     }
 
     private fun ConnectivityManager.hasInternet(): Boolean = getNetworkCapabilities(activeNetwork).hasInternet()

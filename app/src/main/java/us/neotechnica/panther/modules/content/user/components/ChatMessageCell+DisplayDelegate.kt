@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,12 +43,14 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
-import us.neotechnica.panther.modules.common.services.sources.AttributeDetectionService
+import us.neotechnica.panther.modules.common.models.DetectedAttribute
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewStrings
 import us.neotechnica.panther.modules.content.user.constants.UserContentExtensionsColors
 import us.neotechnica.panther.modules.content.user.constants.UserContentExtensionsFloats
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 
 // MARK: - Constants Accessors
 
@@ -165,7 +169,8 @@ internal class MessageLabel {
     fun handleGesture(touchLocation: Offset) {
         val layoutResult = layoutResult ?: return
         val characterIndex = layoutResult.characterIndex(touchLocation - positionInRoot) ?: return
-        AttributeDetectionService.handleGesture(layoutResult.layoutInput.text.text, characterIndex)
+        DependencyValues.current.commonServices.attributeDetection
+            .handleGesture(layoutResult.layoutInput.text.text, characterIndex)
     }
 }
 
@@ -181,6 +186,8 @@ internal class MessageLabel {
  * press.
  *
  * @param text The text to render.
+ * @param messageID The identifier of the message, under which the
+ *   detected attributes are cached.
  * @param label The bubble's label, which records the text layout for
  *   resolving taps.
  * @param isOwn Whether the message was sent by the current user.
@@ -193,6 +200,7 @@ internal class MessageLabel {
 @Suppress("LongParameterList")
 internal fun MessageBubble(
     text: String,
+    messageID: String,
     label: MessageLabel,
     isOwn: Boolean,
     isItalicized: Boolean,
@@ -211,6 +219,19 @@ internal fun MessageBubble(
             DisplayColors.detectorAttributesAlternateForeground
         }
 
+    // Detection runs off the main thread once per message.
+    val attributes by produceState(
+        initialValue =
+            DependencyValues.current.commonServices.attributeDetection
+                .cachedAttributes(text, messageID) ?: emptyList(),
+        key1 = text,
+        key2 = messageID,
+    ) {
+        value =
+            DependencyValues.current.commonServices.attributeDetection
+                .attributes(text, messageID)
+    }
+
     Box(
         modifier =
             Modifier
@@ -223,7 +244,7 @@ internal fun MessageBubble(
                 ),
     ) {
         Text(
-            text = messageCellString(text.ifBlank { " " }, foregroundColor, detectorColor, isSpeaking, highlightRange),
+            text = messageCellString(text.ifBlank { " " }, attributes, foregroundColor, detectorColor, isSpeaking, highlightRange),
             style =
                 TextStyle(
                     fontSize = StringFloats.MESSAGE_CELL_STRING_SYSTEM_FONT_SIZE.sp,
@@ -262,8 +283,10 @@ private fun messageCellLineHeight(): Float =
 
 // The message cell string: the base foreground, detected attributes
 // underlined in the detector color, and the spoken range highlighted.
+@Suppress("LongParameterList")
 private fun messageCellString(
     text: String,
+    attributes: List<DetectedAttribute>,
     foregroundColor: Color,
     detectorColor: Color,
     isSpeaking: Boolean,
@@ -273,7 +296,7 @@ private fun messageCellString(
         append(text)
         addStyle(SpanStyle(color = foregroundColor), 0, text.length)
 
-        AttributeDetectionService.detectAttributes(text).forEach { attribute ->
+        attributes.forEach { attribute ->
             val end = (attribute.range.last + 1).coerceAtMost(text.length)
             addStyle(SpanStyle(color = detectorColor, textDecoration = TextDecoration.Underline), attribute.range.first, end)
         }

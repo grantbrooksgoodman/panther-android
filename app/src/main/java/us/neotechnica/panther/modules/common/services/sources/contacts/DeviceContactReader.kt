@@ -9,6 +9,8 @@
 package us.neotechnica.panther.modules.common.services.sources.contacts
 
 import android.content.ContentResolver
+import android.content.Context
+import android.content.res.Resources
 import android.database.Cursor
 import android.net.Uri
 import android.provider.ContactsContract
@@ -46,8 +48,9 @@ internal object DeviceContactReader {
     // MARK: - Read
 
     /** Returns every device contact that has at least one phone number. */
-    fun read(resolver: ContentResolver): List<DeviceContact> {
-        val phoneRecordsForContactIDs = readPhoneRecords(resolver)
+    fun read(context: Context): List<DeviceContact> {
+        val resolver = context.contentResolver
+        val phoneRecordsForContactIDs = readPhoneRecords(resolver, context.resources)
         if (phoneRecordsForContactIDs.isEmpty()) return emptyList()
 
         val nameFieldsForContactIDs = readNameFields(resolver)
@@ -74,11 +77,19 @@ internal object DeviceContactReader {
 
     // MARK: - Auxiliary
 
-    private fun readPhoneRecords(resolver: ContentResolver): Map<String, PhoneRecords> {
+    // The E.164 form the provider normalizes each number to stands in
+    // for the system's international format; a typed label resolves
+    // through the platform's label table.
+    private fun readPhoneRecords(
+        resolver: ContentResolver,
+        resources: Resources,
+    ): Map<String, PhoneRecords> {
         val projection =
             arrayOf(
                 ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
                 ContactsContract.CommonDataKinds.Phone.NUMBER,
+                ContactsContract.CommonDataKinds.Phone.NORMALIZED_NUMBER,
+                ContactsContract.CommonDataKinds.Phone.TYPE,
                 ContactsContract.CommonDataKinds.Phone.LABEL,
                 ContactsContract.CommonDataKinds.Phone.PHOTO_THUMBNAIL_URI,
             )
@@ -88,9 +99,18 @@ internal object DeviceContactReader {
             val contactID = cursor.string(ContactsContract.CommonDataKinds.Phone.CONTACT_ID) ?: return@query
             val number = cursor.string(ContactsContract.CommonDataKinds.Phone.NUMBER) ?: return@query
             if (number.isBlank()) return@query
-            val label = cursor.string(ContactsContract.CommonDataKinds.Phone.LABEL)
+            val normalizedNumber = cursor.string(ContactsContract.CommonDataKinds.Phone.NORMALIZED_NUMBER)?.takeUnless { it.isBlank() }
+            val type = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.TYPE).takeIf { it >= 0 }?.let { cursor.getInt(it) }
+            val customLabel = cursor.string(ContactsContract.CommonDataKinds.Phone.LABEL)
+            val label =
+                type?.let {
+                    ContactsContract.CommonDataKinds.Phone
+                        .getTypeLabel(resources, it, customLabel)
+                        .toString()
+                }
+                    ?: customLabel
             val records = phoneRecordsForContactIDs.getOrPut(contactID) { PhoneRecords() }
-            records.phoneNumbers.add(PhoneNumber(number, label))
+            records.phoneNumbers.add(PhoneNumber(number, label, internalFormattedString = normalizedNumber))
             if (records.photoThumbnailURI == null) {
                 records.photoThumbnailURI = cursor.string(ContactsContract.CommonDataKinds.Phone.PHOTO_THUMBNAIL_URI)
             }

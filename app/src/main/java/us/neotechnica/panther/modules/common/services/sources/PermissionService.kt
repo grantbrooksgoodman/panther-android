@@ -9,6 +9,7 @@
 package us.neotechnica.panther.modules.common.services.sources
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -16,6 +17,7 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
@@ -70,6 +72,10 @@ object PermissionService {
         NOTIFICATIONS,
     }
 
+    // MARK: - Properties
+
+    private var appContext: Context? = null
+
     // MARK: - Computed Properties
 
     /** The current status of the contacts permission. */
@@ -82,13 +88,20 @@ object PermissionService {
             if (SystemBuild.VERSION.SDK_INT >= SystemBuild.VERSION_CODES.TIRAMISU) {
                 getPermissionStatus(Manifest.permission.POST_NOTIFICATIONS, PermissionType.NOTIFICATIONS)
             } else {
-                val activity = currentActivity() ?: return PermissionStatus.UNKNOWN
-                if (NotificationManagerCompat.from(activity).areNotificationsEnabled()) {
+                val context = appContext ?: return PermissionStatus.UNKNOWN
+                if (NotificationManagerCompat.from(context).areNotificationsEnabled()) {
                     PermissionStatus.GRANTED
                 } else {
                     PermissionStatus.DENIED
                 }
             }
+
+    // MARK: - Initialization
+
+    /** Prepares the service with the application context. */
+    fun initialize(context: Context) {
+        appContext = context.applicationContext
+    }
 
     // MARK: - Permissions Requesting
 
@@ -198,17 +211,32 @@ object PermissionService {
         permission: String,
         type: PermissionType,
     ): PermissionStatus {
-        val activity = currentActivity() ?: return PermissionStatus.UNKNOWN
-        if (ContextCompat.checkSelfPermission(activity, permission) == PackageManager.PERMISSION_GRANTED) {
-            return PermissionStatus.GRANTED
-        }
-
-        return if (Persistent.booleanOrNull(type.hasRequestedKey) == true) {
-            PermissionStatus.DENIED
-        } else {
-            PermissionStatus.UNKNOWN
-        }
+        val context = appContext ?: return PermissionStatus.UNKNOWN
+        val activity = currentActivity()
+        return permissionStatus(
+            isGranted = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED,
+            hasRequested = Persistent.booleanOrNull(type.hasRequestedKey) == true,
+            canShowRationale = activity != null && ActivityCompat.shouldShowRequestPermissionRationale(activity, permission),
+        )
     }
+
+    /**
+     * Resolves a permission's status from the platform's answers.
+     *
+     * A permission that is not granted stays askable – and so
+     * undetermined – until the app has requested it and the system no
+     * longer allows a prompt; only then is it denied.
+     */
+    internal fun permissionStatus(
+        isGranted: Boolean,
+        hasRequested: Boolean,
+        canShowRationale: Boolean,
+    ): PermissionStatus =
+        when {
+            isGranted -> PermissionStatus.GRANTED
+            !hasRequested || canShowRationale -> PermissionStatus.UNKNOWN
+            else -> PermissionStatus.DENIED
+        }
 
     private val PermissionType.hasRequestedKey: PersistentStorageKey
         get() =

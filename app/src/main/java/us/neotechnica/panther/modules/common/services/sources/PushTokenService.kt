@@ -137,7 +137,6 @@ object PushTokenService {
     suspend fun prunePushTokensForCurrentUser() {
         val currentUser = userSession.currentUser ?: return
         val currentUserPushTokens = currentUser.pushTokens?.toSet() ?: return
-        if (currentUserPushTokens.isEmpty()) return
 
         val userData: Map<String, Any?> = database.getValues<Map<String, Any?>>(NetworkPath.users.rawValue)
 

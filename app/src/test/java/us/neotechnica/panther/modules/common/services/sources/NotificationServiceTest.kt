@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.common.services.sources
 
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -72,6 +73,35 @@ class NotificationServiceTest {
         assertNull(NotificationService.pushTokens(mapOf("!" to true)))
     }
 
+    // MARK: - Payload
+
+    @Test
+    fun `an Android recipient receives a data-only message at high priority`() {
+        val message = fcmMessage(deviceID = "and_abc")
+
+        assertFalse(message.has("notification"))
+        assertFalse(message.has("apns"))
+        assertEquals("high", message.getJSONObject("android").getString("priority"))
+        assertEquals("token", message.getString("token"))
+
+        val data = message.getJSONObject("data")
+        assertEquals("Title", data.getString("title"))
+        assertEquals("Body", data.getString("body"))
+        assertEquals("-C", data.getString("conversationIDKey"))
+    }
+
+    @Test
+    fun `an iOS recipient keeps the notification block and the APNs payload`() {
+        val message = fcmMessage(deviceID = "ios_abc", isReaction = true)
+
+        assertEquals("Title", message.getJSONObject("notification").getString("title"))
+        assertEquals("Body", message.getJSONObject("notification").getString("body"))
+        val aps = message.getJSONObject("apns").getJSONObject("payload").getJSONObject("aps")
+        assertEquals(3, aps.getInt("badge"))
+        assertEquals("Reaction.caf", aps.getString("sound"))
+        assertFalse(message.getJSONObject("data").has("title"))
+    }
+
     // MARK: - Delivery Failures
 
     @Test
@@ -117,6 +147,20 @@ class NotificationServiceTest {
     }
 
     // MARK: - Auxiliary
+
+    private fun fcmMessage(
+        deviceID: String,
+        isReaction: Boolean = false,
+    ): JSONObject =
+        NotificationService.fcmMessage(
+            title = "Title",
+            body = "Body",
+            badgeNumber = 3,
+            pushToken = "token",
+            deviceID = deviceID,
+            userInfo = mapOf("conversationIDKey" to "-C"),
+            isReaction = isReaction,
+        )
 
     private fun textMessage(vararg translations: Translation): Message =
         Message(

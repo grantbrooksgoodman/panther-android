@@ -24,10 +24,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
 import us.neotechnica.panther.modules.common.models.ContentPickerResult
 import us.neotechnica.panther.modules.common.models.MediaFileExtension
-import us.neotechnica.panther.modules.common.services.sources.DocumentExportService
-import us.neotechnica.panther.modules.common.services.sources.contentpicker.ContentPickerService
+import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.common.services.sources.contentpicker.DocumentPickerService
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceStrings
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import java.io.File
 
 /**
@@ -42,6 +42,8 @@ import java.io.File
  */
 @Composable
 fun RegisterContentPickerLaunchers() {
+    val contentPicker = DependencyValues.current.commonServices.contentPicker
+    val documentExport = DependencyValues.current.commonServices.documentExport
     val context = LocalContext.current
 
     val mediaLauncher =
@@ -51,24 +53,24 @@ fun RegisterContentPickerLaunchers() {
                     val isVideo = context.contentResolver.getType(it)?.startsWith(VIDEO_MIME_TYPE_PREFIX) == true
                     if (isVideo) ContentPickerResult.Video(it) else ContentPickerResult.Image(it)
                 }
-            ContentPickerService.media.handleResult(result)
+            contentPicker.media.handleResult(result)
         }
 
     val documentLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            ContentPickerService.document.handleResult(uri?.let { documentResult(context, it) })
+            contentPicker.document.handleResult(uri?.let { documentResult(context, it) })
         }
 
     var cameraUri by remember { mutableStateOf<Uri?>(null) }
     val cameraLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
             val uri = cameraUri
-            ContentPickerService.camera.handleResult(if (success && uri != null) ContentPickerResult.Image(uri) else null)
+            contentPicker.camera.handleResult(if (success && uri != null) ContentPickerResult.Image(uri) else null)
         }
 
     val exportLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            DocumentExportService.handleResult(result.data?.data)
+            documentExport.handleResult(result.data?.data)
         }
 
     DisposableEffect(Unit) {
@@ -83,19 +85,19 @@ fun RegisterContentPickerLaunchers() {
         }
         val launchExport = { intent: Intent -> exportLauncher.launch(intent) }
 
-        ContentPickerService.media.registerLauncher(launchMedia)
-        ContentPickerService.document.registerLauncher(launchDocument)
-        ContentPickerService.camera.registerLauncher(launchCamera)
-        DocumentExportService.registerLauncher(launchExport)
+        contentPicker.media.registerLauncher(launchMedia)
+        contentPicker.document.registerLauncher(launchDocument)
+        contentPicker.camera.registerLauncher(launchCamera)
+        documentExport.registerLauncher(launchExport)
 
         // Only this composition's launchers are cleared: a page that
         // registered its own launchers while this one was leaving keeps
         // them.
         onDispose {
-            ContentPickerService.media.unregisterLauncher(launchMedia)
-            ContentPickerService.document.unregisterLauncher(launchDocument)
-            ContentPickerService.camera.unregisterLauncher(launchCamera)
-            DocumentExportService.unregisterLauncher(launchExport)
+            contentPicker.media.unregisterLauncher(launchMedia)
+            contentPicker.document.unregisterLauncher(launchDocument)
+            contentPicker.camera.unregisterLauncher(launchCamera)
+            documentExport.unregisterLauncher(launchExport)
         }
     }
 }

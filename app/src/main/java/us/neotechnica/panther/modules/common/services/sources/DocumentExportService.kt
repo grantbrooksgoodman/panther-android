@@ -13,8 +13,10 @@ import android.content.Intent
 import android.net.Uri
 import android.webkit.MimeTypeMap
 import us.neotechnica.panther.bundle.LocalizedStringKey
+import us.neotechnica.panther.modules.common.extensions.toException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import java.io.File
 
@@ -126,16 +128,21 @@ object DocumentExportService {
      */
     fun handleResult(destination: Uri?) {
         val source = temporaryFile
-        val cancelled = destination == null || source == null
-        if (destination != null && source != null) {
-            runCatching {
-                appContext?.contentResolver?.openOutputStream(destination)?.use { output ->
-                    source.inputStream().use { it.copyTo(output) }
-                }
-            }
-        }
+        if (destination == null || source == null) return onDismiss(cancelled = true)
 
-        onDismiss(cancelled)
+        // The export counts as completed only when the copy succeeds;
+        // a failed copy is reported and treated as cancelled.
+        val copied =
+            runCatching {
+                val output =
+                    appContext?.contentResolver?.openOutputStream(destination)
+                        ?: throw Exception("Failed to open export destination.", metadata = ExceptionMetadata(this))
+                output.use { source.inputStream().use { input -> input.copyTo(it) } }
+            }.onFailure { throwable ->
+                Logger.log(throwable.toException())
+            }.isSuccess
+
+        onDismiss(cancelled = !copied)
     }
 
     // MARK: - Auxiliary

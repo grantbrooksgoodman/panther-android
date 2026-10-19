@@ -28,6 +28,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.ContextMe
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheet
 import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheets
+import us.neotechnica.panther.modules.common.extensions.shortCode
 import us.neotechnica.panther.modules.common.models.MediaFile
 import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.common.services.sources.DocumentExportService
@@ -480,9 +481,6 @@ class ContextMenuActionHandlerService(
         if (dependencies.isDisplayingAlternateText(message)) return languagePair.to to languagePair.from
         return languagePair.from to languagePair.to
     }
-
-    private val String.shortCode: String
-        get() = "${take(2)}${takeLast(2)}".uppercase()
 
     // MARK: - Companion
 

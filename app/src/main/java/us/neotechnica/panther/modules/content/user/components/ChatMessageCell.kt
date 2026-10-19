@@ -226,6 +226,7 @@ private fun MessageKindContent(
         is MessageKind.AttributedText ->
             MessageBubble(
                 text = kind.text,
+                messageID = message.id,
                 label = label,
                 isOwn = isOwn,
                 isItalicized = kind.isItalicized,
@@ -234,7 +235,7 @@ private fun MessageKindContent(
             )
 
         is MessageKind.Text ->
-            MessageBubble(text = kind.text, label = label, isOwn = isOwn, isItalicized = false)
+            MessageBubble(text = kind.text, messageID = message.id, label = label, isOwn = isOwn, isItalicized = false)
 
         is MessageKind.Photo, is MessageKind.Video ->
             MediaMessageBubble(

@@ -42,11 +42,13 @@ import us.neotechnica.panther.designsystem.modules.foundation.services.Translati
 import us.neotechnica.panther.modules.common.extensions.ApplicationStorageKey
 import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.common.services.sources.AnalyticsService
+import us.neotechnica.panther.modules.common.services.sources.AttributeDetectionService
 import us.neotechnica.panther.modules.common.services.sources.CommonPropertyLists
 import us.neotechnica.panther.modules.common.services.sources.DefaultAttributeDetectionServiceDelegate
 import us.neotechnica.panther.modules.common.services.sources.DocumentExportService
 import us.neotechnica.panther.modules.common.services.sources.InviteService
 import us.neotechnica.panther.modules.common.services.sources.LoggerPresentationService
+import us.neotechnica.panther.modules.common.services.sources.PermissionService
 import us.neotechnica.panther.modules.common.services.sources.RegionDetailService
 import us.neotechnica.panther.modules.common.services.sources.UpdateService
 import us.neotechnica.panther.modules.common.services.sources.audio.TextToSpeechService
@@ -295,6 +297,8 @@ object Application {
         contactService.initialize(context)
         DeviceID.initialize(context)
         inviteService.initialize(context)
+        PermissionService.initialize(context)
+        AttributeDetectionService.initialize(context)
         DependencyValues.current.settingsPageViewService.initialize(context)
         textToSpeechService.initialize(context)
         audioMessagePlaybackService.initialize(context)

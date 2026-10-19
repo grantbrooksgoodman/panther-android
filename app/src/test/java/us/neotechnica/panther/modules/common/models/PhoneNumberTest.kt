@@ -21,8 +21,8 @@ class PhoneNumberTest {
     @Before
     fun setUp() {
         CommonPropertyLists.initializeForTesting(
-            callingCodes = mapOf("FR" to "33", "US" to "1"),
-            lookupTables = mapOf("10" to listOf("1"), "9" to listOf("33")),
+            callingCodes = mapOf("FR" to "33", "GB" to "44", "US" to "1"),
+            lookupTables = mapOf("10" to listOf("1", "44"), "9" to listOf("33")),
         )
         RegionDetailService.clearCache()
     }
@@ -51,6 +51,21 @@ class PhoneNumberTest {
         assertEquals("1", phoneNumber.callingCode)
         assertEquals("5551234567", phoneNumber.nationalNumberString)
         assertEquals("15551234567", phoneNumber.compiledNumberString)
+    }
+
+    @Test
+    fun `a national foreign number takes its calling code from the normalized international form`() {
+        val phoneNumber = PhoneNumber("020 7946 0958", internalFormattedString = "+442079460958")
+
+        assertEquals("44", phoneNumber.callingCode)
+        assertEquals("+442079460958", phoneNumber.internalFormattedString)
+    }
+
+    @Test
+    fun `a spaced international form yields its first component as the calling code`() {
+        val phoneNumber = PhoneNumber("020 7946 0958", internalFormattedString = "+44 20 7946 0958")
+
+        assertEquals("44", phoneNumber.callingCode)
     }
 
     @Test

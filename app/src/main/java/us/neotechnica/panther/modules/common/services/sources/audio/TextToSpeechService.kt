@@ -234,11 +234,16 @@ object TextToSpeechService {
         val engine = engine ?: return null
         if (!isInitialized) return null
 
+        // A voice matches on the raw code prefix of its language tag; the
+        // locale's language is the fallback for the installed-voice rule.
         val language = Locale.forLanguageTag(languageCode).language
         return runCatching {
             engine.voices
                 ?.filter { voice ->
-                    voice.locale.language.equals(language, ignoreCase = true) &&
+                    (
+                        voice.locale.toLanguageTag().startsWith(languageCode, ignoreCase = true) ||
+                            voice.locale.language.equals(language, ignoreCase = true)
+                    ) &&
                         !voice.isNetworkConnectionRequired &&
                         voice.features?.contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED) != true
                 }.orEmpty()

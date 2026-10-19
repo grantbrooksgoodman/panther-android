@@ -32,6 +32,7 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.designsystem.modules.theming.views.PantherTheme
 import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.common.services.sources.AnalyticsService
+import us.neotechnica.panther.modules.common.services.sources.NotificationService
 import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
 import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.navigation.PendingChatNavigation
@@ -58,6 +59,7 @@ class MainActivity : ComponentActivity() {
     // MARK: - Dependencies
 
     private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
+    private val notificationService: NotificationService by Dependency { it.commonServices.notification }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -119,7 +121,9 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        capturePendingChat(intent)
+        intent.getStringExtra(PendingChatNavigation.CONVERSATION_ID_KEY_EXTRA)?.let {
+            notificationService.respondToNotificationTap(it)
+        }
     }
 
     override fun onDestroy() {
