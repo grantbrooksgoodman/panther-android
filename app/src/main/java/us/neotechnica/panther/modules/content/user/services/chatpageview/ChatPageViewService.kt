@@ -46,11 +46,6 @@ import kotlin.time.Duration.Companion.milliseconds
  *   recipient bar.
  * - The preview configuration displays a read-only preview with the
  *   input bar hidden.
- *
- * **Important:** Lifecycle events that occur while a media preview or
- * picker is presented over the page reflect the page being covered and
- * uncovered, not presented and dismissed; consult
- * [shouldRespondToViewLifecycleEvent] before acting on them.
  */
 object ChatPageViewService {
     // MARK: - Dependencies
@@ -83,17 +78,6 @@ object ChatPageViewService {
 
     /** The navigation title the page resolved, or `null` before it resolves. */
     val navigationTitle: StateFlow<String?> = mutableNavigationTitle.asStateFlow()
-
-    /**
-     * A Boolean value that indicates whether a view lifecycle event
-     * reflects the page being presented or dismissed, rather than
-     * covered by a media preview or picker.
-     */
-    val shouldRespondToViewLifecycleEvent: Boolean
-        get() =
-            !DependencyValues.current.chatInfoPageViewService.isPreviewingMedia &&
-                !MediaActionHandlerService.isPresentingPickerController &&
-                !MediaMessagePreviewService.isPreviewingMedia
 
     // MARK: - Set Configuration
 

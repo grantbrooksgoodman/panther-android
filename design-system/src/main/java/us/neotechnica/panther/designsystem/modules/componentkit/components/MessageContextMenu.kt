@@ -22,12 +22,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -93,7 +91,6 @@ fun MessageContextMenu(
     content: @Composable () -> Unit,
 ) {
     val controller = LocalContextMenuController.current
-    val haptics = LocalHapticFeedback.current
     var bubbleCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
     val originID = remember { Any() }
     val pressDuration =
@@ -187,11 +184,9 @@ fun MessageContextMenu(
                         onDoubleTap =
                             if (hasDoubleTapDefault) {
                                 {
+                                    // The choice's own handler supplies any feedback.
                                     val choice = currentReactionChoices.firstOrNull { it.isDoubleTapDefault }
-                                    if (choice != null) {
-                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        choice.onSelect()
-                                    }
+                                    (choice?.onDoubleTap ?: choice?.onSelect)?.invoke()
                                 }
                             } else {
                                 null

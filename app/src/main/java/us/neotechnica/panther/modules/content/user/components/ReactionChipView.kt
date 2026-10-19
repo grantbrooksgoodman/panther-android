@@ -16,16 +16,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import us.neotechnica.panther.R
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.componentkit.models.ReactionChoice
+import us.neotechnica.panther.designsystem.modules.foundation.services.SoundPlayer
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.modules.common.services.sources.HapticsService
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.sources.message.models.Message
 import us.neotechnica.panther.modules.networking.sources.user.models.User
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 
 // MARK: - Constants Accessors
 
@@ -99,6 +104,9 @@ internal fun reactionChips(reactions: List<Reaction>): List<ReactionChip> =
  * order, with the current user's own styles selected and the love style
  * as the double-tap default.
  *
+ * Choosing a reaction plays the reaction sound with medium haptic
+ * feedback; the double tap gives the haptic feedback alone.
+ *
  * @param message The message to react to.
  * @param reactions The message's reactions.
  * @param onReact Applies the given style to the given message.
@@ -108,6 +116,7 @@ internal fun reactionChoicesFor(
     reactions: List<Reaction>,
     onReact: (Message, Reaction.Style) -> Unit,
 ): List<ReactionChoice> {
+    val hapticsService = DependencyValues.current.commonServices.haptics
     val ownStyles =
         reactions
             .filter { it.userID == User.currentUserID }
@@ -119,7 +128,15 @@ internal fun reactionChoicesFor(
             selectedColor = style.squareIconBackgroundColor,
             isSelected = style in ownStyles,
             isDoubleTapDefault = style == Reaction.Style.LOVE,
-            onSelect = { onReact(message, style) },
+            onSelect = {
+                SoundPlayer.play(R.raw.reaction)
+                hapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
+                onReact(message, style)
+            },
+            onDoubleTap = {
+                hapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
+                onReact(message, style)
+            },
         )
     }
 }

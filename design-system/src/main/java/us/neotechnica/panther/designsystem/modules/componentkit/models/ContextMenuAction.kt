@@ -22,6 +22,9 @@ import androidx.compose.ui.graphics.Color
  *   this reaction.
  * @property onSelect The closure to run when the user chooses this
  *   reaction.
+ * @property onDoubleTap The closure to run when a double tap on the
+ *   message applies this default reaction, or `null` to run
+ *   [onSelect].
  */
 data class ReactionChoice(
     val emoji: String,
@@ -29,6 +32,7 @@ data class ReactionChoice(
     val isSelected: Boolean,
     val isDoubleTapDefault: Boolean = false,
     val onSelect: () -> Unit,
+    val onDoubleTap: (() -> Unit)? = null,
 )
 
 /**

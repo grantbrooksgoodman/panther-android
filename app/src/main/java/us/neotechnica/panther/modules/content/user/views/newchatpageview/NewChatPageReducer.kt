@@ -13,8 +13,11 @@ import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
 import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.common.services.sources.AnalyticsService
+import us.neotechnica.panther.modules.content.user.dependencies.inputBarService
+import us.neotechnica.panther.modules.content.user.extensions.isEmpty
+import us.neotechnica.panther.modules.content.user.extensions.isMock
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
-import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.inputbar.InputBarService
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.recipientbar.RecipientBarService
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
@@ -54,6 +57,7 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
 
     private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
     private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
+    private val inputBarService: InputBarService by Dependency { it.inputBarService }
 
     // MARK: - Actions
 
@@ -77,6 +81,15 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
         /** An action that indicates the input bar's text changed, carrying the new value. */
         data class InputChanged(
             val text: String,
+        ) : Action
+
+        /**
+         * An action that indicates the input bar's focus changed,
+         * carrying whether the input field is now the first responder.
+         * Taking focus commits or clears a pending recipient entry.
+         */
+        data class InputBarFocusChanged(
+            val isFirstResponder: Boolean,
         ) : Action
 
         /** An action that indicates whether the done button is enabled changed, carrying the new value. */
@@ -137,6 +150,7 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
         when (action) {
             Action.ViewAppeared -> {
                 analyticsService.logEvent(AnalyticsService.AnalyticsEvent.ACCESS_NEW_CHAT_PAGE)
+                inputBarService.configureInputBar(forceUpdate = true)
                 ReduceResult(
                     state.copy(
                         doneToolbarButtonText = LocalizedStringKey.Cancel.localized(),
@@ -158,12 +172,28 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
 
             Action.FirstMessageSent -> reduceFirstMessageSent(state)
 
-            is Action.InputChanged -> ReduceResult(state.copy(inputText = action.text))
+            is Action.InputChanged -> {
+                inputBarService.textViewDidChange(action.text)
+                ReduceResult(state.copy(inputText = action.text))
+            }
+
+            is Action.InputBarFocusChanged -> {
+                inputBarService.setIsFirstResponder(action.isFirstResponder)
+                if (!action.isFirstResponder) {
+                    ReduceResult(state)
+                } else {
+                    inputBarService.configureInputBar()
+                    ReduceResult(state, textViewShouldBeginEditingEffect())
+                }
+            }
 
             is Action.IsDoneToolbarButtonEnabledChanged ->
                 ReduceResult(state.copy(isDoneToolbarButtonEnabled = action.isDoneToolbarButtonEnabled))
 
-            is Action.IsSendingMessageChanged -> ReduceResult(state.copy(isSendingMessage = action.isSendingMessage))
+            is Action.IsSendingMessageChanged -> {
+                inputBarService.toggleSendingUI(on = action.isSendingMessage, clearInputTextViewText = false)
+                ReduceResult(state.copy(isSendingMessage = action.isSendingMessage))
+            }
 
             is Action.MessageOutboxChanged -> ReduceResult(state.copy(hasSendingOutboxEntry = action.hasSendingOutboxEntry))
 
@@ -172,19 +202,23 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
                 ReduceResult(state.copy(inputText = action.restoredText))
             }
 
-            is Action.SendReturned -> {
-                DependencyValues.current.navigation.navigate(
-                    Route.UserContent(
-                        UserContentRoute.Stack(listOf(UserContentNavigatorState.SeguePaths.Chat(action.conversationIDKey))),
-                    ),
-                )
-                ReduceResult(state.copy(hasSentFirstMessage = true))
-            }
-
-            Action.SendTapped ->
-                if (state.inputText.isBlank() || state.isSendingMessage) {
+            is Action.SendReturned ->
+                if (action.conversationIDKey.isBlank()) {
                     ReduceResult(state)
                 } else {
+                    DependencyValues.current.navigation.navigate(
+                        Route.UserContent(
+                            UserContentRoute.Stack(listOf(UserContentNavigatorState.SeguePaths.Chat(action.conversationIDKey))),
+                        ),
+                    )
+                    ReduceResult(state.copy(hasSentFirstMessage = true))
+                }
+
+            Action.SendTapped ->
+                if (state.inputText.isBlank() || state.isSendingMessage || !inputBarService.shouldEnableSendButton) {
+                    ReduceResult(state)
+                } else {
+                    inputBarService.toggleSendingUI(on = true)
                     ReduceResult(state.copy(inputText = ""), sendEffect(state.inputText))
                 }
         }
@@ -205,11 +239,14 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
         )
     }
 
+    // The send goes through the input bar's action handler, which refuses
+    // an empty conversation; only a stored conversation is navigated into.
     private fun sendEffect(text: String): Effect<Action> =
         Effect.run { send ->
             try {
-                MessageDeliveryService.sendTextMessage(text)
-                val conversationIDKey = conversationSession.currentConversation?.id?.key
+                inputBarService.actionHandler.didPressSendButton(text)
+                val conversation = conversationSession.currentConversation
+                val conversationIDKey = conversation?.takeIf { !it.isEmpty && !it.isMock }?.id?.key
                 if (conversationIDKey != null) {
                     send(Action.FirstMessageSent)
                     send(Action.SendReturned(conversationIDKey))
@@ -219,5 +256,21 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
             } catch (exception: Exception) {
                 send(Action.SendFailed(exception, text))
             }
+        }
+
+    // A pending recipient entry – typed text, or unregistered recipients
+    // left in place – is committed or cleared when the input field takes
+    // focus, unless the suggestions table is showing.
+    private fun textViewShouldBeginEditingEffect(): Effect<Action> =
+        Effect.fireAndForget {
+            val recipientBar = RecipientBarService
+            val hasMockRecipients =
+                recipientBar.contactSelectionUI.selectedContactPairs.value
+                    .any { it.isMock }
+            val textFieldText = recipientBar.layout.textFieldText.value
+            if (!hasMockRecipients && textFieldText.isBlank()) return@fireAndForget
+            if (recipientBar.tableView.isTableViewVisible.value) return@fireAndForget
+
+            recipientBar.actionHandler.textFieldShouldReturn(textFieldText, makeInputBarFirstResponder = false)
         }
 }

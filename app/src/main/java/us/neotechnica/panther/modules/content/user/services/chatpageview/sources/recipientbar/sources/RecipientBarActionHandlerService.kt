@@ -233,12 +233,14 @@ class RecipientBarActionHandlerService(
             return
         }
 
+        // A number keeps only dashes and pluses between its digits; inner
+        // spaces make the entry a name.
         val phoneNumber = PhoneNumber(text)
         val sanitizedLength =
             text
                 .replace("-", "")
                 .replace("+", "")
-                .replace(" ", "")
+                .trim()
                 .length
         if (phoneNumber.compiledNumberString.length <= 1 || text.digits.length != sanitizedLength) {
             contactSelectionUIService.selectContactPair(ContactPair.mock(withName = text))

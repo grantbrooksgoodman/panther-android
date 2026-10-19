@@ -131,7 +131,10 @@ object ContactSelectorPageView {
                 SearchBarInView(
                     query = state.searchQuery,
                     onQueryChange = { viewModel.send(ContactSelectorPageReducer.Action.SearchQueryChanged(it)) },
-                    keyboardType = if (entryPoint == EntryPoint.CHAT_INFO_PAGE_VIEW) KeyboardType.Phone else null,
+                    // A name-and-phone pad: text entry without autocorrection,
+                    // or the phone pad when adding a participant by number.
+                    keyboardType = if (entryPoint == EntryPoint.CHAT_INFO_PAGE_VIEW) KeyboardType.Phone else KeyboardType.Text,
+                    autoCorrectEnabled = false,
                     placeholderText = state.searchBarPlaceholderText,
                 ) {
                     // The page extends beneath the navigation bar and keyboard, as

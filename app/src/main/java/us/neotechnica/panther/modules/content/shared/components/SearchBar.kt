@@ -67,6 +67,8 @@ private typealias Strings = SearchBarStrings
  * @param bottomPadding The padding below the field.
  * @param keyboardType The soft-keyboard type for the input field, or
  *   `null` for the system default.
+ * @param autoCorrectEnabled Whether the keyboard offers autocorrection.
+ *   The default is `true`.
  * @param placeholderText The placeholder shown while the query is
  *   empty. Defaults to the localized search prompt.
  * @param onSubmit The handler to run with the current query when the
@@ -91,6 +93,7 @@ fun SearchBar(
     backgroundColor: Color = LocalPantherColors.current.navigationBarBackground,
     bottomPadding: Float = Floats.DEFAULT_BOTTOM_PADDING,
     keyboardType: KeyboardType? = null,
+    autoCorrectEnabled: Boolean = true,
     placeholderText: String = LocalizedStringKey.Search.localized(),
     onSubmit: ((String) -> Unit)? = null,
     onFocusChanged: ((Boolean) -> Unit)? = null,
@@ -177,6 +180,7 @@ fun SearchBar(
                     keyboardActions = KeyboardActions(onDone = { onSubmit?.invoke(query) }),
                     keyboardOptions =
                         KeyboardOptions(
+                            autoCorrectEnabled = autoCorrectEnabled,
                             imeAction = ImeAction.Done,
                             keyboardType = keyboardType ?: KeyboardType.Text,
                         ),
@@ -237,6 +241,8 @@ private const val CANCEL_BUTTON_ANIMATION_LABEL = "SearchBarCancelButton"
  * @param onQueryChange Invoked as the query changes.
  * @param keyboardType The keyboard type to display during editing,
  *   or `null` for the system default.
+ * @param autoCorrectEnabled Whether the keyboard offers autocorrection.
+ *   The default is `true`.
  * @param placeholderText The placeholder string to display while the
  *   query is empty. Defaults to the localized search prompt.
  * @param onSubmit The handler to run with the current query when the
@@ -249,6 +255,7 @@ fun SearchBarInView(
     query: String,
     onQueryChange: (String) -> Unit,
     keyboardType: KeyboardType? = null,
+    autoCorrectEnabled: Boolean = true,
     placeholderText: String = LocalizedStringKey.Search.localized(),
     onSubmit: ((String) -> Unit)? = null,
     content: @Composable () -> Unit,
@@ -258,6 +265,7 @@ fun SearchBarInView(
             query = query,
             onQueryChange = onQueryChange,
             keyboardType = keyboardType,
+            autoCorrectEnabled = autoCorrectEnabled,
             placeholderText = placeholderText,
             onSubmit = onSubmit,
         )

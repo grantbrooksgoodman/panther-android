@@ -78,7 +78,7 @@ abstract class ContentPickerSource {
      *
      * @param result The selection, or `null` if the user canceled.
      */
-    fun handleResult(result: ContentPickerResult?) {
+    open fun handleResult(result: ContentPickerResult?) {
         val handler = onDismissHandler
         onDismissHandler = null
         handler?.invoke(result?.let { Result.success(it) })
@@ -109,6 +109,3 @@ class DocumentPickerService : ContentPickerSource() {
         val allowedMimeTypes = arrayOf("image/jpeg", "image/png", "video/mp4", "application/pdf", "text/plain")
     }
 }
-
-/** The picker that selects a photo or video from the library. */
-class MediaPickerService : ContentPickerSource()

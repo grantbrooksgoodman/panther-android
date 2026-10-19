@@ -22,6 +22,7 @@ import android.net.Uri
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.google.firebase.messaging.FirebaseMessagingService
@@ -321,7 +322,7 @@ class PantherMessagingService : FirebaseMessagingService() {
         }
 
         private fun reactionSoundURI(context: Context): Uri =
-            Uri.parse("${ContentResolver.SCHEME_ANDROID_RESOURCE}://${context.packageName}/${R.raw.reaction}")
+            "${ContentResolver.SCHEME_ANDROID_RESOURCE}://${context.packageName}/${R.raw.reaction}".toUri()
 
         @Suppress("LongParameterList")
         private fun showNotification(

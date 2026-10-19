@@ -19,6 +19,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import us.neotechnica.panther.modules.common.constants.CommonConstants
 import us.neotechnica.panther.modules.common.models.ImageFileExtension
 import us.neotechnica.panther.modules.common.models.MediaFile
 import us.neotechnica.panther.modules.common.models.MediaFileExtension
@@ -32,6 +33,7 @@ import us.neotechnica.panther.modules.networking.sources.message.models.RichMess
 import us.neotechnica.panther.modules.networking.sources.support.MessageDecodeEnvironment
 import us.neotechnica.panther.modules.networking.sources.support.SessionTestEnvironment
 import us.neotechnica.panther.modules.networking.sources.user.models.User
+import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.networking.modules.translation.models.TranslationReference
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
@@ -142,7 +144,7 @@ class ContextMenuActionHandlerServiceTest {
 
         val titles = service.menuForMessage(message)?.map { it.title }
 
-        assertEquals(listOf("Copy", "Speak"), titles)
+        assertEquals(listOf("Copy", "Speak", "Report a mistranslation"), titles)
     }
 
     @Test
@@ -192,6 +194,32 @@ class ContextMenuActionHandlerServiceTest {
         val titles = service.menuForMessage(message)?.map { it.title }
 
         assertEquals(listOf("Copy", "Speak"), titles)
+    }
+
+    @Test
+    fun `an own message showing its original offers report in a one-to-one conversation`() {
+        val titles = service.menuForMessage(ownTextMessage())?.map { it.title }
+
+        assertEquals(listOf("Copy", "Speak", "Report a mistranslation", "View translation"), titles)
+    }
+
+    @Test
+    fun `a received message showing its original still offers report`() {
+        val message = receivedTextMessage()
+        AlternateMessageService.toggle(AlternateMessageService.AlternateMessageType.ALTERNATE_TEXT, message)
+
+        val titles = service.menuForMessage(message)?.map { it.title }
+
+        assertEquals(listOf("Copy", "Speak", "Report a mistranslation", "View translation"), titles)
+    }
+
+    @Test
+    fun `a mock or outbox message offers no menu`() {
+        val mock = SessionTestEnvironment.message(id = CommonConstants.NEW_MESSAGE_ID, fromAccountID = "me", sentDate = Date())
+        val outbox = SessionTestEnvironment.message(id = "${OutboxEntry.ID_PREFIX}1", fromAccountID = "me", sentDate = Date())
+
+        assertNull(service.menuForMessage(mock))
+        assertNull(service.menuForMessage(outbox))
     }
 
     @Test

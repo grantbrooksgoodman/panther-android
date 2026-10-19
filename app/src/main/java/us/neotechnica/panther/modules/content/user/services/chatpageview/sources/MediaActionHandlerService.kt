@@ -6,7 +6,7 @@
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
-@file:Suppress("FileLength")
+@file:Suppress("FileLength", "LargeClass")
 
 package us.neotechnica.panther.modules.content.user.services.chatpageview.sources
 
@@ -31,6 +31,7 @@ import androidx.media3.transformer.Effects
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -84,10 +85,17 @@ private typealias Strings = ChatPageViewServiceStrings.MediaActionHandler
  * images and videos and generating thumbnails where needed – and sends
  * it as a media message.
  *
- * **Note:** Videos that cannot be transcoded are staged unchanged. PDF
- * thumbnails are rendered; other document types are sent without one.
+ * **Note:** PDF thumbnails are rendered; other document types are sent
+ * without one.
  */
 object MediaActionHandlerService {
+    // MARK: - Types
+
+    /** The transcoder the video path runs. */
+    internal class Dependencies(
+        val compressVideo: suspend (Uri, File) -> Unit = ::compressVideo,
+    )
+
     // MARK: - Dependencies
 
     private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
@@ -96,6 +104,7 @@ object MediaActionHandlerService {
     // MARK: - Properties
 
     private var appContext: Context? = null
+    private var dependencies: Dependencies? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     /** A Boolean value that indicates whether a content picker is currently presented. */
@@ -114,6 +123,11 @@ object MediaActionHandlerService {
     /** Prepares the service with the application context. */
     fun initialize(context: Context) {
         appContext = context.applicationContext
+    }
+
+    /** Replaces the transcoder the video path runs. */
+    internal fun setDependencies(dependencies: Dependencies?) {
+        this.dependencies = dependencies
     }
 
     // MARK: - Attach Media Button Tapped
@@ -186,10 +200,11 @@ object MediaActionHandlerService {
     // MARK: - Process Video
 
     /**
-     * Stages the video at [uri] and generates its thumbnail.
+     * Transcodes the video at [uri] into place and generates its
+     * thumbnail.
      *
-     * @throws Exception if the video cannot be read or its thumbnail
-     *   cannot be generated.
+     * @throws Exception if the video cannot be transcoded or its
+     *   thumbnail cannot be generated.
      */
     suspend fun processVideo(uri: Uri): MediaFile =
         withContext(Dispatchers.IO) {
@@ -197,11 +212,15 @@ object MediaActionHandlerService {
             val relativePath = "${NetworkPath.media.rawValue}/${Strings.DEFAULT_VIDEO_NAME}.${fileExtension.rawValue}"
             val destination = FileStore.resolve(relativePath) ?: throw failure("Failed to resolve local media path.")
 
-            runCatching { compressVideo(uri, destination) }
-                .onFailure {
-                    Logger.log("Failed to transcode video; staging unchanged. ${it.message}")
-                    copyToFile(uri, relativePath)
-                }
+            try {
+                resolvedDependencies().compressVideo(uri, destination)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (exception: Exception) {
+                throw exception
+            } catch (throwable: Throwable) {
+                throw Exception.from(throwable, metadata = ExceptionMetadata(this@MediaActionHandlerService))
+            }
 
             writeThumbnail(videoThumbnail(uri), relativePath)
             MediaFile(relativePath, Strings.DEFAULT_VIDEO_NAME, fileExtension)
@@ -408,19 +427,42 @@ object MediaActionHandlerService {
             .query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
             ?.use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
 
-    private fun Bitmap.jpegCompressedToKB(targetKB: Int): ByteArray {
+    private fun Bitmap.jpegCompressedToKB(targetKB: Int): ByteArray =
+        jpegDataCompressedToKB(targetKB) { quality ->
+            ByteArrayOutputStream().use { stream ->
+                compress(Bitmap.CompressFormat.JPEG, quality, stream)
+                stream.toByteArray()
+            }
+        }
+
+    /**
+     * Returns JPEG data within the tolerated margin of the given size,
+     * lowering the quality step by step.
+     *
+     * @param targetKB The target size, in kilobytes.
+     * @param compress Encodes the image at the given JPEG quality.
+     *
+     * @throws Exception if no quality meets the target.
+     */
+    internal fun jpegDataCompressedToKB(
+        targetKB: Int,
+        compress: (quality: Int) -> ByteArray,
+    ): ByteArray {
+        val targetBytes = targetKB * BYTES_PER_KB
+        val toleratedBytes = (targetBytes * (1 + TOLERATED_MARGIN_OF_ERROR)).toLong()
+
         var quality = INITIAL_QUALITY
         var data: ByteArray
         do {
-            data =
-                ByteArrayOutputStream().use { stream ->
-                    compress(Bitmap.CompressFormat.JPEG, quality, stream)
-                    stream.toByteArray()
-                }
+            data = compress(quality)
             quality -= QUALITY_STEP
-        } while (data.size > targetKB * BYTES_PER_KB && quality >= QUALITY_STEP)
+        } while (data.size > targetBytes && quality >= QUALITY_STEP)
+
+        if (data.size > toleratedBytes) throw failure("Failed to compress image.")
         return data
     }
+
+    private fun resolvedDependencies(): Dependencies = dependencies ?: Dependencies().also { dependencies = it }
 
     internal fun requireContext(): Context = appContext ?: throw failure("Media action handler is not initialized.")
 
@@ -432,4 +474,5 @@ object MediaActionHandlerService {
     private const val PLAIN_TEXT_MIME_TYPE_PREFIX = "text/"
     private const val QUALITY_STEP = 5
     private const val BYTES_PER_KB = 1024
+    private const val TOLERATED_MARGIN_OF_ERROR = 0.2
 }

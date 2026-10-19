@@ -13,6 +13,7 @@ import us.neotechnica.panther.modules.common.models.ContactImageCache
 import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.common.services.sources.CommonPropertyLists
 import us.neotechnica.panther.modules.common.services.sources.audio.TextToSpeechServiceCache
+import us.neotechnica.panther.modules.content.user.components.ContactInitialsImageCache
 import us.neotechnica.panther.modules.content.user.dependencies.chatInfoPageViewService
 import us.neotechnica.panther.modules.content.user.dependencies.settingsPageViewService
 import us.neotechnica.panther.modules.content.user.extensions.UserDisplayNameCache
@@ -45,6 +46,7 @@ object CacheDomainList : CacheDomainListDelegate {
                 CacheDomain.chatInfoPageViewService,
                 CacheDomain.commonPropertyLists,
                 CacheDomain.contactImage,
+                CacheDomain.contactInitialsImage,
                 CacheDomain.contactPairArchive,
                 CacheDomain.contactService,
                 CacheDomain.conversationArchive,
@@ -90,6 +92,10 @@ val CacheDomain.Companion.commonPropertyLists: CacheDomain
 /** The cache domain for the `contactImage` cache. */
 val CacheDomain.Companion.contactImage: CacheDomain
     get() = CacheDomain("contactImage") { ContactImageCache.clearCache() }
+
+/** The cache domain for the `contactInitialsImage` cache. */
+val CacheDomain.Companion.contactInitialsImage: CacheDomain
+    get() = CacheDomain("contactInitialsImage") { ContactInitialsImageCache.clearCache() }
 
 /** The cache domain for the `contactPairArchive` cache. */
 val CacheDomain.Companion.contactPairArchive: CacheDomain

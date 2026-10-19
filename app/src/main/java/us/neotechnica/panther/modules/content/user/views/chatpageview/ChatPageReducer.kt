@@ -19,7 +19,10 @@ import us.neotechnica.panther.modules.content.user.dependencies.chatPageViewServ
 import us.neotechnica.panther.modules.content.user.dependencies.contextMenuActionHandlerService
 import us.neotechnica.panther.modules.content.user.dependencies.inputBarService
 import us.neotechnica.panther.modules.content.user.extensions.chatPageHeaderLabelText
+import us.neotechnica.panther.modules.content.user.extensions.isEmpty
+import us.neotechnica.panther.modules.content.user.extensions.isMock
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
+import us.neotechnica.panther.modules.content.user.services.ChatPageStateService
 import us.neotechnica.panther.modules.content.user.services.chatpageview.ChatPageViewService
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.AlternateMessageService
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.AudioMessagePlaybackService
@@ -30,6 +33,7 @@ import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
 import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.modules.session.sync.services.ConversationObserverService
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
@@ -62,6 +66,7 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
 
     private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
     private val audioMessagePlaybackService: AudioMessagePlaybackService by Dependency { it.chatPageViewService.audioMessagePlayback }
+    private val conversationObserver: ConversationObserverService by Dependency { it.clientSession.sync.conversationObserver }
     private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
     private val sessionStore: SessionStore by Dependency { it.clientSession.store }
     private val textToSpeechService: TextToSpeechService by Dependency { it.commonServices.audio.textToSpeech }
@@ -79,6 +84,12 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             val conversationIDKey: String,
             val configuration: ChatPageView.Configuration,
         ) : Action
+
+        /**
+         * An action that indicates the page finished appearing. Marks
+         * the chat page presented and the unread messages read.
+         */
+        data object ViewDidAppear : Action
 
         /**
          * An action that indicates the displayed messages changed,
@@ -224,6 +235,12 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
                 )
             }
 
+            Action.ViewDidAppear -> {
+                ChatPageStateService.setIsPresented(true)
+                val effect = if (state.configuration is ChatPageView.Configuration.Preview) Effect.none() else markReadEffect()
+                ReduceResult(state, effect)
+            }
+
             is Action.MessagesUpdated ->
                 ReduceResult(
                     state.copy(
@@ -231,7 +248,6 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
                         viewState = ViewState.Loaded,
                         changeToken = UUID.randomUUID(),
                     ),
-                    markReadEffect(),
                 )
 
             is Action.TextViewDidChange -> {
@@ -265,7 +281,7 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
 
             is Action.HandleSessionStoreChange ->
                 if (shouldReload(action.change)) {
-                    val effect = reloadEffect(ReducerFloats.SESSION_STORE_CHANGE_DEBOUNCE_MILLISECONDS, ReloadEffectID.SESSION_STORE)
+                    val effect = reloadEffect(ReducerFloats.SESSION_STORE_CHANGE_DEBOUNCE_MILLISECONDS, ReloadEffectID.CHAT_PAGE_RELOAD)
                     ReduceResult(state, effect)
                 } else {
                     ReduceResult(state)
@@ -279,11 +295,10 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             is Action.HandleOutboxChange ->
                 ReduceResult(
                     state.copy(isSendingOutboxEntry = action.isSendingOutboxEntry),
-                    reloadEffect(ReducerFloats.OUTBOX_CHANGE_DEBOUNCE_MILLISECONDS, ReloadEffectID.OUTBOX),
+                    reloadEffect(ReducerFloats.OUTBOX_CHANGE_DEBOUNCE_MILLISECONDS, ReloadEffectID.CHAT_PAGE_RELOAD),
                 )
 
-            Action.ReloadRequested ->
-                ReduceResult(state.copy(changeToken = UUID.randomUUID()), markReadEffect())
+            Action.ReloadRequested -> ReduceResult(state.copy(changeToken = UUID.randomUUID()))
 
             Action.ConversationUnavailable -> {
                 DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
@@ -298,28 +313,10 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
 
     // MARK: - Auxiliary
 
+    // One identifier for both change sources: a burst of session store
+    // and outbox changes reloads once.
     private enum class ReloadEffectID {
-        OUTBOX,
-        SESSION_STORE,
-    }
-
-    /**
-     * Whether the chat page is being disposed while its conversation
-     * remains on screen, as opposed to the conversation being left:
-     * either a sub-page of the same conversation – its chat info or a
-     * message's reaction details – was pushed over it, or another chat
-     * page now presents the same conversation, as when the new chat page
-     * hands off to the conversation after its first message is sent.
-     */
-    private fun isConversationStillPresented(conversationIDKey: String): Boolean {
-        val topPath =
-            DependencyValues.current.navigation.state.value.userContent.stack
-                .lastOrNull()
-        return when (topPath) {
-            is UserContentNavigatorState.SeguePaths.Chat -> topPath.conversationIDKey == conversationIDKey
-            is UserContentNavigatorState.SeguePaths.ChatInfo -> topPath.conversationIDKey == conversationIDKey
-            else -> false
-        }
+        CHAT_PAGE_RELOAD,
     }
 
     private fun reloadEffect(
@@ -344,6 +341,8 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             ChatPageViewService.setConfiguration(configuration)
             conversationSession.resetMessageOffset()
             conversationSession.setCurrentConversation(conversation)
+            // Stored conversations are observed on every appearance.
+            if (!conversation.isEmpty && !conversation.isMock) conversationObserver.startObserving(conversation.id.key)
             configuration.focusedMessageID?.let { conversationSession.incrementMessageOffset(it) }
 
             val inputBarService = DependencyValues.current.inputBarService
@@ -352,7 +351,6 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
 
             val navigationTitle = conversation.chatPageHeaderLabelText ?: ConversationCellViewData(conversation)?.titleLabelText
             navigationTitle?.let { ChatPageViewService.setNavigationTitle(it) }
-            markCurrentConversationAsRead()
         }
 
     // Speech, playback, and alternate content stop on every disappearance;
@@ -363,6 +361,7 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
     // outgoing page is disposed only after its exit transition, by which
     // time the incoming page has already set the pointer.
     private fun viewDisappeared(state: State) {
+        conversationObserver.stopObserving()
         textToSpeechService.stopSpeakingIfNeeded()
         audioMessagePlaybackService.stopPlayback()
         DependencyValues.current.contextMenuActionHandlerService.resetSpeakingMessage()
@@ -370,8 +369,15 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         AlternateMessageService.restoreAllAudioTranscriptionMessageIDs()
         DependencyValues.current.inputBarService.textViewDidChange("")
 
+        // The page counts as presented while its conversation stays on
+        // the navigation stack, so a disposal under a sub-page or a
+        // handoff to another chat page of the same conversation keeps it.
+        val isConversationStillPresented = ChatPageStateService.isConversationStillPresented(state.conversationIDKey)
+        ChatPageStateService.setIsPresented(isConversationStillPresented)
+        conversationSession.resetMessageOffset()
+
         if (state.configuration is ChatPageView.Configuration.Preview) return
-        if (!isConversationStillPresented(state.conversationIDKey)) {
+        if (!isConversationStillPresented) {
             // Flush read receipts for any message that arrived within the
             // mark-read debounce window just before the page was left; the
             // detached flush outlives the view model.
@@ -379,8 +385,6 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             conversationSession.setCurrentConversation(null)
             ChatPageViewService.clearNavigationTitle()
         }
-
-        conversationSession.resetMessageOffset()
     }
 
     private fun sendEffect(text: String): Effect<Action> =

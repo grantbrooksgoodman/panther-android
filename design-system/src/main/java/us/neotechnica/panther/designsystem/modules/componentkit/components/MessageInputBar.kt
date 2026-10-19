@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -99,6 +100,7 @@ fun MessageInputBar(
     images: MessageInputBarImages? = null,
     focusRequester: FocusRequester? = null,
     onFocusChanged: ((Boolean) -> Unit)? = null,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalPantherColors.current
@@ -171,6 +173,7 @@ fun MessageInputBar(
                         onValueChange = onTextChange,
                         textStyle = Font.system.textStyle.copy(color = colors.titleText),
                         cursorBrush = SolidColor(if (isSending) Colors.inputTextViewAlternateTint else colors.navigationBarButton),
+                        keyboardOptions = keyboardOptions,
                         maxLines = Floats.FIELD_MAX_LINES,
                         modifier =
                             Modifier

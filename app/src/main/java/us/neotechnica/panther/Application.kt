@@ -53,6 +53,7 @@ import us.neotechnica.panther.modules.common.services.sources.RegionDetailServic
 import us.neotechnica.panther.modules.common.services.sources.UpdateService
 import us.neotechnica.panther.modules.common.services.sources.audio.TextToSpeechService
 import us.neotechnica.panther.modules.common.services.sources.contacts.ContactService
+import us.neotechnica.panther.modules.common.services.sources.contentpicker.ContentPickerService
 import us.neotechnica.panther.modules.content.user.dependencies.chatPageViewService
 import us.neotechnica.panther.modules.content.user.dependencies.settingsPageViewService
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.AudioMessagePlaybackService
@@ -302,6 +303,7 @@ object Application {
         DependencyValues.current.settingsPageViewService.initialize(context)
         textToSpeechService.initialize(context)
         audioMessagePlaybackService.initialize(context)
+        ContentPickerService.initialize(context)
         MediaActionHandlerService.initialize(context)
         ContextMenuActionHandlerService.initialize(context)
         DefaultAttributeDetectionServiceDelegate.initialize(context)

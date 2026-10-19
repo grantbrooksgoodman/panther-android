@@ -23,6 +23,8 @@ import us.neotechnica.panther.modules.networking.sources.message.models.Message
  * @property isGroup Whether the conversation has more than two
  *   participants.
  * @property isFailed Whether this is a failed outbox message.
+ * @property isLastMessage Whether this is the last message in the list
+ *   (with the reactions, gates the delivery status label).
  * @property senderName The sender's display name, shown above the first
  *   message in a run from a group participant, or `null` when it should
  *   be hidden.
@@ -37,6 +39,7 @@ data class ChatMessageRowData(
     val isLastConfirmedOwnMessage: Boolean,
     val isGroup: Boolean,
     val isFailed: Boolean,
+    val isLastMessage: Boolean = false,
     val senderName: String?,
     val senderImage: ImageBitmap? = null,
     val reactions: List<Reaction> = emptyList(),

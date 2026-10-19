@@ -85,20 +85,19 @@ object ReadReceiptService {
 
     // MARK: - Auxiliary
 
+    // Nothing is marked once the most recent incoming message has been
+    // read; a badge write failure propagates.
     private suspend fun updateReadDateForUnreadMessages(conversation: Conversation): Boolean {
-        val unreadMessages =
-            conversation.messages?.filter { !it.isFromCurrentUser && it.currentUserReadReceipt == null } ?: return false
+        val messages = conversation.messages?.filter { !it.isFromCurrentUser } ?: return false
+        if (messages.lastOrNull()?.currentUserReadReceipt != null) return false
+
+        val unreadMessages = messages.filter { it.currentUserReadReceipt == null }
         if (unreadMessages.isEmpty()) return false
 
         conversation.updateReadDate(unreadMessages)
 
         val currentUser = userSession.currentUser ?: return true
-        try {
-            notificationService.setBadgeNumber(currentUser.calculateBadgeNumber())
-        } catch (exception: Exception) {
-            Logger.log(exception, domain = LoggerDomain.conversation)
-        }
-
+        notificationService.setBadgeNumber(currentUser.calculateBadgeNumber())
         return true
     }
 }

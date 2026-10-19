@@ -47,7 +47,8 @@ private typealias DataSourceLayoutFloats = ChatPageViewFloats.MessagesLayoutDele
  *
  * A failed outbox message reads "Not Delivered". Otherwise the label
  * names the language of displayed alternate content and, for the last
- * confirmed own message in a one-to-one conversation, the message's
+ * confirmed own message in a one-to-one conversation – while it is
+ * the last message in the list or carries reactions – the message's
  * delivery or read status. Reactions render as chips beside the label
  * rather than within it.
  *
@@ -85,7 +86,8 @@ internal fun cellBottomLabelAttributedText(row: ChatMessageRowData): AnnotatedSt
         }
     }
 
-    if (!row.isGroup && row.isLastConfirmedOwnMessage && message.isFromCurrentUser) {
+    val hasStatusRoom = row.isLastMessage || row.reactions.isNotEmpty()
+    if (!row.isGroup && row.isLastConfirmedOwnMessage && message.isFromCurrentUser && hasStatusRoom) {
         val readDate = message.readReceipts?.firstOrNull { it.userID != User.currentUserID }?.readDate
         return buildAnnotatedString {
             if (readDate == null) {

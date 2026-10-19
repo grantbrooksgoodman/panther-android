@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -34,6 +35,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.intl.Locale
+import androidx.compose.ui.text.intl.LocaleList
 import us.neotechnica.panther.bundle.isNewChatPageDoneToolbarButtonEnabled
 import us.neotechnica.panther.bundle.messageOutboxDidChange
 import us.neotechnica.panther.bundle.navigators.ChatNavigatorState
@@ -53,6 +56,7 @@ import us.neotechnica.panther.modules.content.user.components.contentpickerview.
 import us.neotechnica.panther.modules.content.user.components.recipientbar.RecipientBar
 import us.neotechnica.panther.modules.content.user.components.rememberRegisteredDeliveryProgressIndicatorService
 import us.neotechnica.panther.modules.content.user.constants.NewChatPageViewColors
+import us.neotechnica.panther.modules.content.user.dependencies.inputBarService
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.MediaActionHandlerService
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.inputbar.sources.InputBarConfigService
@@ -65,6 +69,7 @@ import us.neotechnica.panther.modules.content.user.views.newchatpageview.NewChat
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedStates
@@ -101,7 +106,6 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
     RegisterMediaMessageSentHook(viewModel)
 
     val recipientBar = RecipientBarService
-    val selectedContactPairs by recipientBar.contactSelectionUI.selectedContactPairs.collectAsState()
     val isTextFieldFirstResponder by recipientBar.layout.isTextFieldFirstResponder.collectAsState()
     val inputBarPlaceholder by recipientBar.layout.inputBarPlaceholder.collectAsState()
     val isTableViewVisible by recipientBar.tableView.isTableViewVisible.collectAsState()
@@ -159,18 +163,10 @@ fun NewChatPageView(modifier: Modifier = Modifier) {
                     }
                 }
 
-                MessageInputBar(
-                    text = state.inputText,
+                NewChatInputBar(
+                    state = state,
+                    viewModel = viewModel,
                     placeholder = inputBarPlaceholder ?: "",
-                    isSending = state.isSendingMessage || state.hasSendingOutboxEntry,
-                    onTextChange = { viewModel.send(Action.InputChanged(it)) },
-                    onSend = { viewModel.send(Action.SendTapped) },
-                    onAttach = { MediaActionHandlerService.attachMediaButtonTapped() },
-                    attachMediaButtonSymbol = InputBarConfigService.attachMediaButtonImage(),
-                    sendButtonSymbol = InputBarConfigService.sendButtonImage(),
-                    isSendEnabled = selectedContactPairs.isNotEmpty() && !isTextFieldFirstResponder && state.inputText.isNotBlank(),
-                    isAttachEnabled = !isTextFieldFirstResponder,
-                    images = InputBarConfigService.images(),
                     focusRequester = inputBarFocusRequester,
                 )
             }
@@ -199,6 +195,39 @@ private fun RegisterMediaMessageSentHook(viewModel: ViewModel<NewChatPageReducer
         }
         onDispose { MediaActionHandlerService.onMediaMessageSent = null }
     }
+}
+
+// MARK: - Input Bar
+
+// The input bar's buttons follow the shared input bar service, as the
+// chat page's do.
+@Composable
+private fun NewChatInputBar(
+    state: NewChatPageReducer.State,
+    viewModel: ViewModel<NewChatPageReducer.State, NewChatPageReducer.Action>,
+    placeholder: String,
+    focusRequester: FocusRequester,
+) {
+    val inputBarService = remember { DependencyValues.current.inputBarService }
+    val isSendButtonEnabled by inputBarService.isSendButtonEnabled.collectAsState()
+    val isAttachMediaButtonEnabled by inputBarService.isAttachMediaButtonEnabled.collectAsState()
+
+    MessageInputBar(
+        text = state.inputText,
+        placeholder = placeholder,
+        isSending = state.isSendingMessage,
+        onTextChange = { viewModel.send(Action.InputChanged(it)) },
+        onSend = { viewModel.send(Action.SendTapped) },
+        onAttach = { MediaActionHandlerService.attachMediaButtonTapped() },
+        attachMediaButtonSymbol = InputBarConfigService.attachMediaButtonImage(),
+        sendButtonSymbol = InputBarConfigService.sendButtonImage(),
+        isSendEnabled = isSendButtonEnabled,
+        isAttachEnabled = isAttachMediaButtonEnabled,
+        images = InputBarConfigService.images(),
+        focusRequester = focusRequester,
+        onFocusChanged = { viewModel.send(Action.InputBarFocusChanged(it)) },
+        keyboardOptions = KeyboardOptions(hintLocales = LocaleList(Locale(RuntimeStorage.languageCode))),
+    )
 }
 
 // MARK: - Header

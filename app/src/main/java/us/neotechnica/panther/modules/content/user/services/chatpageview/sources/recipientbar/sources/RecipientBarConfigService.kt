@@ -14,12 +14,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.common.services.sources.audio.TextToSpeechService
 import us.neotechnica.panther.modules.content.user.dependencies.chatPageViewService
+import us.neotechnica.panther.modules.content.user.dependencies.inputBarService
 import us.neotechnica.panther.modules.content.user.extensions.empty
 import us.neotechnica.panther.modules.content.user.extensions.isMock
 import us.neotechnica.panther.modules.content.user.extensions.mock
 import us.neotechnica.panther.modules.content.user.extensions.userIDs
 import us.neotechnica.panther.modules.content.user.extensions.users
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.AudioMessagePlaybackService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.inputbar.InputBarService
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.recipientbar.RecipientBarService
 import us.neotechnica.panther.modules.networking.sources.common.extensions.sortedByLatestMessageSentDate
 import us.neotechnica.panther.modules.networking.sources.common.extensions.visibleForCurrentUser
@@ -42,6 +44,7 @@ class RecipientBarConfigService {
 
     private val audioMessagePlaybackService: AudioMessagePlaybackService by Dependency { it.chatPageViewService.audioMessagePlayback }
     private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
+    private val inputBarService: InputBarService by Dependency { it.inputBarService }
     private val textToSpeechService: TextToSpeechService by Dependency { it.commonServices.audio.textToSpeech }
     private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
 
@@ -103,6 +106,7 @@ class RecipientBarConfigService {
 
             conversationSession.setCurrentConversation(conversation)
             mutableConversationIDKey.value = null
+            inputBarService.configureInputBar()
             return
         }
 
@@ -110,6 +114,8 @@ class RecipientBarConfigService {
         if (existingConversation.id.key != previousConversationIDKey) {
             mutableConversationIDKey.value = existingConversation.id.key
         }
+
+        inputBarService.configureInputBar()
     }
 
     // MARK: - Reset

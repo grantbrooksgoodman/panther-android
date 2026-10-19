@@ -38,6 +38,8 @@ import us.neotechnica.panther.modules.content.user.constants.ChatPageViewService
 import us.neotechnica.panther.modules.content.user.dependencies.chatPageViewService
 import us.neotechnica.panther.modules.content.user.extensions.isConsentMessage
 import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
+import us.neotechnica.panther.modules.content.user.extensions.isMock
+import us.neotechnica.panther.modules.content.user.extensions.isOutboxMessage
 import us.neotechnica.panther.modules.content.user.extensions.messageLabelText
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.AlternateMessageService
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.MediaActionHandlerService
@@ -189,10 +191,10 @@ class ContextMenuActionHandlerService(
      * @param message The message to build the menu for.
      *
      * @return The context menu actions for the message, or `null` if
-     *   the message is a consent message.
+     *   the message is a consent, mock, or outbox message.
      */
     fun menuForMessage(message: Message): List<ContextMenuAction>? {
-        if (message.isConsentMessage) return null
+        if (message.isConsentMessage || message.isMock || message.isOutboxMessage) return null
         val actions = mutableListOf<ContextMenuAction>()
         if (message.reactions != null) {
             actions.add(
@@ -420,7 +422,6 @@ class ContextMenuActionHandlerService(
 
         val translation = message.translation
         val containsLetters = translation?.input?.value?.containsLetters == true || translation?.output?.sanitized?.containsLetters == true
-        val isDisplayingAlternate = dependencies.isDisplayingAlternateText(message)
         val hostingKey = translation?.let { message.translationReferences?.firstOrNull()?.hostingKey }
 
         val isOutputDistinct =
@@ -428,14 +429,8 @@ class ContextMenuActionHandlerService(
                 translation?.input?.value?.lowercasedTrimmingWhitespaceAndNewlines
         if (!isOutputDistinct || isSpeaking || !containsLetters || hostingKey == null) return actions
 
-        // The report is offered only while the translation itself is on
-        // display – a mistranslation must be visible to be reported.
-        val isDisplayingTranslation = if (message.isFromCurrentUser) isDisplayingAlternate else !isDisplayingAlternate
         val exceptionCode = mistranslationException(hostingKey).code
-        if (translation.languagePair.isIdempotent == false &&
-            isDisplayingTranslation &&
-            exceptionCode !in dependencies.reportedErrorCodes()
-        ) {
+        if (translation.languagePair.isIdempotent == false && exceptionCode !in dependencies.reportedErrorCodes()) {
             actions.add(
                 ContextMenuAction(
                     title = LocalizedStringKey.ReportMistranslation.localized(),

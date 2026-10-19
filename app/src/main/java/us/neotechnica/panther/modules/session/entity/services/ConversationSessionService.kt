@@ -190,20 +190,13 @@ object ConversationSessionService {
             sessionStore.upsertConversation(conversation)
             currentConversationReference.wrappedValue = CurrentConversationReference.Stored(conversation.id.key)
 
-            // Live-observe the open conversation; the observer coalesces
-            // repeated starts for the same key.
-            conversationObserver.startObserving(conversation.id.key)
-
             // Persist the open conversation so process death can restore it.
             persistOpenConversationIDKey(conversation.id.key)
 
+            // First send in a new chat: observation begins now that the
+            // conversation is stored. The chat page starts it otherwise.
             if (previousReference is CurrentConversationReference.Draft) {
-                // First send in a new chat: observation begins now that the
-                // conversation is stored.
-                Logger.log(
-                    "Started observing newly stored conversation.",
-                    domain = LoggerDomain.conversation,
-                )
+                conversationObserver.startObserving(conversation.id.key)
             }
         }
 

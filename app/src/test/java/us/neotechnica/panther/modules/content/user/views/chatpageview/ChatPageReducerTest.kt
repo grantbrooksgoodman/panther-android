@@ -8,7 +8,15 @@
 
 package us.neotechnica.panther.modules.content.user.views.chatpageview
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -21,16 +29,19 @@ import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
 import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.content.user.dependencies.inputBarService
+import us.neotechnica.panther.modules.content.user.services.ChatPageStateService
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.AlternateMessageService
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.sources.support.MessageDecodeEnvironment
 import us.neotechnica.panther.modules.networking.sources.support.SessionTestEnvironment
+import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.parity.FixtureJson
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.effect.Send
 import java.util.Date
 
 /**
@@ -38,6 +49,7 @@ import java.util.Date
  * state, the input bar forwarding, the alternate content toggles, the
  * send gate, and the reload triggers.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class ChatPageReducerTest {
     // MARK: - Setup
 
@@ -58,6 +70,7 @@ class ChatPageReducerTest {
         AlternateMessageService.restoreAllAudioTranscriptionMessageIDs()
         DependencyValues.current.inputBarService.toggleSendingUI(on = false)
         DependencyValues.current.inputBarService.textViewDidChange("")
+        ChatPageStateService.setIsPresented(false)
     }
 
     // MARK: - Appearance
@@ -187,8 +200,54 @@ class ChatPageReducerTest {
                 configuration = ChatPageView.Configuration.NewChat,
             )
 
+        ChatPageStateService.setIsPresented(true)
         reducer.reduce(state, ChatPageReducer.Action.ViewDisappeared)
         assertEquals(conversation.id.key, ConversationSessionService.currentConversation?.id?.key)
+        assertTrue(ChatPageStateService.isPresented)
+    }
+
+    @Test
+    fun `disappearing stops observing the conversation`() {
+        val conversationObserver = DependencyValues.current.clientSession.sync.conversationObserver
+        conversationObserver.startObserving("c1")
+        assertTrue(conversationObserver.isActivelyObserving("c1"))
+
+        reducer.reduce(ChatPageReducer.State(conversationIDKey = "c1"), ChatPageReducer.Action.ViewDisappeared)
+
+        assertFalse(conversationObserver.isActivelyObserving("c1"))
+    }
+
+    @Test
+    fun `a burst of store and outbox changes reloads once`() =
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            try {
+                val conversation = runBlocking { Conversation.decode(FixtureJson.loadObject("conversation.json")) }
+                ConversationSessionService.setCurrentConversation(conversation)
+                val state = ChatPageReducer.State(conversationIDKey = conversation.id.key)
+                val change = SessionStoreChange.Conversations(upsertedIDKeys = setOf(conversation.id.key), removedIDKeys = emptySet())
+
+                val sent = mutableListOf<ChatPageReducer.Action>()
+                val send = Send<ChatPageReducer.Action> { sent.add(it) }
+                val storeReload = reducer.reduce(state, ChatPageReducer.Action.HandleSessionStoreChange(change)).effect
+                val outboxReload = reducer.reduce(state, ChatPageReducer.Action.HandleOutboxChange(false)).effect
+                launch { storeReload.operation(send) }
+                launch { outboxReload.operation(send) }
+                advanceUntilIdle()
+
+                assertEquals(listOf<ChatPageReducer.Action>(ChatPageReducer.Action.ReloadRequested), sent)
+            } finally {
+                Dispatchers.resetMain()
+            }
+        }
+
+    @Test
+    fun `finishing appearing marks the page presented`() {
+        ChatPageStateService.setIsPresented(false)
+
+        reducer.reduce(ChatPageReducer.State(conversationIDKey = "c1"), ChatPageReducer.Action.ViewDidAppear)
+
+        assertTrue(ChatPageStateService.isPresented)
     }
 
     @Test
@@ -197,7 +256,9 @@ class ChatPageReducerTest {
         ConversationSessionService.setCurrentConversation(conversation)
         DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
 
+        ChatPageStateService.setIsPresented(true)
         reducer.reduce(ChatPageReducer.State(conversationIDKey = conversation.id.key), ChatPageReducer.Action.ViewDisappeared)
+        assertFalse(ChatPageStateService.isPresented)
         assertNull(ConversationSessionService.currentConversation)
     }
 }

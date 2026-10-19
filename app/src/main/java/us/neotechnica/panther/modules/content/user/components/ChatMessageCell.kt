@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,11 +41,14 @@ import us.neotechnica.panther.modules.content.user.constants.ChatPageViewStrings
 import us.neotechnica.panther.modules.content.user.constants.UserContentExtensionsColors
 import us.neotechnica.panther.modules.content.user.dependencies.chatPageViewService
 import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
+import us.neotechnica.panther.modules.content.user.extensions.isMock
+import us.neotechnica.panther.modules.content.user.extensions.isOutboxMessage
 import us.neotechnica.panther.modules.content.user.extensions.isPlayingMessage
 import us.neotechnica.panther.modules.content.user.extensions.isSpeakingMessage
 import us.neotechnica.panther.modules.content.user.extensions.isSystemMessage
 import us.neotechnica.panther.modules.content.user.extensions.kind
 import us.neotechnica.panther.modules.content.user.models.MessageKind
+import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.AudioMessagePlaybackService
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.MediaMessagePreviewService
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Reaction
@@ -138,7 +143,12 @@ private fun MessageContent(
     val message = row.message
     val isOwn = message.isFromCurrentUser
     val kind = message.kind
-    val reactionChoices = reactionChoicesFor(message, row.reactions, onReact)
+
+    // Mock and outbox messages carry no menu, and nothing attaches while
+    // a send is in flight; the double-tap default goes with them.
+    val isSendingMessage by MessageDeliveryService.isSendingMessage.collectAsState()
+    val hasContextMenu = !message.isMock && !message.isOutboxMessage && !isSendingMessage
+    val reactionChoices = if (hasContextMenu) reactionChoicesFor(message, row.reactions, onReact) else emptyList()
     val alignment = if (isOwn) ContextMenuAlignment.TRAILING else ContextMenuAlignment.LEADING
     val messageLabel = remember { MessageLabel() }
 
@@ -154,7 +164,7 @@ private fun MessageContent(
     ) {
         if (row.isGroup && !isOwn) SenderAvatar(row)
         MessageContextMenu(
-            actions = contextMenuActions(message),
+            actions = if (hasContextMenu) contextMenuActions(message) else emptyList(),
             alignment = alignment,
             reactionChoices = reactionChoices,
             alignsMenuCardToLeadingEdge = true,

@@ -189,7 +189,7 @@ object MessageDeliveryService {
             val (contextConversation, contextIsPenPalsConversation) = conversationContext
             val updated =
                 messageSession.sendTextMessage(
-                    text = text.trimEnd(),
+                    text = text,
                     toUsers = recipients,
                     inConversation = contextConversation,
                     isPenPalsConversation = contextIsPenPalsConversation,

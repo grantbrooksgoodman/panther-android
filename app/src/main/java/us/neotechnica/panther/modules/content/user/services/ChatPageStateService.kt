@@ -9,8 +9,11 @@
 package us.neotechnica.panther.modules.content.user.services
 
 import us.neotechnica.panther.bundle.chatPageState
+import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
 import us.neotechnica.panther.modules.content.user.extensions.drainEffects
 import us.neotechnica.panther.modules.content.user.models.ChatPageStateServiceEffectID
+import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
@@ -33,6 +36,29 @@ object ChatPageStateService {
         LockIsolated(mapOf<ChatPageStateServiceEffectID, () -> Unit>())
     private val uponIsPresentedChangedToTrue =
         LockIsolated(mapOf<ChatPageStateServiceEffectID, () -> Unit>())
+
+    // MARK: - Is Conversation Still Presented
+
+    /**
+     * Returns whether the given conversation's chat page is on the
+     * navigation stack: either it is the top page, or a sub-page of the
+     * same conversation – its chat info – was pushed over it. A chat
+     * page being disposed while this holds is not being left, as when
+     * the new chat page hands off to the conversation after its first
+     * message is sent.
+     *
+     * @param conversationIDKey The conversation's identifier key.
+     */
+    fun isConversationStillPresented(conversationIDKey: String): Boolean {
+        val topPath =
+            DependencyValues.current.navigation.state.value.userContent.stack
+                .lastOrNull()
+        return when (topPath) {
+            is UserContentNavigatorState.SeguePaths.Chat -> topPath.conversationIDKey == conversationIDKey
+            is UserContentNavigatorState.SeguePaths.ChatInfo -> topPath.conversationIDKey == conversationIDKey
+            else -> false
+        }
+    }
 
     // MARK: - Setters
 

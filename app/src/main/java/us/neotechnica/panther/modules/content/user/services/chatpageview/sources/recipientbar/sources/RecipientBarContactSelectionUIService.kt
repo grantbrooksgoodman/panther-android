@@ -14,10 +14,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.modules.common.models.ContactPair
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceFloats
+import us.neotechnica.panther.modules.content.user.dependencies.inputBarService
 import us.neotechnica.panther.modules.content.user.extensions.containsBlockedUser
 import us.neotechnica.panther.modules.content.user.extensions.containsCurrentUser
 import us.neotechnica.panther.modules.content.user.extensions.isMock
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.recipientbar.RecipientBarService
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -87,19 +89,22 @@ class RecipientBarContactSelectionUIService(
         if (mutableHighlightedViewID.value == withViewID) mutableHighlightedViewID.value = null
 
         Task.delayed(by = INPUT_BAR_CONFIGURATION_DELAY) {
+            DependencyValues.current.inputBarService.configureInputBar()
             if (mutableSelectedContactPairs.value.isEmpty()) layout().setInputBarPlaceholder(null)
         }
     }
 
     /**
-     * Removes every unregistered recipient, along with its view, and
-     * reconfigures the message list.
+     * Removes every unregistered recipient, along with its view, and –
+     * when a registered recipient remains – reconfigures the message
+     * list.
      */
     fun deselectMockContactPairs() {
         val mockViewIDs = mutableSelectedContactPairs.value.filter { it.isMock }.map { it.contact.encodedHash }
         if (mockViewIDs.isEmpty()) return
 
         mockViewIDs.forEach { deselectContactPair(withViewID = it) }
+        if (mutableSelectedContactPairs.value.isEmpty()) return
         config().reconfigureCollectionView()
     }
 

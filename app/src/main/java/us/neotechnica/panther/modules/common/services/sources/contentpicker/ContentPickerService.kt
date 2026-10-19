@@ -8,6 +8,8 @@
 
 package us.neotechnica.panther.modules.common.services.sources.contentpicker
 
+import android.content.Context
+
 /**
  * The content pickers available for a media message: camera capture,
  * the document picker, and the system photo and video picker.
@@ -25,4 +27,9 @@ object ContentPickerService {
 
     /** The picker that selects a photo or video from the library. */
     val media = MediaPickerService()
+
+    /** Prepares the pickers with the application context. */
+    fun initialize(context: Context) {
+        media.initialize(context)
+    }
 }

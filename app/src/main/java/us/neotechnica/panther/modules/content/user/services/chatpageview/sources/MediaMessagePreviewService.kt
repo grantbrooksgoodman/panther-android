@@ -17,7 +17,10 @@ import us.neotechnica.panther.modules.common.models.MediaFile
 import us.neotechnica.panther.modules.content.user.components.MediaImageLoader
 import us.neotechnica.panther.modules.content.user.constants.MediaMessageBubbleFloats
 import us.neotechnica.panther.modules.content.user.constants.MediaPreviewOverlayFloats
+import us.neotechnica.panther.modules.content.user.dependencies.inputBarService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.recipientbar.RecipientBarService
 import us.neotechnica.panther.modules.networking.sources.message.models.Message
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 
 /**
@@ -51,6 +54,9 @@ object MediaMessagePreviewService {
     var previewingMessageID by mutableStateOf<String?>(null)
         private set
 
+    private var inputBarWasFirstResponder = false
+    private var recipientBarWasFirstResponder = false
+
     // MARK: - Did Tap Image
 
     /**
@@ -76,6 +82,8 @@ object MediaMessagePreviewService {
         val file = message.richContent?.mediaComponent?.localPathFile ?: return
         if (!file.exists() || isPreviewingMedia || isPresentingContextMenu) return
 
+        inputBarWasFirstResponder = DependencyValues.current.inputBarService.isFirstResponder.value
+        recipientBarWasFirstResponder = RecipientBarService.layout.isTextFieldFirstResponder.value
         KeyboardService.resignFirstResponders()
         previewingMessageID = message.id
         isPreviewingMedia = true
@@ -83,10 +91,22 @@ object MediaMessagePreviewService {
 
     // MARK: - Dismiss Preview
 
-    /** Dismisses the presented media preview, if any. */
+    /**
+     * Dismisses the presented media preview, if any, restoring the first
+     * responder the preview displaced.
+     */
     fun dismissPreview() {
         previewingMessageID = null
         isPreviewingMedia = false
+
+        if (inputBarWasFirstResponder) {
+            DependencyValues.current.inputBarService.becomeFirstResponder()
+        } else if (recipientBarWasFirstResponder) {
+            RecipientBarService.layout.textFieldBecomeFirstResponder()
+        }
+
+        inputBarWasFirstResponder = false
+        recipientBarWasFirstResponder = false
     }
 
     // MARK: - Images
@@ -117,7 +137,11 @@ object MediaMessagePreviewService {
      * @return The thumbnail, or `null` if none can be decoded.
      */
     fun thumbnail(mediaFile: MediaFile): ImageBitmap? {
-        val file = (if (mediaFile.fileExtension.isImage) mediaFile.localPathFile else mediaFile.thumbnailFile) ?: return null
+        // Without a thumbnail file, the full image stands in.
+        val file =
+            (if (mediaFile.fileExtension.isImage) mediaFile.localPathFile else mediaFile.thumbnailFile?.takeIf { it.exists() })
+                ?: mediaFile.localPathFile
+                ?: return null
         cachedThumbnails.wrappedValue[file.path]?.let { return it }
         val thumbnail = MediaImageLoader.decode(file, MediaMessageBubbleFloats.IMAGE_DECODE_MAX_DIMENSION) ?: return null
         cachedThumbnails.withValue { it.value = it.value + (file.path to thumbnail) }

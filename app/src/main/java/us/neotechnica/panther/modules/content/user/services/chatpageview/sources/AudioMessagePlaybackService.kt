@@ -45,6 +45,15 @@ private typealias PlaybackFloats = ChatPageViewServiceFloats.AudioMessagePlaybac
  * which would add a dependency without benefit for single-file playback.
  */
 object AudioMessagePlaybackService {
+    // MARK: - Types
+
+    /** The message list the service reads when advancing playback. */
+    internal class Dependencies(
+        val displayedMessages: () -> List<Message> = { conversationSession.displayedMessages.value },
+        val isDisplayingAudioTranscription: (Message) -> Boolean = AlternateMessageService::isDisplayingAudioTranscription,
+        val visibleMessageIDs: () -> Set<String> = { visibleMessageIDsProvider?.invoke() ?: emptySet() },
+    )
+
     // MARK: - Dependencies
 
     private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
@@ -57,6 +66,8 @@ object AudioMessagePlaybackService {
     private val scope = CoroutineScope(Dispatchers.Main)
 
     private var appContext: Context? = null
+    private var dependencies: Dependencies? = null
+    private var visibleMessageIDsProvider: (() -> Set<String>)? = null
     private var player: MediaPlayer? = null
     private var progressJob: Job? = null
 
@@ -87,6 +98,26 @@ object AudioMessagePlaybackService {
         audioFocus.initialize(context)
     }
 
+    /** Replaces the message list the service reads. */
+    internal fun setDependencies(dependencies: Dependencies?) {
+        this.dependencies = dependencies
+    }
+
+    // MARK: - Set Visible Message IDs
+
+    /**
+     * Registers the provider of the identifiers of the messages the
+     * chat page currently shows, or clears it.
+     *
+     * Playback advances only to a next audio message that is visible.
+     *
+     * @param provider Returns the visible messages' identifiers, or
+     *   `null` to clear the registration.
+     */
+    fun setVisibleMessageIDs(provider: (() -> Set<String>)?) {
+        visibleMessageIDsProvider = provider
+    }
+
     // MARK: - Did Tap Play Button
 
     /**
@@ -103,14 +134,14 @@ object AudioMessagePlaybackService {
         message: Message,
         audioReference: AudioMessageReference,
     ) {
-        if (mutablePlayingMessageID == message.id) return stopPlayback()
-
-        textToSpeechService.stop()
-
         val audioFile = if (message.isFromCurrentUser) audioReference.original else audioReference.translated
         val file = audioFile.localPathFile ?: return
 
+        // Both the play and the stop tap give feedback.
         hapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
+        if (mutablePlayingMessageID == message.id) return stopPlayback()
+
+        textToSpeechService.stop()
         play(message.id, file.absolutePath)
     }
 
@@ -169,12 +200,23 @@ object AudioMessagePlaybackService {
         }
     }
 
-    private fun nextAudioMessage(afterMessageID: String): Message? {
-        val messages = conversationSession.displayedMessages.value
+    /**
+     * Returns the audio message that follows the given one, provided it
+     * is visible and not showing its transcription; otherwise, `null`.
+     */
+    internal fun nextAudioMessage(afterMessageID: String): Message? {
+        val dependencies = resolvedDependencies()
+        val messages = dependencies.displayedMessages()
         val index = messages.indexOfFirst { it.id == afterMessageID }
         if (index < 0) return null
-        return messages.getOrNull(index + 1)?.takeIf { it.contentType.isAudio }
+        return messages.getOrNull(index + 1)?.takeIf { next ->
+            next.contentType.isAudio &&
+                next.id in dependencies.visibleMessageIDs() &&
+                !dependencies.isDisplayingAudioTranscription(next)
+        }
     }
+
+    private fun resolvedDependencies(): Dependencies = dependencies ?: Dependencies().also { dependencies = it }
 
     private fun startProgressPolling() {
         progressJob?.cancel()

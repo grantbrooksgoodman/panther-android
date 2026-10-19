@@ -226,6 +226,16 @@ class RecipientBarActionHandlerServiceTest {
         }
 
     @Test
+    fun `a number with inner spaces becomes a mock recipient`() =
+        runBlocking {
+            handler.textFieldShouldReturn("555 888 5555")
+
+            val selected = RecipientBarService.contactSelectionUI.selectedContactPairs.value
+            assertTrue(selected.single().isMock)
+            assertEquals("555 888 5555", selected.single().contact.fullName)
+        }
+
+    @Test
     fun `a known number resolves to its registered user`() =
         runBlocking {
             val user = SessionTestEnvironment.user(id = "bob", nationalNumber = "5558885555")

@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,6 +50,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.modules.content.user.components.ChatMessageCell
 import us.neotechnica.panther.modules.content.user.components.ChatMessageRowData
+import us.neotechnica.panther.modules.content.user.components.ContactInitialsImageCache
 import us.neotechnica.panther.modules.content.user.components.messageTimestampLabelAttributedText
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewServiceFloats
@@ -59,6 +61,7 @@ import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
 import us.neotechnica.panther.modules.content.user.extensions.isOutboxMessage
 import us.neotechnica.panther.modules.content.user.extensions.systemLocalized
 import us.neotechnica.panther.modules.content.user.services.chatpageview.ChatPageViewService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.AudioMessagePlaybackService
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.sources.message.models.Message
 import us.neotechnica.panther.modules.session.clientSession
@@ -241,6 +244,7 @@ internal fun MessageList(
     val loadMoreConnection = rememberLoadMoreMessagesConnection(listState)
 
     StickToBottomEffect(listState, state)
+    VisibleMessagesEffect(listState)
 
     // Dragging toward the leading edge reveals the timestamps; releasing
     // springs the list back.
@@ -278,13 +282,11 @@ internal fun MessageList(
                 } else {
                     null
                 }
+            // The contact's photo, else its initials; no contact, no image.
             val senderImage =
                 remember(senderUser?.id) {
-                    senderUser
-                        ?.contactPair
-                        ?.contact
-                        ?.image
-                        ?.asImageBitmap()
+                    val contact = senderUser?.contactPair?.contact
+                    contact?.image?.asImageBitmap() ?: contact?.let { ContactInitialsImageCache.image(it) }
                 }
 
             Box(modifier = Modifier.fillMaxWidth()) {
@@ -295,9 +297,10 @@ internal fun MessageList(
                                 message = message,
                                 previousMessage = previousMessage,
                                 isLastConfirmedOwnMessage = index == lastConfirmedOwnIndex,
+                                isLastMessage = index == messages.lastIndex,
                                 isGroup = isGroup,
                                 isFailed = isFailed,
-                                senderName = if (showSender && firstOfRun) senderUser?.displayName ?: message.fromAccountID else null,
+                                senderName = if (showSender && firstOfRun) senderUser?.displayName else null,
                                 senderImage = senderImage,
                                 reactions = message.reactions.orEmpty(),
                             ),
@@ -329,3 +332,16 @@ internal fun MessageList(
 }
 
 private val TIMESTAMP_END_PADDING = 8.dp
+
+// Playback advances only into messages the list currently shows.
+@Composable
+private fun VisibleMessagesEffect(listState: LazyListState) {
+    DisposableEffect(listState) {
+        AudioMessagePlaybackService.setVisibleMessageIDs {
+            listState.layoutInfo.visibleItemsInfo
+                .mapNotNull { it.key as? String }
+                .toSet()
+        }
+        onDispose { AudioMessagePlaybackService.setVisibleMessageIDs(null) }
+    }
+}

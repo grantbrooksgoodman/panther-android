@@ -19,6 +19,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.AlternateMessageService
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.sources.message.models.Message
 import us.neotechnica.panther.modules.networking.sources.message.models.ReadReceipt
 import us.neotechnica.panther.modules.networking.sources.support.MessageDecodeEnvironment
@@ -97,26 +98,35 @@ class ChatMessageCellDataSourceTest {
         val message = message("m1", from = "me", pair = LanguagePair("en", "es"))
         AlternateMessageService.toggle(AlternateMessageService.AlternateMessageType.ALTERNATE_TEXT, message)
 
-        val label = cellBottomLabelAttributedText(row(message, isLastConfirmedOwnMessage = true))
+        val label = cellBottomLabelAttributedText(row(message, isLastConfirmedOwnMessage = true, isLastMessage = true))
 
         assertEquals("Spanish translation", label?.text)
     }
 
     @Test
     fun `the last confirmed own message in a one-to-one chat reads Delivered or Read`() {
-        val delivered = cellBottomLabelAttributedText(row(message("m1", from = "me"), isLastConfirmedOwnMessage = true))
+        val delivered = cellBottomLabelAttributedText(row(message("m1", from = "me"), isLastConfirmedOwnMessage = true, isLastMessage = true))
         assertEquals("Delivered", delivered?.text)
 
         val readMessage = message("m2", from = "me").copy(readReceipts = listOf(ReadReceipt(userID = "a", readDate = Date())))
-        val read = cellBottomLabelAttributedText(row(readMessage, isLastConfirmedOwnMessage = true))
+        val read = cellBottomLabelAttributedText(row(readMessage, isLastConfirmedOwnMessage = true, isLastMessage = true))
         assertNotNull(read)
         assertTrue(read!!.text, read.text.startsWith("Read "))
     }
 
     @Test
     fun `group chats and earlier own messages show no delivery status`() {
-        assertNull(cellBottomLabelAttributedText(row(message("m1", from = "me"), isLastConfirmedOwnMessage = true, isGroup = true)))
+        assertNull(cellBottomLabelAttributedText(row(message("m1", from = "me"), isLastConfirmedOwnMessage = true, isGroup = true, isLastMessage = true)))
         assertNull(cellBottomLabelAttributedText(row(message("m1", from = "me"))))
+    }
+
+    @Test
+    fun `an own message followed by an incoming message shows no status unless it has reactions`() {
+        val message = message("m1", from = "me")
+        assertNull(cellBottomLabelAttributedText(row(message, isLastConfirmedOwnMessage = true)))
+
+        val reacted = row(message, isLastConfirmedOwnMessage = true, reactions = listOf(Reaction(userID = "a", style = Reaction.Style.LOVE)))
+        assertEquals("Delivered", cellBottomLabelAttributedText(reacted)?.text)
     }
 
     // MARK: - Top Label
@@ -146,7 +156,9 @@ class ChatMessageCellDataSourceTest {
         isFailed: Boolean = false,
         isGroup: Boolean = false,
         isLastConfirmedOwnMessage: Boolean = false,
+        isLastMessage: Boolean = false,
         senderName: String? = null,
+        reactions: List<Reaction> = emptyList(),
     ): ChatMessageRowData =
         ChatMessageRowData(
             message = message,
@@ -154,6 +166,8 @@ class ChatMessageCellDataSourceTest {
             isLastConfirmedOwnMessage = isLastConfirmedOwnMessage,
             isGroup = isGroup,
             isFailed = isFailed,
+            isLastMessage = isLastMessage,
             senderName = senderName,
+            reactions = reactions,
         )
 }

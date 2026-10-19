@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -43,6 +44,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
+import us.neotechnica.panther.modules.common.models.Contact
 import us.neotechnica.panther.modules.common.models.DetectedAttribute
 import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewColors
@@ -50,7 +52,9 @@ import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewStrings
 import us.neotechnica.panther.modules.content.user.constants.UserContentExtensionsColors
 import us.neotechnica.panther.modules.content.user.constants.UserContentExtensionsFloats
+import us.neotechnica.panther.modules.content.user.extensions.fromInitials
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 
 // MARK: - Constants Accessors
 
@@ -111,7 +115,8 @@ internal fun SenderNameLabel(row: ChatMessageRowData) {
 /**
  * The sender's avatar shown to the leading edge of every received group
  * message, aligned to the bubble's bottom: the sender's contact image,
- * or the generic person glyph.
+ * the contact's initials, or – without a contact – the generic person
+ * glyph.
  *
  * @param row The row whose sender to render.
  */
@@ -128,6 +133,36 @@ internal fun SenderAvatar(row: ChatMessageRowData) {
                 modifier = Modifier.size(DisplayFloats.avatarSize).background(DisplayColors.genericAvatarViewBackground),
             )
         }
+    }
+}
+
+/**
+ * The initials images rendered for contacts without a photo, keyed by
+ * contact identifier.
+ */
+internal object ContactInitialsImageCache {
+    // MARK: - Properties
+
+    private val cachedInitialsImagesForContactIDs = LockIsolated(mapOf<String, ImageBitmap>())
+
+    // MARK: - Methods
+
+    /** Removes every cached initials image. */
+    fun clearCache() {
+        cachedInitialsImagesForContactIDs.wrappedValue = emptyMap()
+    }
+
+    /**
+     * Returns the initials image for the given contact, rendering and
+     * caching it on first access.
+     *
+     * @param contact The contact to render.
+     */
+    fun image(contact: Contact): ImageBitmap {
+        cachedInitialsImagesForContactIDs.wrappedValue[contact.id]?.let { return it }
+        val image = ImageBitmap.fromInitials(contact.initials)
+        cachedInitialsImagesForContactIDs.withValue { it.value = it.value + (contact.id to image) }
+        return image
     }
 }
 

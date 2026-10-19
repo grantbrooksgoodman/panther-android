@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import us.neotechnica.panther.bundle.isNewChatPageDoneToolbarButtonEnabled
+import us.neotechnica.panther.modules.content.user.dependencies.inputBarService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedStates
 
@@ -121,6 +122,8 @@ class RecipientBarLayoutService {
      */
     fun setIsTextFieldFirstResponder(isFirstResponder: Boolean) {
         mutableIsTextFieldFirstResponder.value = isFirstResponder
+        // The input bar's buttons read this status, so they follow it.
+        DependencyValues.current.inputBarService.configureInputBar()
     }
 
     /**

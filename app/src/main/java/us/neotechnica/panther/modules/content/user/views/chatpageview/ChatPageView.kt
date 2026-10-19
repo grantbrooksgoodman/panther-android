@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -30,6 +31,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.text.intl.Locale
+import androidx.compose.ui.text.intl.LocaleList
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -64,6 +67,7 @@ import us.neotechnica.panther.modules.content.user.services.chatpageview.sources
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
@@ -146,14 +150,18 @@ object ChatPageView {
         val inputBarService = remember { DependencyValues.current.inputBarService }
         val isDefault = configuration is Configuration.Default
 
+        val hasAppeared = LocalPageHasAppeared.current
         DisposableEffect(Unit) {
             ChatPageStateService.setIsPresented(true)
-            connectionStatusService.addEffectUponConnectionChanged(id = ConnectionStatusServiceEffectID.CONFIGURE_INPUT_BAR) {
-                inputBarService.configureInputBar(forceUpdate = true)
+            if (isDefault) {
+                connectionStatusService.addEffectUponConnectionChanged(id = ConnectionStatusServiceEffectID.CONFIGURE_INPUT_BAR) {
+                    inputBarService.configureInputBar(forceUpdate = true)
+                }
             }
+            // The reducer's disappearance keeps the page presented while
+            // its conversation stays on the navigation stack.
             onDispose {
-                ChatPageStateService.setIsPresented(false)
-                connectionStatusService.removeEffect(ConnectionStatusServiceEffectID.CONFIGURE_INPUT_BAR)
+                if (isDefault) connectionStatusService.removeEffect(ConnectionStatusServiceEffectID.CONFIGURE_INPUT_BAR)
                 viewModel.send(ChatPageReducer.Action.ViewDisappeared)
                 viewModel.close()
             }
@@ -161,6 +169,8 @@ object ChatPageView {
         LaunchedEffect(conversationIDKey) {
             viewModel.send(ChatPageReducer.Action.ViewAppeared(conversationIDKey, configuration))
             viewModel.send(ChatPageReducer.Action.HandleOutboxChange(anyOutboxSending()))
+            snapshotFlow { hasAppeared.value }.first { it }
+            viewModel.send(ChatPageReducer.Action.ViewDidAppear)
         }
 
         val state by viewModel.state.collectAsState()
@@ -200,7 +210,7 @@ object ChatPageView {
                         )
 
                         if (isDefault) {
-                            ChatInputBar(viewModel = viewModel, inputBarService = inputBarService, state = state)
+                            ChatInputBar(viewModel = viewModel, inputBarService = inputBarService)
                         }
                     }
                 }
@@ -225,7 +235,6 @@ object ChatPageView {
 private fun ChatInputBar(
     viewModel: ViewModel<ChatPageReducer.State, ChatPageReducer.Action>,
     inputBarService: InputBarService,
-    state: ChatPageReducer.State,
 ) {
     val text by inputBarService.text.collectAsState()
     val isSendButtonEnabled by inputBarService.isSendButtonEnabled.collectAsState()
@@ -257,7 +266,7 @@ private fun ChatInputBar(
     MessageInputBar(
         text = text,
         placeholder = LocalizedStringKey.NewMessage.localized(),
-        isSending = isShowingSendingUI || state.isSendingOutboxEntry,
+        isSending = isShowingSendingUI,
         onTextChange = { viewModel.send(ChatPageReducer.Action.TextViewDidChange(it)) },
         onSend = { viewModel.send(ChatPageReducer.Action.DidPressSendButton) },
         onAttach = { inputBarService.actionHandler.didPressAttachMediaButton() },
@@ -267,6 +276,7 @@ private fun ChatInputBar(
         isAttachEnabled = isAttachMediaButtonEnabled,
         images = InputBarConfigService.images(),
         onFocusChanged = { inputBarService.setIsFirstResponder(it) },
+        keyboardOptions = KeyboardOptions(hintLocales = LocaleList(Locale(RuntimeStorage.languageCode))),
         focusRequester = focusRequester,
         modifier = Modifier.alpha(alpha),
     )
