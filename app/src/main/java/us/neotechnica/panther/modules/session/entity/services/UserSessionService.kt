@@ -27,11 +27,11 @@ import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.filteringSystemMessages
 import us.neotechnica.panther.modules.content.user.extensions.ignoredConversationIDKeys
 import us.neotechnica.panther.modules.networking.sources.common.extensions.allDataTypes
+import us.neotechnica.panther.modules.networking.sources.common.extensions.conversationService
 import us.neotechnica.panther.modules.networking.sources.common.extensions.merge
 import us.neotechnica.panther.modules.networking.sources.common.extensions.visibleForCurrentUser
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.sources.conversation.models.ConversationID
-import us.neotechnica.panther.modules.networking.sources.conversation.services.ConversationService
 import us.neotechnica.panther.modules.networking.sources.user.models.DeviceID
 import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.networking.sources.user.services.UserService
@@ -47,6 +47,7 @@ import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.networking.modules.database.interfaces.observe
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Coalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -383,7 +384,9 @@ object UserSessionService {
             return commitConversationsToMemory(decodedConversations)
         }
 
-        val conversations = ConversationService.getConversations(conversationsNeedingFetch.map { it.key })
+        val conversations =
+            DependencyValues.current.networking.conversationService
+                .getConversations(conversationsNeedingFetch.map { it.key })
 
         // Stamp fetched conversations with the user-record
         // token when it differs from the node hash. Atomic

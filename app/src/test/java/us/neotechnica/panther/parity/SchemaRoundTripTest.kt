@@ -108,5 +108,10 @@ class SchemaRoundTripTest {
                 expected["messageHash"],
                 Message.decode(FixtureJson.loadObject("message.json")).encodedHash,
             )
+
+            assertEquals(
+                expected["mediaMessageHash"],
+                Message.decode(FixtureJson.loadObject("message_media.json")).encodedHash,
+            )
         }
 }

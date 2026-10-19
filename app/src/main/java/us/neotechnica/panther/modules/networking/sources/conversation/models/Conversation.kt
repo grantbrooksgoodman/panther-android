@@ -39,6 +39,7 @@ import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestampDateFormatter
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.failingForEmptyCollection
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.EncodedHashable
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
 import us.neotechnica.panther.subsystem.modules.foundation.models.Coalescer
@@ -237,6 +238,45 @@ data class Conversation(
         userCoalescer.submitUnlessCancelled("${id.encoded}/$forceUpdate") {
             fetchAndCommitUsers(forceUpdate)
         }
+    }
+
+    // MARK: - Update Last Modified Date
+
+    // NIT: Unused on Android.
+
+    /**
+     * Writes a new last-modified date for the conversation using
+     * narrow child paths, leaving sibling metadata untouched.
+     *
+     * The date, conversation hash, and participant token entries are
+     * committed in a single atomic fan-out.
+     *
+     * @param to The new last-modified date.
+     *
+     * @throws Exception if the write fails.
+     */
+    suspend fun updateLastModifiedDate(to: Date = Date()) {
+        val database = DependencyValues.current.networking.database
+        val dateFormatter = DependencyValues.current.timestampDateFormatter
+
+        val conversationPath = "${NetworkPath.conversations.rawValue}/${id.key}"
+        val newHash = copy(metadata = metadata.copyWith(lastModifiedDate = to)).encodedHash
+
+        val updates =
+            mutableMapOf<String, Any?>(
+                listOf(
+                    conversationPath,
+                    SerializableKey.METADATA.rawValue,
+                    ConversationMetadata.SerializableKey.LAST_MODIFIED_DATE.rawValue,
+                ).joinToString("/") to dateFormatter.format(to),
+                "$conversationPath/${SerializableKey.ENCODED_HASH.rawValue}" to newHash,
+            )
+
+        for (participant in participants) {
+            updates[participant.conversationTokenPath] = newHash
+        }
+
+        database.commit(updates)
     }
 
     // MARK: - Update Read Date
@@ -532,7 +572,7 @@ data class Conversation(
                         )
                     }.sortedBy { it.userID }
 
-            val reactionMetadata = encodedReactionMetadata.map { ReactionMetadata.decode(it) }
+            val reactionMetadata = encodedReactionMetadata.failingForEmptyCollection().map { ReactionMetadata.decode(it) }
 
             // Message resolution is deferred to resolveMessages /
             // resolveMessagesOnCurrentUserConversations; decoding
@@ -557,7 +597,7 @@ data class Conversation(
 
             return Conversation(
                 id = conversationID,
-                activities = encodedActivities.map { Activity.decode(it) },
+                activities = encodedActivities.failingForEmptyCollection().map { Activity.decode(it) },
                 messageIDs = if (messageIDs.isBangQualifiedEmpty) bangQualifiedEmptyList else messageIDs,
                 metadata = ConversationMetadata.decode(encodedMetadata),
                 participants = participants,

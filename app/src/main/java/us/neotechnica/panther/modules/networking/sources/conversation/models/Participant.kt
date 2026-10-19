@@ -8,8 +8,12 @@
 
 package us.neotechnica.panther.modules.networking.sources.conversation.models
 
+import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.common.interfaces.Serializable
+import us.neotechnica.panther.networking.modules.common.interfaces.SerializableDecoder
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 
 /**
  * A member of a conversation.
@@ -55,14 +59,30 @@ data class Participant(
 
     // MARK: - Companion
 
-    companion object {
-        /**
-         * Returns a Boolean value that indicates whether a
-         * participant can be decoded from the given data.
-         */
-        fun canDecode(data: Map<String, Any?>): Boolean =
+    companion object : SerializableDecoder<Participant, Map<String, Any?>> {
+        override fun canDecode(data: Map<String, Any?>): Boolean =
             data[Keys.HAS_DELETED_CONVERSATION.rawValue] is Boolean &&
                 data[Keys.IS_TYPING.rawValue] is Boolean &&
                 data[Keys.USER_ID.rawValue] is String
+
+        // NIT: Unused on Android.
+        override fun decode(data: Map<String, Any?>): Participant {
+            val hasDeletedConversation = data[Keys.HAS_DELETED_CONVERSATION.rawValue] as? Boolean
+            val isTyping = data[Keys.IS_TYPING.rawValue] as? Boolean
+            val userID = data[Keys.USER_ID.rawValue] as? String
+
+            if (hasDeletedConversation == null || isTyping == null || userID == null) {
+                throw Exception.Networking.decodingFailed(
+                    data,
+                    ExceptionMetadata(this),
+                )
+            }
+
+            return Participant(
+                userID = userID,
+                hasDeletedConversation = hasDeletedConversation,
+                isTyping = isTyping,
+            )
+        }
     }
 }

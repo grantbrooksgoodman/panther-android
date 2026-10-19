@@ -10,6 +10,7 @@ package us.neotechnica.panther.modules.content.user.services.chatpageview.source
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -67,6 +68,11 @@ class RecipientBarContactSelectionUIServiceTest {
 
     @After
     fun tearDown() {
+        // A blank query reloads the suggestions table on the Main
+        // scope; join that resolution before the Main dispatcher goes
+        // away, or its continuation resumes into the missing platform
+        // dispatcher during a later test.
+        runBlocking { RecipientBarService.tableView.resolveContactPairs() }
         Dispatchers.resetMain()
         RecipientBarService.reset()
         LocalizedStringResolver.clearCache()

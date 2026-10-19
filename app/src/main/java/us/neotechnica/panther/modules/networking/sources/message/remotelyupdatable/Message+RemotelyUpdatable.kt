@@ -9,6 +9,7 @@
 package us.neotechnica.panther.modules.networking.sources.message.remotelyupdatable
 
 import us.neotechnica.panther.bundle.messages
+import us.neotechnica.panther.modules.networking.sources.common.interfaces.asList
 import us.neotechnica.panther.modules.networking.sources.common.interfaces.encodeForWrite
 import us.neotechnica.panther.modules.networking.sources.message.models.Message
 import us.neotechnica.panther.modules.networking.sources.message.models.ReadReceipt
@@ -17,7 +18,6 @@ import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
-import us.neotechnica.panther.networking.modules.translation.models.TranslationReference
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -29,7 +29,6 @@ enum class MessageUpdatableKey(
     val rawValue: String,
 ) {
     READ_RECEIPTS("readReceipts"),
-    TRANSLATION_REFERENCES("translations"),
 }
 
 // MARK: - Modify Key
@@ -37,6 +36,8 @@ enum class MessageUpdatableKey(
 /**
  * Returns a copy of the message with the given key set to the given
  * value, or `null` if the value's type does not match the key.
+ *
+ * An empty read-receipt list becomes `null`.
  */
 fun Message.modifyKey(
     key: MessageUpdatableKey,
@@ -44,10 +45,7 @@ fun Message.modifyKey(
 ): Message? =
     when (key) {
         MessageUpdatableKey.READ_RECEIPTS ->
-            (value as? List<*>)?.filterIsInstance<ReadReceipt>()?.let { copy(readReceipts = it) }
-
-        MessageUpdatableKey.TRANSLATION_REFERENCES ->
-            (value as? List<*>)?.filterIsInstance<TranslationReference>()?.let { copy(translationReferences = it) }
+            value.asList<ReadReceipt>()?.let { copy(readReceipts = it.ifEmpty { null }) }
     }
 
 // MARK: - Update

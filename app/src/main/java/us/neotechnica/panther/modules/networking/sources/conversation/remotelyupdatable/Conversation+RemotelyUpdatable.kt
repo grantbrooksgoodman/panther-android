@@ -14,6 +14,7 @@ import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.modules.content.user.extensions.currentUserParticipant
 import us.neotechnica.panther.modules.content.user.extensions.filteringSystemMessages
 import us.neotechnica.panther.modules.networking.sources.common.extensions.uniquedByID
+import us.neotechnica.panther.modules.networking.sources.common.interfaces.asList
 import us.neotechnica.panther.modules.networking.sources.common.interfaces.encodeForWrite
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Activity
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
@@ -25,7 +26,6 @@ import us.neotechnica.panther.modules.networking.sources.message.models.Message
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.state.services.PendingTranslationArchive
 import us.neotechnica.panther.modules.session.state.services.SelfWriteRegistry
-import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
@@ -67,10 +67,10 @@ fun Conversation.modifyKey(
         ConversationUpdatableKey.ENCODED_HASH, ConversationUpdatableKey.ID -> null
 
         ConversationUpdatableKey.ACTIVITIES ->
-            (value as? List<*>)?.filterIsInstance<Activity>()?.let { updateIDHash(copy(activities = it)) }
+            value.asList<Activity>()?.let { updateIDHash(copy(activities = it)) }
 
         ConversationUpdatableKey.MESSAGES -> {
-            val messages = (value as? List<*>)?.filterIsInstance<Message>() ?: return null
+            val messages = value.asList<Message>() ?: return null
             // The session store never stores system messages; filter them
             // here too so hydrated display arrays can't leak their IDs.
             val filtered = messages.uniquedByID.filteringSystemMessages
@@ -84,10 +84,10 @@ fun Conversation.modifyKey(
             (value as? ConversationMetadata)?.let { updateIDHash(copy(metadata = it)) }
 
         ConversationUpdatableKey.PARTICIPANTS ->
-            (value as? List<*>)?.filterIsInstance<Participant>()?.let { updateIDHash(copy(participants = it)) }
+            value.asList<Participant>()?.let { updateIDHash(copy(participants = it)) }
 
         ConversationUpdatableKey.REACTION_METADATA -> {
-            val reactionMetadata = (value as? List<*>)?.filterIsInstance<ReactionMetadata>() ?: return null
+            val reactionMetadata = value.asList<ReactionMetadata>() ?: return null
             updateIDHash(
                 copy(
                     reactionMetadata =
@@ -114,6 +114,7 @@ suspend fun Conversation.updateValues(data: Map<ConversationUpdatableKey, Any>):
     val changedKeys = mutableSetOf<String>()
 
     for ((key, value) in data) {
+        requireRemotelyUpdatable(key)
         val modified =
             updated.modifyKey(key, value)
                 ?: throw Exception.Networking.typeMismatch(
@@ -155,6 +156,7 @@ suspend fun Conversation.update(
     key: ConversationUpdatableKey,
     to: Any,
 ): Conversation {
+    requireRemotelyUpdatable(key)
     val newValue =
         modifyKey(key, to) ?: throw Exception.Networking.typeMismatch(
             key.rawValue,
@@ -189,6 +191,7 @@ suspend fun Conversation.update(
     key: ConversationUpdatableKey,
     applyingRaw: (Any?) -> Any?,
 ): Conversation {
+    requireRemotelyUpdatable(key)
     val valueKeyPath = "${NetworkPath.conversations.rawValue}/${id.key}/${key.rawValue}"
     val committed =
         DependencyValues.current.networking.database
@@ -201,9 +204,16 @@ suspend fun Conversation.update(
 
     val decoded: Any =
         when (key) {
+            ConversationUpdatableKey.METADATA ->
+                stringKeyMap(committed)?.let { ConversationMetadata.decode(it) }
+                    ?: throw Exception.Networking.typeMismatch(
+                        key.rawValue,
+                        committed,
+                        ExceptionMetadata(this),
+                    )
+
             ConversationUpdatableKey.REACTION_METADATA ->
-                @Suppress("UNCHECKED_CAST")
-                (committed as? List<Map<String, Any?>>)?.map { ReactionMetadata.decode(it) }
+                committed.asList<Map<*, *>>()?.map { ReactionMetadata.decode(stringKeyMap(it) ?: emptyMap()) }
                     ?: throw Exception.Networking.typeMismatch(
                         key.rawValue,
                         committed,
@@ -240,17 +250,16 @@ suspend fun Conversation.willWrite(
     key: ConversationUpdatableKey,
     updated: Conversation,
 ): WriteAction<Conversation> {
-    val messages = value as? List<*>
+    val messages = value.asList<Message>()
     if (key != ConversationUpdatableKey.MESSAGES ||
         messages == null ||
-        messages.filterIsInstance<Message>().filteringSystemMessages.isEmpty()
+        messages.filteringSystemMessages.isEmpty()
     ) {
         return WriteAction.Proceed
     }
 
     val newMessages =
         messages
-            .filterIsInstance<Message>()
             .filteringSystemMessages
             .filter { it.id !in messageIDs.toSet() }
 
@@ -259,7 +268,7 @@ suspend fun Conversation.willWrite(
         updated.currentUserParticipant
             ?: throw Exception(
                 "Failed to resolve current user participant.",
-                metadata = ExceptionMetadata(SessionStore),
+                metadata = ExceptionMetadata(this),
             )
 
     // Reset typing for current user + un-delete all participants.
@@ -354,6 +363,20 @@ suspend fun Conversation.didWrite(
 
 private val Conversation.identifier: String
     get() = id.key
+
+// The identifier and hash token are serializable keys, not updatable
+// ones.
+private fun Conversation.requireRemotelyUpdatable(key: ConversationUpdatableKey) {
+    if (key == ConversationUpdatableKey.ID || key == ConversationUpdatableKey.ENCODED_HASH) {
+        throw Exception.Networking.notRemotelyUpdatable(key.rawValue, ExceptionMetadata(this))
+    }
+}
+
+@Suppress("UNCHECKED_CAST")
+private fun stringKeyMap(value: Any?): Map<String, Any?>? =
+    (value as? Map<*, *>)
+        ?.takeIf { map -> map.keys.all { it is String } }
+        ?.let { it as Map<String, Any?> }
 
 /** Builds fan-out entries updating each participant's conversation token to the conversation's hash. */
 private fun buildParticipantUpdates(conversation: Conversation): Map<String, Any?> {

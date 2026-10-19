@@ -12,6 +12,7 @@ import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIE
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.interfaces.Serializable
 import us.neotechnica.panther.networking.modules.common.interfaces.SerializableDecoder
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.failingForEmptyCollection
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.EncodedHashable
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -88,7 +89,7 @@ data class ReactionMetadata(
 
             return ReactionMetadata(
                 messageID = messageID,
-                reactions = encodedReactions.map { Reaction.decode(it) },
+                reactions = encodedReactions.failingForEmptyCollection().map { Reaction.decode(it) },
             )
         }
 

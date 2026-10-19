@@ -26,19 +26,21 @@ data class LocalMediaFilePath(
 ) {
     // MARK: - Computed Properties
 
-    /**
-     * The absolute file of the media file, or `null` before the file
-     * store is initialized.
-     */
-    val localPathURL: File?
-        get() = FileStore.resolve(relativePathString)
+    /** The absolute file of the media file. */
+    val localPathURL: File
+        get() = File(documentsDirectory, relativePathString)
 
     /**
      * The absolute file of the thumbnail, or `null` if there is no
-     * thumbnail or the file store is not initialized.
+     * thumbnail.
      */
     val localThumbnailPathURL: File?
-        get() = relativeThumbnailPathString?.let { FileStore.resolve(it) }
+        get() = relativeThumbnailPathString?.let { File(documentsDirectory, it) }
+
+    // MARK: - Auxiliary
+
+    private val documentsDirectory: File
+        get() = checkNotNull(FileStore.documentsDirectory) { "File store has not been initialized." }
 
     // MARK: - Companion
 

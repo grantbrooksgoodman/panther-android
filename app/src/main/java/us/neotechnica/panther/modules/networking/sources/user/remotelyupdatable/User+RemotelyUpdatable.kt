@@ -9,6 +9,7 @@
 package us.neotechnica.panther.modules.networking.sources.user.remotelyupdatable
 
 import us.neotechnica.panther.bundle.users
+import us.neotechnica.panther.modules.networking.sources.common.interfaces.asList
 import us.neotechnica.panther.modules.networking.sources.common.interfaces.encodeForWrite
 import us.neotechnica.panther.modules.networking.sources.conversation.models.ConversationID
 import us.neotechnica.panther.modules.networking.sources.user.models.User
@@ -16,6 +17,7 @@ import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
+import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.common.models.WriteAction
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
@@ -45,8 +47,10 @@ enum class UserUpdatableKey(
 /**
  * Returns a copy of the user with the given key set to the given
  * value, or `null` if the value's type does not match the key.
+ *
+ * The blocked-user, previous-language-code and push-token lists
+ * become `null` when they are the bang-qualified empty sentinel.
  */
-@Suppress("UNCHECKED_CAST")
 fun User.modifyKey(
     key: UserUpdatableKey,
     value: Any,
@@ -56,10 +60,10 @@ fun User.modifyKey(
             (value as? Boolean)?.let { copy(aiEnhancedTranslationsEnabled = it) }
 
         UserUpdatableKey.BLOCKED_USER_IDS ->
-            (value as? List<*>)?.filterIsInstance<String>()?.let { copy(blockedUserIDs = it) }
+            value.asList<String>()?.let { copy(blockedUserIDs = if (it.isBangQualifiedEmpty) null else it) }
 
         UserUpdatableKey.CONVERSATION_IDS ->
-            (value as? List<*>)?.filterIsInstance<ConversationID>()?.let { copy(conversationIDs = it) }
+            value.asList<ConversationID>()?.let { copy(conversationIDs = it) }
 
         UserUpdatableKey.DEVICE_ID ->
             (value as? String)?.let { copy(deviceID = it) }
@@ -71,10 +75,10 @@ fun User.modifyKey(
             (value as? Boolean)?.let { copy(messageRecipientConsentRequired = it) }
 
         UserUpdatableKey.PREVIOUS_LANGUAGE_CODES ->
-            (value as? List<*>)?.filterIsInstance<String>()?.let { copy(previousLanguageCodes = it) }
+            value.asList<String>()?.let { copy(previousLanguageCodes = if (it.isBangQualifiedEmpty) null else it) }
 
         UserUpdatableKey.PUSH_TOKENS ->
-            (value as? List<*>)?.filterIsInstance<String>()?.let { copy(pushTokens = it) }
+            value.asList<String>()?.let { copy(pushTokens = if (it.isBangQualifiedEmpty) null else it) }
     }
 
 // MARK: - Update

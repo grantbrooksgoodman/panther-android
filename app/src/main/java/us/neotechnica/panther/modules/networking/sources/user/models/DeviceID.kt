@@ -20,6 +20,15 @@ import java.util.UUID
  * A namespace for the current device's persistent identifier.
  */
 object DeviceID {
+    // MARK: - Types
+
+    /** The identifier store and the platform identifier source. */
+    internal data class Dependencies(
+        val androidID: () -> String? = DeviceID::androidID,
+        val read: () -> String? = DeviceID::read,
+        val save: (String) -> Unit = DeviceID::save,
+    )
+
     // MARK: - Properties
 
     private const val ACCOUNT = "us.neotechnica.deviceID"
@@ -28,6 +37,7 @@ object DeviceID {
 
     private val cachedID = LockIsolated<String?>(null)
     private var appContext: Context? = null
+    private var dependencies = Dependencies()
 
     // MARK: - Computed Properties
 
@@ -38,20 +48,22 @@ object DeviceID {
      * Android ID, or a new UUID when unavailable – and persisted to
      * encrypted preferences, mirrored to a plain-preferences backup,
      * and cached in process so the value stays stable for the lifetime
-     * of an install.
+     * of an install. The persisted value is returned verbatim.
      */
     val current: String
         get() =
             cachedID.withValue { reference ->
                 reference.value?.let { return@withValue it }
 
-                val existingID = read()
-                var resolvedID = existingID ?: (androidID() ?: UUID.randomUUID().toString())
-                resolvedID = "and_$resolvedID"
-                if (existingID == null) save(resolvedID)
+                dependencies.read()?.let { existingID ->
+                    reference.value = existingID
+                    return@withValue existingID
+                }
 
-                reference.value = resolvedID
-                resolvedID
+                val newID = "and_${dependencies.androidID() ?: UUID.randomUUID()}"
+                dependencies.save(newID)
+                reference.value = newID
+                newID
             }
 
     // MARK: - Methods
@@ -59,6 +71,12 @@ object DeviceID {
     /** Prepares the identifier store with the application context. */
     fun initialize(context: Context) {
         appContext = context.applicationContext
+    }
+
+    /** Replaces the store and source and forgets the cached identifier. */
+    internal fun setDependencies(dependencies: Dependencies) {
+        this.dependencies = dependencies
+        cachedID.wrappedValue = null
     }
 
     // MARK: - Auxiliary

@@ -20,6 +20,8 @@ import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.parity.FixtureJson
+import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import java.io.File
@@ -71,5 +73,28 @@ class UserRemotelyUpdatableTest {
             user.update(UserUpdatableKey.PUSH_TOKENS, to = listOf("tokenA"))
 
             assertTrue(database.committedUpdates.isEmpty())
+        }
+
+    @Test
+    fun `update previousLanguageCodes with the empty sentinel stores null and writes the sentinel`() =
+        runTest {
+            val user = User.decode(FixtureJson.loadObject("user.json"))
+            assertNull(user.previousLanguageCodes)
+
+            val updated = user.update(UserUpdatableKey.PREVIOUS_LANGUAGE_CODES, to = listOf("!"))
+
+            assertNull(updated.previousLanguageCodes)
+            assertEquals(listOf("!") to "users/${user.id}/previousLanguageCodes", database.setValues.single())
+            assertEquals(user.encodedHash, updated.encodedHash)
+        }
+
+    @Test
+    fun `update rejects a list with a foreign element`() =
+        runTest {
+            val user = User.decode(FixtureJson.loadObject("user.json"))
+
+            val failure = runCatching { user.update(UserUpdatableKey.PUSH_TOKENS, to = listOf("token", 1)) }.exceptionOrNull()
+
+            assertEquals("Type mismatch for serialization key.", (failure as Exception).descriptor)
         }
 }

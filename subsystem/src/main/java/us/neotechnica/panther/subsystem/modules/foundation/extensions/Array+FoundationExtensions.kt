@@ -9,6 +9,29 @@
 package us.neotechnica.panther.subsystem.modules.foundation.extensions
 
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+
+/**
+ * Returns the list unchanged, or throws when it is empty.
+ *
+ * Decoders that map every element of a collection call this first,
+ * so an empty collection fails as a decoding error rather than
+ * silently producing an empty result.
+ *
+ * @return The receiver.
+ *
+ * @throws Exception if the list is empty.
+ */
+fun <Element> List<Element>.failingForEmptyCollection(): List<Element> {
+    if (isEmpty()) {
+        throw Exception(
+            "Collection is empty.",
+            metadata = ExceptionMetadata(this),
+        )
+    }
+
+    return this
+}
 
 /**
  * A single exception compiled from the list, formed by appending each

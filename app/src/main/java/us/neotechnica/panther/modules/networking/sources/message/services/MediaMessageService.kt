@@ -20,12 +20,15 @@ import us.neotechnica.panther.modules.networking.sources.message.models.HostedCo
 import us.neotechnica.panther.modules.networking.sources.message.models.LocalMediaFilePath
 import us.neotechnica.panther.modules.networking.sources.message.models.Message
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
+import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.database.interfaces.getValues
 import us.neotechnica.panther.networking.modules.storage.interfaces.StorageDelegate
 import us.neotechnica.panther.networking.modules.storage.models.HostedItemMetadata
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.compiledException
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
+import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
@@ -126,7 +129,14 @@ object MediaMessageService {
                 hostedContentType.mediaFilePath
                     ?: throw Exception("Failed to resolve media file path.", metadata = ExceptionMetadata(this))
 
-            if (multipleMessagesReference(mediaFilePath)) return
+            // A reference scan that fails leaves the content in place.
+            val isReferencedByMultipleMessages =
+                try {
+                    multipleMessagesReference(mediaFilePath)
+                } catch (_: Exception) {
+                    null
+                }
+            if (isReferencedByMultipleMessages != false) return
 
             try {
                 storage.deleteItem("${NetworkPath.media.rawValue}/$mediaFilePath")
@@ -134,14 +144,20 @@ object MediaMessageService {
                 exceptions.add(exception)
             }
 
-            // Best-effort; the thumbnail may be absent. The suffix is
-            // appended to the extension-qualified path.
-            runCatching { storage.deleteItem("${NetworkPath.media.rawValue}/$mediaFilePath${MediaFile.THUMBNAIL_IMAGE_NAME_SUFFIX}") }
+            // The thumbnail lives beside the file under the path
+            // prefix the upload wrote; it may be absent.
+            try {
+                storage.deleteItem("${NetworkPath.media.rawValue}/${hostedContentType.mediaFileID}${MediaFile.THUMBNAIL_IMAGE_NAME_SUFFIX}")
+            } catch (exception: Exception) {
+                if (!exception.isEqual(to = AppException.Networking.Storage.storageItemDoesNotExist)) {
+                    exceptions.add(exception)
+                }
+            }
         } catch (exception: Exception) {
             exceptions.add(exception)
         }
 
-        exceptions.firstOrNull()?.let { throw it }
+        exceptions.compiledException?.let { throw it }
     }
 
     // MARK: - Auxiliary
@@ -154,7 +170,7 @@ object MediaMessageService {
         val sourceFile =
             mediaComponent.localPathFile
                 ?: throw Exception("Failed to resolve local media path.", metadata = ExceptionMetadata(this))
-        if (!storage.itemExists(path = relativePath)) {
+        if (!itemExists(storage, relativePath)) {
             if (isPlainTextDocument(mediaComponent.fileExtension)) {
                 // Hosted plain-text payloads are always LZFSE-compressed,
                 // while the local file stays uncompressed.
@@ -189,7 +205,7 @@ object MediaMessageService {
         thumbnailRelativePath: String,
     ) {
         val thumbnailFile = mediaComponent.thumbnailFile ?: return
-        if (!storage.itemExists(path = thumbnailRelativePath)) {
+        if (!itemExists(storage, thumbnailRelativePath)) {
             storage.upload(
                 thumbnailFile,
                 metadata =
@@ -206,17 +222,40 @@ object MediaMessageService {
     private fun isPlainTextDocument(fileExtension: MediaFileExtension?): Boolean =
         (fileExtension as? MediaFileExtension.Document)?.fileExtension is DocumentFileExtension.PlainText
 
+    // An existence check that fails is treated as "absent", so the
+    // upload proceeds.
+    private suspend fun itemExists(
+        storage: StorageDelegate,
+        path: String,
+    ): Boolean =
+        try {
+            storage.itemExists(path = path)
+        } catch (_: Exception) {
+            false
+        }
+
     private fun moveIntoPlace(
         source: File,
         destinationRelativePath: String,
     ) {
-        val destination = FileStore.resolve(destinationRelativePath) ?: return
+        val destination =
+            FileStore.resolve(destinationRelativePath)
+                ?: throw Exception("File store has not been initialized.", metadata = ExceptionMetadata(this))
         if (source.absolutePath == destination.absolutePath) return
-        destination.parentFile?.mkdirs()
-        if (destination.exists()) destination.delete()
-        if (!source.renameTo(destination)) {
-            destination.writeBytes(source.readBytes())
-            source.delete()
+
+        try {
+            destination.parentFile?.mkdirs()
+            if (destination.exists()) destination.delete()
+            if (!source.renameTo(destination)) {
+                source.copyTo(destination, overwrite = true)
+                if (!source.delete()) {
+                    throw Exception("Failed to remove moved file.", metadata = ExceptionMetadata(this))
+                }
+            }
+        } catch (exception: Exception) {
+            throw exception
+        } catch (throwable: Throwable) {
+            throw Exception.from(throwable, metadata = ExceptionMetadata(this))
         }
     }
 
@@ -240,12 +279,7 @@ object MediaMessageService {
         val storage = DependencyValues.current.networking.storage
         val userInfo = mapOf("MessageID" to messageID)
 
-        val destination =
-            localPath.localPathURL
-                ?: throw Exception(
-                    "Failed to resolve local media path.",
-                    metadata = ExceptionMetadata(this),
-                ).appending(userInfo = userInfo)
+        val destination = localPath.localPathURL
 
         try {
             storage.downloadItem(localPath.relativePathString, destination)

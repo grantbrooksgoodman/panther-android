@@ -287,6 +287,18 @@ let messageEncoded: [String: Any] = [
     "sentDate": fixedDateString,
 ]
 
+// Media message (message_media.json). Its MIME content type carries a
+// `/`, which JSONEncoder escapes as `\/` inside the hash input.
+let mediaMessageID = "-FixtureMessage000002"
+let mediaMessageHashFactors: [String] = [
+    mediaMessageID,
+    userID,
+    "image/jpeg",
+    fixedDateString,
+    "\(peerUserID) | \(fixedDateString)",
+].sorted()
+let mediaMessageHash = encodedHash(mediaMessageHashFactors)
+
 // MARK: - Output
 
 struct Manifest: Codable {
@@ -415,6 +427,8 @@ writeJSON(
         "conversationHashFactorsSorted": conversationHashFactors.sorted(),
         "emptyActivityHash": emptyActivityHash,
         "emptyReactionMetadataHash": emptyReactionMetadataHash,
+        "mediaMessageHash": mediaMessageHash,
+        "mediaMessageHashFactorsSorted": mediaMessageHashFactors,
         "messageHash": messageHash,
         "messageHashFactorsSorted": messageHashFactors,
         "phoneNumberHash": phoneNumberHash,

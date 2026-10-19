@@ -56,7 +56,7 @@ class DeleteConversationTest {
 
             assertTrue(environment.storage.deletedPaths.contains("audioMessageInputs/-M1.m4a"))
             assertTrue(environment.storage.deletedPaths.contains("media/-MediaID.jpg"))
-            assertTrue(environment.storage.deletedPaths.contains("media/-MediaID.jpg-thumbnail.jpeg"))
+            assertTrue(environment.storage.deletedPaths.contains("media/-MediaID-thumbnail.jpeg"))
 
             assertTrue(environment.database.setValues.contains(null to "messages/-M1"))
             assertTrue(environment.database.committedUpdates.any { it.containsKey("conversations/-C/messages/-M1") })

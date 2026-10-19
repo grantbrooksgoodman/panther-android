@@ -18,6 +18,14 @@
   ],
   "emptyActivityHash" : "e77a5d1eec3442fdbf53a2c4a0b4db710c13c7f1ca558b795cc0dbbf71d023a3",
   "emptyReactionMetadataHash" : "61551f8492635f34f1c27cc5ad51e1216d3e64dc307e6748cde122aaf68f33f4",
+  "mediaMessageHash" : "68873cd1ff5be8fcb954dd91595d7adc61adc07e972e9c5ab6f49a5ff2ff9071",
+  "mediaMessageHashFactorsSorted" : [
+    "-FixtureMessage000002",
+    "2025-08-19 22:30:00 GMT",
+    "androidFixtureUser0001",
+    "androidFixtureUser0002 | 2025-08-19 22:30:00 GMT",
+    "image\/jpeg"
+  ],
   "messageHash" : "93f528ab4a842ee68eb33201018124360a976a1e285c6d85fc33a56e9e36acde",
   "messageHashFactorsSorted" : [
     "-FixtureMessage000001",

@@ -18,6 +18,17 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 
 /**
+ * Casts the receiver to a list whose every element is an [Element],
+ * or returns `null` when the receiver is not a list or any element
+ * has another type.
+ */
+@Suppress("UNCHECKED_CAST")
+internal inline fun <reified Element> Any?.asList(): List<Element>? =
+    (this as? List<*>)
+        ?.takeIf { list -> list.all { it is Element } }
+        ?.let { it as List<Element> }
+
+/**
  * Encodes [value] for a remote write using the standard encoding
  * ladder: a [Serializable], a list of [Serializable], or a raw
  * encodable value, in that order.

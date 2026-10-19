@@ -20,9 +20,9 @@ import us.neotechnica.panther.modules.common.models.MediaFile
 import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.common.services.sources.AnalyticsService
 import us.neotechnica.panther.modules.common.services.sources.NotificationService
+import us.neotechnica.panther.modules.networking.sources.common.extensions.conversationService
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Participant
-import us.neotechnica.panther.modules.networking.sources.conversation.services.ConversationService
 import us.neotechnica.panther.modules.networking.sources.message.models.Message
 import us.neotechnica.panther.modules.networking.sources.message.models.RichMessageContent
 import us.neotechnica.panther.modules.networking.sources.message.services.MessageService
@@ -306,7 +306,7 @@ object MessageSessionService {
         )
 
         val createdConversation =
-            ConversationService.createConversation(
+            DependencyValues.current.networking.conversationService.createConversation(
                 firstMessage = message,
                 isPenPalsConversation = isPenPalsConversation,
                 participants = participantUsers.map { Participant(userID = it.id) },

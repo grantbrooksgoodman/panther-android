@@ -96,6 +96,11 @@ class RecipientBarActionHandlerServiceTest {
 
     @After
     fun tearDown() {
+        // A blank submission reloads the suggestions table on the Main
+        // scope; join that resolution before the Main dispatcher goes
+        // away, or its continuation resumes into the missing platform
+        // dispatcher during a later test.
+        runBlocking { RecipientBarService.tableView.resolveContactPairs() }
         Dispatchers.resetMain()
         CommonPropertyLists.clearCache()
         RegionDetailService.clearCache()

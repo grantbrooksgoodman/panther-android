@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.networking.sources.user.models
 
+import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.isFromCurrentUser
@@ -16,16 +17,21 @@ import us.neotechnica.panther.modules.networking.sources.common.extensions.visib
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.sources.conversation.models.ConversationID
 import us.neotechnica.panther.modules.session.clientSession
+import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.common.interfaces.Serializable
 import us.neotechnica.panther.networking.modules.common.interfaces.SerializableDecoder
+import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
+import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.getValues
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.EncodedHashable
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 
 /**
  * A registered user.
@@ -156,6 +162,31 @@ data class User(
                 addAll(pushTokens ?: emptyList())
             }.sorted()
 
+    // MARK: - Hosted Badge Number
+
+    // NIT: Unused on Android.
+
+    /**
+     * Returns the user's application badge number, as stored in the
+     * remote database.
+     *
+     * @return The badge number, or `0` if it cannot be read.
+     */
+    suspend fun hostedBadgeNumber(): Int =
+        try {
+            DependencyValues.current.networking.database.getValues<Int>(
+                listOf(
+                    NetworkPath.users.rawValue,
+                    id,
+                    SerializableKey.BADGE_NUMBER.rawValue,
+                ).joinToString("/"),
+                cacheStrategy = CacheStrategy.DISREGARD_CACHE,
+            )
+        } catch (exception: Exception) {
+            Logger.log(exception)
+            0
+        }
+
     // MARK: - Badge Number Calculation
 
     /**
@@ -181,7 +212,7 @@ data class User(
             if (data[SerializableKey.ID.rawValue] !is String) return false
             if (data[SerializableKey.AI_ENHANCED_TRANSLATIONS_ENABLED.rawValue] !is Boolean) return false
             if (!isAbsentOrMap(data, SerializableKey.BLOCKED_USER_IDS)) return false
-            if (!isAbsentOrMap(data, SerializableKey.CONVERSATION_IDS)) return false
+            if (!isAbsentOrStringMap(data, SerializableKey.CONVERSATION_IDS)) return false
             if (data[SerializableKey.DEVICE_ID.rawValue] !is String) return false
             if (data[SerializableKey.IS_PEN_PALS_PARTICIPANT.rawValue] !is Boolean) return false
             if (data[SerializableKey.MESSAGE_RECIPIENT_CONSENT_REQUIRED.rawValue] !is Boolean) return false
@@ -221,8 +252,8 @@ data class User(
             // re-decodes of identical data compare equal.
             val blockedUserIDs = stringKeyMap(data, SerializableKey.BLOCKED_USER_IDS)?.keys?.sorted() ?: emptyList()
             val conversationIDs =
-                stringKeyMap(data, SerializableKey.CONVERSATION_IDS)
-                    ?.map { (key, value) -> ConversationID(key = key, hash = value.toString()) }
+                stringMap(data, SerializableKey.CONVERSATION_IDS)
+                    ?.map { (key, value) -> ConversationID(key = key, hash = value) }
                     ?.sortedBy { it.key }
                     ?: emptyList()
             val pushTokens = stringKeyMap(data, SerializableKey.PUSH_TOKENS)?.keys?.sorted() ?: emptyList()
@@ -255,6 +286,14 @@ data class User(
             return value is Map<*, *>
         }
 
+        private fun isAbsentOrStringMap(
+            data: Map<String, Any?>,
+            key: SerializableKey,
+        ): Boolean {
+            data[key.rawValue] ?: return true
+            return stringMap(data, key) != null
+        }
+
         @Suppress("UNCHECKED_CAST")
         private fun mapValue(
             data: Map<String, Any?>,
@@ -269,5 +308,14 @@ data class User(
             (data[key.rawValue] as? Map<*, *>)
                 ?.takeIf { map -> map.keys.all { it is String } }
                 ?.let { it as Map<String, Any?> }
+
+        @Suppress("UNCHECKED_CAST")
+        private fun stringMap(
+            data: Map<String, Any?>,
+            key: SerializableKey,
+        ): Map<String, String>? =
+            (data[key.rawValue] as? Map<*, *>)
+                ?.takeIf { map -> map.keys.all { it is String } && map.values.all { it is String } }
+                ?.let { it as Map<String, String> }
     }
 }

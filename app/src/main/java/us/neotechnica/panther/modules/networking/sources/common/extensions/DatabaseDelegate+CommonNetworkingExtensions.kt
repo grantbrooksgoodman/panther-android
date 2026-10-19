@@ -21,6 +21,8 @@ import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.networking.modules.database.interfaces.getValues
 import us.neotechnica.panther.networking.modules.database.services.CoreDatabaseStore
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.models.StoredItemKey
 import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
@@ -44,23 +46,27 @@ fun DatabaseDelegate.clearTemporaryCaches() {
  * This method has no effect once the snapshot has been populated
  * during the current app session.
  *
- * @throws us.neotechnica.panther.subsystem.modules.foundation.models.Exception
- *   if reading the database fails.
+ * @throws Exception if reading the database fails.
  */
 suspend fun DatabaseDelegate.populateTemporaryCaches() {
     if (RuntimeStorage.populatedTemporaryCaches) return
 
     val (conversationData, userData) =
-        coroutineScope {
-            val getConversationValues = async { getValues<Map<String, Any?>>(NetworkPath.conversations.rawValue) }
-            val getUserValues = async { getValues<Map<String, Any?>>(NetworkPath.users.rawValue) }
-            getConversationValues.await() to getUserValues.await()
+        try {
+            coroutineScope {
+                val getConversationValues = async { getValues<Map<String, Any>>(NetworkPath.conversations.rawValue) }
+                val getUserValues = async { getValues<Map<String, Any>>(NetworkPath.users.rawValue) }
+                getConversationValues.await() to getUserValues.await()
+            }
+        } catch (exception: Exception) {
+            throw exception
+        } catch (throwable: Throwable) {
+            throw Exception.from(throwable, metadata = ExceptionMetadata(this))
         }
 
     val environment = Networking.config.environment.shortString
 
     conversationData.forEach { (key, value) ->
-        if (value == null) return@forEach
         CoreDatabaseStore.addValue(
             DataSample(value, TEMPORARY_CACHE_EXPIRY_MILLIS),
             "$environment/${NetworkPath.conversations.rawValue}/$key",
@@ -68,7 +74,6 @@ suspend fun DatabaseDelegate.populateTemporaryCaches() {
     }
 
     userData.forEach { (key, value) ->
-        if (value == null) return@forEach
         CoreDatabaseStore.addValue(
             DataSample(value, TEMPORARY_CACHE_EXPIRY_MILLIS),
             "$environment/${NetworkPath.users.rawValue}/$key",

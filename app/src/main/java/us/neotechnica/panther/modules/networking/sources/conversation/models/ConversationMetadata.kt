@@ -8,7 +8,6 @@
 
 package us.neotechnica.panther.modules.networking.sources.conversation.models
 
-import android.util.Base64
 import us.neotechnica.panther.modules.networking.sources.common.extensions.stringList
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
@@ -22,6 +21,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import java.security.MessageDigest
+import java.util.Base64
 import java.util.Date
 
 /**
@@ -93,7 +93,7 @@ class ConversationMetadata(
             val result =
                 mutableMapOf<String, Any?>(
                     SerializableKey.IMAGE_DATA.rawValue to (
-                        imageData?.let { Base64.encodeToString(it, Base64.NO_WRAP) }
+                        imageData?.let { Base64.getEncoder().encodeToString(it) }
                             ?: BANG_QUALIFIED_EMPTY
                     ),
                     SerializableKey.IS_PEN_PALS_CONVERSATION.rawValue to isPenPalsConversation,
@@ -235,6 +235,7 @@ class ConversationMetadata(
     // MARK: - Companion
 
     companion object : SerializableDecoder<ConversationMetadata, Map<String, Any?>> {
+        private const val BASE64_QUANTUM_LENGTH = 4
         private const val HASH_MULTIPLIER = 31
 
         /**
@@ -378,9 +379,10 @@ class ConversationMetadata(
             )
         }
 
-        private fun decodeBase64(string: String): ByteArray? =
-            runCatching {
-                Base64.decode(string, Base64.NO_WRAP)
-            }.getOrNull()
+        // Unpadded input is rejected.
+        private fun decodeBase64(string: String): ByteArray? {
+            if (string.length % BASE64_QUANTUM_LENGTH != 0) return null
+            return runCatching { Base64.getDecoder().decode(string) }.getOrNull()
+        }
     }
 }

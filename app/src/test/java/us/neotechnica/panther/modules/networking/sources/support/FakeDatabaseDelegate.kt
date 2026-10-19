@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.networking.modules.database.models.QueryStrategy
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import kotlin.time.Duration
 
 /**
@@ -40,6 +41,9 @@ class FakeDatabaseDelegate : DatabaseDelegate {
 
     /** The values returned by [getValues], keyed by path. */
     val getValuesResults = mutableMapOf<String, Any?>()
+
+    /** The exceptions [getValues] throws, keyed by path. */
+    val getValuesFailures = mutableMapOf<String, Exception>()
 
     /** The paths passed to [getValues] so far. */
     val getValuesPaths = mutableListOf<String>()
@@ -89,6 +93,7 @@ class FakeDatabaseDelegate : DatabaseDelegate {
         timeout: Duration,
     ): Any {
         getValuesPaths.add(path)
+        getValuesFailures[path]?.let { throw it }
         if (getValuesResults.containsKey(path)) {
             return checkNotNull(getValuesResults[path]) { "getValuesResults[$path] is null." }
         }

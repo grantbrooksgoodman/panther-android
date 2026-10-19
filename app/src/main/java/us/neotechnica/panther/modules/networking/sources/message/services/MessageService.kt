@@ -186,6 +186,47 @@ object MessageService {
         }
     }
 
+    // NIT: Unused on Android.
+
+    /**
+     * Builds a message and writes its node to the database.
+     *
+     * Use [buildMessage] on the send path, where the message node
+     * write should join the atomic fan-out instead.
+     *
+     * @param fromAccountID The identifier of the sending account.
+     * @param richContent The message's rich content, or `null` for a
+     *   text message.
+     * @param sentDate The date the message was sent.
+     * @param translations The message's translations, or `null` for
+     *   a message without text.
+     *
+     * @return The created message.
+     *
+     * @throws Exception if the message cannot be built or written.
+     */
+    suspend fun createMessage(
+        fromAccountID: String,
+        richContent: RichMessageContent?,
+        sentDate: Date = Date(),
+        translations: List<Translation>?,
+    ): Message {
+        val message =
+            buildMessage(
+                fromAccountID = fromAccountID,
+                richContent = richContent,
+                sentDate = sentDate,
+                translations = translations,
+            )
+
+        database.updateChildValues(
+            key = "${NetworkPath.messages.rawValue}/${message.id}",
+            data = message.encoded.filterKeys { it != Message.SerializableKey.ID.rawValue },
+        )
+
+        return message
+    }
+
     // MARK: - Retrieval by ID
 
     /**

@@ -33,19 +33,18 @@ data class LocalAudioFilePath(
 ) {
     // MARK: - Computed Properties
 
-    /**
-     * The absolute file of the input recording, or `null` before the
-     * file store is initialized.
-     */
-    val inputFilePathURL: File?
-        get() = FileStore.resolve(inputFilePathString)
+    /** The absolute file of the input recording. */
+    val inputFilePathURL: File
+        get() = File(documentsDirectory, inputFilePathString)
 
-    /**
-     * The absolute file of the translated output audio, or `null`
-     * before the file store is initialized.
-     */
-    val outputFilePathURL: File?
-        get() = FileStore.resolve(outputFilePathString)
+    /** The absolute file of the translated output audio. */
+    val outputFilePathURL: File
+        get() = File(documentsDirectory, outputFilePathString)
+
+    // MARK: - Auxiliary
+
+    private val documentsDirectory: File
+        get() = checkNotNull(FileStore.documentsDirectory) { "File store has not been initialized." }
 
     // MARK: - Companion
 

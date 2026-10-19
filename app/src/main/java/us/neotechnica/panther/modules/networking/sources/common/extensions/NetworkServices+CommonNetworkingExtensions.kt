@@ -8,9 +8,14 @@
 
 package us.neotechnica.panther.modules.networking.sources.common.extensions
 
+import us.neotechnica.panther.modules.networking.sources.conversation.services.ConversationService
 import us.neotechnica.panther.modules.networking.sources.message.services.MessageService
 import us.neotechnica.panther.modules.networking.sources.user.services.UserService
 import us.neotechnica.panther.networking.modules.common.models.NetworkServices
+
+/** The conversation service. */
+val NetworkServices.conversationService: ConversationService
+    get() = ConversationService
 
 /** The message service. */
 val NetworkServices.messageService: MessageService

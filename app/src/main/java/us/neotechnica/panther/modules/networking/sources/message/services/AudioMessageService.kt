@@ -102,12 +102,8 @@ object AudioMessageService {
 
         val sourcePathString =
             if (isFromCurrentUser) localAudioFilePath.inputFilePathString else localAudioFilePath.outputFilePathString
-        val sourceFile =
-            (if (isFromCurrentUser) localAudioFilePath.inputFilePathURL else localAudioFilePath.outputFilePathURL)
-                ?: throw failure("Failed to resolve local audio path.").appending(userInfo = userInfo)
-        val destinationFile =
-            (if (isFromCurrentUser) localAudioFilePath.outputFilePathURL else localAudioFilePath.inputFilePathURL)
-                ?: throw failure("Failed to resolve local audio path.").appending(userInfo = userInfo)
+        val sourceFile = if (isFromCurrentUser) localAudioFilePath.inputFilePathURL else localAudioFilePath.outputFilePathURL
+        val destinationFile = if (isFromCurrentUser) localAudioFilePath.outputFilePathURL else localAudioFilePath.inputFilePathURL
 
         try {
             storage.downloadItem(sourcePathString, sourceFile)

@@ -34,13 +34,13 @@ import us.neotechnica.panther.modules.content.user.extensions.isMock
 import us.neotechnica.panther.modules.content.user.extensions.isOutboxMessage
 import us.neotechnica.panther.modules.content.user.extensions.offsetFromCurrentUserAdditionDate
 import us.neotechnica.panther.modules.content.user.extensions.sortedByAscendingSentDate
+import us.neotechnica.panther.modules.networking.sources.common.extensions.conversationService
 import us.neotechnica.panther.modules.networking.sources.common.extensions.uniquedByID
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.sources.conversation.models.ConversationID
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Participant
 import us.neotechnica.panther.modules.networking.sources.conversation.remotelyupdatable.ConversationUpdatableKey
 import us.neotechnica.panther.modules.networking.sources.conversation.remotelyupdatable.update
-import us.neotechnica.panther.modules.networking.sources.conversation.services.ConversationService
 import us.neotechnica.panther.modules.networking.sources.message.models.Message
 import us.neotechnica.panther.modules.networking.sources.message.services.MessageService
 import us.neotechnica.panther.modules.networking.sources.user.models.User
@@ -315,7 +315,7 @@ object ConversationSessionService {
             }
         }
 
-        ConversationService.removeConversationFromUsers(
+        DependencyValues.current.networking.conversationService.removeConversationFromUsers(
             userIDs = conversation.participants.map { it.userID },
             conversationIDKey = conversation.id.key,
         )

@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.networking.sources.user.models
 
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.seconds
 import java.util.Date
 import kotlin.math.abs
 import kotlin.time.Duration
@@ -26,13 +27,19 @@ class UserDataSnapshot(
 ) {
     // MARK: - Computed Properties
 
-    /** A Boolean value that indicates whether the snapshot has expired. */
+    /**
+     * A Boolean value that indicates whether the snapshot has expired.
+     *
+     * The age is measured in whole seconds.
+     */
     val isExpired: Boolean
-        get() = abs(Date().time - date.time) > expiryThreshold.inWholeMilliseconds
+        get() = abs(date.seconds(from = Date())) * MILLISECONDS_PER_SECOND > expiryThreshold.inWholeMilliseconds
 
     // MARK: - Companion
 
     companion object {
+        private const val MILLISECONDS_PER_SECOND = 1000L
+
         /** An empty, already-expired snapshot. */
         val empty: UserDataSnapshot
             get() =

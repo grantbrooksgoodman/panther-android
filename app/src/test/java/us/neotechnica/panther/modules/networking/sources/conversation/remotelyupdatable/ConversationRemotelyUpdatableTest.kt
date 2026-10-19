@@ -28,6 +28,7 @@ import us.neotechnica.panther.modules.session.entity.services.ReactionSessionSer
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.parity.FixtureJson
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
@@ -93,6 +94,28 @@ class ConversationRemotelyUpdatableTest {
 
             // The rehashed conversation is upserted into the store.
             assertEquals(updated, SessionStore.getConversation(updated.id))
+        }
+
+    @Test
+    fun `updateValues rejects the identifier and hash keys as not updatable`() =
+        runTest {
+            for (key in listOf(ConversationUpdatableKey.ID, ConversationUpdatableKey.ENCODED_HASH)) {
+                val failure = runCatching { conversation.updateValues(mapOf(key to "value")) }.exceptionOrNull()
+                assertEquals("The specified serialization key is not updatable.", (failure as Exception).descriptor)
+            }
+
+            assertTrue(database.committedUpdates.isEmpty())
+        }
+
+    @Test
+    fun `updateValues rejects a mistyped list`() =
+        runTest {
+            val failure =
+                runCatching { conversation.updateValues(mapOf(ConversationUpdatableKey.ACTIVITIES to listOf("left"))) }
+                    .exceptionOrNull()
+
+            assertEquals("Type mismatch for serialization key.", (failure as Exception).descriptor)
+            assertTrue(database.committedUpdates.isEmpty())
         }
 
     // MARK: - Reaction Transaction Round-Trip

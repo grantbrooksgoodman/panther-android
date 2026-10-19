@@ -10,6 +10,7 @@ package us.neotechnica.panther.modules.session.entity.services
 
 import us.neotechnica.panther.bundle.users
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
+import us.neotechnica.panther.modules.networking.sources.common.extensions.conversationService
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Activity
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.sources.conversation.models.ConversationID
@@ -18,13 +19,13 @@ import us.neotechnica.panther.modules.networking.sources.conversation.models.Par
 import us.neotechnica.panther.modules.networking.sources.conversation.models.PenPalsSharingData
 import us.neotechnica.panther.modules.networking.sources.conversation.remotelyupdatable.ConversationUpdatableKey
 import us.neotechnica.panther.modules.networking.sources.conversation.remotelyupdatable.updateValues
-import us.neotechnica.panther.modules.networking.sources.conversation.services.ConversationService
 import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 
@@ -166,7 +167,7 @@ object ActivitySessionService {
             )
 
         if (removeFromUser) {
-            ConversationService.removeConversationFromUsers(
+            DependencyValues.current.networking.conversationService.removeConversationFromUsers(
                 userIDs = listOf(userID),
                 conversationIDKey = updatedConversation.id.key,
             )

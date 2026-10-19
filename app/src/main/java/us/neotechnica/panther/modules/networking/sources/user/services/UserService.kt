@@ -26,6 +26,7 @@ import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.networking.modules.database.interfaces.getValues
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.failingForEmptyCollection
 import us.neotechnica.panther.subsystem.modules.foundation.models.Coalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -165,15 +166,8 @@ object UserService {
                 )
             }
 
-        if (userDataByID.isEmpty()) {
-            throw Exception(
-                "No users to decode.",
-                metadata = ExceptionMetadata(this),
-            )
-        }
-
         return coroutineScope {
-            userDataByID.map { data -> async { user(data) } }.awaitAll()
+            userDataByID.failingForEmptyCollection().map { data -> async { user(data) } }.awaitAll()
         }
     }
 

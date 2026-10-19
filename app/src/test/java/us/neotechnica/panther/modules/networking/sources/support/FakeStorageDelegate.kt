@@ -36,6 +36,12 @@ class FakeStorageDelegate : StorageDelegate {
     /** The hosted items served by [downloadItem], keyed by storage path. */
     val hostedItems = mutableMapOf<String, ByteArray>()
 
+    /** The exceptions [deleteItem] throws, keyed by storage path. */
+    val deleteFailures = mutableMapOf<String, Exception>()
+
+    /** The exception [itemExists] throws, or `null` to answer normally. */
+    var itemExistsFailure: Exception? = null
+
     // MARK: - StorageDelegate
 
     override fun clearStore() = Unit
@@ -52,6 +58,7 @@ class FakeStorageDelegate : StorageDelegate {
         prependingEnvironment: Boolean,
         timeout: Duration,
     ) {
+        deleteFailures[path]?.let { throw it }
         deletedPaths.add(path)
     }
 
@@ -101,7 +108,10 @@ class FakeStorageDelegate : StorageDelegate {
         prependingEnvironment: Boolean,
         cacheStrategy: CacheStrategy,
         timeout: Duration,
-    ): Boolean = hostedItems.containsKey(path)
+    ): Boolean {
+        itemExistsFailure?.let { throw it }
+        return hostedItems.containsKey(path)
+    }
 
     override fun prewarm() = Unit
 
