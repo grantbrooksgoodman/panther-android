@@ -37,8 +37,7 @@ internal fun Application.configureBuild(context: Context) {
         codeName = CODE_NAME,
         finalName = FINAL_NAME,
         bundleVersion = BuildConfig.VERSION_NAME,
-        // TODO: FIX BEFORE PLAY STORE RELEASE.
-        milestone = Build.Milestone.BETA, // resolveBuildMilestone(),
+        milestone = resolveBuildMilestone(),
         buildDate = Date(buildDate * MILLIS_PER_SECOND),
         firstCompileDate = Date(firstCompileDate * MILLIS_PER_SECOND),
     )

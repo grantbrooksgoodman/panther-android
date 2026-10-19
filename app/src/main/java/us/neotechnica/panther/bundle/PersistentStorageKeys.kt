@@ -40,6 +40,7 @@ object PermanentKeyDelegate : PermanentPersistentStorageKeyDelegate {
             PersistentStorageKey.networking(NetworkingStorageKey.NETWORK_ENVIRONMENT),
             PersistentStorageKey.permissionService(PermissionServiceStorageKey.HAS_REQUESTED_CONTACT_PERMISSION),
             PersistentStorageKey.permissionService(PermissionServiceStorageKey.HAS_REQUESTED_NOTIFICATION_PERMISSION),
+            PersistentStorageKey.permissionService(PermissionServiceStorageKey.HAS_REQUESTED_STORAGE_PERMISSION),
         )
 }
 

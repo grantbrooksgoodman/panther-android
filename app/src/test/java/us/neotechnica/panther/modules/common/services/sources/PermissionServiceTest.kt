@@ -8,7 +8,10 @@
 
 package us.neotechnica.panther.modules.common.services.sources
 
+import android.os.Build
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import us.neotechnica.panther.modules.common.services.sources.PermissionService.PermissionStatus
 
@@ -34,6 +37,17 @@ class PermissionServiceTest {
     @Test
     fun `a refused permission the system no longer prompts for is denied`() {
         assertEquals(PermissionStatus.DENIED, status(isGranted = false, hasRequested = true, canShowRationale = false))
+    }
+
+    @Test
+    fun `android 9 needs the storage permission to save media`() {
+        assertTrue(PermissionService.requiresStoragePermission(Build.VERSION_CODES.P))
+    }
+
+    @Test
+    fun `android 10 and later save media without the storage permission`() {
+        assertFalse(PermissionService.requiresStoragePermission(Build.VERSION_CODES.Q))
+        assertFalse(PermissionService.requiresStoragePermission(Build.VERSION_CODES.VANILLA_ICE_CREAM))
     }
 
     // MARK: - Auxiliary

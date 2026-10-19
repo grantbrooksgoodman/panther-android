@@ -16,6 +16,10 @@ import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import us.neotechnica.panther.modules.common.models.MediaFile
+import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.modules.common.services.sources.PermissionService.PermissionStatus
+import us.neotechnica.panther.modules.common.services.sources.PermissionService.PermissionType
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import java.io.File
 
 /**
@@ -23,9 +27,33 @@ import java.io.File
  * collections: images to Pictures, videos to Movies, and other files
  * to Downloads.
  *
+ * On Android 9 the save needs the storage permission; this method
+ * requests it first and, if the user refuses, prompts them to grant
+ * it in Settings.
+ *
+ * @return `true` if the file was saved; otherwise, `false` if the
+ *   storage permission was refused.
  * @throws Exception if the file cannot be read or written.
  */
-suspend fun MediaActionHandlerService.saveMedia(mediaFile: MediaFile): Unit =
+suspend fun MediaActionHandlerService.saveMedia(mediaFile: MediaFile): Boolean {
+    if (!ensureStoragePermission()) return false
+    writeToMediaCollection(mediaFile)
+    return true
+}
+
+// MARK: - Auxiliary
+
+// Requests the storage permission Android 9 needs before writing to
+// the media store, prompting for Settings when it is refused.
+private suspend fun ensureStoragePermission(): Boolean {
+    val permissionService = DependencyValues.current.commonServices.permission
+    if (permissionService.storagePermissionStatus == PermissionStatus.GRANTED) return true
+    if (permissionService.requestPermission(PermissionType.STORAGE) == PermissionStatus.GRANTED) return true
+    permissionService.presentCTA(PermissionType.STORAGE)
+    return false
+}
+
+private suspend fun MediaActionHandlerService.writeToMediaCollection(mediaFile: MediaFile): Unit =
     withContext(Dispatchers.IO) {
         val source = mediaFile.localPathFile ?: throw failure("Failed to resolve local media path.")
         val extension = mediaFile.fileExtension
@@ -49,8 +77,6 @@ suspend fun MediaActionHandlerService.saveMedia(mediaFile: MediaFile): Unit =
             directory = directory,
         )
     }
-
-// MARK: - Auxiliary
 
 private fun downloadsContentUri(): Uri =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

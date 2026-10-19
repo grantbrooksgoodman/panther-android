@@ -55,6 +55,7 @@ enum class PermissionServiceStorageKey(
 ) {
     HAS_REQUESTED_CONTACT_PERMISSION("hasRequestedContactPermission"),
     HAS_REQUESTED_NOTIFICATION_PERMISSION("hasRequestedNotificationPermission"),
+    HAS_REQUESTED_STORAGE_PERMISSION("hasRequestedStoragePermission"),
 }
 
 /** The persistent storage keys scoped to the review service. */

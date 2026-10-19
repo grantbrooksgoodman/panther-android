@@ -192,8 +192,7 @@ private suspend fun saveFile(metadata: MediaItemViewData) {
         // An image that cannot be decoded exports as a document instead.
         val isDecodableImage = file.fileExtension.isImage && MediaMessagePreviewService.image(file) != null
         if (isDecodableImage || file.fileExtension.isVideo) {
-            MediaActionHandlerService.saveMedia(file)
-            HUD.showSuccess()
+            if (MediaActionHandlerService.saveMedia(file)) HUD.showSuccess()
         } else {
             val localFile =
                 file.localPathFile

@@ -1,5 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.Panther" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- The theme the app runs under once the system splash hands
+         over. -->
+    <style name="Theme.Panther.Main" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- The launch theme: a blank system splash in the app's
+         background color with no icon. MainActivity removes it on
+         the first frame, so the app's own splash page takes over
+         immediately. On Android 11 and earlier the window shows the
+         same background until the first frame draws. -->
+    <style name="Theme.Panther" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@android:color/transparent</item>
+        <item name="postSplashScreenTheme">@style/Theme.Panther.Main</item>
+    </style>
 </resources>

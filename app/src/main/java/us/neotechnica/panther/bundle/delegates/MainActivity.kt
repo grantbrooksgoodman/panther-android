@@ -18,6 +18,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import us.neotechnica.panther.bundle.developermode.ShakeDetector
 import us.neotechnica.panther.bundle.openConversationIDKey
 import us.neotechnica.panther.designsystem.modules.alertkit.views.AlertHost
@@ -65,6 +66,9 @@ class MainActivity : ComponentActivity() {
     private val uiCacheInvalidationService: UICacheInvalidationService by Dependency { it.uiCacheInvalidationService }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // The system splash is blank and leaves on the first frame, so
+        // the app's own splash page takes over at once.
+        installSplashScreen().setOnExitAnimationListener { it.remove() }
         super.onCreate(savedInstanceState)
 
         // A non-null saved state on the first activity creation of a process means the process was

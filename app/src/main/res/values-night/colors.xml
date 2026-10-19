@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The system splash background: the app's dark-mode
+         background. -->
+    <color name="splash_background">#000000</color>
+</resources>

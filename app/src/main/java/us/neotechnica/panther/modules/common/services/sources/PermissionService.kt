@@ -43,8 +43,8 @@ import android.os.Build as SystemBuild
 /**
  * Checks, requests, and prompts for system permissions.
  *
- * Only the contacts and notifications permissions are modeled. A
- * permission that has not been granted reports
+ * The contacts, notifications, and storage permissions are modeled.
+ * A permission that has not been granted reports
  * [PermissionStatus.UNKNOWN] until the app has requested it, and
  * [PermissionStatus.DENIED] afterward.
  */
@@ -73,6 +73,12 @@ object PermissionService {
          * sounds.
          */
         NOTIFICATIONS,
+
+        /**
+         * Permission to write to shared storage, which saving media
+         * needs on Android 9.
+         */
+        STORAGE,
     }
 
     // MARK: - Properties
@@ -97,6 +103,20 @@ object PermissionService {
                 } else {
                     PermissionStatus.DENIED
                 }
+            }
+
+    /**
+     * The current status of the storage permission.
+     *
+     * Android 10 and later write to the media store without a
+     * permission, so the status is [PermissionStatus.GRANTED] there.
+     */
+    val storagePermissionStatus: PermissionStatus
+        get() =
+            if (requiresStoragePermission(SystemBuild.VERSION.SDK_INT)) {
+                getPermissionStatus(Manifest.permission.WRITE_EXTERNAL_STORAGE, PermissionType.STORAGE)
+            } else {
+                PermissionStatus.GRANTED
             }
 
     // MARK: - Initialization
@@ -127,6 +147,13 @@ object PermissionService {
                 } else {
                     // Pre-Tiramisu there is no notification runtime permission; report the current state.
                     notificationPermissionStatus
+                }
+
+            PermissionType.STORAGE ->
+                if (requiresStoragePermission(SystemBuild.VERSION.SDK_INT)) {
+                    requestSystemPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, type)
+                } else {
+                    PermissionStatus.GRANTED
                 }
         }
 
@@ -171,6 +198,7 @@ object PermissionService {
         when (type) {
             PermissionType.CONTACTS -> presentContactCTA()
             PermissionType.NOTIFICATIONS -> presentNotificationCTA()
+            PermissionType.STORAGE -> presentStorageCTA()
         }
 
     private suspend fun presentContactCTA(): Boolean =
@@ -182,6 +210,12 @@ object PermissionService {
     private suspend fun presentNotificationCTA(): Boolean =
         presentCTA(
             "⌘${Build.finalName}⌘ has not been granted permission to send and receive notifications." +
+                "\n\nYou can change this in Settings.",
+        )
+
+    private suspend fun presentStorageCTA(): Boolean =
+        presentCTA(
+            "⌘${Build.finalName}⌘ has not been granted permission to save media to your device." +
                 "\n\nYou can change this in Settings.",
         )
 
@@ -242,12 +276,17 @@ object PermissionService {
             else -> PermissionStatus.DENIED
         }
 
+    // Android 10 and later write to the media store without a
+    // permission; Android 9 needs the storage permission.
+    internal fun requiresStoragePermission(sdkInt: Int): Boolean = sdkInt < SystemBuild.VERSION_CODES.Q
+
     private val PermissionType.hasRequestedKey: PersistentStorageKey
         get() =
             PersistentStorageKey.permissionService(
                 when (this) {
                     PermissionType.CONTACTS -> PermissionServiceStorageKey.HAS_REQUESTED_CONTACT_PERMISSION
                     PermissionType.NOTIFICATIONS -> PermissionServiceStorageKey.HAS_REQUESTED_NOTIFICATION_PERMISSION
+                    PermissionType.STORAGE -> PermissionServiceStorageKey.HAS_REQUESTED_STORAGE_PERMISSION
                 },
             )
 

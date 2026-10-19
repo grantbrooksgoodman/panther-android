@@ -7,6 +7,13 @@
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Saving media on Android 9 writes to the public media
+         directories, which needs this permission; Android 10 and
+         later write through the media store without it. -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
     <!-- The app shows no ads and never reads the advertising ID, so the
          advertising permissions that Firebase Analytics merges in are
          removed, and ad ID collection is turned off below. -->

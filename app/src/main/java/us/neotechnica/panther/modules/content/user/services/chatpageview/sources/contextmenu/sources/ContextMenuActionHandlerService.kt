@@ -149,7 +149,7 @@ class ContextMenuActionHandlerService(
         val presentExportController: (File) -> Unit = { DocumentExportService.presentExportController(forFileAt = it) },
         val presentReactionDetails: (String) -> Unit = { RootSheets.present(RootSheet.reactionDetailsPageView(it)) },
         val reportedErrorCodes: () -> List<String> = { ErrorReportingService.reportedErrorCodes },
-        val saveMedia: suspend (MediaFile) -> Unit = { MediaActionHandlerService.saveMedia(it) },
+        val saveMedia: suspend (MediaFile) -> Boolean = { MediaActionHandlerService.saveMedia(it) },
         val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main),
         val showSuccessHUD: () -> Unit = { HUD.showSuccess() },
         val speak: (String, String, String) -> Boolean = { text, languageCode, messageID ->
@@ -261,8 +261,7 @@ class ContextMenuActionHandlerService(
         if (imageOrVideo != null) {
             dependencies.scope.launch {
                 try {
-                    dependencies.saveMedia(imageOrVideo)
-                    dependencies.showSuccessHUD()
+                    if (dependencies.saveMedia(imageOrVideo)) dependencies.showSuccessHUD()
                 } catch (exception: Exception) {
                     Logger.log(exception, with = AlertType.toast)
                 }

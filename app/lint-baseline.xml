@@ -140,12 +140,6 @@
             file="src/main/res/raw/animated_logotype.gif"/>
     </issue>
 
-    <issue
-        id="UnusedResources"
-        message="The resource `R.raw.reaction` appears to be unused">
-        <location
-            file="src/main/res/raw/reaction.wav"/>
-    </issue>
 
     <issue
         id="UseKtx"
