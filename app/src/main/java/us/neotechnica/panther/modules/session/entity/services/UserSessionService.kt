@@ -17,6 +17,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.Application
 import us.neotechnica.panther.bundle.currentUserID
@@ -204,7 +206,8 @@ object UserSessionService {
         return currentBlockedUserIDs != updatedBlockedUserIDs
     }
 
-    private fun commitConversationsToMemory(conversations: Set<Conversation>) {
+    private suspend fun commitConversationsToMemory(conversations: Set<Conversation>) {
+        currentCoroutineContext().ensureActive()
         // Resolved from archive or network; bypasses RemotelyUpdatable.update.
         sessionStore.upsertConversations(conversations)
     }
@@ -213,7 +216,11 @@ object UserSessionService {
         val currentConversationIDStrings =
             currentUser?.conversationIDs?.map { it.encoded }?.sorted() ?: return true
 
-        val map = dictionary[User.SerializableKey.CONVERSATION_IDS.rawValue] as? Map<*, *> ?: return false
+        // A token value that is not a string reads as "no change".
+        val map =
+            (dictionary[User.SerializableKey.CONVERSATION_IDS.rawValue] as? Map<*, *>)
+                ?.takeIf { map -> map.values.all { it is String } }
+                ?: return false
         val updatedConversationIDStrings = map.map { "${it.key} | ${it.value}" }.sorted()
 
         // Remove deleted conversations.
@@ -323,6 +330,7 @@ object UserSessionService {
      * fetch their associated messages or users.
      */
     private suspend fun resolveCurrentUserConversations() {
+        currentCoroutineContext().ensureActive()
         val user = currentUser ?: return
         if (user.id != User.currentUserID) return
         var conversationIDs = user.conversationIDs ?: return
@@ -335,6 +343,7 @@ object UserSessionService {
         conversationIDs = conversationIDs.filter { it.key !in ignoredConversationIDKeys }
 
         for (conversationID in conversationIDs) {
+            currentCoroutineContext().ensureActive()
             val exactMatch = sessionStore.getConversation(conversationID)
             if (exactMatch != null) {
                 decodedConversations.merge(listOf(exactMatch))
@@ -355,6 +364,7 @@ object UserSessionService {
             }
         }
 
+        currentCoroutineContext().ensureActive()
         Logger.log(
             "Conversations needing update: ${conversationsNeedingUpdate.size}\n" +
                 "Conversations needing fetch: ${conversationsNeedingFetch.size}\n" +
@@ -372,6 +382,7 @@ object UserSessionService {
             return commitConversationsToMemory(decodedConversations)
         }
 
+        currentCoroutineContext().ensureActive()
         decodedConversations.merge(
             coroutineScope {
                 conversationsNeedingUpdate
@@ -384,6 +395,7 @@ object UserSessionService {
             return commitConversationsToMemory(decodedConversations)
         }
 
+        currentCoroutineContext().ensureActive()
         val conversations =
             DependencyValues.current.networking.conversationService
                 .getConversations(conversationsNeedingFetch.map { it.key })
@@ -481,7 +493,7 @@ object UserSessionService {
                     title = "You have been signed out.",
                     message = "A sign-in was detected from another device.",
                 ),
-                translating = listOf(Toast.TranslationOptionKey.Message, Toast.TranslationOptionKey.Title),
+                translating = Toast.TranslationOptionKey.allCases,
             )
 
             Application.reset(onCompletion = Application.ResetCompletionProcedure.NAVIGATE_TO_SPLASH)

@@ -119,9 +119,10 @@ data class Reaction(
         }
     }
 
-    // MARK: - Type Aliases
+    // MARK: - Types
 
-    private enum class Keys(
+    /** The serializable keys for encoding and decoding the model. */
+    enum class SerializableKey(
         val rawValue: String,
     ) {
         STYLE("style"),
@@ -134,8 +135,8 @@ data class Reaction(
     override val encoded: Map<String, Any?>
         get() =
             mapOf(
-                Keys.STYLE.rawValue to style.encodedValue,
-                Keys.USER_ID.rawValue to userID,
+                SerializableKey.STYLE.rawValue to style.encodedValue,
+                SerializableKey.USER_ID.rawValue to userID,
             )
 
     // MARK: - Companion
@@ -156,14 +157,14 @@ data class Reaction(
         }
 
         override fun canDecode(data: Map<String, Any?>): Boolean {
-            val encodedStyle = data[Keys.STYLE.rawValue] as? String ?: return false
-            return Style.from(encodedStyle) != null && data[Keys.USER_ID.rawValue] is String
+            val encodedStyle = data[SerializableKey.STYLE.rawValue] as? String ?: return false
+            return Style.from(encodedStyle) != null && data[SerializableKey.USER_ID.rawValue] is String
         }
 
         override fun decode(data: Map<String, Any?>): Reaction {
-            val encodedStyle = data[Keys.STYLE.rawValue] as? String
+            val encodedStyle = data[SerializableKey.STYLE.rawValue] as? String
             val style = encodedStyle?.let { Style.from(it) }
-            val userID = data[Keys.USER_ID.rawValue] as? String
+            val userID = data[SerializableKey.USER_ID.rawValue] as? String
 
             if (style == null || userID == null) {
                 throw Exception.Networking.decodingFailed(

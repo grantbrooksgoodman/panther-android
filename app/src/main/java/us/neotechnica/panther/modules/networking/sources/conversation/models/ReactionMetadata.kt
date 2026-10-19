@@ -27,9 +27,10 @@ data class ReactionMetadata(
     val reactions: List<Reaction>,
 ) : Serializable<Map<String, Any?>>,
     EncodedHashable {
-    // MARK: - Type Aliases
+    // MARK: - Types
 
-    private enum class Keys(
+    /** The serializable keys for encoding and decoding the model. */
+    enum class SerializableKey(
         val rawValue: String,
     ) {
         MESSAGE_ID("messageID"),
@@ -42,8 +43,8 @@ data class ReactionMetadata(
     override val encoded: Map<String, Any?>
         get() =
             mapOf(
-                Keys.MESSAGE_ID.rawValue to messageID,
-                Keys.REACTIONS.rawValue to reactions.map { it.encoded },
+                SerializableKey.MESSAGE_ID.rawValue to messageID,
+                SerializableKey.REACTIONS.rawValue to reactions.map { it.encoded },
             )
 
     override val hashFactors: List<String>
@@ -71,13 +72,13 @@ data class ReactionMetadata(
             )
 
         override fun canDecode(data: Map<String, Any?>): Boolean {
-            if (data[Keys.MESSAGE_ID.rawValue] !is String) return false
+            if (data[SerializableKey.MESSAGE_ID.rawValue] !is String) return false
             val encodedReactions = reactionMaps(data) ?: return false
             return encodedReactions.all { Reaction.canDecode(it) }
         }
 
         override fun decode(data: Map<String, Any?>): ReactionMetadata {
-            val messageID = data[Keys.MESSAGE_ID.rawValue] as? String
+            val messageID = data[SerializableKey.MESSAGE_ID.rawValue] as? String
             val encodedReactions = reactionMaps(data)
 
             if (messageID == null || encodedReactions == null) {
@@ -95,7 +96,7 @@ data class ReactionMetadata(
 
         @Suppress("UNCHECKED_CAST")
         private fun reactionMaps(data: Map<String, Any?>): List<Map<String, Any?>>? =
-            (data[Keys.REACTIONS.rawValue] as? List<*>)
+            (data[SerializableKey.REACTIONS.rawValue] as? List<*>)
                 ?.takeIf { list -> list.all { it is Map<*, *> } }
                 ?.map { it as Map<String, Any?> }
     }

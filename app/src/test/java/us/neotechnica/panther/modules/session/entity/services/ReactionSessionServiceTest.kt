@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -71,6 +72,7 @@ class ReactionSessionServiceTest {
     @After
     fun tearDown() {
         ConversationSessionService.setCurrentConversation(null)
+        Dispatchers.resetMain()
     }
 
     // MARK: - Tests
@@ -91,6 +93,19 @@ class ReactionSessionServiceTest {
 
             assertFalse(ReactionSessionService.isReactingToMessage)
             assertNull(SessionStore.getConversation(conversation.id.key)?.reactionMetadata)
+        }
+
+    @Test
+    fun `a write that throws a runtime exception resets the gate`() =
+        runBlocking {
+            environment.database.transactionFailure = IllegalStateException("Transaction failed.")
+
+            val failure =
+                runCatching { ReactionSessionService.react(checkNotNull(Reaction.from(Reaction.Style.LOVE)), message) }
+                    .exceptionOrNull()
+
+            assertEquals("Transaction failed.", (failure as Exception).descriptor)
+            assertFalse(ReactionSessionService.isReactingToMessage)
         }
 
     @Test

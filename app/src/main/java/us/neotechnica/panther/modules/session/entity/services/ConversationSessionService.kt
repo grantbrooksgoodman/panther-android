@@ -393,7 +393,7 @@ object ConversationSessionService {
                                     Toast.ToastType.Banner(ToastStyle.INFO),
                                     message = "This conversation is no longer available.",
                                 ),
-                                translating = listOf(Toast.TranslationOptionKey.Message, Toast.TranslationOptionKey.Title),
+                                translating = Toast.TranslationOptionKey.allCases,
                             )
                         } else {
                             RuntimeStorage.remove(StoredItemKey.shouldNotifyOfConversationAvailability)
@@ -440,7 +440,7 @@ object ConversationSessionService {
                 conversationPath,
                 Conversation.SerializableKey.PARTICIPANTS.rawValue,
                 forUser,
-                Participant.Keys.HAS_DELETED_CONVERSATION.rawValue,
+                Participant.SerializableKey.HAS_DELETED_CONVERSATION.rawValue,
             ).joinToString("/")
 
         // Compute updated hash with the deletion applied.
@@ -501,6 +501,6 @@ object ConversationSessionService {
         val amountToGet = messageOffset.wrappedValue
         val unique = messages.distinct()
         if (unique.size <= amountToGet) return messages
-        return unique.takeLast(amountToGet + 1)
+        return unique.takeLast(amountToGet)
     }
 }

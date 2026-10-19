@@ -45,6 +45,12 @@ class FakeDatabaseDelegate : DatabaseDelegate {
     /** The exceptions [getValues] throws, keyed by path. */
     val getValuesFailures = mutableMapOf<String, Exception>()
 
+    /** The throwable [commit] throws, or `null` to record normally. */
+    var commitFailure: Throwable? = null
+
+    /** The throwable [runTransaction] throws, or `null` to run the block. */
+    var transactionFailure: Throwable? = null
+
     /** The paths passed to [getValues] so far. */
     val getValuesPaths = mutableListOf<String>()
 
@@ -54,6 +60,7 @@ class FakeDatabaseDelegate : DatabaseDelegate {
     // MARK: - DatabaseDelegate
 
     override suspend fun commit(updates: Map<String, Any?>) {
+        commitFailure?.let { throw it }
         committedUpdates.add(updates)
     }
 
@@ -81,6 +88,7 @@ class FakeDatabaseDelegate : DatabaseDelegate {
         timeout: Duration,
         block: (Any?) -> Any?,
     ): Any? {
+        transactionFailure?.let { throw it }
         val result = block(transactionSeed)
         lastTransactionResult = result
         return result

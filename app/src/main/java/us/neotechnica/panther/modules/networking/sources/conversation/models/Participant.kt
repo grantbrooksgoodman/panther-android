@@ -36,9 +36,10 @@ data class Participant(
     val isWellFormed: Boolean
         get() = userID.isNotBlank() && !userID.isBangQualifiedEmpty
 
-    // MARK: - Type Aliases
+    // MARK: - Types
 
-    internal enum class Keys(
+    /** The serializable keys for encoding and decoding the model. */
+    enum class SerializableKey(
         val rawValue: String,
     ) {
         HAS_DELETED_CONVERSATION("hasDeletedConversation"),
@@ -52,24 +53,24 @@ data class Participant(
     override val encoded: Map<String, Any?>
         get() =
             mapOf(
-                Keys.HAS_DELETED_CONVERSATION.rawValue to hasDeletedConversation,
-                Keys.IS_TYPING.rawValue to isTyping,
-                Keys.USER_ID.rawValue to userID,
+                SerializableKey.HAS_DELETED_CONVERSATION.rawValue to hasDeletedConversation,
+                SerializableKey.IS_TYPING.rawValue to isTyping,
+                SerializableKey.USER_ID.rawValue to userID,
             )
 
     // MARK: - Companion
 
     companion object : SerializableDecoder<Participant, Map<String, Any?>> {
         override fun canDecode(data: Map<String, Any?>): Boolean =
-            data[Keys.HAS_DELETED_CONVERSATION.rawValue] is Boolean &&
-                data[Keys.IS_TYPING.rawValue] is Boolean &&
-                data[Keys.USER_ID.rawValue] is String
+            data[SerializableKey.HAS_DELETED_CONVERSATION.rawValue] is Boolean &&
+                data[SerializableKey.IS_TYPING.rawValue] is Boolean &&
+                data[SerializableKey.USER_ID.rawValue] is String
 
         // NIT: Unused on Android.
         override fun decode(data: Map<String, Any?>): Participant {
-            val hasDeletedConversation = data[Keys.HAS_DELETED_CONVERSATION.rawValue] as? Boolean
-            val isTyping = data[Keys.IS_TYPING.rawValue] as? Boolean
-            val userID = data[Keys.USER_ID.rawValue] as? String
+            val hasDeletedConversation = data[SerializableKey.HAS_DELETED_CONVERSATION.rawValue] as? Boolean
+            val isTyping = data[SerializableKey.IS_TYPING.rawValue] as? Boolean
+            val userID = data[SerializableKey.USER_ID.rawValue] as? String
 
             if (hasDeletedConversation == null || isTyping == null || userID == null) {
                 throw Exception.Networking.decodingFailed(

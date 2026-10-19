@@ -83,7 +83,7 @@ internal val String.trimmingTrailingWhitespace: String
 // MARK: - Sanitization
 
 /** The string with the translation processing sentinels removed. */
-internal val String.sanitized: String
+val String.sanitized: String
     get() = replace("⁂", "").replace("⌘", "").replace("※", "")
 
 // MARK: - Base64

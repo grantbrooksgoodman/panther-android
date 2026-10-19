@@ -32,6 +32,7 @@ import us.neotechnica.panther.modules.session.entity.constants.MessageSessionSer
 import us.neotechnica.panther.modules.session.state.services.PendingTranslationArchive
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.translation.extensions.reference
+import us.neotechnica.panther.networking.modules.translation.extensions.sanitized
 import us.neotechnica.panther.networking.modules.translation.interfaces.HostedTranslationDelegate
 import us.neotechnica.panther.networking.modules.translation.models.ArchiveStrategy
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
@@ -378,8 +379,4 @@ object MessageSessionService {
         DependencyValues.current.clientSession.entity.conversation.currentConversation
             ?.id
             ?.key == inConversation?.id?.key
-
-    /** The string with the translation processing sentinels removed. */
-    private val String.sanitized: String
-        get() = replace("⁂", "").replace("⌘", "").replace("※", "")
 }

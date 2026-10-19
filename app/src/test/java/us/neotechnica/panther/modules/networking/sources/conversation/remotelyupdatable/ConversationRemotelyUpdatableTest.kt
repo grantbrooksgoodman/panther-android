@@ -8,8 +8,13 @@
 
 package us.neotechnica.panther.modules.networking.sources.conversation.remotelyupdatable
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -37,6 +42,7 @@ import us.neotechnica.panther.translator.models.Translation
 import us.neotechnica.panther.translator.models.TranslationInput
 import java.io.File
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ConversationRemotelyUpdatableTest {
     // MARK: - Setup
 
@@ -45,6 +51,7 @@ class ConversationRemotelyUpdatableTest {
 
     @Before
     fun setUp() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
         val directory = File(System.getProperty("java.io.tmpdir"), "conversation-updatable-test-${System.nanoTime()}")
         directory.mkdirs()
         FileStore.initializeForTesting(directory)
@@ -70,6 +77,7 @@ class ConversationRemotelyUpdatableTest {
         // mutations in other test classes do not trigger the
         // conversation-removed presentation path.
         ConversationSessionService.setCurrentConversation(null)
+        Dispatchers.resetMain()
     }
 
     // MARK: - Update Values

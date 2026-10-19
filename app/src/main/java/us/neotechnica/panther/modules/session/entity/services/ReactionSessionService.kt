@@ -8,10 +8,12 @@
 
 package us.neotechnica.panther.modules.session.entity.services
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import us.neotechnica.panther.modules.common.extensions.toException
 import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.common.services.sources.NotificationService
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
@@ -53,6 +55,7 @@ object ReactionSessionService {
     // MARK: - Properties
 
     private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val mainScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val internalIsReactingToMessage = LockIsolated(false)
 
     private val uponIsReactingToMessageChangedToFalse =
@@ -225,9 +228,12 @@ object ReactionSessionService {
     private fun setIsReactingToMessage(isReactingToMessage: Boolean) {
         internalIsReactingToMessage.wrappedValue = isReactingToMessage
 
-        // The context menu gate flips alongside the state write so a
-        // lift cannot begin while a reaction is in flight.
-        ContextMenuInteraction.setCanBegin(!isReactingToMessage)
+        // Deferred to the next turn on purpose: the context menu gate
+        // flips after this turn's effects and the caller's continuation
+        // have run, which matches the ordering callers were written for.
+        mainScope.launch {
+            ContextMenuInteraction.setCanBegin(!isReactingToMessage)
+        }
 
         val effects =
             (if (isReactingToMessage) uponIsReactingToMessageChangedToTrue else uponIsReactingToMessageChangedToFalse)
@@ -282,9 +288,12 @@ object ReactionSessionService {
                         reactionUserID = reactionUserID,
                     )
                 }
-            } catch (exception: Exception) {
+            } catch (cancellation: CancellationException) {
                 setIsReactingToMessage(false)
-                throw exception
+                throw cancellation
+            } catch (throwable: Throwable) {
+                setIsReactingToMessage(false)
+                throw throwable.toException()
             }
 
         setIsReactingToMessage(false)
@@ -311,31 +320,31 @@ object ReactionSessionService {
         var metadata = (currentValue as? List<Map<String, Any?>>) ?: emptyList()
 
         // Strip sentinel entries.
-        metadata = metadata.filter { (it[KEY_MESSAGE_ID] as? String) != BANG_QUALIFIED_EMPTY }
+        metadata = metadata.filter { (it[ReactionMetadata.SerializableKey.MESSAGE_ID.rawValue] as? String) != BANG_QUALIFIED_EMPTY }
 
         // Remove current user's reactions to this message.
         metadata =
             metadata.mapNotNull { entry ->
-                if ((entry[KEY_MESSAGE_ID] as? String) != messageID) return@mapNotNull entry
+                if ((entry[ReactionMetadata.SerializableKey.MESSAGE_ID.rawValue] as? String) != messageID) return@mapNotNull entry
 
                 val reactions =
-                    ((entry[KEY_REACTIONS] as? List<Map<String, Any?>>) ?: emptyList())
-                        .filter { (it[KEY_USER_ID] as? String) != currentUserID }
+                    ((entry[ReactionMetadata.SerializableKey.REACTIONS.rawValue] as? List<Map<String, Any?>>) ?: emptyList())
+                        .filter { (it[Reaction.SerializableKey.USER_ID.rawValue] as? String) != currentUserID }
 
-                if (reactions.isEmpty()) null else entry + (KEY_REACTIONS to reactions)
+                if (reactions.isEmpty()) null else entry + (ReactionMetadata.SerializableKey.REACTIONS.rawValue to reactions)
             }
 
         // Add new reaction if provided.
         if (encodedReactionStyle != null && reactionUserID != null) {
             val reactionStyle = Reaction.Style.from(encodedReactionStyle) ?: Reaction.Style.LOVE
             val reaction = Reaction(reactionStyle, userID = reactionUserID)
-            val index = metadata.indexOfFirst { (it[KEY_MESSAGE_ID] as? String) == messageID }
+            val index = metadata.indexOfFirst { (it[ReactionMetadata.SerializableKey.MESSAGE_ID.rawValue] as? String) == messageID }
 
             metadata =
                 if (index >= 0) {
                     val reactions =
-                        ((metadata[index][KEY_REACTIONS] as? List<Map<String, Any?>>) ?: emptyList()) + reaction.encoded
-                    metadata.toMutableList().also { it[index] = it[index] + (KEY_REACTIONS to reactions) }
+                        ((metadata[index][ReactionMetadata.SerializableKey.REACTIONS.rawValue] as? List<Map<String, Any?>>) ?: emptyList()) + reaction.encoded
+                    metadata.toMutableList().also { it[index] = it[index] + (ReactionMetadata.SerializableKey.REACTIONS.rawValue to reactions) }
                 } else {
                     metadata + ReactionMetadata(messageID = messageID, reactions = listOf(reaction)).encoded
                 }
@@ -344,10 +353,4 @@ object ReactionSessionService {
         // Return empty sentinel if no reactions remain.
         return if (metadata.isEmpty()) listOf(ReactionMetadata.empty.encoded) else metadata
     }
-
-    // MARK: - Companion
-
-    private const val KEY_MESSAGE_ID = "messageID"
-    private const val KEY_REACTIONS = "reactions"
-    private const val KEY_USER_ID = "userID"
 }

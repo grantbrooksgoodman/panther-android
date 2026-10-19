@@ -103,9 +103,9 @@ data class Conversation(
                 participants.associate { participant ->
                     participant.userID to
                         mapOf(
-                            Participant.Keys.HAS_DELETED_CONVERSATION.rawValue to
+                            Participant.SerializableKey.HAS_DELETED_CONVERSATION.rawValue to
                                 participant.hasDeletedConversation,
-                            Participant.Keys.IS_TYPING.rawValue to participant.isTyping,
+                            Participant.SerializableKey.IS_TYPING.rawValue to participant.isTyping,
                         )
                 }
 
@@ -557,8 +557,8 @@ data class Conversation(
             val participants =
                 participantMap
                     .map { (userID, values) ->
-                        val hasDeleted = values[Participant.Keys.HAS_DELETED_CONVERSATION.rawValue] as? Boolean
-                        val isTyping = values[Participant.Keys.IS_TYPING.rawValue] as? Boolean
+                        val hasDeleted = values[Participant.SerializableKey.HAS_DELETED_CONVERSATION.rawValue] as? Boolean
+                        val isTyping = values[Participant.SerializableKey.IS_TYPING.rawValue] as? Boolean
                         if (hasDeleted == null || isTyping == null) {
                             throw Exception.Networking.decodingFailed(
                                 values,

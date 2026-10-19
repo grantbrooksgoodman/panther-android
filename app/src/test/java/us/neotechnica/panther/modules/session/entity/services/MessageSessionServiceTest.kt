@@ -10,9 +10,12 @@ package us.neotechnica.panther.modules.session.entity.services
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -55,6 +58,14 @@ class MessageSessionServiceTest {
 
         environment.signIn(me)
         SessionStore.upsertUser(them)
+    }
+
+    @After
+    fun tearDown() {
+        // A send notifies recipients on a background scope that hops
+        // to Main; let it settle before the Main dispatcher goes away.
+        runBlocking { delay(SETTLE_MILLIS) }
+        Dispatchers.resetMain()
     }
 
     // MARK: - Tests
@@ -104,4 +115,8 @@ class MessageSessionServiceTest {
             assertEquals(created.id.hash, fanOut["users/me/openConversations/-fakeGeneratedKey"])
             assertEquals(created.id.hash, fanOut["users/them/openConversations/-fakeGeneratedKey"])
         }
+
+    private companion object {
+        const val SETTLE_MILLIS = 100L
+    }
 }

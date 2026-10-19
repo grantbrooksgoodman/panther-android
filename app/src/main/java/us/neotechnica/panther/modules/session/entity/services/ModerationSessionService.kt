@@ -128,7 +128,11 @@ object ModerationSessionService {
             conversation?.users ?: users
                 ?: throw Exception("No data source provided.", metadata = ExceptionMetadata(this))
 
-        runCatching { contactService.syncIfNeeded() }.onFailure { Logger.log("$it") }
+        try {
+            contactService.syncIfNeeded()
+        } catch (exception: Exception) {
+            Logger.log(exception)
+        }
 
         val contactPairs =
             resolvedUsers
@@ -226,7 +230,7 @@ object ModerationSessionService {
             User.currentUserID
                 ?: throw Exception("Current user ID has not been set.", metadata = ExceptionMetadata(this))
 
-        val path = listOf(NetworkPath.users.rawValue, currentUserID, BLOCKED_USER_IDS_KEY).joinToString("/")
+        val path = listOf(NetworkPath.users.rawValue, currentUserID, User.SerializableKey.BLOCKED_USER_IDS.rawValue).joinToString("/")
         val rawValue: Map<String, Any?> = database.getValues<Map<String, Any?>>(path, cacheStrategy = CacheStrategy.ADAPTIVE)
         val blockedUserIDs = rawValue.keys.filter { !it.isBangQualifiedEmpty }
         if (blockedUserIDs.isEmpty()) return emptyList()
@@ -267,10 +271,15 @@ object ModerationSessionService {
 
     private suspend fun reportUsers(userIDs: List<String>) {
         database.runTransaction(NetworkPath.reportedUsers.rawValue) { current ->
-            @Suppress("UNCHECKED_CAST")
-            val reportedUserIDs = (current as? Map<String, Any?>).orEmpty().toMutableMap()
+            // Counters that are not integers are dropped.
+            val reportedUserIDs = mutableMapOf<String, Int>()
+            (current as? Map<*, *>)?.forEach { (key, value) ->
+                val count = (value as? Long)?.toInt() ?: value as? Int
+                if (key is String && count != null) reportedUserIDs[key] = count
+            }
+
             for (userID in userIDs) {
-                reportedUserIDs[userID] = ((reportedUserIDs[userID] as? Number)?.toInt() ?: 0) + 1
+                reportedUserIDs[userID] = (reportedUserIDs[userID] ?: 0) + 1
             }
             reportedUserIDs
         }
@@ -300,8 +309,4 @@ object ModerationSessionService {
     }
 
     private fun ModerationType.firstUppercase(): String = rawValue.replaceFirstChar { it.uppercase() }
-
-    // MARK: - Companion
-
-    private const val BLOCKED_USER_IDS_KEY = "blockedUserIDs"
 }

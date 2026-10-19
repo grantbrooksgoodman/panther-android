@@ -23,6 +23,7 @@ import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.database.interfaces.getValues
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.interfaces.DependencyKey
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.englishLanguageName
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
@@ -98,7 +99,10 @@ object ClientSession {
                 cacheStrategy = CacheStrategy.ADAPTIVE,
             )
 
-        Logger.log("Setting language code to ${languageCode.uppercase()}.", domain = LoggerDomain.clientSession)
+        Logger.log(
+            "Setting language code to ${languageCode.englishLanguageName ?: languageCode.uppercase()}.",
+            domain = LoggerDomain.clientSession,
+        )
         CoreUtilities.setLanguageCode(languageCode)
     }
 }

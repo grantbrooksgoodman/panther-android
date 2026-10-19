@@ -8,11 +8,18 @@
 
 package us.neotechnica.panther.modules.session.entity.services
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import us.neotechnica.panther.designsystem.modules.foundation.toast.ToastPresenter
 import us.neotechnica.panther.modules.networking.sources.support.MessageDecodeEnvironment
 import us.neotechnica.panther.modules.networking.sources.support.SessionTestEnvironment
 
@@ -21,6 +28,7 @@ import us.neotechnica.panther.modules.networking.sources.support.SessionTestEnvi
  * message node and its hosted media, and the conversation node are
  * all removed.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class DeleteConversationTest {
     // MARK: - Setup
 
@@ -28,8 +36,18 @@ class DeleteConversationTest {
 
     @Before
     fun setUp() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        // The deletion shows a toast; a toast left showing by an
+        // earlier class would otherwise defer it forever under
+        // virtual time.
+        ToastPresenter.hide()
         environment.install("delete-conversation-test")
         environment.signIn(SessionTestEnvironment.user(id = "me"))
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     // MARK: - Tests

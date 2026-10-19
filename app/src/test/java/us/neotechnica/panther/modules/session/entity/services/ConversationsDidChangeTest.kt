@@ -13,6 +13,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.junit.After
@@ -67,6 +68,7 @@ class ConversationsDidChangeTest {
     @After
     fun tearDown() {
         UserSessionService.stopObservingCurrentUserChanges()
+        Dispatchers.resetMain()
     }
 
     // MARK: - Tests
@@ -112,6 +114,23 @@ class ConversationsDidChangeTest {
             )
 
             awaitUntil { "users/me" in environment.database.getValuesPaths }
+        }
+
+    @Test
+    fun `a non-string token value reads as no change`() =
+        runBlocking {
+            UserSessionService.startObservingCurrentUserChanges()
+            environment.database.emit(
+                "users/me",
+                mapOf(
+                    User.SerializableKey.CONVERSATION_IDS.rawValue to mapOf("-A" to first.id.hash, "-B" to true),
+                    User.SerializableKey.DEVICE_ID.rawValue to "device",
+                ),
+            )
+
+            delay(SETTLE_MILLIS)
+            assertTrue(environment.database.getValuesPaths.isEmpty())
+            assertNotNull(SessionStore.getConversation("-B"))
         }
 
     @Test

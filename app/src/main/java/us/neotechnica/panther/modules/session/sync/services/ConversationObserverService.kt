@@ -17,6 +17,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.conversationObserver
+import us.neotechnica.panther.bundle.conversations
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.sources.user.models.User
@@ -24,6 +25,7 @@ import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
+import us.neotechnica.panther.networking.modules.common.models.NetworkPath
 import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.networking.modules.database.interfaces.observe
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
@@ -108,12 +110,12 @@ object ConversationObserverService {
     ) {
         try {
             database
-                .observe<Map<String, Any?>>("$PATH_CONVERSATIONS/$conversationIDKey")
+                .observe<Map<String, Any?>>("${NetworkPath.conversations.rawValue}/$conversationIDKey")
                 .collect { snapshot -> handleSnapshot(snapshot, conversationIDKey) }
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (throwable: Throwable) {
-            Logger.log(Exception.from(throwable, ExceptionMetadata(this)))
+            Logger.log(Exception.from(throwable, ExceptionMetadata(this)), domain = LoggerDomain.conversationObserver)
         }
 
         // Stream terminated. Retry once after a short delay; the
@@ -121,7 +123,12 @@ object ConversationObserverService {
         if (isRetry) return
         delay(RETRY_DELAY_MILLIS)
         Logger.log(
-            "Retrying conversation observation after stream termination. (ConversationIDKey: $conversationIDKey)",
+            Exception(
+                "Retrying conversation observation after stream termination.",
+                isReportable = false,
+                userInfo = mapOf("ConversationIDKey" to conversationIDKey),
+                metadata = ExceptionMetadata(this),
+            ),
             domain = LoggerDomain.conversationObserver,
         )
         observe(conversationIDKey, isRetry = true)
@@ -131,12 +138,17 @@ object ConversationObserverService {
         data: Map<String, Any?>,
         conversationIDKey: String,
     ) {
-        val hash = data[KEY_HASH] as? String ?: BANG_QUALIFIED_EMPTY
-        val decodable = data.toMutableMap().apply { put(KEY_ID, "$conversationIDKey | $hash") }
+        val hash = data[Conversation.SerializableKey.ENCODED_HASH.rawValue] as? String ?: BANG_QUALIFIED_EMPTY
+        val decodable =
+            data.toMutableMap().apply { put(Conversation.SerializableKey.ID.rawValue, "$conversationIDKey | $hash") }
 
         if (!Conversation.canDecode(decodable)) {
             Logger.log(
-                "Received non-decodable conversation snapshot. (ConversationIDKey: $conversationIDKey)",
+                Exception(
+                    "Received non-decodable conversation snapshot.",
+                    userInfo = mapOf("ConversationIDKey" to conversationIDKey, "Data" to data),
+                    metadata = ExceptionMetadata(this),
+                ),
                 domain = LoggerDomain.conversationObserver,
                 with = AlertType.toastInPrerelease,
             )
@@ -149,8 +161,12 @@ object ConversationObserverService {
             val newMessageIDs = conversation.messageIDs.toSet() - existingIDs
             if (newMessageIDs.isNotEmpty()) {
                 Logger.log(
-                    "Resolving ${newMessageIDs.size} new message(s) from observer snapshot. " +
-                        "(ConversationIDKey: $conversationIDKey)",
+                    Exception(
+                        "Resolving ${newMessageIDs.size} new message(s) from observer snapshot.",
+                        isReportable = false,
+                        userInfo = mapOf("ConversationIDKey" to conversationIDKey),
+                        metadata = ExceptionMetadata(this),
+                    ),
                     domain = LoggerDomain.conversationObserver,
                 )
                 conversation.resolveMessages(newMessageIDs)
@@ -166,21 +182,22 @@ object ConversationObserverService {
                 conversation.participants.map { it.userID }.filter { it != User.currentUserID }
             if (participantUserIDs.any { sessionStore.users[it] == null }) {
                 Logger.log(
-                    "Backfilling missing participant user(s) from observer snapshot. " +
-                        "(ConversationIDKey: $conversationIDKey)",
+                    Exception(
+                        "Backfilling missing participant user(s) from observer snapshot.",
+                        isReportable = false,
+                        userInfo = mapOf("ConversationIDKey" to conversationIDKey),
+                        metadata = ExceptionMetadata(this),
+                    ),
                     domain = LoggerDomain.conversationObserver,
                 )
                 conversation.resolveUsers()
             }
         } catch (exception: Exception) {
-            Logger.log(exception)
+            Logger.log(exception, domain = LoggerDomain.conversationObserver)
         }
     }
 
     // MARK: - Companion
 
-    private const val PATH_CONVERSATIONS = "conversations"
-    private const val KEY_HASH = "hash"
-    private const val KEY_ID = "id"
     private const val RETRY_DELAY_MILLIS = 2_000L
 }

@@ -8,11 +8,15 @@
 
 package us.neotechnica.panther.modules.session.state.services
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import us.neotechnica.panther.bundle.messages
 import us.neotechnica.panther.bundle.outbox
+import us.neotechnica.panther.modules.common.extensions.toException
 import us.neotechnica.panther.modules.common.models.MediaFile
+import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.networking.sources.user.services.UserService
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
@@ -49,10 +53,24 @@ suspend fun MessageOutboxService.retry(entryID: String) {
         return
     }
 
-    val recipients =
-        entry.recipientUserIDs.mapNotNull { userID ->
-            DependencyValues.current.clientSession.store.users[userID] ?: runCatching { UserService.getUser(userID) }.getOrNull()
+    // Resolve recipient users from the store, fetching any missing ones.
+    val recipients = mutableListOf<User>()
+    for (userID in entry.recipientUserIDs) {
+        val storedUser = DependencyValues.current.clientSession.store.users[userID]
+        if (storedUser != null) {
+            recipients.add(storedUser)
+            continue
         }
+
+        try {
+            recipients.add(UserService.getUser(userID))
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (throwable: Throwable) {
+            Logger.log(throwable.toException())
+        }
+    }
+
     if (recipients.isEmpty()) {
         markFailed(entryID)
         Logger.log("Failed to resolve any recipient users for outbox entry $entryID.", domain = LoggerDomain.outbox)
@@ -64,9 +82,12 @@ suspend fun MessageOutboxService.retry(entryID: String) {
         sendPayload(entry, conversation, recipients)
         remove(entryID)
         Logger.log("Retry succeeded for outbox entry $entryID.", domain = LoggerDomain.outbox)
-    } catch (exception: Exception) {
+    } catch (cancellation: CancellationException) {
+        throw cancellation
+    } catch (_: Throwable) {
+        // Every failure marks the entry failed; the entry is retried later.
         markFailed(entryID)
-        Logger.log(exception)
+        Logger.log("Retry failed for outbox entry $entryID.", domain = LoggerDomain.outbox)
     } finally {
         stopDeliveryProgressIfCurrent(entry)
     }
@@ -74,8 +95,8 @@ suspend fun MessageOutboxService.retry(entryID: String) {
 
 private suspend fun sendPayload(
     entry: OutboxEntry,
-    conversation: us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation,
-    recipients: List<us.neotechnica.panther.modules.networking.sources.user.models.User>,
+    conversation: Conversation,
+    recipients: List<User>,
 ) {
     when (val payload = entry.payload) {
         is OutboxEntry.Payload.Audio ->

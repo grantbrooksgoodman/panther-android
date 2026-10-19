@@ -10,8 +10,10 @@
 
 package us.neotechnica.panther.modules.session.sync.services
 
+import kotlinx.coroutines.CancellationException
 import us.neotechnica.panther.bundle.conversationSync
 import us.neotechnica.panther.bundle.conversations
+import us.neotechnica.panther.modules.common.extensions.toException
 import us.neotechnica.panther.modules.content.user.extensions.currentUserParticipant
 import us.neotechnica.panther.modules.content.user.extensions.filteringSystemMessages
 import us.neotechnica.panther.modules.content.user.extensions.sortedByAscendingSentDate
@@ -91,17 +93,23 @@ class ConversationSyncService {
                 }
             if (recentlyFailed) {
                 Logger.log(
-                    "Conversation recently failed sync; temporarily ignoring updates. " +
-                        "(ConversationIDKey: ${conversation.id.key})",
+                    Exception(
+                        "Conversation recently failed sync; temporarily ignoring updates.",
+                        isReportable = false,
+                        userInfo = mapOf("ConversationIDKey" to conversation.id.key),
+                        metadata = ExceptionMetadata(this),
+                    ),
                     domain = LoggerDomain.conversationSync,
                 )
                 conversation
             } else {
                 try {
                     _synchronizeConversation(conversation)
-                } catch (exception: Exception) {
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
+                } catch (throwable: Throwable) {
                     recordFailure(conversation.id.key)
-                    throw exception
+                    throw throwable.toException()
                 }
             }
         }
@@ -241,8 +249,8 @@ class ConversationSyncService {
 
         val updatedParticipants = mutableListOf<Participant>()
         for ((userID, values) in participantMap) {
-            val hasDeletedConversation = values[KEY_HAS_DELETED] as? Boolean
-            val isTyping = values[KEY_IS_TYPING] as? Boolean
+            val hasDeletedConversation = values[Participant.SerializableKey.HAS_DELETED_CONVERSATION.rawValue] as? Boolean
+            val isTyping = values[Participant.SerializableKey.IS_TYPING.rawValue] as? Boolean
             if (hasDeletedConversation == null || isTyping == null) {
                 throw Exception.Networking.decodingFailed(
                     values,
@@ -377,7 +385,7 @@ class ConversationSyncService {
                     val exception =
                         Exception("Messages could not be fully resolved after reconciliation.", metadata = ExceptionMetadata(this))
                             .appending(userInfo)
-                    Logger.log(exception)
+                    Logger.log(exception, domain = LoggerDomain.conversationSync)
                     throw exception
                 }
 
@@ -471,8 +479,6 @@ class ConversationSyncService {
         private val coalescer = Coalescer<String, Conversation>()
         private val recentlyFailedSyncRecords = LockIsolated(setOf<SynchronizationRecord>())
 
-        private const val KEY_HAS_DELETED = "hasDeletedConversation"
-        private const val KEY_IS_TYPING = "isTyping"
         private const val LAST_MESSAGES_RELOAD_COUNT = 10
 
         /**

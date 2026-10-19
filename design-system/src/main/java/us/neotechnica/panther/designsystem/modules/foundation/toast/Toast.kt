@@ -129,6 +129,11 @@ data class Toast(
 
         /** The toast's headline. */
         data object Title : TranslationOptionKey
+
+        companion object {
+            /** Every translatable part of a toast. */
+            val allCases: List<TranslationOptionKey> = listOf(Message, Title)
+        }
     }
 
     /** The strategy that controls how long a toast remains visible. */

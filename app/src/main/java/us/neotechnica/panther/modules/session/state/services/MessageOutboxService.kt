@@ -246,8 +246,6 @@ object MessageOutboxService {
             if (didLoad) return
             didLoad = true
 
-            migrateLegacyArchiveIfNeeded()
-
             val decoded =
                 Persistent
                     .archive(PersistentStorageKey.sessionStore(SessionStoreStorageKey.MESSAGE_OUTBOX)) { it }
@@ -274,18 +272,6 @@ object MessageOutboxService {
 
             garbageCollectPayloadFiles()
         }
-    }
-
-    private fun migrateLegacyArchiveIfNeeded() {
-        // The outbox previously persisted as a preferences string; move
-        // any such payload into the file-backed archive once, then clear
-        // the string so later launches load only from the archive.
-        val messageOutboxKey = PersistentStorageKey.sessionStore(SessionStoreStorageKey.MESSAGE_OUTBOX)
-        val legacyArchive = Persistent.string(messageOutboxKey) ?: return
-        runCatching { decodeOutboxArchive(legacyArchive) }.getOrNull()?.let { decoded ->
-            Persistent.setArchive(messageOutboxKey, decoded.map { encodeEntry(it) })
-        }
-        Persistent.setString(messageOutboxKey, null)
     }
 
     private fun persistArchive() {
