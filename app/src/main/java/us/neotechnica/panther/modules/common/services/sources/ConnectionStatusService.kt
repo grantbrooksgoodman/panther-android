@@ -42,7 +42,10 @@ object ConnectionStatusService {
 
     // MARK: - Computed Properties
 
-    /** Whether the device currently has a validated internet connection. */
+    /**
+     * Whether the device currently has a validated internet
+     * connection.
+     */
     val isOnline: Boolean
         get() = online.wrappedValue
 

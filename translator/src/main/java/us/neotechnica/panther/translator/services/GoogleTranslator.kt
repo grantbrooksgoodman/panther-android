@@ -20,10 +20,11 @@ import us.neotechnica.panther.translator.models.TranslationPlatform
 /**
  * Translates using Google Translate.
  *
- * A lightweight JSON endpoint responds far faster than loading and
- * scraping the full web app, so [translate] uses it alone. The
- * [BaseTranslator] web-view fallback is currently disabled: when the
- * endpoint fails, the error propagates and the next platform is tried.
+ * A lightweight JSON endpoint responds far faster than loading
+ * and scraping the full web app, so [translate] uses it alone.
+ * The [BaseTranslator] web-view fallback is currently disabled:
+ * when the endpoint fails, the error propagates and the next
+ * platform is tried.
  */
 internal class GoogleTranslator : BaseTranslator(TranslationPlatform.GOOGLE) {
     // MARK: - Translate

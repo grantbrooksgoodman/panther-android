@@ -34,6 +34,7 @@ import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.common.services.sources.AnalyticsService
 import us.neotechnica.panther.modules.common.services.sources.NotificationService
 import us.neotechnica.panther.modules.content.user.dependencies.uiCacheInvalidationService
+import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
 import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.navigation.PendingChatNavigation
 import us.neotechnica.panther.navigation.RootView
@@ -61,6 +62,7 @@ class MainActivity : ComponentActivity() {
 
     private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
     private val notificationService: NotificationService by Dependency { it.commonServices.notification }
+    private val uiCacheInvalidationService: UICacheInvalidationService by Dependency { it.uiCacheInvalidationService }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -131,7 +133,7 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         if (isFinishing) {
             ClientSession.store.flushNow()
-            DependencyValues.current.uiCacheInvalidationService.refreshNotificationExtensionNameMap()
+            uiCacheInvalidationService.refreshNotificationExtensionNameMap()
             analyticsService.logEvent(AnalyticsService.AnalyticsEvent.TERMINATE_APP)
         }
     }
@@ -141,7 +143,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private companion object {
-        /** Whether this process has already created the activity once, distinguishing config changes from process restarts. */
+        /**
+         * Whether this process has already created the activity
+         * once, distinguishing config changes from process
+         * restarts.
+         */
         @Volatile
         private var hasCreatedInProcess = false
     }

@@ -50,6 +50,7 @@ import us.neotechnica.panther.modules.content.user.services.ChatPageStateService
 import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.modules.session.clientSession
+import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.PendingChatNavigation
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
@@ -77,6 +78,7 @@ class PantherMessagingService : FirebaseMessagingService() {
 
     private val clientSession: ClientSession by Dependency { it.clientSession }
     private val hapticsService: HapticsService by Dependency { it.commonServices.haptics }
+    private val navigation: Navigation by Dependency { it.navigation }
     private val pushTokenService: PushTokenService by Dependency { it.commonServices.pushToken }
 
     // MARK: - Properties
@@ -179,7 +181,6 @@ class PantherMessagingService : FirebaseMessagingService() {
         // The notification sound plays beside the toast.
         playNotificationSound(this, isReaction = received.isReaction)
         Toast.show(toast) {
-            val navigation = DependencyValues.current.navigation
             val chatRoute =
                 Route.UserContent(
                     UserContentRoute.Push(
@@ -283,7 +284,10 @@ class PantherMessagingService : FirebaseMessagingService() {
         /** The identifier of the reactions notification channel. */
         const val REACTIONS_CHANNEL_ID = "reactions"
 
-        /** Creates the messages and reactions notification channels (idempotent). */
+        /**
+         * Creates the messages and reactions notification
+         * channels (idempotent).
+         */
         fun createChannel(context: Context) {
             val manager = context.getSystemService(NotificationManager::class.java) ?: return
             manager.createNotificationChannel(
@@ -311,7 +315,10 @@ class PantherMessagingService : FirebaseMessagingService() {
             manager.createNotificationChannel(reactions)
         }
 
-        /** Plays the reaction sound, or the default notification sound. */
+        /**
+         * Plays the reaction sound, or the default notification
+         * sound.
+         */
         private fun playNotificationSound(
             context: Context,
             isReaction: Boolean,

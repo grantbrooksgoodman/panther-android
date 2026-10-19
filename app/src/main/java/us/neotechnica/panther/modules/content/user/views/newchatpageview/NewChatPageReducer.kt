@@ -21,6 +21,7 @@ import us.neotechnica.panther.modules.content.user.services.chatpageview.sources
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.recipientbar.RecipientBarService
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
+import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
@@ -38,18 +39,19 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
 /**
  * The reducer that drives the new chat page.
  *
- * This page composes a new conversation. The user chooses recipients
- * through the recipient bar, which [RecipientBarService] drives, and
- * sends the first message through the page's input bar.
+ * This page composes a new conversation. The user chooses
+ * recipients through the recipient bar, which
+ * [RecipientBarService] drives, and sends the first message
+ * through the page's input bar.
  *
  * The page's behavior contract:
  *
- * - On appearance, the page configures its toolbar – titling it and
- *   labeling the done button as Cancel.
- * - Once the first message is sent, the toolbar updates to reflect the
- *   now-created conversation: its title becomes the conversation's
- *   title and the done button is relabeled; the page then navigates
- *   into that conversation.
+ * - On appearance, the page configures its toolbar – titling it
+ *   and labeling the done button as Cancel.
+ * - Once the first message is sent, the toolbar updates to
+ *   reflect the now-created conversation: its title becomes the
+ *   conversation's title and the done button is relabeled; the
+ *   page then navigates into that conversation.
  * - Tapping done dismisses the page.
  */
 class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.Action> {
@@ -58,62 +60,99 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
     private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
     private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
     private val inputBarService: InputBarService by Dependency { it.inputBarService }
+    private val navigation: Navigation by Dependency { it.navigation }
 
     // MARK: - Actions
 
     /** The actions the new chat page can process. */
     sealed interface Action {
-        /** An action that indicates the view appeared. Configures the toolbar. */
+        /**
+         * An action that indicates the view appeared. Configures
+         * the toolbar.
+         */
         data object ViewAppeared : Action
 
-        /** An action that indicates the view disappeared. Releases the recipient bar and the composed conversation. */
+        /**
+         * An action that indicates the view disappeared. Releases
+         * the recipient bar and the composed conversation.
+         */
         data object ViewDisappeared : Action
 
-        /** An action that indicates the user tapped the done button. Dismisses the page. */
+        /**
+         * An action that indicates the user tapped the done
+         * button. Dismisses the page.
+         */
         data object DoneToolbarButtonTapped : Action
 
-        /** An action that indicates the first message was sent. Updates the toolbar to reflect the now-created conversation. */
+        /**
+         * An action that indicates the first message was sent.
+         * Updates the toolbar to reflect the now-created
+         * conversation.
+         */
         data object FirstMessageSent : Action
 
-        /** An action that indicates the user tapped the send button. Sends the entered text as the first message. */
+        /**
+         * An action that indicates the user tapped the send
+         * button. Sends the entered text as the first message.
+         */
         data object SendTapped : Action
 
-        /** An action that indicates the input bar's text changed, carrying the new value. */
+        /**
+         * An action that indicates the input bar's text changed,
+         * carrying the new value.
+         */
         data class InputChanged(
             val text: String,
         ) : Action
 
         /**
          * An action that indicates the input bar's focus changed,
-         * carrying whether the input field is now the first responder.
-         * Taking focus commits or clears a pending recipient entry.
+         * carrying whether the input field is now the first
+         * responder. Taking focus commits or clears a pending
+         * recipient entry.
          */
         data class InputBarFocusChanged(
             val isFirstResponder: Boolean,
         ) : Action
 
-        /** An action that indicates whether the done button is enabled changed, carrying the new value. */
+        /**
+         * An action that indicates whether the done button is
+         * enabled changed, carrying the new value.
+         */
         data class IsDoneToolbarButtonEnabledChanged(
             val isDoneToolbarButtonEnabled: Boolean,
         ) : Action
 
-        /** An action that indicates whether a message send is in flight changed, carrying the new value. */
+        /**
+         * An action that indicates whether a message send is in
+         * flight changed, carrying the new value.
+         */
         data class IsSendingMessageChanged(
             val isSendingMessage: Boolean,
         ) : Action
 
-        /** An action that indicates the outbox changed, carrying whether an entry is still sending. */
+        /**
+         * An action that indicates the outbox changed, carrying
+         * whether an entry is still sending.
+         */
         data class MessageOutboxChanged(
             val hasSendingOutboxEntry: Boolean,
         ) : Action
 
-        /** An action that indicates the first message failed to send, carrying the resulting [Exception] and the text to restore. */
+        /**
+         * An action that indicates the first message failed to
+         * send, carrying the resulting [Exception] and the text
+         * to restore.
+         */
         data class SendFailed(
             val exception: Exception,
             val restoredText: String,
         ) : Action
 
-        /** An action that indicates the first message was sent, carrying the created conversation's key. */
+        /**
+         * An action that indicates the first message was sent,
+         * carrying the created conversation's key.
+         */
         data class SendReturned(
             val conversationIDKey: String,
         ) : Action
@@ -125,19 +164,34 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
     data class State(
         /** The text the done button displays. */
         val doneToolbarButtonText: String = "",
-        /** A Boolean value that indicates whether the first message has been sent. */
+        /**
+         * A Boolean value that indicates whether the first
+         * message has been sent.
+         */
         val hasSentFirstMessage: Boolean = false,
-        /** A Boolean value that indicates whether an outbox entry is still sending. */
+        /**
+         * A Boolean value that indicates whether an outbox entry
+         * is still sending.
+         */
         val hasSendingOutboxEntry: Boolean = false,
         /** The text the input bar displays. */
         val inputText: String = "",
-        /** A Boolean value that indicates whether the done button is enabled. */
+        /**
+         * A Boolean value that indicates whether the done button
+         * is enabled.
+         */
         val isDoneToolbarButtonEnabled: Boolean = true,
-        /** A Boolean value that indicates whether a message send is in flight. */
+        /**
+         * A Boolean value that indicates whether a message send
+         * is in flight.
+         */
         val isSendingMessage: Boolean = false,
         /** The page's navigation title. */
         val navigationTitle: String = "",
-        /** A Boolean value that indicates whether the done button uses a bold font. */
+        /**
+         * A Boolean value that indicates whether the done button
+         * uses a bold font.
+         */
         val shouldUseBoldDoneToolbarButton: Boolean = false,
     )
 
@@ -166,7 +220,7 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
             }
 
             Action.DoneToolbarButtonTapped -> {
-                DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
+                navigation.navigate(Route.UserContent(UserContentRoute.Pop))
                 ReduceResult(state)
             }
 
@@ -206,7 +260,7 @@ class NewChatPageReducer : Reducer<NewChatPageReducer.State, NewChatPageReducer.
                 if (action.conversationIDKey.isBlank()) {
                     ReduceResult(state)
                 } else {
-                    DependencyValues.current.navigation.navigate(
+                    navigation.navigate(
                         Route.UserContent(
                             UserContentRoute.Stack(listOf(UserContentNavigatorState.SeguePaths.Chat(action.conversationIDKey))),
                         ),

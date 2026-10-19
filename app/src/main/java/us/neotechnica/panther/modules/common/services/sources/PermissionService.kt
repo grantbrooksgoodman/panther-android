@@ -68,7 +68,10 @@ object PermissionService {
         /** Access to the user's contact list. */
         CONTACTS,
 
-        /** Permission to display notifications, badges, and sounds. */
+        /**
+         * Permission to display notifications, badges, and
+         * sounds.
+         */
         NOTIFICATIONS,
     }
 
@@ -106,12 +109,13 @@ object PermissionService {
     // MARK: - Permissions Requesting
 
     /**
-     * Requests the given permission from the user through the current
-     * activity's result registry.
+     * Requests the given permission from the user through the
+     * current activity's result registry.
      *
      * @param type The permission to request.
      * @return The resulting permission status.
-     * @throws Exception if no activity is foregrounded to host the request.
+     * @throws Exception if no activity is foregrounded to host
+     *   the request.
      */
     suspend fun requestPermission(type: PermissionType): PermissionStatus =
         when (type) {
@@ -156,12 +160,12 @@ object PermissionService {
     // MARK: - Call to Action Methods
 
     /**
-     * Presents an alert prompting the user to grant the given permission
-     * in Settings.
+     * Presents an alert prompting the user to grant the given
+     * permission in Settings.
      *
      * @param type The permission the alert describes.
-     * @return `true` if the user canceled the alert; otherwise, `false`
-     *   if they chose to open Settings.
+     * @return `true` if the user canceled the alert; otherwise,
+     *   `false` if they chose to open Settings.
      */
     suspend fun presentCTA(type: PermissionType): Boolean =
         when (type) {

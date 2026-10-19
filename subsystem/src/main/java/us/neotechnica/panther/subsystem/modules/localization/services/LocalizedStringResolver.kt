@@ -30,27 +30,17 @@ import java.util.concurrent.ConcurrentHashMap
  * [MISSING] placeholder.
  */
 object LocalizedStringResolver {
-    // MARK: - Constants
-
-    /** The placeholder returned when a key resolves in no language. */
-    const val MISSING = "�"
-
-    /** The language always used as the final fallback. */
-    private const val FALLBACK_LANGUAGE_CODE = "en"
-
-    /** The subsystem table key whose value maps language codes to display names. */
-    private const val LANGUAGE_CODES_KEY = "language_codes"
-
     // MARK: - Properties
 
     /**
      * The language strings are resolved for.
      *
-     * Delegates to [RuntimeStorage.languageCode] – the single source of
-     * truth for the user's selected language, shared with the on-the-fly
-     * translation path – so pre-localized strings resolve in the same
-     * language as translated ones. It defaults to the device language
-     * until the user's stored preference is applied at launch.
+     * Delegates to [RuntimeStorage.languageCode] – the single
+     * source of truth for the user's selected language, shared
+     * with the on-the-fly translation path – so pre-localized
+     * strings resolve in the same language as translated ones. It
+     * defaults to the device language until the user's stored
+     * preference is applied at launch.
      */
     val languageCode: String
         get() = RuntimeStorage.languageCode
@@ -68,12 +58,30 @@ object LocalizedStringResolver {
     @Volatile
     private var testTableProvider: ((LocalizationSource) -> Map<String, Map<String, String>>)? = null
 
+    // MARK: - Constants
+
+    /**
+     * The placeholder returned when a key resolves in no
+     * language.
+     */
+    const val MISSING = "�"
+
+    /** The language always used as the final fallback. */
+    private const val FALLBACK_LANGUAGE_CODE = "en"
+
+    /**
+     * The subsystem table key whose value maps language codes to
+     * display names.
+     */
+    private const val LANGUAGE_CODES_KEY = "language_codes"
+
     // MARK: - Initialization
 
     /**
      * Prepares the resolver for use.
      *
-     * @param context Any context; its application context is retained.
+     * @param context Any context; its application context is
+     *   retained.
      */
     fun initialize(context: Context) {
         appContext = context.applicationContext
@@ -83,14 +91,14 @@ object LocalizedStringResolver {
      * Stores the supported languages and validates the active
      * language code.
      *
-     * Reads the subsystem table's `language_codes` entry, omitting the
-     * languages the app does not support, and stores the result in
-     * [RuntimeStorage.languageCodeDictionary]. When the active
-     * language code is not among them, the active language reverts to
-     * English and the event is logged.
+     * Reads the subsystem table's `language_codes` entry,
+     * omitting the languages the app does not support, and stores
+     * the result in [RuntimeStorage.languageCodeDictionary].
+     * When the active language code is not among them, the active
+     * language reverts to English and the event is logged.
      *
-     * Call this method once at launch, after [initialize] and after
-     * the active language code has been set.
+     * Call this method once at launch, after [initialize] and
+     * after the active language code has been set.
      */
     fun initialize() {
         val supportedLanguages =
@@ -125,7 +133,10 @@ object LocalizedStringResolver {
         tables.clear()
     }
 
-    /** Removes every loaded localization table, forcing a reload on next access. */
+    /**
+     * Removes every loaded localization table, forcing a reload
+     * on next access.
+     */
     fun clearCache() {
         tables.clear()
     }

@@ -17,7 +17,10 @@ import us.neotechnica.panther.subsystem.modules.localization.models.Localization
  * localized-strings table.
  */
 interface LocalizedStringKeyRepresentable {
-    /** The key used to resolve this string in a localized-strings table. */
+    /**
+     * The key used to resolve this string in a localized-strings
+     * table.
+     */
     val referent: String
 
     /** The table this key resolves from by default. */

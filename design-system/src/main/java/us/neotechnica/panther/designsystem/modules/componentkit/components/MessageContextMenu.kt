@@ -39,37 +39,41 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Wraps a message bubble so a long press lifts it and presents [actions]
- * in a context menu, following the bubble's [alignment], with an optional
- * row of [reactionChoices] above the bubble.
+ * Wraps a message bubble so a long press lifts it and presents
+ * [actions] in a context menu, following the bubble's [alignment],
+ * with an optional row of [reactionChoices] above the bubble.
  *
- * The long press carries into the menu: without lifting, the user can
- * drag onto an action – highlighting it – and release to select it.
+ * The long press carries into the menu: without lifting, the user
+ * can drag onto an action – highlighting it – and release to
+ * select it.
  *
  * @param actions The menu's actions.
  * @param alignment The side the menu anchors to.
- * @param reactionChoices The reaction options shown above the bubble; the
- *   row is omitted when empty.
- * @param liftScale The fraction the lifted copy scales up by; pass `0`
- *   to lift a full-width row without scaling it past the screen edge.
- * @param liftedBackground An opaque background painted behind the lifted
- *   copy, so a transparent row (such as a list cell) stays readable over
- *   the dimmed backdrop. Pass `null` when the content paints its own
- *   background, such as a message bubble.
- * @param minimumPressDuration How long a press must be held to present
- *   the menu, or `null` for the default: the 220-millisecond message
- *   bubble press, or the system's long-press timeout while
+ * @param reactionChoices The reaction options shown above the
+ *   bubble; the row is omitted when empty.
+ * @param liftScale The fraction the lifted copy scales up by;
+ *   pass `0` to lift a full-width row without scaling it past the
+ *   screen edge.
+ * @param liftedBackground An opaque background painted behind the
+ *   lifted copy, so a transparent row (such as a list cell) stays
+ *   readable over the dimmed backdrop. Pass `null` when the
+ *   content paints its own background, such as a message bubble.
+ * @param minimumPressDuration How long a press must be held to
+ *   present the menu, or `null` for the default: the
+ *   220-millisecond message bubble press, or the system's
+ *   long-press timeout while
  *   [SystemAnimation.usesAppleAnimations] is `false`.
- * @param menuLeadingOffset For [ContextMenuAlignment.LEADING], the inset
- *   from the content's leading edge at which the menu's leading text (and
- *   the reaction row's leading edge) is aligned, so a full-width row can
- *   line its menu text up with an inner element such as an avatar rather
- *   than the screen edge.
- * @param onTap The action performed on a single tap, given the tap's
- *   location in the root coordinate space, or `null` when the bubble
- *   has none. Handling it here (rather than a `clickable` inside
- *   [content]) keeps the tap from consuming the long-press and
- *   double-tap.
+ * @param menuLeadingOffset For [ContextMenuAlignment.LEADING],
+ *   the inset from the content's leading edge at which the menu's
+ *   leading text (and the reaction row's leading edge) is
+ *   aligned, so a full-width row can line its menu text up with
+ *   an inner element such as an avatar rather than the screen
+ *   edge.
+ * @param onTap The action performed on a single tap, given the
+ *   tap's location in the root coordinate space, or `null` when
+ *   the bubble has none. Handling it here (rather than a
+ *   `clickable` inside [content]) keeps the tap from consuming
+ *   the long-press and double-tap.
  * @param modifier The modifier for the wrapper.
  * @param content The message bubble.
  */

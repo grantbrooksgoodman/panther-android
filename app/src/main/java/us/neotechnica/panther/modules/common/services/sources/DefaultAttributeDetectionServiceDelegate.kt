@@ -27,10 +27,10 @@ import java.util.Date
  * The delegate used by [AttributeDetectionService] when no custom
  * delegate is registered.
  *
- * The default delegate presents a confirmation action sheet for date
- * and URL selections – opening the calendar app or the system browser
- * if the user confirms – and opens phone number selections immediately
- * in the dialer.
+ * The default delegate presents a confirmation action sheet for
+ * date and URL selections – opening the calendar app or the
+ * system browser if the user confirms – and opens phone number
+ * selections immediately in the dialer.
  */
 object DefaultAttributeDetectionServiceDelegate : AttributeDetectionServiceDelegate {
     // MARK: - Properties
@@ -47,7 +47,10 @@ object DefaultAttributeDetectionServiceDelegate : AttributeDetectionServiceDeleg
 
     // MARK: - Did Select Date
 
-    /** Presents an action sheet offering to show the selected date in the calendar app. */
+    /**
+     * Presents an action sheet offering to show the selected date
+     * in the calendar app.
+     */
     override fun didSelectDate(
         date: Date,
         substring: String,
@@ -71,7 +74,10 @@ object DefaultAttributeDetectionServiceDelegate : AttributeDetectionServiceDeleg
 
     // MARK: - Did Select URL
 
-    /** Presents an action sheet offering to open the selected URL in the system browser. */
+    /**
+     * Presents an action sheet offering to open the selected URL
+     * in the system browser.
+     */
     override fun didSelectURL(
         url: String,
         substring: String,

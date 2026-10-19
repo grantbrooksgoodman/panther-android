@@ -19,9 +19,15 @@ import kotlin.math.abs
 class DataSample(
     /** The cached value. */
     val data: Any,
-    /** The duration after which the sample expires, in milliseconds. */
+    /**
+     * The duration after which the sample expires, in
+     * milliseconds.
+     */
     val expiryThreshold: Long,
-    /** The epoch-millisecond timestamp at which the sample was captured. */
+    /**
+     * The epoch-millisecond timestamp at which the sample was
+     * captured.
+     */
     val date: Long = System.currentTimeMillis(),
 ) {
     // MARK: - Computed Properties

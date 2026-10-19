@@ -42,7 +42,10 @@ object PushTokenService {
 
     // MARK: - Computed Properties
 
-    /** The device's current push token, or `null` if one has not been set. */
+    /**
+     * The device's current push token, or `null` if one has not
+     * been set.
+     */
     val currentToken: String?
         get() = currentTokenRef.wrappedValue
 

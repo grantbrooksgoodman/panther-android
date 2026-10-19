@@ -19,6 +19,7 @@ import us.neotechnica.panther.bundle.analytics
 import us.neotechnica.panther.modules.common.models.SystemInformation
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.networking.sources.user.models.User
+import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.descriptor
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
@@ -44,7 +45,10 @@ import java.util.Date
 object AnalyticsService {
     // MARK: - Types
 
-    /** A usage event that can be reported to the analytics backend. */
+    /**
+     * A usage event that can be reported to the analytics
+     * backend.
+     */
     enum class AnalyticsEvent(
         val eventName: String,
     ) {
@@ -79,19 +83,13 @@ object AnalyticsService {
     // MARK: - Dependencies
 
     private val dateFormatter: TimestampDateFormatter by Dependency { it.timestampDateFormatter }
+    private val navigation: Navigation by Dependency { it.navigation }
 
     // MARK: - Properties
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private var appContext: Context? = null
-
-    // MARK: - Object Lifecycle
-
-    /** Prepares the service with the application context. */
-    fun initialize(context: Context) {
-        appContext = context.applicationContext
-    }
 
     // MARK: - Computed Properties
 
@@ -105,6 +103,13 @@ object AnalyticsService {
     val shouldEnableDataCollection: Boolean by lazy {
         Networking.config.environment == NetworkEnvironment.PRODUCTION &&
             Build.milestone == Build.Milestone.GENERAL_RELEASE
+    }
+
+    // MARK: - Object Lifecycle
+
+    /** Prepares the service with the application context. */
+    fun initialize(context: Context) {
+        appContext = context.applicationContext
     }
 
     // MARK: - Log Event
@@ -176,7 +181,7 @@ object AnalyticsService {
 
             User.currentUserID?.let { parameters["current_user_id"] = it }
 
-            val viewID = DependencyValues.current.navigation.state.value.descriptor
+            val viewID = navigation.state.value.descriptor
             if (viewID != null) parameters["view_id"] = viewID
 
             return parameters

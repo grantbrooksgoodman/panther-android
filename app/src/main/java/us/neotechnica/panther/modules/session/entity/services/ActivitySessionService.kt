@@ -17,12 +17,14 @@ import us.neotechnica.panther.modules.networking.sources.conversation.models.Con
 import us.neotechnica.panther.modules.networking.sources.conversation.models.MessageRecipientConsentAcknowledgementData
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Participant
 import us.neotechnica.panther.modules.networking.sources.conversation.models.PenPalsSharingData
+import us.neotechnica.panther.modules.networking.sources.conversation.models.copyWith
 import us.neotechnica.panther.modules.networking.sources.conversation.remotelyupdatable.ConversationUpdatableKey
 import us.neotechnica.panther.modules.networking.sources.conversation.remotelyupdatable.updateValues
 import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.common.models.NetworkServices
 import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
@@ -34,6 +36,10 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetad
  * recording each change as an activity.
  */
 object ActivitySessionService {
+    // MARK: - Dependencies
+
+    private val networking: NetworkServices by Dependency { it.networking }
+
     // MARK: - Properties
 
     private val database: DatabaseDelegate by Dependency { it.networking.database }
@@ -118,12 +124,14 @@ object ActivitySessionService {
      * conversation, recording the change as an activity.
      *
      * @param userID The identifier of the user to remove.
-     * @param conversation The conversation to remove the user from.
-     * @param removeFromUser A Boolean value that determines whether to
-     *   also remove the conversation from the user's record.
+     * @param conversation The conversation to remove the user
+     *   from.
+     * @param removeFromUser A Boolean value that determines
+     *   whether to also remove the conversation from the user's
+     *   record.
      *
-     * @throws Exception if the activity cannot be synthesized or the
-     *   write fails.
+     * @throws Exception if the activity cannot be synthesized or
+     *   the write fails.
      */
     suspend fun removeFromConversation(
         userID: String,
@@ -167,7 +175,7 @@ object ActivitySessionService {
             )
 
         if (removeFromUser) {
-            DependencyValues.current.networking.conversationService.removeConversationFromUsers(
+            networking.conversationService.removeConversationFromUsers(
                 userIDs = listOf(userID),
                 conversationIDKey = updatedConversation.id.key,
             )

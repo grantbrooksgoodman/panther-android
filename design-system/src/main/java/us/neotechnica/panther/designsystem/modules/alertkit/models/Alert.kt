@@ -20,9 +20,9 @@ import us.neotechnica.panther.translator.models.TranslationInput
 /**
  * An alert that displays a title, message, and a set of actions.
  *
- * Create an alert with a title, an optional message, and one or more
- * actions, then call [present] to display it and suspend until the user
- * selects an action:
+ * Create an alert with a title, an optional message, and one or
+ * more actions, then call [present] to display it and suspend
+ * until the user selects an action:
  *
  * ```kotlin
  * Alert(
@@ -35,9 +35,9 @@ import us.neotechnica.panther.translator.models.TranslationInput
  * ).present()
  * ```
  *
- * When you omit `actions`, the alert displays a single "OK" button. Pass
- * translation keys to [present] to translate the alert's content into
- * the user's language before presentation.
+ * When you omit `actions`, the alert displays a single "OK"
+ * button. Pass translation keys to [present] to translate the
+ * alert's content into the user's language before presentation.
  */
 class Alert(
     private val title: String? = null,
@@ -125,8 +125,8 @@ class Alert(
     }
 
     /**
-     * Presents the alert and suspends until the user selects an action,
-     * running that action's effect.
+     * Presents the alert and suspends until the user selects an
+     * action, running that action's effect.
      */
     suspend fun present(): Unit =
         AlertPresenter.presentAwaitingResult(fallbackValue = Unit) { guard ->

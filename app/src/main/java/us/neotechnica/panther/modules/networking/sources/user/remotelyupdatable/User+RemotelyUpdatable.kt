@@ -83,7 +83,10 @@ fun User.modifyKey(
 
 // MARK: - Update
 
-/** Writes the value for the given key to the server and returns the updated user. */
+/**
+ * Writes the value for the given key to the server and returns
+ * the updated user.
+ */
 suspend fun User.update(
     key: UserUpdatableKey,
     to: Any,
@@ -117,14 +120,15 @@ suspend fun User.update(
 // MARK: - Update Values
 
 /**
- * Applies the given key updates to the user and writes the changed
- * fields to the user node in a single atomic update. Upserts the
- * updated user into the session store.
+ * Applies the given key updates to the user and writes the
+ * changed fields to the user node in a single atomic update.
+ * Upserts the updated user into the session store.
  *
- * This is the multi-field analog of [update]. Fields written this
- * way bypass the per-field [willWrite] incremental-diff handling, so it
- * is intended for whole-value scalar and list fields rather than the
- * `blockedUserIDs` or `pushTokens` diff fields.
+ * This is the multi-field analog of [update]. Fields written
+ * this way bypass the per-field [willWrite] incremental-diff
+ * handling, so it is intended for whole-value scalar and list
+ * fields rather than the `blockedUserIDs` or `pushTokens` diff
+ * fields.
  */
 suspend fun User.updateValues(data: Map<UserUpdatableKey, Any>): User {
     var updated = this
@@ -201,7 +205,10 @@ suspend fun User.willWrite(
 
 // MARK: - Did Write
 
-/** Applies a completed single-field remote update, upserting the updated user into the session store. */
+/**
+ * Applies a completed single-field remote update, upserting the
+ * updated user into the session store.
+ */
 @Suppress("UnusedParameter") // `key` matches the shared updatable-type write signature.
 fun User.didWrite(
     updated: User,

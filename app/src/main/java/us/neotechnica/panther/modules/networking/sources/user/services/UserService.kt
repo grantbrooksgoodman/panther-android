@@ -61,19 +61,19 @@ object UserService {
     // MARK: - User Creation
 
     /**
-     * Creates a new user with the given properties and writes it to
-     * the database.
+     * Creates a new user with the given properties and writes it
+     * to the database.
      *
      * @param id The identifier for the new user.
      * @param languageCode The user's language code.
      * @param phoneNumber The user's phone number.
-     * @param pushTokens The user's push notification tokens, or `null`
-     *   if none.
+     * @param pushTokens The user's push notification tokens, or
+     *   `null` if none.
      *
      * @return The created user.
      *
-     * @throws Exception if an account already exists for the phone
-     *   number, or if writing the user fails.
+     * @throws Exception if an account already exists for the
+     *   phone number, or if writing the user fails.
      */
     suspend fun createUser(
         id: String,
@@ -176,19 +176,19 @@ object UserService {
     /**
      * Returns the user with the given identifier.
      *
-     * Unless bypassed, an unexpired cached snapshot is returned instead
-     * of re-fetching.
+     * Unless bypassed, an unexpired cached snapshot is returned
+     * instead of re-fetching.
      *
      * @param id The identifier of the user to fetch.
-     * @param bypassSnapshotCache A Boolean value that determines whether
-     *   to ignore the snapshot cache and always fetch.
-     * @param cacheStrategy The database cache strategy to apply for the
-     *   fetch, or `null` to use the default.
+     * @param bypassSnapshotCache A Boolean value that determines
+     *   whether to ignore the snapshot cache and always fetch.
+     * @param cacheStrategy The database cache strategy to apply
+     *   for the fetch, or `null` to use the default.
      *
      * @return The user.
      *
-     * @throws Exception if no identifier is provided or the user cannot
-     *   be fetched or decoded.
+     * @throws Exception if no identifier is provided or the user
+     *   cannot be fetched or decoded.
      */
     suspend fun getUser(
         id: String,
@@ -282,15 +282,15 @@ object UserService {
      * concurrently.
      *
      * @param ids The identifiers of the users to fetch.
-     * @param bypassSnapshotCache A Boolean value that determines whether
-     *   to ignore the snapshot cache and always fetch.
-     * @param cacheStrategy The database cache strategy to apply for the
-     *   fetches, or `null` to use the default.
+     * @param bypassSnapshotCache A Boolean value that determines
+     *   whether to ignore the snapshot cache and always fetch.
+     * @param cacheStrategy The database cache strategy to apply
+     *   for the fetches, or `null` to use the default.
      *
      * @return The users.
      *
-     * @throws Exception if no identifiers are provided or any user
-     *   cannot be fetched.
+     * @throws Exception if no identifiers are provided or any
+     *   user cannot be fetched.
      */
     suspend fun getUsers(
         ids: List<String>,
@@ -333,8 +333,8 @@ object UserService {
      *
      * @return The matching user.
      *
-     * @throws Exception if no user is registered with the phone number,
-     *   or if the users cannot be fetched.
+     * @throws Exception if no user is registered with the phone
+     *   number, or if the users cannot be fetched.
      */
     suspend fun getUser(phoneNumber: PhoneNumber): User {
         val userInfo = mapOf<String, Any>("PhoneNumber" to phoneNumber.encoded)

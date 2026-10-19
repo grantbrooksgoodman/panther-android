@@ -50,6 +50,8 @@ import kotlin.coroutines.cancellation.CancellationException
 // LargeClass suppressed: the snapshot, derivation, and archive
 // read/write responsibilities are cohesive.
 
+// The counterpart archiver runs to 438 lines in a package without a file-length rule.
+
 /**
  * Reads and writes translations in the hosted RTDB archive, keyed
  * `translations/<from>-<to>/<encodedHash(input)>`.

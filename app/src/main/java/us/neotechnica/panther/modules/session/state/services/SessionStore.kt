@@ -46,6 +46,8 @@ private typealias Floats = SessionStoreFloats
 
 // This store exceeds the file-length and type-body-length limits.
 
+// The counterpart store carries `// swiftlint:disable file_length type_body_length`.
+
 /**
  * The in-memory store of the session's conversations, messages, and
  * users.

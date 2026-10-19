@@ -77,7 +77,7 @@ fun UserContentContainerView(modifier: Modifier = Modifier) {
 
     // The conversations list is always composed; map its coverage by a
     // pushed chat to an appear/disappear lifecycle so returning from a
-    // chat refreshes it. Settings and New Chat are sheets on iOS, which
+    // chat refreshes it. Settings and New Chat behave as sheets, which
     // leave the list's lifecycle alone.
     val isCoveredByChat = isCoveredByPush(topPath)
     LaunchedEffect(isCoveredByChat) {

@@ -22,13 +22,25 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 internal data class ReceivedNotification(
     /** The notification's body text. */
     val body: String,
-    /** The identifier key of the conversation the notification describes. */
+    /**
+     * The identifier key of the conversation the notification
+     * describes.
+     */
     val conversationIDKey: String,
-    /** The identifier of the reacted-to message, or the empty sentinel. */
+    /**
+     * The identifier of the reacted-to message, or the empty
+     * sentinel.
+     */
     val reactionMessageID: String,
-    /** The identifier of the user the notification is intended for. */
+    /**
+     * The identifier of the user the notification is intended
+     * for.
+     */
     val recipientUserID: String,
-    /** The notification's title text, or `null` if the payload has none. */
+    /**
+     * The notification's title text, or `null` if the payload has
+     * none.
+     */
     val title: String?,
 ) {
     // MARK: - Computed Properties
@@ -41,10 +53,11 @@ internal data class ReceivedNotification(
 
     companion object {
         /**
-         * Reads the notification values from the push payload's data.
+         * Reads the notification values from the push payload's
+         * data.
          *
-         * The body is logged first, so a malformed payload still leaves
-         * a trace.
+         * The body is logged first, so a malformed payload still
+         * leaves a trace.
          *
          * @param data The push payload's data map.
          *

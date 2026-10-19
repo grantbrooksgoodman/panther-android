@@ -24,6 +24,8 @@ import java.io.File
 import java.util.UUID
 import kotlin.math.abs
 
+// The counterpart logger carries `// swiftlint:disable file_length type_body_length`.
+
 /**
  * A centralized, thread-safe logging service that writes structured
  * diagnostic output to the console and to an on-disk session record.
@@ -97,14 +99,16 @@ object Logger {
     }
 
     /**
-     * The kind of user-visible alert to present alongside a log entry.
+     * The kind of user-visible alert to present alongside a log
+     * entry.
      *
-     * When you pass an [AlertType] to one of [Logger]'s `log` methods,
-     * the logger forwards it to the registered presentation delegate,
-     * which displays the corresponding alert after the entry is
-     * recorded. Use [ErrorAlert] for reportable exceptions,
-     * [NormalAlert] for informational messages, or [Toast] for
-     * lightweight, non-blocking feedback.
+     * When you pass an [AlertType] to one of [Logger]'s `log`
+     * methods, the logger forwards it to the registered
+     * presentation delegate, which displays the corresponding
+     * alert after the entry is recorded. Use [ErrorAlert] for
+     * reportable exceptions, [NormalAlert] for informational
+     * messages, or [Toast] for lightweight, non-blocking
+     * feedback.
      */
     sealed interface AlertType {
         /**
@@ -139,13 +143,13 @@ object Logger {
             val toast: AlertType = Toast()
 
             /**
-             * A toast notification that is only shown in prerelease
-             * builds.
+             * A toast notification that is only shown in
+             * prerelease builds.
              *
-             * Resolves once, on first access after the build has been
-             * configured: `null` when the build milestone is
-             * [Build.Milestone.GENERAL_RELEASE], effectively silencing the
-             * alert in production.
+             * Resolves once, on first access after the build has
+             * been configured: `null` when the build milestone is
+             * [Build.Milestone.GENERAL_RELEASE], effectively
+             * silencing the alert in production.
              */
             val toastInPrerelease: AlertType? by lazy { toastInPrerelease() }
 
@@ -202,7 +206,8 @@ object Logger {
         private set
 
     /**
-     * The file of the on-disk session record for the current launch.
+     * The file of the on-disk session record for the current
+     * launch.
      *
      * A new file is created for each launch and is not persisted
      * across sessions. Returns `null` before
@@ -222,7 +227,10 @@ object Logger {
     val domainsExcludedFromSessionRecord: List<LoggerDomain>
         get() = _domainsExcludedFromSessionRecord.wrappedValue ?: activeSubscription.domainsExcludedFromSessionRecord
 
-    /** The currently active filter, or `null` if no filter is applied. */
+    /**
+     * The currently active filter, or `null` if no filter is
+     * applied.
+     */
     val filter: Filter?
         get() = _filter.wrappedValue
 
@@ -311,12 +319,12 @@ object Logger {
     /**
      * Sets whether reportable exceptions are filed automatically.
      *
-     * When enabled, [log] forwards every reportable exception through
-     * the registered error report delegate without presenting a prompt
-     * to the user.
+     * When enabled, [log] forwards every reportable exception
+     * through the registered error report delegate without
+     * presenting a prompt to the user.
      *
-     * @param reportsErrorsAutomatically Whether to file reportable
-     *   exceptions automatically.
+     * @param reportsErrorsAutomatically Whether to file
+     *   reportable exceptions automatically.
      */
     fun setReportsErrorsAutomatically(reportsErrorsAutomatically: Boolean) {
         this.reportsErrorsAutomatically = reportsErrorsAutomatically
@@ -343,17 +351,18 @@ object Logger {
     /**
      * Logs an exception.
      *
-     * The entry includes the exception's descriptor, error code, user
-     * info (if any), source location, and a timestamp. When the
-     * exception is reportable and [reportsErrorsAutomatically] is
-     * enabled, the exception's [Exception.hydrated] form is also
-     * forwarded to the registered error report delegate.
+     * The entry includes the exception's descriptor, error code,
+     * user info (if any), source location, and a timestamp. When
+     * the exception is reportable and
+     * [reportsErrorsAutomatically] is enabled, the exception's
+     * [Exception.hydrated] form is also forwarded to the
+     * registered error report delegate.
      *
      * @param exception The exception to log.
      * @param domain The domain to log to. Defaults to the general
      *   domain.
-     * @param with The alert to present after logging, or `null` to log
-     *   silently.
+     * @param with The alert to present after logging, or `null`
+     *   to log silently.
      */
     fun log(
         exception: Exception,
@@ -397,17 +406,17 @@ object Logger {
     /**
      * Logs a plain-text message.
      *
-     * The entry includes the file, function, and line number of the
-     * caller – or of [metadata], when given – alongside the message
-     * text.
+     * The entry includes the file, function, and line number of
+     * the caller – or of [metadata], when given – alongside the
+     * message text.
      *
      * @param message The message to log.
      * @param domain The domain to log to. Defaults to the general
      *   domain.
-     * @param with The alert to present after logging, or `null` to log
-     *   silently.
-     * @param metadata The source location to attribute the message to,
-     *   or `null` to attribute it to the caller.
+     * @param with The alert to present after logging, or `null`
+     *   to log silently.
+     * @param metadata The source location to attribute the
+     *   message to, or `null` to attribute it to the caller.
      */
     fun log(
         message: String,

@@ -58,21 +58,21 @@ import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
  *
  * Blocking updates the current user's blocked user identifiers;
  * reporting increments a per-user counter in a transaction. Each
- * action prompts for confirmation, and actions targeting more than one
- * user are presented as an action sheet.
+ * action prompts for confirmation, and actions targeting more
+ * than one user are presented as an action sheet.
  */
 object ModerationSessionService {
-    // MARK: - Dependencies
-
-    private val contactService: ContactService by Dependency { it.commonServices.contact }
-    private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
-
     // MARK: - Types
 
     private data class ModerationAlertData(
         val actions: List<Action>,
         val translationOptionKeys: List<ActionSheet.TranslationOptionKey>,
     )
+
+    // MARK: - Dependencies
+
+    private val contactService: ContactService by Dependency { it.commonServices.contact }
+    private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
 
     // MARK: - Properties
 
@@ -82,11 +82,11 @@ object ModerationSessionService {
     // MARK: - Content Moderation
 
     /**
-     * Prompts the user to block one or more participants in the given
-     * conversation.
+     * Prompts the user to block one or more participants in the
+     * given conversation.
      *
-     * @param inConversation The conversation whose participants may be
-     *   blocked.
+     * @param inConversation The conversation whose participants
+     *   may be blocked.
      *
      * @throws Exception if blocking fails.
      */
@@ -95,11 +95,11 @@ object ModerationSessionService {
     }
 
     /**
-     * Prompts the user to report one or more participants in the given
-     * conversation.
+     * Prompts the user to report one or more participants in the
+     * given conversation.
      *
-     * @param inConversation The conversation whose participants may be
-     *   reported.
+     * @param inConversation The conversation whose participants
+     *   may be reported.
      *
      * @throws Exception if reporting fails.
      */

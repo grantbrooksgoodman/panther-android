@@ -31,16 +31,16 @@ import kotlin.time.Duration.Companion.seconds
  *
  * The picker's behavior contract:
  *
- * - On appearance, the picker clears its search query and selection and
- *   disables the done button.
- * - The list displays the languages whose names match the search query,
- *   or a no results message when none match. While the query is empty,
- *   all supported languages are shown.
+ * - On appearance, the picker clears its search query and
+ *   selection and disables the done button.
+ * - The list displays the languages whose names match the search
+ *   query, or a no results message when none match. While the
+ *   query is empty, all supported languages are shown.
  * - Selecting a language enables the done button.
- * - Tapping done dismisses the sheet and, after a short delay, composes
- *   the invitation in the selected language, surfacing any error as a
- *   toast. Tapping cancel dismisses the sheet without composing an
- *   invitation.
+ * - Tapping done dismisses the sheet and, after a short delay,
+ *   composes the invitation in the selected language, surfacing
+ *   any error as a toast. Tapping cancel dismisses the sheet
+ *   without composing an invitation.
  */
 class InviteLanguagePickerReducer : Reducer<InviteLanguagePickerReducer.State, InviteLanguagePickerReducer.Action> {
     // MARK: - Dependencies
@@ -51,24 +51,40 @@ class InviteLanguagePickerReducer : Reducer<InviteLanguagePickerReducer.State, I
 
     /** The actions the invite language picker can process. */
     sealed interface Action {
-        /** An action that indicates the view appeared. Resets the picker's selection and search query. */
+        /**
+         * An action that indicates the view appeared. Resets the
+         * picker's selection and search query.
+         */
         data object ViewAppeared : Action
 
         /** An action that indicates the view disappeared. */
         data object ViewDisappeared : Action
 
-        /** An action that indicates the user tapped the cancel button. Dismisses the sheet. */
+        /**
+         * An action that indicates the user tapped the cancel
+         * button. Dismisses the sheet.
+         */
         data object CancelHeaderItemTapped : Action
 
-        /** An action that indicates the user tapped the done button. Dismisses the sheet and begins composing the invitation. */
+        /**
+         * An action that indicates the user tapped the done
+         * button. Dismisses the sheet and begins composing the
+         * invitation.
+         */
         data object DoneHeaderItemTapped : Action
 
-        /** An action that indicates the search query changed, carrying the new value. */
+        /**
+         * An action that indicates the search query changed,
+         * carrying the new value.
+         */
         data class SearchQueryChanged(
             val searchQuery: String,
         ) : Action
 
-        /** An action that indicates the user selected a language, carrying its language code. Enables the done button. */
+        /**
+         * An action that indicates the user selected a language,
+         * carrying its language code. Enables the done button.
+         */
         data class SelectedLanguageCodeChanged(
             val selectedLanguageCode: String,
         ) : Action
@@ -82,7 +98,10 @@ class InviteLanguagePickerReducer : Reducer<InviteLanguagePickerReducer.State, I
         val cancelHeaderItemText: String = LocalizedStringKey.Cancel.localized(),
         /** The localized text the done button displays. */
         val doneHeaderItemText: String = LocalizedStringKey.Done.localized(),
-        /** A Boolean value that indicates whether the done button is enabled. Enabled once a language has been selected. */
+        /**
+         * A Boolean value that indicates whether the done button
+         * is enabled. Enabled once a language has been selected.
+         */
         val isDoneHeaderItemEnabled: Boolean = false,
         /** The localized text the no results label displays. */
         val noResultsLabelText: String = LocalizedStringKey.NoResults.localized(),
@@ -91,7 +110,10 @@ class InviteLanguagePickerReducer : Reducer<InviteLanguagePickerReducer.State, I
         /** The language code of the selected language. */
         val selectedLanguageCode: String = "",
     ) {
-        /** The selectable languages, keyed by language code, with localized display names as values. */
+        /**
+         * The selectable languages, keyed by language code, with
+         * localized display names as values.
+         */
         val localizedLanguageNames: Map<String, String>
             get() =
                 CoreUtilities.localizedLanguageCodeDictionary(RuntimeStorage.languageCode)
@@ -106,7 +128,10 @@ class InviteLanguagePickerReducer : Reducer<InviteLanguagePickerReducer.State, I
                 return localizedString.capitalized
             }
 
-        /** The languages whose display names match the search query, keyed by language code. */
+        /**
+         * The languages whose display names match the search
+         * query, keyed by language code.
+         */
         val queriedLanguageNames: Map<String, String>
             get() {
                 val query = searchQuery.trim().lowercase()

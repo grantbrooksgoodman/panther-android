@@ -24,6 +24,7 @@ import us.neotechnica.panther.modules.content.user.models.BuildInfoButtonStrings
 import us.neotechnica.panther.modules.content.user.services.SettingsPageViewService
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
+import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
@@ -42,27 +43,30 @@ import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
+import us.neotechnica.panther.subsystem.modules.shared.models.SharedEvents
 import java.util.UUID
 
 /**
  * The reducer that drives the settings page.
  *
- * This page presents the app's settings. It shows the user's contact
- * card and provides the buttons for the app's options – blocked users,
- * language, and account actions. Most of these actions are performed
- * through [SettingsPageViewService].
+ * This page presents the app's settings. It shows the user's
+ * contact card and provides the buttons for the app's options –
+ * blocked users, language, and account actions. Most of these
+ * actions are performed through [SettingsPageViewService].
  *
  * The page's behavior contract:
  *
- * - On appearance, the page resolves its translated display strings and
- *   the user's contact card concurrently, and remains in the loading
- *   state until string resolution completes.
- * - Tapping a button performs its action, and tapping done dismisses
- *   the page.
+ * - On appearance, the page resolves its translated display
+ *   strings and the user's contact card concurrently, and remains
+ *   in the loading state until string resolution completes.
+ * - Tapping a button performs its action, and tapping done
+ *   dismisses the page.
  */
 class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReducer.Action> {
     // MARK: - Dependencies
 
+    private val navigation: Navigation by Dependency { it.navigation }
+    private val sharedEvents: SharedEvents by Dependency { it.sharedEvents }
     private val translator: HostedTranslationDelegate by Dependency { it.networking.hostedTranslation }
     private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
     private val viewService: SettingsPageViewService by Dependency { it.settingsPageViewService }
@@ -72,8 +76,9 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
     /** The actions the settings page can process. */
     sealed interface Action {
         /**
-         * An action that indicates the view appeared. Begins resolving
-         * the display strings and the user's contact card.
+         * An action that indicates the view appeared. Begins
+         * resolving the display strings and the user's contact
+         * card.
          */
         data object ViewAppeared : Action
 
@@ -141,18 +146,21 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
         data object SendFeedbackButtonTapped : Action
 
         /**
-         * An action that indicates the user tapped the sign out button.
-         * Signs the user out.
+         * An action that indicates the user tapped the sign out
+         * button. Signs the user out.
          */
         data object SignOutButtonTapped : Action
 
-        /** An action that indicates the trait collection changed. Rebuilds the page. */
+        /**
+         * An action that indicates the trait collection changed.
+         * Rebuilds the page.
+         */
         data object TraitCollectionChanged : Action
 
         /**
-         * An action that indicates resolving the user's contact card
-         * failed, carrying the resulting [Exception]. Falls back to the
-         * user's phone number.
+         * An action that indicates resolving the user's contact
+         * card failed, carrying the resulting [Exception]. Falls
+         * back to the user's phone number.
          */
         data class FetchCNContactForCurrentUserFailed(
             val exception: Exception,
@@ -175,8 +183,8 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
         ) : Action
 
         /**
-         * An action that indicates display string resolution succeeded,
-         * carrying the resolved strings.
+         * An action that indicates display string resolution
+         * succeeded, carrying the resolved strings.
          */
         data class ResolveReturned(
             val strings: List<TranslationOutputMap>,
@@ -188,26 +196,28 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
     /**
      * The state of the settings page.
      *
-     * @property buildInfoButtonStrings The strings the build info button
-     *   currently displays.
-     * @property contactDetailViewImage The image shown in the user's
-     *   contact detail view.
-     * @property contactDetailViewSubtitleLabelText The subtitle shown in
-     *   the user's contact detail view.
-     * @property contactDetailViewTitleLabelText The title shown in the
+     * @property buildInfoButtonStrings The strings the build info
+     *   button currently displays.
+     * @property contactDetailViewImage The image shown in the
      *   user's contact detail view.
+     * @property contactDetailViewSubtitleLabelText The subtitle
+     *   shown in the user's contact detail view.
+     * @property contactDetailViewTitleLabelText The title shown
+     *   in the user's contact detail view.
      * @property contactPair The current user's device contact, if
      *   available.
-     * @property developerModeListItems The developer mode list rows, if
-     *   any.
-     * @property groupedListViewsID The identity of the grouped list.
-     *   Regenerated to rebuild it when the trait collection changes.
-     * @property strings The page's translated display strings. Contains
-     *   the default, untranslated strings until resolution completes.
-     * @property viewID The identity of the page's content. Regenerated
-     *   to rebuild it from the latest values.
-     * @property viewState The page's loading state. Remains loading
-     *   until display string resolution completes.
+     * @property developerModeListItems The developer mode list
+     *   rows, if any.
+     * @property groupedListViewsID The identity of the grouped
+     *   list. Regenerated to rebuild it when the trait collection
+     *   changes.
+     * @property strings The page's translated display strings.
+     *   Contains the default, untranslated strings until
+     *   resolution completes.
+     * @property viewID The identity of the page's content.
+     *   Regenerated to rebuild it from the latest values.
+     * @property viewState The page's loading state. Remains
+     *   loading until display string resolution completes.
      */
     data class State(
         val buildInfoButtonStrings: BuildInfoButtonStrings =
@@ -224,6 +234,10 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
         internal val timesEncounteredCopyrightText: Int = 0,
         internal val traitCollectionChanged: Boolean = false,
     ) {
+        // MARK: - Dependencies
+
+        private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
+
         /** The localized text the done button displays. */
         val doneToolbarButtonText: String
             get() = LocalizedStringKey.Done.localized(LocalizationSource.SUBSYSTEM)
@@ -232,12 +246,15 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
         val navigationTitle: String
             get() = LocalizedStringKey.Settings.localized(LocalizationSource.SUBSYSTEM).replace("…", "")
 
-        /** The blocked users button's text, including the count of blocked users. */
+        /**
+         * The blocked users button's text, including the count of
+         * blocked users.
+         */
         val blockedUsersButtonText: String
             get() {
                 val count =
                     (
-                        DependencyValues.current.clientSession.entity.user.currentUser
+                        userSession.currentUser
                             ?.blockedUserIDs ?: emptyList()
                     ).count { !it.isBangQualifiedEmpty }
                 return "${strings.value(SettingsPageViewStrings.blockedUsersButtonText, SettingsPageViewStrings)} ($count)"
@@ -259,7 +276,7 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
         val isBlockedUsersButtonEnabled: Boolean
             get() =
                 !(
-                    DependencyValues.current.clientSession.entity.user.currentUser
+                    userSession.currentUser
                         ?.blockedUserIDs ?: emptyList()
                 ).isBangQualifiedEmpty
     }
@@ -285,7 +302,7 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
 
             Action.ViewDisappeared -> {
                 if (state.traitCollectionChanged) {
-                    DependencyValues.current.sharedEvents.traitCollectionChanged
+                    sharedEvents.traitCollectionChanged
                         .send(Unit)
                 }
                 ReduceResult(state)
@@ -318,7 +335,7 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
             }
 
             Action.DoneToolbarButtonTapped -> {
-                DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
+                navigation.navigate(Route.UserContent(UserContentRoute.Pop))
                 ReduceResult(state)
             }
 

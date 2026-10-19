@@ -40,7 +40,10 @@ object FileStore {
     val applicationSupportDirectory: File?
         get() = testApplicationSupportDirectory ?: appContext?.noBackupFilesDir
 
-    /** The root documents directory, or `null` before initialization. */
+    /**
+     * The root documents directory, or `null` before
+     * initialization.
+     */
     val documentsDirectory: File?
         get() = testDirectory ?: appContext?.filesDir
 
@@ -61,7 +64,7 @@ object FileStore {
     /**
      * Prepares the file store with temporary directories for tests.
      *
-     * @param directory The directory that stands in for the
+     * @param directory The directory that takes the place of the
      *   documents directory.
      * @param applicationSupportDirectory The directory that stands
      *   in for the Application Support directory. The default is
@@ -86,15 +89,18 @@ object FileStore {
     /** Whether a file exists at [relativePath]. */
     fun exists(relativePath: String): Boolean = resolve(relativePath)?.exists() == true
 
-    /** Deletes the file or directory at [relativePath], recursively. */
+    /**
+     * Deletes the file or directory at [relativePath],
+     * recursively.
+     */
     fun delete(relativePath: String) {
         resolve(relativePath)?.deleteRecursively()
     }
 
     /**
-     * Writes [bytes] to [relativePath], creating parent directories as
-     * needed, and returns the written file (or `null` before
-     * initialization).
+     * Writes [bytes] to [relativePath], creating parent
+     * directories as needed, and returns the written file (or
+     * `null` before initialization).
      */
     fun write(
         relativePath: String,

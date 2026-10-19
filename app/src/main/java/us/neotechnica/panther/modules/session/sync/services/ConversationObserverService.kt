@@ -38,18 +38,14 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.Alert
 import java.util.UUID
 
 /**
- * Observes a single conversation for real-time updates, applying each
- * snapshot to the [SessionStore].
+ * Observes a single conversation for real-time updates, applying
+ * each snapshot to the [SessionStore].
  *
- * At most one conversation is observed at a time. When the stream ends
- * it is retried once after a short delay; thereafter the user-node
- * pipeline remains the safety net.
+ * At most one conversation is observed at a time. When the stream
+ * ends it is retried once after a short delay; thereafter the
+ * user-node pipeline remains the safety net.
  */
 object ConversationObserverService {
-    // MARK: - Dependencies
-
-    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
-
     // MARK: - Types
 
     private data class ObservationState(
@@ -57,6 +53,10 @@ object ConversationObserverService {
         val generation: String,
         val job: Job,
     )
+
+    // MARK: - Dependencies
+
+    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
 
     // MARK: - Properties
 
@@ -70,7 +70,10 @@ object ConversationObserverService {
     /** Whether the given conversation is actively being observed. */
     fun isActivelyObserving(conversationIDKey: String): Boolean = state.wrappedValue?.conversationIDKey == conversationIDKey
 
-    /** Starts observing the given conversation, stopping any prior one. */
+    /**
+     * Starts observing the given conversation, stopping any prior
+     * one.
+     */
     fun startObserving(conversationIDKey: String) {
         state.withValue { reference ->
             reference.value?.job?.cancel()
@@ -91,7 +94,10 @@ object ConversationObserverService {
         }
     }
 
-    /** Stops observing the currently observed conversation, if any. */
+    /**
+     * Stops observing the currently observed conversation, if
+     * any.
+     */
     fun stopObserving() {
         state.withValue {
             if (it.value != null) {

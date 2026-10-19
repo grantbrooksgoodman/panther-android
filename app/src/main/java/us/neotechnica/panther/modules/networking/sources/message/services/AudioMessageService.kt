@@ -17,6 +17,8 @@ import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.storage.interfaces.StorageDelegate
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -27,21 +29,28 @@ import us.neotechnica.panther.translator.models.Translation
  * The service that downloads and deletes audio message content.
  */
 object AudioMessageService {
+    // MARK: - Dependencies
+
+    private val storage: StorageDelegate by Dependency { it.networking.storage }
+
     // MARK: - Get Audio Component
 
     /**
-     * Returns the audio component for the given message, using the local
-     * copy when available and downloading it otherwise.
+     * Returns the audio component for the given message, using
+     * the local copy when available and downloading it otherwise.
      *
      * @param messageID The identifier of the message.
-     * @param isFromCurrentUser Whether the message was sent by the current
-     *   user.
-     * @param localAudioFilePath The local file paths for the message's audio.
-     * @param translation The translation associated with the audio.
+     * @param isFromCurrentUser Whether the message was sent by
+     *   the current user.
+     * @param localAudioFilePath The local file paths for the
+     *   message's audio.
+     * @param translation The translation associated with the
+     *   audio.
      *
      * @return The audio component.
      *
-     * @throws Exception if the audio cannot be resolved or downloaded.
+     * @throws Exception if the audio cannot be resolved or
+     *   downloaded.
      */
     suspend fun getAudioComponent(
         messageID: String,
@@ -65,8 +74,6 @@ object AudioMessageService {
      * @throws Exception if deletion fails.
      */
     suspend fun deleteInputAudioComponent(messageID: String) {
-        val storage = DependencyValues.current.networking.storage
-
         try {
             storage.deleteItem(
                 listOf(
@@ -97,7 +104,6 @@ object AudioMessageService {
         localAudioFilePath: LocalAudioFilePath,
         translation: Translation,
     ): AudioMessageReference {
-        val storage = DependencyValues.current.networking.storage
         val userInfo = mapOf("MessageID" to messageID)
 
         val sourcePathString =

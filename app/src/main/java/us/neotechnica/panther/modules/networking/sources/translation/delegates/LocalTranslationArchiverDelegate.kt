@@ -25,13 +25,14 @@ import us.neotechnica.panther.subsystem.modules.foundation.interfaces.Translatio
 /**
  * The persistent translation archive.
  *
- * Lookups and
- * mutations operate on an in-memory archive and its index, while disk
- * writes are serialized onto a background thread off the calling path.
- * The archive is decoded from disk at most once per launch and persisted
- * through [Persistent] under [PersistentStorageKey.translationArchive],
- * so a message's resolved translation survives relaunches and a reopened
- * chat presents its history without re-resolving every message.
+ * Lookups and mutations operate on an in-memory archive and its
+ * index, while disk writes are serialized onto a background
+ * thread off the calling path. The archive is decoded from disk
+ * at most once per launch and persisted through [Persistent]
+ * under [PersistentStorageKey.translationArchive], so a
+ * message's resolved translation survives relaunches and a
+ * reopened chat presents its history without re-resolving every
+ * message.
  *
  * Registered through
  * [Translator.config][us.neotechnica.panther.translator.Translator.config],
@@ -46,8 +47,8 @@ class LocalTranslationArchiverDelegate :
 
     /**
      * Serializes disk writes off the calling thread; lookups and
-     * mutations operate on the in-memory archive and never wait for the
-     * disk.
+     * mutations operate on the in-memory archive and never wait
+     * for the disk.
      */
     private val persistenceExecutor =
         Executors.newSingleThreadExecutor { runnable ->
@@ -55,13 +56,16 @@ class LocalTranslationArchiverDelegate :
         }
 
     /**
-     * Maps "<input value hash>|<language pair>" to its translation for
-     * constant-time lookups, avoiding a per-entry hash computation on
-     * every query.
+     * Maps "<input value hash>|<language pair>" to its
+     * translation for constant-time lookups, avoiding a per-entry
+     * hash computation on every query.
      */
     private var archiveIndex = mutableMapOf<String, Translation>()
 
-    /** The decoded archive, loaded from disk at most once per launch. */
+    /**
+     * The decoded archive, loaded from disk at most once per
+     * launch.
+     */
     private var cachedArchive: MutableSet<Translation>? = null
 
     // MARK: - Init
@@ -134,6 +138,20 @@ class LocalTranslationArchiverDelegate :
         }
     }
 
+    // MARK: - Testing
+
+    /**
+     * Blocks until every persistence write submitted so far has
+     * completed. For tests only, where the file store's directory
+     * is a shared, reassignable static; production writes run
+     * fire-and-forget.
+     */
+    internal fun flushForTesting() {
+        val latch = java.util.concurrent.CountDownLatch(1)
+        persistenceExecutor.execute { latch.countDown() }
+        latch.await()
+    }
+
     // MARK: - Auxiliary
 
     private fun indexKey(
@@ -145,9 +163,9 @@ class LocalTranslationArchiverDelegate :
         indexKey(encodedHashOf(listOf(translation.input.value)), translation.languagePair)
 
     /**
-     * Inserts the translation into both the archive and the index,
-     * replacing any existing translation for the same input and language
-     * pair.
+     * Inserts the translation into both the archive and the
+     * index, replacing any existing translation for the same
+     * input and language pair.
      */
     private fun insert(
         translation: Translation,
@@ -175,9 +193,9 @@ class LocalTranslationArchiverDelegate :
     }
 
     /**
-     * Writes the archive on a background thread, keeping disk I/O off the
-     * translation path. Writes are serialized in submission order, so the
-     * last snapshot always wins.
+     * Writes the archive on a background thread, keeping disk I/O
+     * off the translation path. Writes are serialized in
+     * submission order, so the last snapshot always wins.
      */
     private fun persistArchive(archive: Set<Translation>) {
         val snapshot = archive.toList()
@@ -217,19 +235,6 @@ class LocalTranslationArchiverDelegate :
             output = output,
             languagePair = LanguagePair(from = from, to = to),
         )
-    }
-
-    // MARK: - Testing
-
-    /**
-     * Blocks until every persistence write submitted so far has
-     * completed. For tests only, where the file store's directory is a
-     * shared, reassignable static; production writes run fire-and-forget.
-     */
-    internal fun flushForTesting() {
-        val latch = java.util.concurrent.CountDownLatch(1)
-        persistenceExecutor.execute { latch.countDown() }
-        latch.await()
     }
 
     // MARK: - Companion

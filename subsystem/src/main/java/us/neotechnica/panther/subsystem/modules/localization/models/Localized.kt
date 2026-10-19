@@ -35,7 +35,10 @@ class Localized(
     private val languageCode: String = LocalizedStringResolver.languageCode,
     private val source: LocalizationSource = LocalizationSource.SUBSYSTEM,
 ) {
-    /** The localized string for the specified key and language code. */
+    /**
+     * The localized string for the specified key and language
+     * code.
+     */
     val wrappedValue: String
         get() = LocalizedStringResolver.string(key, source, languageCode)
 }
@@ -53,16 +56,17 @@ fun LocalizedStringKeyRepresentable.localized(source: LocalizationSource = this.
     LocalizedStringResolver.string(this, source)
 
 /**
- * The localized value for this key in [languageCode], resolved from
- * [source].
+ * The localized value for this key in [languageCode], resolved
+ * from [source].
  *
- * Falls back to English and then to [LocalizedStringResolver.MISSING].
- * Use this overload to localize content for a specific recipient's
- * language, such as a push notification's body.
+ * Falls back to English and then to
+ * [LocalizedStringResolver.MISSING]. Use this overload to
+ * localize content for a specific recipient's language, such as a
+ * push notification's body.
  *
  * @param languageCode The language to resolve for.
- * @param source The table to resolve from; defaults to the key's own
- *   [source][LocalizedStringKeyRepresentable.source].
+ * @param source The table to resolve from; defaults to the key's
+ *   own [source][LocalizedStringKeyRepresentable.source].
  */
 fun LocalizedStringKeyRepresentable.localized(
     languageCode: String,

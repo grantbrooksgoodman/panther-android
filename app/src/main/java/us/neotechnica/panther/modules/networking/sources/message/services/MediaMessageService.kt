@@ -22,9 +22,11 @@ import us.neotechnica.panther.modules.networking.sources.message.models.Message
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.networking.modules.database.interfaces.getValues
 import us.neotechnica.panther.networking.modules.storage.interfaces.StorageDelegate
 import us.neotechnica.panther.networking.modules.storage.models.HostedItemMetadata
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.compiledException
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
@@ -37,28 +39,36 @@ import java.io.File
 import kotlin.time.Duration
 
 /**
- * The service that uploads, downloads, and deletes media message content.
+ * The service that uploads, downloads, and deletes media message
+ * content.
  *
- * **Note:** plain-text document payloads are LZFSE-compressed before
- * upload and decompressed on download, while the local file stays
- * uncompressed. [Lzfse] emits uncompressed LZFSE blocks on encode (a
- * valid stream, without a compression ratio) and decodes every
- * block type – uncompressed, LZVN, and FSE-compressed (v2).
+ * **Note:** plain-text document payloads are LZFSE-compressed
+ * before upload and decompressed on download, while the local
+ * file stays uncompressed. [Lzfse] emits uncompressed LZFSE
+ * blocks on encode (a valid stream, without a compression ratio)
+ * and decodes every block type – uncompressed, LZVN, and
+ * FSE-compressed (v2).
  */
 object MediaMessageService {
+    // MARK: - Dependencies
+
+    private val database: DatabaseDelegate by Dependency { it.networking.database }
+    private val storage: StorageDelegate by Dependency { it.networking.storage }
+
     // MARK: - Get Media Component
 
     /**
-     * Returns the media file for the given message, using the local copy
-     * when available and downloading it otherwise.
+     * Returns the media file for the given message, using the
+     * local copy when available and downloading it otherwise.
      *
      * @param messageID The identifier of the message.
-     * @param localMediaFilePath The local file paths for the message's
-     *   media.
+     * @param localMediaFilePath The local file paths for the
+     *   message's media.
      *
      * @return The media file.
      *
-     * @throws Exception if the media cannot be resolved or downloaded.
+     * @throws Exception if the media cannot be resolved or
+     *   downloaded.
      */
     suspend fun getMediaComponent(
         messageID: String,
@@ -72,9 +82,10 @@ object MediaMessageService {
     /**
      * Uploads [mediaComponent] and its thumbnail for [message].
      *
-     * The file and its thumbnail are independent Storage objects, uploaded
-     * concurrently and each skipped when already present, and the local
-     * files are moved into their permanent locations afterward.
+     * The file and its thumbnail are independent Storage objects,
+     * uploaded concurrently and each skipped when already
+     * present, and the local files are moved into their permanent
+     * locations afterward.
      *
      * @param mediaComponent The media file to upload.
      * @param message The message the media belongs to.
@@ -86,7 +97,6 @@ object MediaMessageService {
         mediaComponent: MediaFile,
         message: Message,
     ) {
-        val storage = DependencyValues.current.networking.storage
         val pathPrefix = "${NetworkPath.media.rawValue}/${mediaComponent.encodedHash.take(SHORTENED_HASH_LENGTH)}"
         val relativePath = "$pathPrefix.${mediaComponent.fileExtension.rawValue}"
         val thumbnailRelativePath = "$pathPrefix${MediaFile.THUMBNAIL_IMAGE_NAME_SUFFIX}"
@@ -102,20 +112,18 @@ object MediaMessageService {
     // MARK: - Delete Media Component
 
     /**
-     * Deletes the media content – and its thumbnail – for [messageID]
-     * from remote storage.
+     * Deletes the media content – and its thumbnail – for
+     * [messageID] from remote storage.
      *
-     * The content is preserved when it is still referenced by other
-     * messages, or when the message is not a media message.
+     * The content is preserved when it is still referenced by
+     * other messages, or when the message is not a media message.
      *
      * @param messageID The identifier of the message.
      *
-     * @throws Exception if the content type cannot be resolved or deletion
-     *   fails.
+     * @throws Exception if the content type cannot be resolved or
+     *   deletion fails.
      */
     suspend fun deleteMediaComponent(messageID: String) {
-        val storage = DependencyValues.current.networking.storage
-        val database = DependencyValues.current.networking.database
         val exceptions = mutableListOf<Exception>()
 
         try {
@@ -260,7 +268,6 @@ object MediaMessageService {
     }
 
     private suspend fun multipleMessagesReference(mediaFilePath: String): Boolean {
-        val database = DependencyValues.current.networking.database
         val allMessages: Map<String, Any?>? = database.getValues<Map<String, Any?>>(NetworkPath.messages.rawValue)
         val referenceCount =
             allMessages
@@ -276,7 +283,6 @@ object MediaMessageService {
         messageID: String,
         localPath: LocalMediaFilePath,
     ): MediaFile {
-        val storage = DependencyValues.current.networking.storage
         val userInfo = mapOf("MessageID" to messageID)
 
         val destination = localPath.localPathURL

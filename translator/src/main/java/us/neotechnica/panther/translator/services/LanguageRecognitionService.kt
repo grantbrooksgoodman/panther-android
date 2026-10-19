@@ -53,16 +53,6 @@ import kotlin.coroutines.resumeWithException
 class LanguageRecognitionService internal constructor(
     private val dependencies: Dependencies = Dependencies(),
 ) {
-    // MARK: - Dependencies
-
-    internal data class Dependencies(
-        val identifyLanguage: suspend (String) -> String = { identifier.identifyLanguage(it).await() },
-        val identifyPossibleLanguages: suspend (String) -> List<Pair<String, Float>> = { string ->
-            identifier.identifyPossibleLanguages(string).await().map { it.languageTag to it.confidence }
-        },
-        val spellChecker: SpellChecker? = SystemSpellChecker,
-    )
-
     // MARK: - Types
 
     // Reports which of the given words are misspelled in a language,
@@ -77,6 +67,16 @@ class LanguageRecognitionService internal constructor(
     private data class CacheKey(
         val string: String,
         val languageCode: String,
+    )
+
+    // MARK: - Dependencies
+
+    internal data class Dependencies(
+        val identifyLanguage: suspend (String) -> String = { identifier.identifyLanguage(it).await() },
+        val identifyPossibleLanguages: suspend (String) -> List<Pair<String, Float>> = { string ->
+            identifier.identifyPossibleLanguages(string).await().map { it.languageTag to it.confidence }
+        },
+        val spellChecker: SpellChecker? = SystemSpellChecker,
     )
 
     // MARK: - Properties

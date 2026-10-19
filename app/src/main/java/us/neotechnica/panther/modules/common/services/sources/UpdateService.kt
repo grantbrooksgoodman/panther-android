@@ -52,21 +52,24 @@ import kotlin.math.roundToLong
  * or the blocking forced-update modal.
  */
 object UpdateService : ForcedUpdateModalDelegate {
-    // MARK: - Dependencies
-
-    private val database: DatabaseDelegate by Dependency { it.networking.database }
-    private val metadataService: MetadataService by Dependency { it.commonServices.metadata }
-
     // MARK: - Types
 
     /** The kind of update to prompt for. */
     enum class UpdateType {
-        /** An update the user must install to continue using the app. */
+        /**
+         * An update the user must install to continue using the
+         * app.
+         */
         FORCED,
 
         /** An update the user may install or postpone. */
         NORMAL,
     }
+
+    // MARK: - Dependencies
+
+    private val database: DatabaseDelegate by Dependency { it.networking.database }
+    private val metadataService: MetadataService by Dependency { it.commonServices.metadata }
 
     // MARK: - Properties
 
@@ -133,17 +136,18 @@ object UpdateService : ForcedUpdateModalDelegate {
     // MARK: - Check for Updates
 
     /**
-     * Checks for an available update and prompts the user to install
-     * it if needed.
+     * Checks for an available update and prompts the user to
+     * install it if needed.
      *
-     * An update is available when the hosted Play Store build number
-     * exceeds the running build's. Updates are forced when the hosted
-     * force-update flag is set, when the app has not been updated
-     * since a previous forced update, or when a postponed update is
-     * at least 10 days old; a forced update presents the blocking
-     * forced-update modal. Otherwise, an alert offers to open Google
-     * Play, and canceling postpones the update – once postponed, the
-     * alert reappears only after at least three subsequent relaunches.
+     * An update is available when the hosted Play Store build
+     * number exceeds the running build's. Updates are forced when
+     * the hosted force-update flag is set, when the app has not
+     * been updated since a previous forced update, or when a
+     * postponed update is at least 10 days old; a forced update
+     * presents the blocking forced-update modal. Otherwise, an
+     * alert offers to open Google Play, and canceling postpones
+     * the update – once postponed, the alert reappears only after
+     * at least three subsequent relaunches.
      *
      * @throws Exception If resolving hosted metadata fails.
      */

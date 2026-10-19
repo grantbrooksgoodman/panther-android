@@ -12,7 +12,9 @@ import us.neotechnica.panther.bundle.chatPageState
 import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
 import us.neotechnica.panther.modules.content.user.extensions.drainEffects
 import us.neotechnica.panther.modules.content.user.models.ChatPageStateServiceEffectID
+import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
@@ -23,6 +25,10 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
  * effects on presentation changes.
  */
 object ChatPageStateService {
+    // MARK: - Dependencies
+
+    private val navigation: Navigation by Dependency { it.navigation }
+
     // MARK: - Properties
 
     /**
@@ -40,18 +46,18 @@ object ChatPageStateService {
     // MARK: - Is Conversation Still Presented
 
     /**
-     * Returns whether the given conversation's chat page is on the
-     * navigation stack: either it is the top page, or a sub-page of the
-     * same conversation – its chat info – was pushed over it. A chat
-     * page being disposed while this holds is not being left, as when
-     * the new chat page hands off to the conversation after its first
-     * message is sent.
+     * Returns whether the given conversation's chat page is on
+     * the navigation stack: either it is the top page, or a
+     * sub-page of the same conversation – its chat info – was
+     * pushed over it. A chat page being disposed while this holds
+     * is not being left, as when the new chat page hands off to
+     * the conversation after its first message is sent.
      *
      * @param conversationIDKey The conversation's identifier key.
      */
     fun isConversationStillPresented(conversationIDKey: String): Boolean {
         val topPath =
-            DependencyValues.current.navigation.state.value.userContent.stack
+            navigation.state.value.userContent.stack
                 .lastOrNull()
         return when (topPath) {
             is UserContentNavigatorState.SeguePaths.Chat -> topPath.conversationIDKey == conversationIDKey

@@ -21,14 +21,14 @@ import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import java.io.File
 
 /**
- * Use [DocumentExportService] to export a file with the system document
- * creator.
+ * Use [DocumentExportService] to export a file with the system
+ * document creator.
  *
- * Call [presentExportController] to show the picker, and register a
- * dismissal handler with [onDismiss] to respond when the export
- * completes. The file is exported from a temporary copy that is removed
- * on dismissal. A host registers the activity result launcher that
- * presents the picker through [registerLauncher].
+ * Call [presentExportController] to show the picker, and register
+ * a dismissal handler with [onDismiss] to respond when the export
+ * completes. The file is exported from a temporary copy that is
+ * removed on dismissal. A host registers the activity result
+ * launcher that presents the picker through [registerLauncher].
  */
 object DocumentExportService {
     // MARK: - Properties
@@ -68,17 +68,18 @@ object DocumentExportService {
     // MARK: - Present Export Controller
 
     /**
-     * Presents the system document creator for exporting the given
-     * file.
+     * Presents the system document creator for exporting the
+     * given file.
      *
-     * The file is copied to the app's cache directory under a localized
-     * default name before presentation; the destination the user
-     * chooses receives a copy.
+     * The file is copied to the app's cache directory under a
+     * localized default name before presentation; the destination
+     * the user chooses receives a copy.
      *
      * @param forFileAt The file to export.
      *
-     * @throws Exception if the file type cannot be determined, if no
-     *   launcher is registered, or if the file cannot be copied.
+     * @throws Exception if the file type cannot be determined, if
+     *   no launcher is registered, or if the file cannot be
+     *   copied.
      */
     fun presentExportController(forFileAt: File) {
         val fileExtension = forFileAt.name.substringAfterLast('.', "").takeIf { it.isNotEmpty() }
@@ -120,11 +121,11 @@ object DocumentExportService {
     // MARK: - Handle Result
 
     /**
-     * Completes the export with the destination the user chose, then
-     * delivers the dismissal to the registered handler.
+     * Completes the export with the destination the user chose,
+     * then delivers the dismissal to the registered handler.
      *
-     * @param destination The chosen destination, or `null` if the user
-     *   canceled.
+     * @param destination The chosen destination, or `null` if the
+     *   user canceled.
      */
     fun handleResult(destination: Uri?) {
         val source = temporaryFile

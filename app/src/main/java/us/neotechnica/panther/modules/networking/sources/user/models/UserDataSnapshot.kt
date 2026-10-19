@@ -22,13 +22,17 @@ class UserDataSnapshot(
     val date: Date = Date(),
     /** The user's serialized data. */
     val data: Map<String, Any?>,
-    /** The duration after which the snapshot is considered expired. */
+    /**
+     * The duration after which the snapshot is considered
+     * expired.
+     */
     val expiryThreshold: Duration,
 ) {
     // MARK: - Computed Properties
 
     /**
-     * A Boolean value that indicates whether the snapshot has expired.
+     * A Boolean value that indicates whether the snapshot has
+     * expired.
      *
      * The age is measured in whole seconds.
      */

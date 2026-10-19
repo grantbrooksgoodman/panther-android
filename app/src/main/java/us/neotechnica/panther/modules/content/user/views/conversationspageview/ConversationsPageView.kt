@@ -79,16 +79,18 @@ private typealias Floats = ConversationsPageViewFloats
  * pull-to-refresh.
  *
  * Tapping the search bar begins a search: the toolbar and title
- * collapse, leaving the search bar and its Cancel button at the top of
- * the page. The search lasts until the user taps Cancel, which clears
- * the query and dismisses the keyboard. The system back gesture ends a
- * search the same way while the page is uncovered.
+ * collapse, leaving the search bar and its Cancel button at the
+ * top of the page. The search lasts until the user taps Cancel,
+ * which clears the query and dismisses the keyboard. The system
+ * back gesture ends a search the same way while the page is
+ * uncovered.
  *
  * @param viewModel The conversations page view model.
  * @param listState The list's scroll state.
- * @param isCovered A Boolean value that indicates whether a pushed
- *   page covers this page. While it is covered, the system back
- *   gesture is left to the navigation stack, even during a search.
+ * @param isCovered A Boolean value that indicates whether a
+ *   pushed page covers this page. While it is covered, the system
+ *   back gesture is left to the navigation stack, even during a
+ *   search.
  * @param modifier The modifier for this view.
  */
 @OptIn(ExperimentalMaterial3Api::class)

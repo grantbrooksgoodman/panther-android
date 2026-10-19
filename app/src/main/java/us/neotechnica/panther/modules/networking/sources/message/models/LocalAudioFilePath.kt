@@ -24,11 +24,20 @@ import java.io.File
  * output audio.
  */
 data class LocalAudioFilePath(
-    /** The input recording's path, relative to the documents directory. */
+    /**
+     * The input recording's path, relative to the documents
+     * directory.
+     */
     val inputFilePathString: String,
-    /** The path to the directory containing the translated output audio. */
+    /**
+     * The path to the directory containing the translated output
+     * audio.
+     */
     val outputDirectoryPathString: String,
-    /** The translated output audio's path, relative to the documents directory. */
+    /**
+     * The translated output audio's path, relative to the
+     * documents directory.
+     */
     val outputFilePathString: String,
 ) {
     // MARK: - Computed Properties

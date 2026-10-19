@@ -36,8 +36,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStora
 import us.neotechnica.panther.translator.Translator
 
 /**
- * The built-in diagnostic actions shown in the subsystem domain of the
- * Developer Mode menu.
+ * The built-in diagnostic actions shown in the subsystem domain
+ * of the Developer Mode menu.
  */
 object DevModeSubsystemActions {
     // MARK: - Properties

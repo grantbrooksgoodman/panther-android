@@ -43,30 +43,31 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * The reducer that drives the welcome page, the root of the onboarding
- * flow.
+ * The reducer that drives the welcome page, the root of the
+ * onboarding flow.
  *
- * This page is the user's entry point into the app. It offers two paths
- * forward: continuing to sign-up, which begins with language selection,
- * or signing in to an existing account.
+ * This page is the user's entry point into the app. It offers two
+ * paths forward: continuing to sign-up, which begins with
+ * language selection, or signing in to an existing account.
  *
  * The page's behavior contract:
  *
  * - On first appearance, the page resolves its translated display
- *   strings, remaining in the loading state until resolution completes.
- *   If resolution fails, the page falls back to its default strings and
- *   loads anyway. The page also resets the app's theme to its default,
- *   clears the application badge, and begins cycling the welcome label.
- * - On every appearance, the page restores the device's language code,
- *   discards any values recorded by [OnboardingService] during a
- *   previous onboarding attempt, and signs the user in anonymously
- *   after a brief delay.
- * - The welcome label displays the welcome message in a randomly chosen
- *   supported language every few seconds, not repeating a language until
- *   all have been shown. Tapping the label resets it and restarts the
- *   cycling loop.
- * - Tapping continue pushes the language selection page; tapping sign in
- *   pushes the sign-in page.
+ *   strings, remaining in the loading state until resolution
+ *   completes. If resolution fails, the page falls back to its
+ *   default strings and loads anyway. The page also resets the
+ *   app's theme to its default, clears the application badge, and
+ *   begins cycling the welcome label.
+ * - On every appearance, the page restores the device's language
+ *   code, discards any values recorded by [OnboardingService]
+ *   during a previous onboarding attempt, and signs the user in
+ *   anonymously after a brief delay.
+ * - The welcome label displays the welcome message in a randomly
+ *   chosen supported language every few seconds, not repeating a
+ *   language until all have been shown. Tapping the label resets
+ *   it and restarts the cycling loop.
+ * - Tapping continue pushes the language selection page; tapping
+ *   sign in pushes the sign-in page.
  */
 class WelcomePageReducer : Reducer<WelcomePageReducer.State, WelcomePageReducer.Action> {
     // MARK: - Dependencies
@@ -82,29 +83,38 @@ class WelcomePageReducer : Reducer<WelcomePageReducer.State, WelcomePageReducer.
     /** The actions the welcome page can process. */
     sealed interface Action {
         /**
-         * An action that indicates the view appeared. Resets the welcome
-         * label, restores the device's language code, discards any
-         * values recorded by [OnboardingService] during a previous
-         * onboarding attempt, and signs the user in anonymously after a
-         * brief delay.
+         * An action that indicates the view appeared. Resets the
+         * welcome label, restores the device's language code,
+         * discards any values recorded by [OnboardingService]
+         * during a previous onboarding attempt, and signs the
+         * user in anonymously after a brief delay.
          */
         data object ViewAppeared : Action
 
         /**
-         * An action that indicates the view appeared for the first time.
-         * Begins display string resolution, resets the app's theme,
-         * clears the application badge, and begins cycling the welcome
-         * label.
+         * An action that indicates the view appeared for the
+         * first time. Begins display string resolution, resets
+         * the app's theme, clears the application badge, and
+         * begins cycling the welcome label.
          */
         data object ViewFirstAppeared : Action
 
-        /** An action that indicates the user tapped the continue button. Pushes the language selection page. */
+        /**
+         * An action that indicates the user tapped the continue
+         * button. Pushes the language selection page.
+         */
         data object ContinueButtonTapped : Action
 
-        /** An action that indicates the user tapped the sign in button. Pushes the sign-in page. */
+        /**
+         * An action that indicates the user tapped the sign in
+         * button. Pushes the sign-in page.
+         */
         data object SignInButtonTapped : Action
 
-        /** An action that indicates the user tapped the welcome label. Resets the label and restarts the cycling loop. */
+        /**
+         * An action that indicates the user tapped the welcome
+         * label. Resets the label and restarts the cycling loop.
+         */
         data object WelcomeLabelTapped : Action
 
         /**
@@ -114,12 +124,18 @@ class WelcomePageReducer : Reducer<WelcomePageReducer.State, WelcomePageReducer.
          */
         data object CycleWelcomeLabelText : Action
 
-        /** An action that indicates display string resolution failed, carrying the resulting [Exception]. */
+        /**
+         * An action that indicates display string resolution
+         * failed, carrying the resulting [Exception].
+         */
         data class ResolveFailed(
             val exception: Exception,
         ) : Action
 
-        /** An action that indicates display string resolution succeeded, carrying the resolved strings. */
+        /**
+         * An action that indicates display string resolution
+         * succeeded, carrying the resolved strings.
+         */
         data class ResolveReturned(
             val strings: List<TranslationOutputMap>,
         ) : Action
@@ -129,11 +145,21 @@ class WelcomePageReducer : Reducer<WelcomePageReducer.State, WelcomePageReducer.
 
     /** The state of the welcome page. */
     data class State(
-        /** The page's translated display strings. Contains the default, untranslated strings until resolution completes. */
+        /**
+         * The page's translated display strings. Contains the
+         * default, untranslated strings until resolution
+         * completes.
+         */
         val strings: List<TranslationOutputMap> = WelcomePageViewStrings.defaultOutputMap,
-        /** The page's loading state. Remains loading until display string resolution completes. */
+        /**
+         * The page's loading state. Remains loading until display
+         * string resolution completes.
+         */
         val viewState: ViewState = ViewState.Loading,
-        /** The text the welcome label displays. Cycles through the supported languages while the page is visible. */
+        /**
+         * The text the welcome label displays. Cycles through the
+         * supported languages while the page is visible.
+         */
         val welcomeLabelText: String = LocalizedStringKey.WelcomeToHello.localized(),
         internal val cycledLanguageCodes: Map<String, String> = emptyMap(),
     ) {

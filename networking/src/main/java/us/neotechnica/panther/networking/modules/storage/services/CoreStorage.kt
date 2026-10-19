@@ -64,6 +64,7 @@ import com.google.firebase.storage.StorageMetadata as FirebaseStorageMetadata
 
 // This service exceeds the file-length and type-body-length limits.
 
+// The counterpart service carries `// swiftlint:disable file_length type_body_length`.
 @Suppress("LargeClass", "TooManyFunctions")
 internal class CoreStorage {
     // MARK: - Properties
@@ -76,12 +77,6 @@ internal class CoreStorage {
 
     private val storedDownloadItemResults = LockIsolated(mapOf<String, DataSample>())
     private val storedItemExistsResults = LockIsolated(mapOf<String, DataSample>())
-
-    // MARK: - Companion
-
-    private companion object {
-        val coalescer = Coalescer<String, Result<Any?>>()
-    }
 
     // MARK: - Global Cache Strategy
 
@@ -1033,6 +1028,12 @@ internal class CoreStorage {
     }
 
     private fun String.resolving(prependingEnvironment: Boolean): String = if (prependingEnvironment) prependingCurrentEnvironment else this
+
+    // MARK: - Companion
+
+    private companion object {
+        val coalescer = Coalescer<String, Result<Any?>>()
+    }
 }
 
 private const val GENERIC_STORAGE_ERROR_CODE = "C81B"

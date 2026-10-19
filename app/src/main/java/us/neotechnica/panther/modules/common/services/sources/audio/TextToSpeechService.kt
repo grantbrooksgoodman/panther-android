@@ -42,11 +42,17 @@ object TextToSpeechService {
 
     // MARK: - Computed Properties
 
-    /** A Boolean value that indicates whether a message is being spoken aloud. */
+    /**
+     * A Boolean value that indicates whether a message is being
+     * spoken aloud.
+     */
     val isSpeaking: Boolean
         get() = speaking
 
-    /** The identifier of the message currently being spoken aloud, or `null`. */
+    /**
+     * The identifier of the message currently being spoken aloud,
+     * or `null`.
+     */
     val speakingMessageID: String?
         get() = speakingMessageIDState
 
@@ -111,15 +117,19 @@ object TextToSpeechService {
     // MARK: - Speak
 
     /**
-     * Speaks [text] aloud with the highest quality voice available for
-     * [languageCode], replacing any in-progress utterance.
+     * Speaks [text] aloud with the highest quality voice
+     * available for [languageCode], replacing any in-progress
+     * utterance.
      *
-     * Nothing is spoken if no voice for the language is installed on
-     * the device; use [isTextToSpeechSupported] to check beforehand.
+     * Nothing is spoken if no voice for the language is installed
+     * on the device; use [isTextToSpeechSupported] to check
+     * beforehand.
      *
      * @param text The text to speak.
-     * @param languageCode The language code of the voice with which to speak the text.
-     * @param messageID The identifier of the message being spoken.
+     * @param languageCode The language code of the voice with
+     *   which to speak the text.
+     * @param messageID The identifier of the message being
+     *   spoken.
      *
      * @return `true` if the utterance was queued for speaking;
      *   otherwise, `false`.
@@ -165,14 +175,15 @@ object TextToSpeechService {
      * Returns the highest quality voice available for the given
      * language code.
      *
-     * Only voices installed on the device are considered: a voice the
-     * speech engine lists but has not downloaded, or one that requires
-     * a network connection, is skipped. A high-quality voice is
-     * preferred; otherwise, the best installed voice for the language
-     * is returned. Results are cached in memory per language code.
+     * Only voices installed on the device are considered: a voice
+     * the speech engine lists but has not downloaded, or one that
+     * requires a network connection, is skipped. A high-quality
+     * voice is preferred; otherwise, the best installed voice for
+     * the language is returned. Results are cached in memory per
+     * language code.
      *
-     * **Note:** While the speech engine is still initializing, this
-     * method returns `null` without caching a result.
+     * **Note:** While the speech engine is still initializing,
+     * this method returns `null` without caching a result.
      *
      * @param languageCode The language code of the voice to find.
      *

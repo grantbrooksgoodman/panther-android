@@ -27,20 +27,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
  * ```
  */
 object NetworkingAppExceptions {
-    // MARK: - Properties
-
-    /** Catalogued database exceptions. */
-    val Database = DatabaseAppExceptions
-
-    /** Catalogued serialization exceptions. */
-    val Serializable = SerializableAppExceptions
-
-    /** Catalogued storage exceptions. */
-    val Storage = StorageAppExceptions
-
-    /** Catalogued translation exceptions. */
-    val Translation = TranslationAppExceptions
-
     // MARK: - Types
 
     /** Catalogued database exceptions. */
@@ -78,6 +64,20 @@ object NetworkingAppExceptions {
         /** Derivation of the translation failed. */
         val translationDerivationFailed = AppException("43B4")
     }
+
+    // MARK: - Properties
+
+    /** Catalogued database exceptions. */
+    val Database = DatabaseAppExceptions
+
+    /** Catalogued serialization exceptions. */
+    val Serializable = SerializableAppExceptions
+
+    /** Catalogued storage exceptions. */
+    val Storage = StorageAppExceptions
+
+    /** Catalogued translation exceptions. */
+    val Translation = TranslationAppExceptions
 }
 
 /**

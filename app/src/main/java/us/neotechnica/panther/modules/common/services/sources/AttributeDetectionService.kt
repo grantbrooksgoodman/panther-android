@@ -28,14 +28,14 @@ import java.util.Locale
 import java.util.regex.Pattern
 
 /**
- * Use [AttributeDetectionService] to handle taps on attributes detected
- * in text.
+ * Use [AttributeDetectionService] to handle taps on attributes
+ * detected in text.
  *
- * The service detects dates, links, and phone numbers in a message's
- * text and notifies its delegate when the user taps one. Register your
- * own conformance with [registerDelegate] to customize how selections
- * are handled; otherwise, [DefaultAttributeDetectionServiceDelegate]
- * is used.
+ * The service detects dates, links, and phone numbers in a
+ * message's text and notifies its delegate when the user taps
+ * one. Register your own conformance with [registerDelegate] to
+ * customize how selections are handled; otherwise,
+ * [DefaultAttributeDetectionServiceDelegate] is used.
  */
 object AttributeDetectionService {
     // MARK: - Types
@@ -85,16 +85,16 @@ object AttributeDetectionService {
     // MARK: - Detect Attributes
 
     /**
-     * Returns the dates, links, and phone numbers detected in the given
-     * message's text, computing them off the main thread once per
-     * message.
+     * Returns the dates, links, and phone numbers detected in the
+     * given message's text, computing them off the main thread
+     * once per message.
      *
      * @param text The text to inspect.
-     * @param messageID The identifier of the message the text belongs
-     *   to, under which the result is cached.
+     * @param messageID The identifier of the message the text
+     *   belongs to, under which the result is cached.
      *
-     * @return The detected attributes, each with the character range it
-     *   occupies.
+     * @return The detected attributes, each with the character
+     *   range it occupies.
      */
     suspend fun attributes(
         text: String,
@@ -116,13 +116,13 @@ object AttributeDetectionService {
     ): List<DetectedAttribute>? = cachedAttributesForMessageIDs.wrappedValue[messageID]?.takeIf { it.first == text }?.second
 
     /**
-     * Returns the dates, links, and phone numbers detected in the given
-     * text, in order of appearance.
+     * Returns the dates, links, and phone numbers detected in the
+     * given text, in order of appearance.
      *
      * @param text The text to inspect.
      *
-     * @return The detected attributes, each with the character range it
-     *   occupies.
+     * @return The detected attributes, each with the character
+     *   range it occupies.
      */
     fun detectAttributes(text: String): List<DetectedAttribute> {
         if (text.isEmpty()) return emptyList()
@@ -148,8 +148,8 @@ object AttributeDetectionService {
     // MARK: - Handle Gesture
 
     /**
-     * Handles a tap on the given text, notifying the delegate of every
-     * detected attribute the tapped character falls on.
+     * Handles a tap on the given text, notifying the delegate of
+     * every detected attribute the tapped character falls on.
      *
      * @param text The text that was tapped.
      * @param characterIndex The index of the tapped character.
@@ -261,8 +261,8 @@ object AttributeDetectionService {
     }
 
     /**
-     * Parses a date the classifier found, trying the device language's
-     * standard styles and then the English patterns.
+     * Parses a date the classifier found, trying the device
+     * language's standard styles and then the English patterns.
      */
     internal fun parseDate(value: String): Date? {
         val trimmed = value.trim().replace(ORDINAL_SUFFIX_REGEX, "")

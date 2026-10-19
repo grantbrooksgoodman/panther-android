@@ -48,6 +48,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 
+// The counterpart service carries `// swiftlint:disable file_length type_body_length`.
+
 /**
  * The service that synchronizes a conversation with its server state.
  *
@@ -77,13 +79,14 @@ class ConversationSyncService {
     // MARK: - Synchronize Conversation
 
     /**
-     * Synchronizes the given conversation with its server state and
-     * returns the reconciled conversation.
+     * Synchronizes the given conversation with its server state
+     * and returns the reconciled conversation.
      *
-     * Concurrent calls for the same conversation coalesce onto a single
-     * synchronization. A conversation whose recent synchronization
-     * failed is temporarily ignored, on an exponential backoff, and
-     * returned unchanged until its cooldown elapses.
+     * Concurrent calls for the same conversation coalesce onto a
+     * single synchronization. A conversation whose recent
+     * synchronization failed is temporarily ignored, on an
+     * exponential backoff, and returned unchanged until its
+     * cooldown elapses.
      */
     suspend fun synchronizeConversation(conversation: Conversation): Conversation =
         coalescer(conversation.id.key) {

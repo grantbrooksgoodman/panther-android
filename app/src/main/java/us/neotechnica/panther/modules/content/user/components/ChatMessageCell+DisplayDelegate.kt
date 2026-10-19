@@ -47,12 +47,14 @@ import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherCol
 import us.neotechnica.panther.modules.common.models.Contact
 import us.neotechnica.panther.modules.common.models.DetectedAttribute
 import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.modules.common.services.sources.AttributeDetectionService
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewColors
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewFloats
 import us.neotechnica.panther.modules.content.user.constants.ChatPageViewStrings
 import us.neotechnica.panther.modules.content.user.constants.UserContentExtensionsColors
 import us.neotechnica.panther.modules.content.user.constants.UserContentExtensionsFloats
 import us.neotechnica.panther.modules.content.user.extensions.fromInitials
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 
@@ -113,10 +115,10 @@ internal fun SenderNameLabel(row: ChatMessageRowData) {
 }
 
 /**
- * The sender's avatar shown to the leading edge of every received group
- * message, aligned to the bubble's bottom: the sender's contact image,
- * the contact's initials, or – without a contact – the generic person
- * glyph.
+ * The sender's avatar shown to the leading edge of every received
+ * group message, aligned to the bubble's bottom: the sender's
+ * contact image, the contact's initials, or – without a contact –
+ * the generic person glyph.
  *
  * @param row The row whose sender to render.
  */
@@ -186,6 +188,10 @@ internal fun bubbleShape(isOwn: Boolean): Shape =
  * tap on the bubble resolves to the character it falls on.
  */
 internal class MessageLabel {
+    // MARK: - Dependencies
+
+    private val attributeDetectionService: AttributeDetectionService by Dependency { it.commonServices.attributeDetection }
+
     // MARK: - Properties
 
     var layoutResult: TextLayoutResult? = null
@@ -204,7 +210,7 @@ internal class MessageLabel {
     fun handleGesture(touchLocation: Offset) {
         val layoutResult = layoutResult ?: return
         val characterIndex = layoutResult.characterIndex(touchLocation - positionInRoot) ?: return
-        DependencyValues.current.commonServices.attributeDetection
+        attributeDetectionService
             .handleGesture(layoutResult.layoutInput.text.text, characterIndex)
     }
 }

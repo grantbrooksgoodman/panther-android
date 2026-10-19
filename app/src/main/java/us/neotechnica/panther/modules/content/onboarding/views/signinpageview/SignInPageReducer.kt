@@ -19,6 +19,7 @@ import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.common.services.sources.AnalyticsService
+import us.neotechnica.panther.modules.common.services.sources.PhoneNumberService
 import us.neotechnica.panther.modules.common.services.sources.RegionDetailService
 import us.neotechnica.panther.modules.content.onboarding.dependencies.onboardingService
 import us.neotechnica.panther.modules.content.onboarding.extensions.verifyPhoneNumber
@@ -54,53 +55,59 @@ import kotlin.time.Duration.Companion.milliseconds
 
 // This reducer exceeds the file-length and type-body-length limits.
 
+// The counterpart reducer carries `// swiftlint:disable file_length function_body_length type_body_length`.
+
 /**
- * The reducer that drives the sign-in page of the onboarding flow.
+ * The reducer that drives the sign-in page of the onboarding
+ * flow.
  *
  * This page performs both steps of phone number verification for
- * returning users. It begins in the phone number configuration, where
- * the user enters their phone number; once a verification code has
- * been sent, it switches to the verification code configuration, where
- * the user enters the six-digit code sent to their phone number.
- * Authenticating successfully signs the user in.
+ * returning users. It begins in the phone number configuration,
+ * where the user enters their phone number; once a verification
+ * code has been sent, it switches to the verification code
+ * configuration, where the user enters the six-digit code sent to
+ * their phone number. Authenticating successfully signs the user
+ * in.
  *
  * The page's behavior contract:
  *
- * - On appearance, the page resolves its translated display strings,
- *   remaining in the loading state until resolution completes. If
- *   resolution fails, the page falls back to its default strings and
- *   loads anyway. The page restores any phone number and region
- *   previously recorded by [OnboardingService], defaulting to the
- *   device's region. When Developer Mode is enabled, the page instead
- *   prefills a test phone number and verification code.
- * - In the phone number configuration, the continue button is enabled
- *   only while the entered phone number is a valid length for the
- *   selected region's calling code. In the verification code
- *   configuration, it is enabled only while the entered code is exactly
- *   six characters long.
+ * - On appearance, the page resolves its translated display
+ *   strings, remaining in the loading state until resolution
+ *   completes. If resolution fails, the page falls back to its
+ *   default strings and loads anyway. The page restores any phone
+ *   number and region previously recorded by [OnboardingService]
+ *   , defaulting to the device's region. When Developer Mode is
+ *   enabled, the page instead prefills a test phone number and
+ *   verification code.
+ * - In the phone number configuration, the continue button is
+ *   enabled only while the entered phone number is a valid length
+ *   for the selected region's calling code. In the verification
+ *   code configuration, it is enabled only while the entered code
+ *   is exactly six characters long.
  * - Tapping continue dismisses the keyboard, then – after a brief
- *   delay – disables the page's buttons, presents a dimmed activity
- *   overlay, and begins the current configuration's operation: the
- *   account existence check in the phone number configuration, or
- *   authentication in the verification code configuration. Beginning
- *   either operation cancels the other if it is still in flight.
- * - If no account is registered with the phone number, the reducer
- *   offers to sign the user up instead. If the user accepts, the
- *   reducer records the phone number and region with
- *   [OnboardingService] and replaces the navigation stack with the
- *   language selection page.
+ *   delay – disables the page's buttons, presents a dimmed
+ *   activity overlay, and begins the current configuration's
+ *   operation: the account existence check in the phone number
+ *   configuration, or authentication in the verification code
+ *   configuration. Beginning either operation cancels the other
+ *   if it is still in flight.
+ * - If no account is registered with the phone number, the
+ *   reducer offers to sign the user up instead. If the user
+ *   accepts, the reducer records the phone number and region with
+ *   [OnboardingService] and replaces the navigation stack with
+ *   the language selection page.
  * - Otherwise, the reducer sends a verification code to the phone
  *   number and switches to the verification code configuration.
- *   Tapping back in that configuration returns to the phone number
- *   configuration rather than popping the page.
- * - If authentication succeeds, the reducer persists the authenticated
- *   user's identifier as the signed-in user's ID, logs a sign-in
- *   analytics event, and presents the splash page. If verification or
- *   authentication fails, the reducer removes the overlay, re-enables
- *   the buttons, and surfaces the error as a toast. Failures caused by
- *   the user – an invalid phone number, an incorrect code, an expired
- *   session, or a cancelled web context – are marked non-reportable
- *   before logging.
+ *   Tapping back in that configuration returns to the phone
+ *   number configuration rather than popping the page.
+ * - If authentication succeeds, the reducer persists the
+ *   authenticated user's identifier as the signed-in user's ID,
+ *   logs a sign-in analytics event, and presents the splash page.
+ *   If verification or authentication fails, the reducer removes
+ *   the overlay, re-enables the buttons, and surfaces the error
+ *   as a toast. Failures caused by the user – an invalid phone
+ *   number, an incorrect code, an expired session, or a cancelled
+ *   web context – are marked non-reportable before logging.
  */
 @Suppress("LargeClass")
 class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Action> {
@@ -117,7 +124,11 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
 
     /** The actions the sign-in page can process. */
     sealed interface Action {
-        /** An action that indicates the view appeared. Restores any previously recorded phone number and region, then begins display string resolution. */
+        /**
+         * An action that indicates the view appeared. Restores
+         * any previously recorded phone number and region, then
+         * begins display string resolution.
+         */
         data object ViewAppeared : Action
 
         /**
@@ -128,74 +139,113 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
         data object BackButtonTapped : Action
 
         /**
-         * An action that indicates the user tapped the continue button.
-         * Dismisses the keyboard, then triggers [RunContinueButtonEffect]
-         * after a brief delay.
+         * An action that indicates the user tapped the continue
+         * button. Dismisses the keyboard, then triggers
+         * [RunContinueButtonEffect] after a brief delay.
          */
         data object ContinueButtonTapped : Action
 
-        /** An action that indicates the user swiped down on the page. Dismisses the keyboard. */
+        /**
+         * An action that indicates the user swiped down on the
+         * page. Dismisses the keyboard.
+         */
         data object DidSwipeDown : Action
 
         /**
-         * An action that begins the current configuration's operation:
-         * the account existence check in the phone number
-         * configuration, or authentication in the verification code
-         * configuration.
+         * An action that begins the current configuration's
+         * operation: the account existence check in the phone
+         * number configuration, or authentication in the
+         * verification code configuration.
          */
         data object RunContinueButtonEffect : Action
 
-        /** An action that indicates the account does not exist alert was dismissed, carrying whether the user selected the cancel option. */
+        /**
+         * An action that indicates the account does not exist
+         * alert was dismissed, carrying whether the user selected
+         * the cancel option.
+         */
         data class AccountDoesNotExistAlertDismissed(
             val cancelled: Boolean,
         ) : Action
 
-        /** An action that indicates the account existence check resolved, carrying whether an account is registered with the entered phone number. */
+        /**
+         * An action that indicates the account existence check
+         * resolved, carrying whether an account is registered
+         * with the entered phone number.
+         */
         data class AccountExistsReturned(
             val accountExists: Boolean,
         ) : Action
 
-        /** An action that indicates authentication failed, carrying the resulting [Exception]. */
+        /**
+         * An action that indicates authentication failed,
+         * carrying the resulting [Exception].
+         */
         data class AuthenticateUserFailed(
             val exception: Exception,
         ) : Action
 
-        /** An action that indicates authentication succeeded, carrying the authenticated user's identifier. */
+        /**
+         * An action that indicates authentication succeeded,
+         * carrying the authenticated user's identifier.
+         */
         data class AuthenticateUserReturned(
             val userID: String,
         ) : Action
 
-        /** An action that indicates the entered phone number changed, carrying the new value. */
+        /**
+         * An action that indicates the entered phone number
+         * changed, carrying the new value.
+         */
         data class PhoneNumberStringChanged(
             val phoneNumberString: String,
         ) : Action
 
-        /** An action that indicates display string resolution failed, carrying the resulting [Exception]. */
+        /**
+         * An action that indicates display string resolution
+         * failed, carrying the resulting [Exception].
+         */
         data class ResolveFailed(
             val exception: Exception,
         ) : Action
 
-        /** An action that indicates display string resolution succeeded, carrying the resolved strings. */
+        /**
+         * An action that indicates display string resolution
+         * succeeded, carrying the resolved strings.
+         */
         data class ResolveReturned(
             val strings: List<TranslationOutputMap>,
         ) : Action
 
-        /** An action that indicates the selected region changed, carrying the new region code. */
+        /**
+         * An action that indicates the selected region changed,
+         * carrying the new region code.
+         */
         data class SelectedRegionCodeChanged(
             val selectedRegionCode: String,
         ) : Action
 
-        /** An action that indicates the entered verification code changed, carrying the new value. */
+        /**
+         * An action that indicates the entered verification code
+         * changed, carrying the new value.
+         */
         data class VerificationCodeChanged(
             val verificationCode: String,
         ) : Action
 
-        /** An action that indicates phone number verification failed, carrying the resulting [Exception]. */
+        /**
+         * An action that indicates phone number verification
+         * failed, carrying the resulting [Exception].
+         */
         data class VerifyPhoneNumberFailed(
             val exception: Exception,
         ) : Action
 
-        /** An action that indicates a verification code was sent to the entered phone number, carrying the identifier issued for the authentication attempt. */
+        /**
+         * An action that indicates a verification code was sent
+         * to the entered phone number, carrying the identifier
+         * issued for the authentication attempt.
+         */
         data class VerifyPhoneNumberReturned(
             val result: AuthDelegate.PhoneVerificationResult,
         ) : Action
@@ -207,23 +257,38 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
     data class State(
         /** The page's current input configuration. */
         val configuration: Configuration = Configuration.PHONE_NUMBER,
-        /** A Boolean value that indicates whether the back button is enabled. Disabled while verification or authentication is in progress. */
+        /**
+         * A Boolean value that indicates whether the back button
+         * is enabled. Disabled while verification or
+         * authentication is in progress.
+         */
         val isBackButtonEnabled: Boolean = true,
         /**
-         * A Boolean value that indicates whether the continue button is
-         * enabled. Enabled only while the current configuration's input is
-         * valid and no operation is in progress.
+         * A Boolean value that indicates whether the continue
+         * button is enabled. Enabled only while the current
+         * configuration's input is valid and no operation is in
+         * progress.
          */
         val isContinueButtonEnabled: Boolean = false,
         /** The phone number the user has entered. */
         val phoneNumberString: String = "",
-        /** The code of the region the entered phone number belongs to. */
+        /**
+         * The code of the region the entered phone number belongs
+         * to.
+         */
         val selectedRegionCode: String = "",
-        /** The page's translated display strings. Contains the default, untranslated strings until resolution completes. */
+        /**
+         * The page's translated display strings. Contains the
+         * default, untranslated strings until resolution
+         * completes.
+         */
         val strings: List<TranslationOutputMap> = SignInPageViewStrings.defaultOutputMap,
         /** The verification code the user has entered. */
         val verificationCode: String = "",
-        /** The page's loading state. Remains loading until display string resolution completes. */
+        /**
+         * The page's loading state. Remains loading until display
+         * string resolution completes.
+         */
         val viewState: ViewState = ViewState.Loading,
         internal val authID: String = "",
     ) {
@@ -231,16 +296,30 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
 
         /** The input configurations the sign-in page can display. */
         enum class Configuration {
-            /** The configuration in which the user enters their phone number. */
+            /**
+             * The configuration in which the user enters their
+             * phone number.
+             */
             PHONE_NUMBER,
 
-            /** The configuration in which the user enters the verification code sent to their phone number. */
+            /**
+             * The configuration in which the user enters the
+             * verification code sent to their phone number.
+             */
             VERIFICATION_CODE,
         }
 
+        // MARK: - Dependencies
+
+        private val phoneNumberService: PhoneNumberService by Dependency { it.commonServices.phoneNumber }
+        private val regionDetailService: RegionDetailService by Dependency { it.commonServices.regionDetail }
+
         // MARK: - Computed Properties
 
-        /** The continue button's title for the current configuration. */
+        /**
+         * The continue button's title for the current
+         * configuration.
+         */
         val continueButtonText: String
             get() =
                 strings.value(
@@ -252,7 +331,10 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
                     SignInPageViewStrings,
                 )
 
-        /** The instruction label's text for the current configuration. */
+        /**
+         * The instruction label's text for the current
+         * configuration.
+         */
         val instructionLabelText: String
             get() =
                 strings.value(
@@ -269,7 +351,7 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
 
         internal val numberIsValidLength: Boolean
             get() =
-                DependencyValues.current.commonServices.phoneNumber.numberIsValidLength(
+                phoneNumberService.numberIsValidLength(
                     phoneNumberString.digits.length,
                     phoneNumber.callingCode,
                 )
@@ -278,9 +360,9 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
             get() =
                 PhoneNumber(
                     callingCode =
-                        DependencyValues.current.commonServices.regionDetail
+                        regionDetailService
                             .callingCode(selectedRegionCode)
-                            ?: DependencyValues.current.commonServices.phoneNumber.deviceCallingCode,
+                            ?: phoneNumberService.deviceCallingCode,
                     nationalNumberString = phoneNumberString.digits,
                     regionCode = selectedRegionCode,
                     label = null,

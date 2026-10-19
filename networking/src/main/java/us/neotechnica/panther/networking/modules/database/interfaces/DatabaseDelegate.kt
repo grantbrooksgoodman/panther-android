@@ -41,13 +41,6 @@ import kotlin.time.Duration
  * callers receive the same result.
  */
 interface DatabaseDelegate {
-    // MARK: - Companion
-
-    companion object {
-        /** The default result limit for [queryValues]. */
-        const val DEFAULT_QUERY_LIMIT = 10
-    }
-
     // MARK: - Methods
 
     /**
@@ -280,6 +273,13 @@ interface DatabaseDelegate {
             data = updates,
             prependingEnvironment = false,
         )
+    }
+
+    // MARK: - Companion
+
+    companion object {
+        /** The default result limit for [queryValues]. */
+        const val DEFAULT_QUERY_LIMIT = 10
     }
 }
 

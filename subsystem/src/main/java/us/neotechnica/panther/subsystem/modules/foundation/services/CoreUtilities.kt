@@ -99,11 +99,12 @@ object CoreUtilities {
      * display name that includes the localized name and, when
      * different, the endonym in parentheses.
      *
-     * @param languageCode The language code to localize the display
-     *   names for.
+     * @param languageCode The language code to localize the
+     *   display names for.
      *
-     * @return The localized dictionary, or `null` when no language-code
-     *   dictionary has been stored in [RuntimeStorage].
+     * @return The localized dictionary, or `null` when no
+     *   language-code dictionary has been stored in
+     *   [RuntimeStorage].
      */
     fun localizedLanguageCodeDictionary(languageCode: String): Map<String, String>? {
         val languageCodeDictionary = RuntimeStorage.languageCodeDictionary ?: return null

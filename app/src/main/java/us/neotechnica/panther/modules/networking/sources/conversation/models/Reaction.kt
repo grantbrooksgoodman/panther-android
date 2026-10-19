@@ -61,7 +61,10 @@ data class Reaction(
         val encodedValue: String
             get() = lowercaseValue.uppercase()
 
-        /** The value that determines the style's position in display order. */
+        /**
+         * The value that determines the style's position in
+         * display order.
+         */
         val orderValue: Int
             get() =
                 when (this) {
@@ -106,11 +109,11 @@ data class Reaction(
             /**
              * Creates a style from its serialized representation.
              *
-             * @param encodedValue The serialized representation of the
-             *   style.
+             * @param encodedValue The serialized representation
+             *   of the style.
              *
-             * @return The matching style, or `null` if the value does
-             *   not represent a known style.
+             * @return The matching style, or `null` if the value
+             *   does not represent a known style.
              */
             fun from(encodedValue: String): Style? =
                 entries.firstOrNull {

@@ -6,6 +6,8 @@
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
+@file:Suppress("FileLength")
+
 package us.neotechnica.panther.subsystem.modules.foundation.models
 
 import us.neotechnica.panther.subsystem.AppSubsystem
@@ -14,6 +16,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.extensions.staticIden
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.localization.models.Localized
 import us.neotechnica.panther.subsystem.modules.localization.models.SubsystemStringKey
+
+// The counterpart model runs to 404 lines in a package without a file-length rule.
 
 /**
  * A structured error type that captures a human-readable
@@ -33,11 +37,11 @@ import us.neotechnica.panther.subsystem.modules.localization.models.SubsystemStr
  *
  * ## Error Codes
  *
- * Every exception carries a [code] derived from a SHA-256 hash
- * of its descriptor. This produces a short, deterministic
- * identifier that remains stable across builds for any given
- * descriptor string. You can also supply a static code through
- * the `userInfo` map's `"StaticErrorCode"` key; exceptions created
+ * Every exception carries a [code] derived from a SHA-256 hash of
+ * its descriptor. This produces a short, deterministic identifier
+ * that remains stable across builds for any given descriptor
+ * string. You can also supply a static code through the
+ * `userInfo` map's `"StaticErrorCode"` key; exceptions created
  * with [from] derive theirs from the throwable's type.
  *
  * ## User-Facing Descriptors
@@ -46,8 +50,8 @@ import us.neotechnica.panther.subsystem.modules.localization.models.SubsystemStr
  * end-user-appropriate message. On general-release builds, if no
  * user-facing descriptor has been registered through the
  * [ExceptionMetadataDelegate][us.neotechnica.panther.subsystem.modules.foundation.interfaces.ExceptionMetadataDelegate],
- * a generic "something went wrong" string is returned instead of
- * the developer-facing descriptor.
+ * a generic "something went wrong" string is returned instead
+ * of the developer-facing descriptor.
  *
  * ## Underlying Exceptions
  *
@@ -66,7 +70,10 @@ class Exception(
 ) : kotlin.Exception(descriptor) {
     // MARK: - Types
 
-    /** The reserved keys the exception recognizes in its user info. */
+    /**
+     * The reserved keys the exception recognizes in its user
+     * info.
+     */
     enum class UserInfo(
         val rawValue: String,
     ) {
@@ -78,124 +85,6 @@ class Exception(
         USER_FACING_DESCRIPTOR("UserFacingDescriptor"),
     }
 
-    // MARK: - Companion
-
-    companion object {
-        /**
-         * Creates an exception from a Kotlin [Throwable].
-         *
-         * The throwable's message becomes the descriptor. The static
-         * error code is derived from a `[domain:code]` identifier –
-         * the throwable's fully qualified type name, plus the value
-         * under the `"NSErrorCode"` user-info key when the caller
-         * supplies one – hashed to four characters, so every instance
-         * of the same throwable type shares one [code]. The type name
-         * is recorded under the `"NSErrorDomain"` user-info key.
-         *
-         * @param throwable The throwable to wrap.
-         * @param isReportable Whether the exception can be reported,
-         *   or `null` to resolve automatically.
-         * @param userInfo Additional supplementary information to
-         *   merge.
-         * @param underlyingExceptions An optional list of exceptions
-         *   that caused this one.
-         * @param metadata The source-location metadata for this
-         *   exception.
-         *
-         * @return The wrapping exception.
-         */
-        fun from(
-            throwable: Throwable,
-            isReportable: Boolean? = null,
-            userInfo: Map<String, Any>? = null,
-            underlyingExceptions: List<Exception>? = null,
-            metadata: ExceptionMetadata,
-        ): Exception {
-            val concatenatedUserInfo = (userInfo ?: emptyMap()).toMutableMap()
-            concatenatedUserInfo[UserInfo.NS_ERROR_DOMAIN.rawValue] = throwable.javaClass.name
-            concatenatedUserInfo[UserInfo.STATIC_ERROR_CODE.rawValue] =
-                throwable.staticIdentifier(userInfo?.get(UserInfo.NS_ERROR_CODE.rawValue)).errorCode
-
-            return Exception(
-                throwable.message ?: throwable.javaClass.simpleName,
-                isReportable = isReportable,
-                userInfo = concatenatedUserInfo,
-                underlyingExceptions = underlyingExceptions,
-                metadata = metadata,
-            )
-        }
-
-        /**
-         * Creates an exception from a Kotlin [Throwable].
-         *
-         * @param throwable The throwable to wrap.
-         * @param metadata The source-location metadata for this
-         *   exception.
-         *
-         * @return The wrapping exception.
-         */
-        fun from(
-            throwable: Throwable,
-            metadata: ExceptionMetadata,
-        ): Exception = from(throwable, isReportable = null, metadata = metadata)
-
-        /**
-         * Returns a non-reportable exception indicating the operation
-         * was abandoned because the calling task was cancelled.
-         *
-         * Cancellation is a control-flow signal rather than a failure;
-         * exceptions created with this factory should be handled
-         * silently and never surfaced to the user.
-         *
-         * @param metadata The source-location metadata for this
-         *   exception.
-         */
-        fun cancelled(metadata: ExceptionMetadata): Exception =
-            Exception(
-                "The operation was cancelled.",
-                isReportable = false,
-                metadata = metadata,
-            )
-
-        /**
-         * Returns a non-reportable exception indicating the internet
-         * connection is offline.
-         *
-         * @param metadata The source-location metadata for this
-         *   exception.
-         */
-        fun internetConnectionOffline(metadata: ExceptionMetadata): Exception =
-            Exception(
-                "Internet connection is offline.",
-                isReportable = false,
-                userInfo =
-                    mapOf(
-                        UserInfo.USER_FACING_DESCRIPTOR.rawValue to
-                            Localized(SubsystemStringKey.INTERNET_CONNECTION_OFFLINE).wrappedValue,
-                    ),
-                metadata = metadata,
-            )
-
-        /**
-         * Returns a non-reportable exception indicating the operation
-         * timed out.
-         *
-         * @param metadata The source-location metadata for this
-         *   exception.
-         */
-        fun timedOut(metadata: ExceptionMetadata): Exception =
-            Exception(
-                "The operation timed out. Please try again later.",
-                isReportable = false,
-                userInfo =
-                    mapOf(
-                        UserInfo.USER_FACING_DESCRIPTOR.rawValue to
-                            Localized(SubsystemStringKey.TIMED_OUT).wrappedValue,
-                    ),
-                metadata = metadata,
-            )
-    }
-
     // MARK: - Properties
 
     /**
@@ -205,11 +94,12 @@ class Exception(
     val code: String
 
     /**
-     * A Boolean value that indicates whether this exception should
-     * be reported to crash-reporting or analytics infrastructure.
+     * A Boolean value that indicates whether this exception
+     * should be reported to crash-reporting or analytics
+     * infrastructure.
      *
-     * When the initializer's `isReportable` argument is `null`, the
-     * value is resolved through the registered
+     * When the initializer's `isReportable` argument is `null`,
+     * the value is resolved through the registered
      * [ExceptionMetadataDelegate][us.neotechnica.panther.subsystem.modules.foundation.interfaces.ExceptionMetadataDelegate],
      * falling back to `true` when no delegate is registered.
      */
@@ -235,8 +125,9 @@ class Exception(
 
     /**
      * A copy of this exception with its descriptor and error code
-     * merged into the user info under the reserved [UserInfo.DESCRIPTOR]
-     * and [UserInfo.ERROR_CODE] keys, for inclusion in a filed report.
+     * merged into the user info under the reserved
+     * [UserInfo.DESCRIPTOR] and [UserInfo.ERROR_CODE] keys, for
+     * inclusion in a filed report.
      */
     val hydrated: Exception
         get() =
@@ -272,9 +163,10 @@ class Exception(
      * The value is resolved in the following order:
      * 1. A `"UserFacingDescriptor"` entry in [userInfo].
      * 2. A mapping provided by the
-     *    [ExceptionMetadataDelegate][us.neotechnica.panther.subsystem.modules.foundation.interfaces.ExceptionMetadataDelegate].
+     *   [ExceptionMetadataDelegate][us.neotechnica.panther.subsystem.modules.foundation.interfaces.ExceptionMetadataDelegate]
+     *   .
      * 3. On general-release builds, a generic string. On
-     *    pre-release builds, the raw [descriptor].
+     *   pre-release builds, the raw [descriptor].
      */
     val userFacingDescriptor: String
         get() {
@@ -301,6 +193,32 @@ class Exception(
                 ?.takeIf { it.isNotEmpty() }
                 ?.distinct()
                 ?.filter { it != this }
+    }
+
+    // MARK: - Equatable Conformance
+
+    override fun equals(other: Any?): Boolean {
+        if (other !is Exception) return false
+
+        val leftStrings = userInfo?.filterValues { it is String }?.mapValues { it.value as String }
+        val rightStrings = other.userInfo?.filterValues { it is String }?.mapValues { it.value as String }
+        val leftNonStringCount = (userInfo?.size ?: 0) - (leftStrings?.size ?: 0)
+        val rightNonStringCount = (other.userInfo?.size ?: 0) - (rightStrings?.size ?: 0)
+
+        return code == other.code &&
+            descriptor == other.descriptor &&
+            isReportable == other.isReportable &&
+            metadata == other.metadata &&
+            underlyingExceptions == other.underlyingExceptions &&
+            leftStrings == rightStrings &&
+            leftNonStringCount == rightNonStringCount
+    }
+
+    override fun hashCode(): Int {
+        var result = code.hashCode()
+        result = 31 * result + descriptor.hashCode()
+        result = 31 * result + isReportable.hashCode()
+        return result
     }
 
     // MARK: - Append
@@ -366,30 +284,123 @@ class Exception(
      */
     fun isEqual(toAny: List<AppException>): Boolean = toAny.any { it.errorCode == code }
 
-    // MARK: - Equatable Conformance
+    // MARK: - Companion
 
-    override fun equals(other: Any?): Boolean {
-        if (other !is Exception) return false
+    companion object {
+        /**
+         * Creates an exception from a Kotlin [Throwable].
+         *
+         * The throwable's message becomes the descriptor. The static
+         * error code is derived from a `[domain:code]` identifier –
+         * the throwable's fully qualified type name, plus the value
+         * under the `"NSErrorCode"` user-info key when the caller
+         * supplies one – hashed to four characters, so every instance
+         * of the same throwable type shares one [code]. The type name
+         * is recorded under the `"NSErrorDomain"` user-info key.
+         *
+         * @param throwable The throwable to wrap.
+         * @param isReportable Whether the exception can be reported,
+         *   or `null` to resolve automatically.
+         * @param userInfo Additional supplementary information to
+         *   merge.
+         * @param underlyingExceptions An optional list of exceptions
+         *   that caused this one.
+         * @param metadata The source-location metadata for this
+         *   exception.
+         *
+         * @return The wrapping exception.
+         */
+        fun from(
+            throwable: Throwable,
+            isReportable: Boolean? = null,
+            userInfo: Map<String, Any>? = null,
+            underlyingExceptions: List<Exception>? = null,
+            metadata: ExceptionMetadata,
+        ): Exception {
+            val concatenatedUserInfo = (userInfo ?: emptyMap()).toMutableMap()
+            concatenatedUserInfo[UserInfo.NS_ERROR_DOMAIN.rawValue] = throwable.javaClass.name
+            concatenatedUserInfo[UserInfo.STATIC_ERROR_CODE.rawValue] =
+                throwable.staticIdentifier(userInfo?.get(UserInfo.NS_ERROR_CODE.rawValue)).errorCode
 
-        val leftStrings = userInfo?.filterValues { it is String }?.mapValues { it.value as String }
-        val rightStrings = other.userInfo?.filterValues { it is String }?.mapValues { it.value as String }
-        val leftNonStringCount = (userInfo?.size ?: 0) - (leftStrings?.size ?: 0)
-        val rightNonStringCount = (other.userInfo?.size ?: 0) - (rightStrings?.size ?: 0)
+            return Exception(
+                throwable.message ?: throwable.javaClass.simpleName,
+                isReportable = isReportable,
+                userInfo = concatenatedUserInfo,
+                underlyingExceptions = underlyingExceptions,
+                metadata = metadata,
+            )
+        }
 
-        return code == other.code &&
-            descriptor == other.descriptor &&
-            isReportable == other.isReportable &&
-            metadata == other.metadata &&
-            underlyingExceptions == other.underlyingExceptions &&
-            leftStrings == rightStrings &&
-            leftNonStringCount == rightNonStringCount
-    }
+        /**
+         * Creates an exception from a Kotlin [Throwable].
+         *
+         * @param throwable The throwable to wrap.
+         * @param metadata The source-location metadata for this
+         *   exception.
+         *
+         * @return The wrapping exception.
+         */
+        fun from(
+            throwable: Throwable,
+            metadata: ExceptionMetadata,
+        ): Exception = from(throwable, isReportable = null, metadata = metadata)
 
-    override fun hashCode(): Int {
-        var result = code.hashCode()
-        result = 31 * result + descriptor.hashCode()
-        result = 31 * result + isReportable.hashCode()
-        return result
+        /**
+         * Returns a non-reportable exception indicating the
+         * operation was abandoned because the calling task was
+         * cancelled.
+         *
+         * Cancellation is a control-flow signal rather than a
+         * failure; exceptions created with this factory should be
+         * handled silently and never surfaced to the user.
+         *
+         * @param metadata The source-location metadata for this
+         *   exception.
+         */
+        fun cancelled(metadata: ExceptionMetadata): Exception =
+            Exception(
+                "The operation was cancelled.",
+                isReportable = false,
+                metadata = metadata,
+            )
+
+        /**
+         * Returns a non-reportable exception indicating the internet
+         * connection is offline.
+         *
+         * @param metadata The source-location metadata for this
+         *   exception.
+         */
+        fun internetConnectionOffline(metadata: ExceptionMetadata): Exception =
+            Exception(
+                "Internet connection is offline.",
+                isReportable = false,
+                userInfo =
+                    mapOf(
+                        UserInfo.USER_FACING_DESCRIPTOR.rawValue to
+                            Localized(SubsystemStringKey.INTERNET_CONNECTION_OFFLINE).wrappedValue,
+                    ),
+                metadata = metadata,
+            )
+
+        /**
+         * Returns a non-reportable exception indicating the operation
+         * timed out.
+         *
+         * @param metadata The source-location metadata for this
+         *   exception.
+         */
+        fun timedOut(metadata: ExceptionMetadata): Exception =
+            Exception(
+                "The operation timed out. Please try again later.",
+                isReportable = false,
+                userInfo =
+                    mapOf(
+                        UserInfo.USER_FACING_DESCRIPTOR.rawValue to
+                            Localized(SubsystemStringKey.TIMED_OUT).wrappedValue,
+                    ),
+                metadata = metadata,
+            )
     }
 }
 

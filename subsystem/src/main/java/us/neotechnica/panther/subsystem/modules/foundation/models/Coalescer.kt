@@ -57,22 +57,26 @@ class Coalescer<Key : Any, Output>(
 
     /** The strategy used to resolve concurrent calls for one key. */
     enum class Policy {
-        /** Subsequent callers share the in-flight operation's result. */
+        /**
+         * Subsequent callers share the in-flight operation's
+         * result.
+         */
         COALESCE,
 
         /**
-         * The in-flight operation is cancelled and replaced by a new
-         * one; every waiting caller receives the replacement's result.
+         * The in-flight operation is cancelled and replaced by a
+         * new one; every waiting caller receives the
+         * replacement's result.
          */
         REPLACE,
 
         /**
-         * The caller waits for the in-flight operation to finish, and
-         * then for the operation to run once more.
+         * The caller waits for the in-flight operation to finish,
+         * and then for the operation to run once more.
          *
-         * Calls that arrive during a run collapse into a single rerun,
-         * which uses the most recent caller's operation; at most one
-         * rerun is ever pending.
+         * Calls that arrive during a run collapse into a single
+         * rerun, which uses the most recent caller's operation;
+         * at most one rerun is ever pending.
          */
         RERUN,
     }
@@ -116,14 +120,14 @@ class Coalescer<Key : Any, Output>(
     ): Output = withContext(NonCancellable) { settlement(key, operation).await() }
 
     /**
-     * Submits an operation for the given key, abandoning the wait if
-     * the calling coroutine is cancelled.
+     * Submits an operation for the given key, abandoning the wait
+     * if the calling coroutine is cancelled.
      *
      * Behaves identically to [invoke] while the calling coroutine
-     * remains active. If the calling coroutine is cancelled before the
-     * awaited task settles, this method rethrows the cancellation; the
-     * shared operation itself keeps running so other callers still
-     * receive its result.
+     * remains active. If the calling coroutine is cancelled
+     * before the awaited task settles, this method rethrows the
+     * cancellation; the shared operation itself keeps running so
+     * other callers still receive its result.
      *
      * @param key The value that identifies the logical work lane.
      * @param operation The asynchronous work to perform.

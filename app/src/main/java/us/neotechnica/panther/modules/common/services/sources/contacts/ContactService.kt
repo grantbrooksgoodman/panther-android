@@ -48,9 +48,10 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
  * Use [ContactService] to match the user's device contacts with
  * registered users.
  *
- * The service queries the device's address book for contacts whose
- * phone numbers belong to registered users, maintains the contact pair
- * archive with the results, and caches the fetched contacts in memory.
+ * The service queries the device's address book for contacts
+ * whose phone numbers belong to registered users, maintains the
+ * contact pair archive with the results, and caches the fetched
+ * contacts in memory.
  */
 object ContactService {
     // MARK: - Dependencies
@@ -60,7 +61,10 @@ object ContactService {
 
     // MARK: - Properties
 
-    /** The service that persists and queries the contact pair archive. */
+    /**
+     * The service that persists and queries the contact pair
+     * archive.
+     */
     val contactPairArchive: ContactPairArchiveService
         get() = ContactPairArchiveService
 
@@ -80,23 +84,24 @@ object ContactService {
     // MARK: - Sync Contact Pair Archive
 
     /**
-     * Rebuilds the contact pair archive by matching every registered
-     * user against the device's contacts.
+     * Rebuilds the contact pair archive by matching every
+     * registered user against the device's contacts.
      *
-     * This method fetches all registered users, queries the device's
-     * address book for contacts matching their phone numbers, and
-     * replaces the archive's contents with the results. Users without a
-     * matching device contact are persisted separately to the unknown
-     * contact pair archive. Related caches are cleared before the
-     * archive is repopulated.
+     * This method fetches all registered users, queries the
+     * device's address book for contacts matching their phone
+     * numbers, and replaces the archive's contents with the
+     * results. Users without a matching device contact are
+     * persisted separately to the unknown contact pair archive.
+     * Related caches are cleared before the archive is
+     * repopulated.
      *
-     * If no device contact matches any registered user, this method
-     * returns without modifying the archive.
+     * If no device contact matches any registered user, this
+     * method returns without modifying the archive.
      *
      * Concurrent calls coalesce onto a single in-flight sync.
      *
-     * @throws Exception if contact permission has not been granted, or
-     *   if fetching users or contacts fails.
+     * @throws Exception if contact permission has not been
+     *   granted, or if fetching users or contacts fails.
      */
     suspend fun syncContactPairArchive() {
         coalescer { syncContactPairArchiveInternal() }
@@ -112,12 +117,13 @@ object ContactService {
     // MARK: - Device Contact Lookup
 
     /**
-     * Returns the lookup URI of the device contact matching the given
-     * compiled number string, suitable for a system contact-view
-     * intent, or `null` when no device contact matches or contact
-     * permission has not been granted.
+     * Returns the lookup URI of the device contact matching the
+     * given compiled number string, suitable for a system
+     * contact-view intent, or `null` when no device contact
+     * matches or contact permission has not been granted.
      *
-     * @param compiledNumberString The compiled number string to match.
+     * @param compiledNumberString The compiled number string to
+     *   match.
      */
     fun deviceContactLookupUri(compiledNumberString: String): Uri? {
         val resolver = appContext?.contentResolver ?: return null
@@ -190,13 +196,13 @@ object ContactService {
     }
 
     /**
-     * Pairs every device contact whose numbers match a registered user
-     * with the users it matches.
+     * Pairs every device contact whose numbers match a registered
+     * user with the users it matches.
      *
-     * Each matching user contributes a number pair; a contact matched by
-     * several users carries their pairs de-duplicated and sorted by
-     * calling code. The result is unique, sorted by first name, and
-     * de-duplicated by phone number.
+     * Each matching user contributes a number pair; a contact
+     * matched by several users carries their pairs de-duplicated
+     * and sorted by calling code. The result is unique, sorted by
+     * first name, and de-duplicated by phone number.
      *
      * @param users The registered users to match.
      * @param deviceContacts The device contacts to match against.

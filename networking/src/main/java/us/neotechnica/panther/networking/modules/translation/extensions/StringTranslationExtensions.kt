@@ -14,13 +14,19 @@ import java.io.ByteArrayOutputStream
 
 // MARK: - Hashing
 
-/** The SHA-256 encoded hash of this string, matching `encodedHashOf(listOf(this))`. */
+/**
+ * The SHA-256 encoded hash of this string, matching
+ * `encodedHashOf(listOf(this))`.
+ */
 internal val String.encodedHash: String
     get() = encodedHashOf(listOf(this))
 
 // MARK: - Constants
 
-/** The separator between the input and output halves of an archive value: EN DASH (U+2013). */
+/**
+ * The separator between the input and output halves of an archive
+ * value: EN DASH (U+2013).
+ */
 internal const val TRANSLATION_COMPONENT_SEPARATOR = "–"
 
 // MARK: - Percent Encoding
@@ -97,7 +103,10 @@ internal val String.base64Encoded: String
                 .encodeToString(toByteArray(Charsets.UTF_8))
         }.getOrElse { Base64.encodeToString(toByteArray(Charsets.UTF_8), Base64.NO_WRAP) }
 
-/** The string decoded from Base64, or itself if it is not valid Base64. */
+/**
+ * The string decoded from Base64, or itself if it is not valid
+ * Base64.
+ */
 internal val String.base64Decoded: String
     get() =
         runCatching {
@@ -118,9 +127,9 @@ internal val String.base64Decoded: String
 // MARK: - Components
 
 /**
- * The `(input, output)` pair decoded from an archive value string of
- * the form `"<alphaEncoded(input)>–<alphaEncoded(output)>"`, or `null`
- * if the string is not a valid two-component value.
+ * The `(input, output)` pair decoded from an archive value string
+ * of the form `"<alphaEncoded(input)>–<alphaEncoded(output)>"`,
+ * or `null` if the string is not a valid two-component value.
  */
 internal val String.decodedTranslationComponents: Pair<String, String>?
     get() {

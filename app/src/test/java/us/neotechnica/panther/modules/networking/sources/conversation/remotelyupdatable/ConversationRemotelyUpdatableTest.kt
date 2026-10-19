@@ -24,6 +24,7 @@ import org.junit.Test
 import us.neotechnica.panther.bundle.currentUserID
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Reaction
+import us.neotechnica.panther.modules.networking.sources.conversation.models.copyWith
 import us.neotechnica.panther.modules.networking.sources.message.models.Message
 import us.neotechnica.panther.modules.networking.sources.message.serializable.decode
 import us.neotechnica.panther.modules.networking.sources.support.FakeDatabaseDelegate

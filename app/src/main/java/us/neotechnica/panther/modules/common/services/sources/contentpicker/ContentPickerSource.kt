@@ -26,7 +26,10 @@ abstract class ContentPickerSource {
 
     // MARK: - Computed Properties
 
-    /** A Boolean value that indicates whether a launcher is registered. */
+    /**
+     * A Boolean value that indicates whether a launcher is
+     * registered.
+     */
     val canPresent: Boolean
         get() = launcher != null
 
@@ -52,7 +55,10 @@ abstract class ContentPickerSource {
 
     // MARK: - Present
 
-    /** Presents the picker through its registered launcher, if any. */
+    /**
+     * Presents the picker through its registered launcher, if
+     * any.
+     */
     fun present() {
         launcher?.invoke()
     }

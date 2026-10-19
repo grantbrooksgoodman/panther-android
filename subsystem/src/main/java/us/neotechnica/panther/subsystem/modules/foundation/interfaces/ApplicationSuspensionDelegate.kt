@@ -21,6 +21,9 @@ package us.neotechnica.panther.subsystem.modules.foundation.interfaces
  * **Important:** [suspendToHome] may be invoked from any thread.
  */
 interface ApplicationSuspensionDelegate {
-    /** Moves the app's task to the background, showing the Home screen. */
+    /**
+     * Moves the app's task to the background, showing the Home
+     * screen.
+     */
     fun suspendToHome()
 }

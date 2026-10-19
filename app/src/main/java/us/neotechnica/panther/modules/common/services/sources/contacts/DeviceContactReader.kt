@@ -47,7 +47,10 @@ internal object DeviceContactReader {
 
     // MARK: - Read
 
-    /** Returns every device contact that has at least one phone number. */
+    /**
+     * Returns every device contact that has at least one phone
+     * number.
+     */
     fun read(context: Context): List<DeviceContact> {
         val resolver = context.contentResolver
         val phoneRecordsForContactIDs = readPhoneRecords(resolver, context.resources)

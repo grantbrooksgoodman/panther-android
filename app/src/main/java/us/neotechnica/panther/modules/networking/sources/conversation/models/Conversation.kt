@@ -28,6 +28,7 @@ import us.neotechnica.panther.modules.networking.sources.message.models.Message
 import us.neotechnica.panther.modules.networking.sources.message.models.ReadReceipt
 import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.session.clientSession
+import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.BANG_QUALIFIED_EMPTY
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
@@ -37,6 +38,9 @@ import us.neotechnica.panther.networking.modules.common.interfaces.Serializable
 import us.neotechnica.panther.networking.modules.common.interfaces.SerializableDecoder
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.common.models.NetworkServices
+import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestampDateFormatter
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.failingForEmptyCollection
@@ -47,9 +51,12 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.TimestampDateFormatter
 import java.util.Date
 
 // This model exceeds the file-length and type-body-length limits.
+
+// The counterpart model carries `// swiftlint:disable file_length type_body_length`.
 
 /**
  * A conversation between two or more users.
@@ -70,13 +77,19 @@ data class Conversation(
     val metadata: ConversationMetadata,
     /** The conversation's participants. */
     val participants: List<Participant>,
-    /** The reactions applied to the conversation's messages, or `null` if it has none. */
+    /**
+     * The reactions applied to the conversation's messages, or
+     * `null` if it has none.
+     */
     val reactionMetadata: List<ReactionMetadata>?,
 ) : Serializable<Map<String, Any?>>,
     EncodedHashable {
     // MARK: - Types
 
-    /** The serializable keys for encoding and decoding a conversation. */
+    /**
+     * The serializable keys for encoding and decoding a
+     * conversation.
+     */
     enum class SerializableKey(
         val rawValue: String,
     ) {
@@ -88,6 +101,13 @@ data class Conversation(
         PARTICIPANTS("participants"),
         REACTION_METADATA("reactionMetadata"),
     }
+
+    // MARK: - Dependencies
+
+    private val database: DatabaseDelegate by Dependency { it.networking.database }
+    private val networking: NetworkServices by Dependency { it.networking }
+    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
+    private val timestampDateFormatter: TimestampDateFormatter by Dependency { it.timestampDateFormatter }
 
     // MARK: - Computed Properties
 
@@ -128,7 +148,7 @@ data class Conversation(
      */
     override val hashFactors: List<String>
         get() {
-            val formatter = DependencyValues.current.timestampDateFormatter
+            val formatter = timestampDateFormatter
             return buildList {
                 add(id.key)
                 addAll(activities?.map { it.encodedHash } ?: emptyList())
@@ -157,7 +177,6 @@ data class Conversation(
      */
     val messages: List<Message>?
         get() {
-            val sessionStore = DependencyValues.current.clientSession.store
             val messages = messageIDs.mapNotNull { sessionStore.messages[it] }
 
             // Session store does not store system messages.
@@ -173,7 +192,6 @@ data class Conversation(
      */
     val users: List<User>?
         get() {
-            val sessionStore = DependencyValues.current.clientSession.store
             val userIDs = participants.map { it.userID }.filter { it != User.currentUserID }
             val users = userIDs.mapNotNull { sessionStore.users[it] }
             if (users.size != userIDs.size) return null
@@ -186,22 +204,22 @@ data class Conversation(
      * Fetches messages from the network and upserts them to the
      * session store.
      *
-     * When [ids] is `null`, all non-system message identifiers on this
-     * conversation are fetched. When [ids] is provided, only the
-     * specified messages are fetched.
+     * When [ids] is `null`, all non-system message identifiers
+     * on this conversation are fetched. When [ids] is provided,
+     * only the specified messages are fetched.
      *
-     * Concurrent calls for the same conversation version and identifier
-     * set coalesce onto a single in-flight fetch. If the calling
-     * coroutine is cancelled before the shared fetch settles, this
-     * method returns without effect for the caller; the fetch itself
-     * always runs to completion, so the session store never observes a
-     * partially applied resolution.
+     * Concurrent calls for the same conversation version and
+     * identifier set coalesce onto a single in-flight fetch. If
+     * the calling coroutine is cancelled before the shared fetch
+     * settles, this method returns without effect for the caller;
+     * the fetch itself always runs to completion, so the session
+     * store never observes a partially applied resolution.
      *
-     * After this method returns, the fetched messages are available
-     * through the [messages] computed property.
+     * After this method returns, the fetched messages are
+     * available through the [messages] computed property.
      *
-     * @param ids A set of message identifiers to fetch. Pass `null` to
-     *   fetch all non-system messages.
+     * @param ids A set of message identifiers to fetch. Pass
+     *   `null` to fetch all non-system messages.
      *
      * @throws Exception if a message cannot be fetched.
      */
@@ -218,19 +236,21 @@ data class Conversation(
      * Fetches non-current-user participants from the network and
      * upserts them to the session store.
      *
-     * By default, this method returns early when all participants are
-     * already available through the [users] computed property. Pass
-     * [forceUpdate] to bypass the cache and re-fetch regardless.
+     * By default, this method returns early when all participants
+     * are already available through the [users] computed
+     * property. Pass [forceUpdate] to bypass the cache and
+     * re-fetch regardless.
      *
-     * Concurrent calls for the same conversation version coalesce onto
-     * a single in-flight fetch; forced and unforced calls occupy
-     * separate lanes so a force re-fetch is never absorbed by a cached
-     * one. If the calling coroutine is cancelled before the shared
-     * fetch settles, this method returns without effect for the
-     * caller; the fetch itself always runs to completion.
+     * Concurrent calls for the same conversation version coalesce
+     * onto a single in-flight fetch; forced and unforced calls
+     * occupy separate lanes so a force re-fetch is never absorbed
+     * by a cached one. If the calling coroutine is cancelled
+     * before the shared fetch settles, this method returns
+     * without effect for the caller; the fetch itself always runs
+     * to completion.
      *
-     * @param forceUpdate When `true`, disregards the cache and fetches
-     *   all participants from the network.
+     * @param forceUpdate When `true`, disregards the cache and
+     *   fetches all participants from the network.
      *
      * @throws Exception if a participant cannot be fetched.
      */
@@ -256,8 +276,7 @@ data class Conversation(
      * @throws Exception if the write fails.
      */
     suspend fun updateLastModifiedDate(to: Date = Date()) {
-        val database = DependencyValues.current.networking.database
-        val dateFormatter = DependencyValues.current.timestampDateFormatter
+        val dateFormatter = timestampDateFormatter
 
         val conversationPath = "${NetworkPath.conversations.rawValue}/${id.key}"
         val newHash = copy(metadata = metadata.copyWith(lastModifiedDate = to)).encodedHash
@@ -298,9 +317,7 @@ data class Conversation(
      *   identifier has not been set, or the write fails.
      */
     suspend fun updateReadDate(messages: List<Message>) {
-        val database = DependencyValues.current.networking.database
-        val dateFormatter = DependencyValues.current.timestampDateFormatter
-        val sessionStore = DependencyValues.current.clientSession.store
+        val dateFormatter = timestampDateFormatter
 
         if (messages.isEmpty()) {
             throw Exception(
@@ -398,8 +415,7 @@ data class Conversation(
             ).joinToString("/")
 
     private suspend fun fetchAndCommitMessages(ids: Set<String>?) {
-        val messageService = DependencyValues.current.networking.messageService
-        val sessionStore = DependencyValues.current.clientSession.store
+        val messageService = networking.messageService
 
         if (ids != null) {
             // Fetched from network; bypasses RemotelyUpdatable.update.
@@ -446,8 +462,6 @@ data class Conversation(
     }
 
     private suspend fun fetchAndCommitUsers(forceUpdate: Boolean) {
-        val networking = DependencyValues.current.networking
-
         val userInfo = mapOf<String, Any>("ConversationID" to id.encoded)
         if (!forceUpdate) {
             val users = users

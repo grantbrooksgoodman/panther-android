@@ -52,13 +52,15 @@ private typealias Colors = ContactSelectorPageViewColors
 private typealias Floats = ContactSelectorPageViewFloats
 
 /**
- * A contact picker: search the user's known contact pairs, or enter a
- * phone number to look up its registered user. Presented as a sheet
- * either from the chat info page – to add a participant – or from the
- * new chat page – to choose a recipient.
+ * A contact picker: search the user's known contact pairs, or
+ * enter a phone number to look up its registered user. Presented
+ * as a sheet either from the chat info page – to add a
+ * participant – or from the new chat page – to choose a
+ * recipient.
  *
- * The page insets its own content from the navigation bar and keyboard,
- * so present it in a sheet that ignores the bottom safe area.
+ * The page insets its own content from the navigation bar and
+ * keyboard, so present it in a sheet that ignores the bottom safe
+ * area.
  */
 object ContactSelectorPageView {
     // MARK: - Types

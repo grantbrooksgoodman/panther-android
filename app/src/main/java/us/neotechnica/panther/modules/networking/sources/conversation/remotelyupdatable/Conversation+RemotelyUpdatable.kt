@@ -6,6 +6,8 @@
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
+@file:Suppress("FileLength")
+
 package us.neotechnica.panther.modules.networking.sources.conversation.remotelyupdatable
 
 import us.neotechnica.panther.bundle.conversations
@@ -37,6 +39,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHas
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import java.util.Date
+
+// The counterpart extension carries `// swiftlint:disable file_length`.
 
 // MARK: - Types
 
@@ -378,7 +382,10 @@ private fun stringKeyMap(value: Any?): Map<String, Any?>? =
         ?.takeIf { map -> map.keys.all { it is String } }
         ?.let { it as Map<String, Any?> }
 
-/** Builds fan-out entries updating each participant's conversation token to the conversation's hash. */
+/**
+ * Builds fan-out entries updating each participant's conversation
+ * token to the conversation's hash.
+ */
 private fun buildParticipantUpdates(conversation: Conversation): Map<String, Any?> {
     val updates = mutableMapOf<String, Any?>()
     for (participant in conversation.participants) {

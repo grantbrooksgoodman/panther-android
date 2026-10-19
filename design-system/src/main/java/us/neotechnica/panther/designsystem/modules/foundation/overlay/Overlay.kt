@@ -21,7 +21,8 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * A global, dimming activity overlay.
  *
- * Toggle it from anywhere with [addOverlay] and [removeOverlay]; the
+ * Toggle it from anywhere with [addOverlay] and [removeOverlay];
+ * the
  * [OverlayHost][us.neotechnica.panther.designsystem.modules.foundation.overlay.OverlayHost]
  * composable renders it over the current screen. While a modal
  * overlay is visible, input to the underlying UI is blocked, the
@@ -58,7 +59,10 @@ object Overlay {
 
     // MARK: - Computed Properties
 
-    /** The activity indicator's configuration, or `null` when hidden. */
+    /**
+     * The activity indicator's configuration, or `null` when
+     * hidden.
+     */
     val activityIndicator: StateFlow<OverlayActivityIndicatorConfiguration?> = mutableActivityIndicator.asStateFlow()
 
     /** The opacity of the overlay's dimming scrim. */

@@ -17,6 +17,7 @@ import us.neotechnica.panther.modules.networking.sources.common.extensions.visib
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.sources.conversation.models.ConversationID
 import us.neotechnica.panther.modules.session.clientSession
+import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList
@@ -25,7 +26,9 @@ import us.neotechnica.panther.networking.modules.common.interfaces.Serializable
 import us.neotechnica.panther.networking.modules.common.interfaces.SerializableDecoder
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.networking.modules.database.interfaces.getValues
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.EncodedHashable
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHash
@@ -48,23 +51,41 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 data class User(
     /** The user's unique identifier. */
     val id: String,
-    /** A Boolean value that indicates whether the user has enabled AI-enhanced translations. */
+    /**
+     * A Boolean value that indicates whether the user has enabled
+     * AI-enhanced translations.
+     */
     val aiEnhancedTranslationsEnabled: Boolean,
-    /** The identifiers of the users this user has blocked, or `null` if none. */
+    /**
+     * The identifiers of the users this user has blocked, or
+     * `null` if none.
+     */
     val blockedUserIDs: List<String>?,
-    /** The identifiers of the user's conversations, or `null` if none. */
+    /**
+     * The identifiers of the user's conversations, or `null` if
+     * none.
+     */
     val conversationIDs: List<ConversationID>?,
     /** The identifier of the user's device. */
     val deviceID: String,
-    /** A Boolean value that indicates whether the user participates in PenPals. */
+    /**
+     * A Boolean value that indicates whether the user
+     * participates in PenPals.
+     */
     val isPenPalsParticipant: Boolean,
     /** The user's language code. */
     val languageCode: String,
-    /** A Boolean value that indicates whether the user requires message-receipt consent. */
+    /**
+     * A Boolean value that indicates whether the user requires
+     * message-receipt consent.
+     */
     val messageRecipientConsentRequired: Boolean,
     /** The user's phone number. */
     val phoneNumber: PhoneNumber,
-    /** The user's previously-used language codes, or `null` if none. */
+    /**
+     * The user's previously-used language codes, or `null` if
+     * none.
+     */
     val previousLanguageCodes: List<String>?,
     /** The user's push notification tokens, or `null` if none. */
     val pushTokens: List<String>?,
@@ -102,6 +123,11 @@ data class User(
         PUSH_TOKENS("pushTokens"),
     }
 
+    // MARK: - Dependencies
+
+    private val database: DatabaseDelegate by Dependency { it.networking.database }
+    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
+
     // MARK: - Computed Properties
 
     /**
@@ -112,7 +138,6 @@ data class User(
      */
     val conversations: List<Conversation>?
         get() {
-            val sessionStore = DependencyValues.current.clientSession.store
             val conversationIDs = conversationIDs ?: return null
             val conversations = conversationIDs.mapNotNull { sessionStore.conversations[it.key] }
             if (conversations.size != conversationIDs.size) return null
@@ -174,7 +199,7 @@ data class User(
      */
     suspend fun hostedBadgeNumber(): Int =
         try {
-            DependencyValues.current.networking.database.getValues<Int>(
+            database.getValues<Int>(
                 listOf(
                     NetworkPath.users.rawValue,
                     id,
@@ -190,11 +215,11 @@ data class User(
     // MARK: - Badge Number Calculation
 
     /**
-     * Returns the number of unread incoming messages across the user's
-     * visible conversations.
+     * Returns the number of unread incoming messages across the
+     * user's visible conversations.
      *
-     * @return The unread message count, or `0` for users other than the
-     *   current user.
+     * @return The unread message count, or `0` for users other
+     *   than the current user.
      */
     fun calculateBadgeNumber(): Int {
         if (id != User.currentUserID) return 0

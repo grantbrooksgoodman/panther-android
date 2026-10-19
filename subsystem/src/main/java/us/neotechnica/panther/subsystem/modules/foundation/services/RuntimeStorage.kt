@@ -49,9 +49,9 @@ object RuntimeStorage {
     /**
      * The ISO 639-1 code of the app's active language.
      *
-     * Returns the overridden language code if one has been stored, the
-     * explicitly stored language code if available, or the device
-     * language as a fallback. This is the target of
+     * Returns the overridden language code if one has been
+     * stored, the explicitly stored language code if available,
+     * or the device language as a fallback. This is the target of
      * [LanguagePair.system][us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage]
      * for display-string translation.
      */
@@ -64,9 +64,10 @@ object RuntimeStorage {
     /**
      * The mapping of supported language codes to language names.
      *
-     * The app stores the subsystem's `language_codes` table here at
-     * launch; [CoreUtilities.localizedLanguageCodeDictionary] localizes
-     * it for display. Returns `null` before the table is stored.
+     * The app stores the subsystem's `language_codes` table here
+     * at launch; [CoreUtilities.localizedLanguageCodeDictionary]
+     * localizes it for display. Returns `null` before the table
+     * is stored.
      */
     @Suppress("UNCHECKED_CAST")
     var languageCodeDictionary: Map<String, String>?

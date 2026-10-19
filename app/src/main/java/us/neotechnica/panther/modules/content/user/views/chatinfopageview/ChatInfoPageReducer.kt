@@ -29,15 +29,21 @@ import us.neotechnica.panther.modules.content.user.extensions.withMessagesOffset
 import us.neotechnica.panther.modules.content.user.models.ChatParticipant
 import us.neotechnica.panther.modules.content.user.models.ConversationCellViewData
 import us.neotechnica.panther.modules.content.user.models.MediaItemViewData
+import us.neotechnica.panther.modules.content.user.services.ConversationCellViewService
 import us.neotechnica.panther.modules.content.user.services.chatinfopageview.ChatInfoPageViewService
 import us.neotechnica.panther.modules.content.user.services.chatinfopageview.presentChangeMetadataActionSheet
 import us.neotechnica.panther.modules.content.user.services.chatpageview.ChatPageViewService
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.MediaActionHandlerService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.inputbar.InputBarService
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Activity
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.sources.conversation.models.ConversationMetadata
+import us.neotechnica.panther.modules.networking.sources.conversation.models.copyWith
 import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.session.clientSession
+import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
+import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
@@ -60,35 +66,42 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 import java.util.UUID
 
+// The counterpart reducer carries `// swiftlint:disable file_length type_body_length`.
+
 /**
  * The reducer that drives the chat info page.
  *
  * This page presents details about a conversation and the actions
- * available on it. It lists the conversation's participants and shared
- * media and – depending on the conversation's kind – lets the user
- * rename the conversation, change its photo, add or remove
- * participants, and leave the conversation. Most of these actions are
- * performed through [ChatInfoPageViewService].
+ * available on it. It lists the conversation's participants and
+ * shared media and – depending on the conversation's kind – lets
+ * the user rename the conversation, change its photo, add or
+ * remove participants, and leave the conversation. Most of these
+ * actions are performed through [ChatInfoPageViewService].
  *
  * The page's behavior contract:
  *
- * - On appearance, the page resolves its translated display strings
- *   and its participant list concurrently, remaining in the loading
- *   state until the participants resolve. If resolving the
- *   participants fails, the page enters the error state.
- * - A segmented control switches the page between its participant and
- *   media lists.
- * - Changing the conversation's name or photo and adding or removing a
- *   participant are performed through [ChatInfoPageViewService]. When
- *   metadata changes, the page updates its chat's navigation title and
- *   notifies observers of the change.
+ * - On appearance, the page resolves its translated display
+ *   strings and its participant list concurrently, remaining in
+ *   the loading state until the participants resolve. If
+ *   resolving the participants fails, the page enters the error
+ *   state.
+ * - A segmented control switches the page between its participant
+ *   and media lists.
+ * - Changing the conversation's name or photo and adding or
+ *   removing a participant are performed through
+ *   [ChatInfoPageViewService]. When metadata changes, the page
+ *   updates its chat's navigation title and notifies observers of
+ *   the change.
  * - Because the page mirrors state that lives outside it, several
- *   actions regenerate a view's identity to force it to rebuild from
- *   the latest values.
+ *   actions regenerate a view's identity to force it to rebuild
+ *   from the latest values.
  */
 class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReducer.Action> {
     // MARK: - Dependencies
 
+    private val conversationCellViewService: ConversationCellViewService by Dependency { it.conversationCellViewService }
+    private val inputBarService: InputBarService by Dependency { it.inputBarService }
+    private val navigation: Navigation by Dependency { it.navigation }
     private val translator: HostedTranslationDelegate by Dependency { it.networking.hostedTranslation }
     private val viewService: ChatInfoPageViewService by Dependency { it.chatInfoPageViewService }
 
@@ -97,9 +110,10 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
     /** The actions the chat info page can process. */
     sealed interface Action {
         /**
-         * An action that indicates the view appeared, carrying the
-         * identifier key of the conversation the page describes. Begins
-         * resolving the display strings and the participant list.
+         * An action that indicates the view appeared, carrying
+         * the identifier key of the conversation the page
+         * describes. Begins resolving the display strings and the
+         * participant list.
          */
         data class ViewAppeared(
             val conversationIDKey: String,
@@ -115,20 +129,22 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         data object AddContactButtonTapped : Action
 
         /**
-         * An action that indicates the user tapped the change-metadata
-         * button. Presents the change-metadata action sheet.
+         * An action that indicates the user tapped the
+         * change-metadata button. Presents the change-metadata
+         * action sheet.
          */
         data object ChangeMetadataButtonTapped : Action
 
         /**
-         * An action that indicates the user tapped the chat info cell.
-         * Expands or collapses the participant list.
+         * An action that indicates the user tapped the chat info
+         * cell. Expands or collapses the participant list.
          */
         data object ChatInfoCellTapped : Action
 
         /**
-         * An action that indicates the current conversation's metadata
-         * changed. Rebuilds the page from the latest values.
+         * An action that indicates the current conversation's
+         * metadata changed. Rebuilds the page from the latest
+         * values.
          */
         data object CurrentConversationMetadataChanged : Action
 
@@ -139,8 +155,8 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         data object DoneHeaderItemTapped : Action
 
         /**
-         * An action that indicates whether a message send is in flight
-         * changed, carrying the new value.
+         * An action that indicates whether a message send is in
+         * flight changed, carrying the new value.
          */
         data class IsSendingMessageChanged(
             val isSendingMessage: Boolean,
@@ -156,17 +172,18 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         data object LoadingStateUpdated : Action
 
         /**
-         * An action that indicates the user tapped a shared media item,
-         * carrying its metadata. Presents the media preview.
+         * An action that indicates the user tapped a shared media
+         * item, carrying its metadata. Presents the media
+         * preview.
          */
         data class MediaItemViewTapped(
             val metadata: MediaItemViewData,
         ) : Action
 
         /**
-         * An action that indicates the user tapped a participant's
-         * remove button, carrying the participant. Begins removing them
-         * from the conversation.
+         * An action that indicates the user tapped a
+         * participant's remove button, carrying the participant.
+         * Begins removing them from the conversation.
          */
         data class RemoveUserButtonTapped(
             val chatParticipant: ChatParticipant,
@@ -181,9 +198,9 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         ) : Action
 
         /**
-         * An action that indicates the user selected a new conversation
-         * photo, carrying the chosen image. Applies it as the
-         * conversation's photo.
+         * An action that indicates the user selected a new
+         * conversation photo, carrying the chosen image. Applies
+         * it as the conversation's photo.
          */
         data class SelectedImageChanged(
             val image: Uri,
@@ -193,8 +210,9 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         data object TraitCollectionChanged : Action
 
         /**
-         * An action that indicates the user tapped a participant's info
-         * badge, carrying the user. Presents that user's info alert.
+         * An action that indicates the user tapped a
+         * participant's info badge, carrying the user. Presents
+         * that user's info alert.
          */
         data class UserInfoBadgeTapped(
             val user: User?,
@@ -209,9 +227,9 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         ) : Action
 
         /**
-         * An action that indicates the change-metadata action sheet
-         * was dismissed, carrying the change the user chose, or `null`
-         * if the sheet was canceled.
+         * An action that indicates the change-metadata action
+         * sheet was dismissed, carrying the change the user
+         * chose, or `null` if the sheet was canceled.
          */
         data class ChangeMetadataActionSheetDismissed(
             val change: ChatInfoPageViewService.MetadataChangeType?,
@@ -266,8 +284,9 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         ) : Action
 
         /**
-         * An action that indicates a metadata update finished. Updates
-         * the navigation title and notifies observers of the change.
+         * An action that indicates a metadata update finished.
+         * Updates the navigation title and notifies observers of
+         * the change.
          */
         data object UpdateMetadataReturned : Action
     }
@@ -277,33 +296,36 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
     /**
      * The state of the chat info page.
      *
-     * @property chatInfoCellViewID The identity of the chat info cell.
-     *   Regenerated to rebuild the cell when the participant list
-     *   expands or collapses.
+     * @property chatInfoCellViewID The identity of the chat info
+     *   cell. Regenerated to rebuild the cell when the
+     *   participant list expands or collapses.
      * @property chatParticipants The conversation's participants.
-     * @property conversationIDKey The identifier key of the conversation
-     *   the page describes.
-     * @property isChangeMetadataButtonEnabled A Boolean value that
-     *   indicates whether the change-metadata button is enabled.
-     *   Disabled while a metadata change is in progress, and while the
-     *   conversation is awaiting the initiator's consent.
-     * @property isSendingMessage A Boolean value that indicates whether
-     *   a message send is in flight.
-     * @property segmentedControlSelectionIndex The index of the selected
-     *   segmented control option: the participant list or the shared
-     *   media list.
-     * @property segmentedControlViewID The identity of the segmented
-     *   control. Regenerated to rebuild it once display strings
-     *   resolve.
-     * @property strings The page's translated display strings. Contains
-     *   the default, untranslated strings until resolution completes.
-     * @property viewID The identity of the page's content. Regenerated
-     *   to rebuild it from the latest conversation values.
-     * @property viewState The page's loading state. Remains loading
-     *   until the participant list resolves.
-     * @property visibleParticipants The participants currently shown in
-     *   the chat info cell's expandable list. Empty while the list is
-     *   collapsed.
+     * @property conversationIDKey The identifier key of the
+     *   conversation the page describes.
+     * @property isChangeMetadataButtonEnabled A Boolean value
+     *   that indicates whether the change-metadata button is
+     *   enabled. Disabled while a metadata change is in progress,
+     *   and while the conversation is awaiting the initiator's
+     *   consent.
+     * @property isSendingMessage A Boolean value that indicates
+     *   whether a message send is in flight.
+     * @property segmentedControlSelectionIndex The index of the
+     *   selected segmented control option: the participant list
+     *   or the shared media list.
+     * @property segmentedControlViewID The identity of the
+     *   segmented control. Regenerated to rebuild it once display
+     *   strings resolve.
+     * @property strings The page's translated display strings.
+     *   Contains the default, untranslated strings until
+     *   resolution completes.
+     * @property viewID The identity of the page's content.
+     *   Regenerated to rebuild it from the latest conversation
+     *   values.
+     * @property viewState The page's loading state. Remains
+     *   loading until the participant list resolves.
+     * @property visibleParticipants The participants currently
+     *   shown in the chat info cell's expandable list. Empty
+     *   while the list is collapsed.
      */
     data class State(
         val chatInfoCellViewID: UUID = UUID.randomUUID(),
@@ -319,19 +341,36 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         val visibleParticipants: List<ChatParticipant> = emptyList(),
         internal val inputBarWasFirstResponder: Boolean = false,
     ) {
-        /** The conversation's avatar image, or `null` if none is available. */
+        // MARK: - Dependencies
+
+        private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
+        private val sessionStore: SessionStore by Dependency { it.clientSession.store }
+
+        /**
+         * The conversation's avatar image, or `null` if none is
+         * available.
+         */
         val avatarImage: Bitmap?
             get() = cellViewData?.thumbnailImage
 
-        /** The system image name for the chat info cell's expand-or-collapse chevron. */
+        /**
+         * The system image name for the chat info cell's
+         * expand-or-collapse chevron.
+         */
         val chatInfoCellImageSystemName: String
             get() = "chevron.${if (visibleParticipants.isEmpty()) "right" else "down"}.circle"
 
-        /** The chat info cell's subtitle: the participants' display names, comma-separated. */
+        /**
+         * The chat info cell's subtitle: the participants'
+         * display names, comma-separated.
+         */
         val chatInfoCellSubtitleLabelText: String
             get() = chatParticipants.joinToString(", ") { it.displayName }
 
-        /** The chat info cell's title: the participant count followed by a localized label. */
+        /**
+         * The chat info cell's title: the participant count
+         * followed by a localized label.
+         */
         val chatInfoCellTitleLabelText: String
             get() = "${chatParticipants.size} ${strings.value(ChatInfoPageViewStrings.participantCountLabelText, ChatInfoPageViewStrings)}"
 
@@ -340,20 +379,25 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
             get() = cellViewData?.titleLabelText.orEmpty()
 
         /**
-         * A Boolean value that indicates whether the add-contact button
-         * is enabled. Disabled while a message is being sent.
+         * A Boolean value that indicates whether the add-contact
+         * button is enabled. Disabled while a message is being
+         * sent.
          */
         val isAddContactButtonEnabled: Boolean
             get() = !isSendingMessage
 
-        /** A Boolean value that indicates whether Developer Mode is enabled. */
+        /**
+         * A Boolean value that indicates whether Developer Mode
+         * is enabled.
+         */
         val isDeveloperModeEnabled: Boolean
             get() = Build.isDeveloperModeEnabled
 
         /**
-         * A Boolean value that indicates whether the leave-conversation
-         * button is enabled. Enabled only when the conversation has more
-         * than two participants and no message is being sent.
+         * A Boolean value that indicates whether the
+         * leave-conversation button is enabled. Enabled only when
+         * the conversation has more than two participants and no
+         * message is being sent.
          */
         val isLeaveConversationButtonEnabled: Boolean
             get() = chatParticipants.size > 2 && !isSendingMessage
@@ -362,7 +406,10 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         val mediaItemMetadata: List<MediaItemViewData>
             get() = conversation?.withMessagesOffsetFromCurrentUserAdditionDate?.mediaItemMetadata ?: emptyList()
 
-        /** The maximum width of the segmented control, two-thirds of the screen's width. */
+        /**
+         * The maximum width of the segmented control, two-thirds
+         * of the screen's width.
+         */
         val segmentedControlMaxWidth: Dp
             get() {
                 val displayMetrics = Resources.getSystem().displayMetrics
@@ -371,8 +418,8 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
             }
 
         /**
-         * The titles of the segmented control's options: the participant
-         * list and the shared media list.
+         * The titles of the segmented control's options: the
+         * participant list and the shared media list.
          */
         val segmentedControlOptionTitles: List<String>
             get() =
@@ -382,8 +429,9 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
                 )
 
         /**
-         * A Boolean value that indicates whether the segmented control
-         * should be elongated to fit long localized option titles.
+         * A Boolean value that indicates whether the segmented
+         * control should be elongated to fit long localized
+         * option titles.
          */
         val shouldElongateSegmentedControl: Boolean
             get() =
@@ -398,10 +446,10 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
             get() = conversation != null
 
         /**
-         * A Boolean value that indicates whether participants can be
-         * removed with a swipe action. Available only in conversations
-         * that are not awaiting the initiator's consent and have more
-         * than two visible participants.
+         * A Boolean value that indicates whether participants can
+         * be removed with a swipe action. Available only in
+         * conversations that are not awaiting the initiator's
+         * consent and have more than two visible participants.
          */
         val showsRemoveUserSwipeAction: Boolean
             get() {
@@ -410,18 +458,18 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
             }
 
         /**
-         * The conversation's sole participant, or `null` when there is
-         * not exactly one participant.
+         * The conversation's sole participant, or `null` when
+         * there is not exactly one participant.
          */
         val singleChatParticipant: ChatParticipant?
             get() = chatParticipants.singleOrNull()
 
         /**
-         * The amount by which to increase the number of participant rows
-         * shown. Its value is `1` when the participant list is expanded
-         * for a conversation that is not awaiting the initiator's
-         * consent and has fewer than ten visible participants;
-         * otherwise, `0`.
+         * The amount by which to increase the number of
+         * participant rows shown. Its value is `1` when the
+         * participant list is expanded for a conversation that is
+         * not awaiting the initiator's consent and has fewer than
+         * ten visible participants; otherwise, `0`.
          */
         val visibleParticipantsIncrement: Int
             get() {
@@ -433,8 +481,8 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
 
         internal val conversation: Conversation?
             get() =
-                DependencyValues.current.clientSession.entity.conversation.currentConversation
-                    ?: DependencyValues.current.clientSession.store
+                conversationSession.currentConversation
+                    ?: sessionStore
                         .getConversation(conversationIDKey)
 
         private val cellViewData: ConversationCellViewData?
@@ -456,7 +504,7 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
             Action.ViewDisappeared -> ReduceResult(state)
 
             Action.AddContactButtonTapped -> {
-                DependencyValues.current.navigation.navigate(
+                navigation.navigate(
                     Route.Chat(ChatRoute.Sheet(ChatNavigatorState.SheetPaths.ContactSelector)),
                 )
                 ReduceResult(state)
@@ -481,8 +529,8 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
             Action.CurrentConversationMetadataChanged -> ReduceResult(state.copy(viewID = UUID.randomUUID()))
 
             Action.DoneHeaderItemTapped -> {
-                DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
-                if (state.inputBarWasFirstResponder) DependencyValues.current.inputBarService.becomeFirstResponder()
+                navigation.navigate(Route.UserContent(UserContentRoute.Pop))
+                if (state.inputBarWasFirstResponder) inputBarService.becomeFirstResponder()
                 ReduceResult(state)
             }
 
@@ -518,7 +566,7 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
             Action.TraitCollectionChanged -> ReduceResult(state)
 
             is Action.UserInfoBadgeTapped -> {
-                action.user?.let { DependencyValues.current.conversationCellViewService.presentUserInfoAlert(it) }
+                action.user?.let { conversationCellViewService.presentUserInfoAlert(it) }
                 ReduceResult(state)
             }
 
@@ -556,7 +604,7 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
     private fun reduceViewAppeared(state: State): ReduceResult<State, Action> {
         val newState =
             state.copy(
-                inputBarWasFirstResponder = DependencyValues.current.inputBarService.isFirstResponder.value,
+                inputBarWasFirstResponder = inputBarService.isFirstResponder.value,
                 isChangeMetadataButtonEnabled = state.conversation?.metadata?.requiresConsentFromInitiator == null,
                 segmentedControlSelectionIndex = 0,
                 viewState = ViewState.Loading,
@@ -570,7 +618,6 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         state: State,
         change: ChatInfoPageViewService.MetadataChangeType?,
     ): ReduceResult<State, Action> {
-        val navigation = DependencyValues.current.navigation
         return when (change) {
             is ChatInfoPageViewService.MetadataChangeType.Name -> {
                 val conversation = state.conversation ?: return ReduceResult(state.copy(isChangeMetadataButtonEnabled = true))
@@ -613,7 +660,7 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         state: State,
         exception: Exception?,
     ): ReduceResult<State, Action> {
-        DependencyValues.current.navigation.navigate(Route.Chat(ChatRoute.Sheet(null)))
+        navigation.navigate(Route.Chat(ChatRoute.Sheet(null)))
         exception?.let { Logger.log(it, with = AlertType.toast) }
         return ReduceResult(state.copy(isChangeMetadataButtonEnabled = true))
     }

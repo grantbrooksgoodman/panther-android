@@ -14,9 +14,9 @@ import us.neotechnica.panther.subsystem.modules.localization.models.Localization
 /**
  * The app's localization key type.
  *
- * Each entry corresponds to a top-level key in the app's localized
- * strings, exposing its snake-case [referent] – the key used to look
- * the value up. Resolve a value with
+ * Each entry corresponds to a top-level key in the app's
+ * localized strings, exposing its snake-case [referent] – the key
+ * used to look the value up. Resolve a value with
  * [localized][us.neotechnica.panther.subsystem.modules.localization.models.localized].
  */
 enum class LocalizedStringKey(

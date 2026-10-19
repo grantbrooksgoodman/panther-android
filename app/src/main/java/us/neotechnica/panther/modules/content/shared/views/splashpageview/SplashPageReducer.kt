@@ -43,34 +43,36 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
 /**
  * The reducer that drives the splash page.
  *
- * The splash page is presented at launch and after a completed sign-in
- * or sign-up. It initializes the app's data bundle through
- * [SplashPageViewService] and routes the user to the appropriate
- * destination when initialization settles.
+ * The splash page is presented at launch and after a completed
+ * sign-in or sign-up. It initializes the app's data bundle
+ * through [SplashPageViewService] and routes the user to the
+ * appropriate destination when initialization settles.
  *
  * The page's behavior contract:
  *
  * - On appearance, the page begins bundle initialization, racing
  *   [SplashPageViewService.initializeBundle] against
- *   [SplashPageViewService.resolveCachedUserIfPoorNetwork]; whichever
- *   settles first determines how the app loads, and the other is
- *   cancelled.
- * - Each network activity event nudges the initialization progress
- *   forward until it approaches completion.
- * - If initialization succeeds, the page presents the user content
- *   when a signed-in user resolved; otherwise, it presents onboarding
- *   with an empty navigation stack.
+ *   [SplashPageViewService.resolveCachedUserIfPoorNetwork];
+ *   whichever settles first determines how the app loads, and the
+ *   other is cancelled.
+ * - Each network activity event nudges the initialization
+ *   progress forward until it approaches completion.
+ * - If initialization succeeds, the page presents the user
+ *   content when a signed-in user resolved; otherwise, it
+ *   presents onboarding with an empty navigation stack.
  * - If initialization fails, the first failure attempts recovery
- *   automatically; subsequent failures present an error alert, and
- *   dismissing it retries. In both cases, failures a database repair
- *   cannot address – a timeout or a media file generation failure –
- *   retry initialization directly, while all other failures run
- *   [SplashPageViewService.performRetryHandler] before retrying.
+ *   automatically; subsequent failures present an error alert,
+ *   and dismissing it retries. In both cases, failures a database
+ *   repair cannot address – a timeout or a media file generation
+ *   failure – retry initialization directly, while all other
+ *   failures run [SplashPageViewService.performRetryHandler]
+ *   before retrying.
  */
 class SplashPageReducer : Reducer<SplashPageReducer.State, SplashPageReducer.Action> {
     // MARK: - Dependencies
 
     private val navigation: Navigation by Dependency { it.navigation }
+    private val splashPageViewService: SplashPageViewService by Dependency { it.splashPageViewService }
     private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
     private val viewService: SplashPageViewService by Dependency { it.splashPageViewService }
 
@@ -78,7 +80,10 @@ class SplashPageReducer : Reducer<SplashPageReducer.State, SplashPageReducer.Act
 
     /** The actions the splash page can process. */
     sealed interface Action {
-        /** An action that indicates the view appeared. Begins bundle initialization. */
+        /**
+         * An action that indicates the view appeared. Begins
+         * bundle initialization.
+         */
         data object ViewAppeared : Action
 
         /**
@@ -225,7 +230,7 @@ class SplashPageReducer : Reducer<SplashPageReducer.State, SplashPageReducer.Act
 
     private fun initializeBundleTask(fromRetry: Boolean = false): Effect<Action> =
         Effect.run { send ->
-            val viewService = DependencyValues.current.splashPageViewService
+            val viewService = splashPageViewService
             coroutineScope {
                 val initDeferred =
                     async {
@@ -266,7 +271,7 @@ class SplashPageReducer : Reducer<SplashPageReducer.State, SplashPageReducer.Act
 
     private fun performRetryHandlerTask(): Effect<Action> =
         Effect.task {
-            val viewService = DependencyValues.current.splashPageViewService
+            val viewService = splashPageViewService
             try {
                 viewService.performRetryHandler()
                 Action.PerformRetryHandlerReturned(null)

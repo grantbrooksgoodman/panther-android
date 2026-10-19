@@ -28,10 +28,12 @@ import us.neotechnica.panther.modules.networking.sources.conversation.models.Con
 import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.extensions.UserSessionServiceStorageKey
+import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.RootNavigatorState
 import us.neotechnica.panther.navigation.RootRoute
 import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.languageExonym
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
@@ -42,8 +44,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStora
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 
 /**
- * Handles conversation cell interactions requiring presentation or
- * session work.
+ * Handles conversation cell interactions requiring presentation
+ * or session work.
  *
  * [ConversationCellReducer][us.neotechnica.panther.modules.content.user.components.conversationcellview.ConversationCellReducer]
  * delegates to this service for blocking, reporting, and deletion
@@ -52,8 +54,8 @@ import us.neotechnica.panther.subsystem.modules.localization.models.localized
  * Resolve the service through
  * [DependencyValues.conversationCellViewService][us.neotechnica.panther.modules.content.user.dependencies.conversationCellViewService].
  *
- * @param dependencies The collaborators the service resolves its work
- *   through. The default resolves the live services.
+ * @param dependencies The collaborators the service resolves its
+ *   work through. The default resolves the live services.
  */
 class ConversationCellViewService(
     private val dependencies: Dependencies = Dependencies(),
@@ -63,14 +65,15 @@ class ConversationCellViewService(
     /**
      * The collaborators the service resolves its work through.
      *
-     * Each property defaults to the live service; a test replaces the
-     * ones it exercises.
+     * Each property defaults to the live service; a test replaces
+     * the ones it exercises.
      *
-     * @property blockUsers Blocks the users in the given conversation.
-     * @property isDeveloperModeEnabled Returns whether developer mode
-     *   is enabled.
-     * @property localizedRegionName Returns the localized name of the
-     *   region with the given code.
+     * @property blockUsers Blocks the users in the given
+     *   conversation.
+     * @property isDeveloperModeEnabled Returns whether developer
+     *   mode is enabled.
+     * @property localizedRegionName Returns the localized name of
+     *   the region with the given code.
      * @property reportUsers Reports the users in the given
      *   conversation.
      */
@@ -90,6 +93,10 @@ class ConversationCellViewService(
         },
     )
 
+    // MARK: - Dependencies
+
+    private val navigation: Navigation by Dependency { it.navigation }
+
     // MARK: - Properties
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -108,12 +115,14 @@ class ConversationCellViewService(
     }
 
     /**
-     * Presents the deletion confirmation action sheet for a conversation.
+     * Presents the deletion confirmation action sheet for a
+     * conversation.
      *
-     * @param title The conversation title the action sheet displays.
+     * @param title The conversation title the action sheet
+     *   displays.
      *
-     * @return `true` if the user cancelled the deletion; otherwise,
-     *   `false`.
+     * @return `true` if the user cancelled the deletion;
+     *   otherwise, `false`.
      */
     suspend fun presentDeletionActionSheet(title: String): Boolean {
         var cancelled = true
@@ -195,7 +204,6 @@ class ConversationCellViewService(
             user.id,
         )
 
-        val navigation = DependencyValues.current.navigation
         navigation.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
         navigation.navigate(Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.Splash)))
     }

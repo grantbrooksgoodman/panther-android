@@ -22,6 +22,7 @@ import org.junit.Before
 import org.junit.Test
 import us.neotechnica.panther.bundle.currentUserID
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
+import us.neotechnica.panther.modules.networking.sources.conversation.models.copyWith
 import us.neotechnica.panther.modules.networking.sources.support.FakeDatabaseDelegate
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.networking.Networking

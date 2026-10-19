@@ -54,7 +54,10 @@ class ActionSheet(
 ) {
     // MARK: - Types
 
-    /** A value that identifies a translatable part of an [ActionSheet]. */
+    /**
+     * A value that identifies a translatable part of an
+     * [ActionSheet].
+     */
     sealed interface TranslationOptionKey {
         /**
          * The action button titles. Pass an empty list to translate

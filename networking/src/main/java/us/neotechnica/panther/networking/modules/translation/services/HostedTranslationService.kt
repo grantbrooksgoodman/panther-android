@@ -52,14 +52,16 @@ import kotlin.time.Duration.Companion.seconds
 
 // This service exceeds the file-length and type-body-length limits.
 
+// The counterpart service carries `// swiftlint:disable file_length type_body_length`.
+
 /**
- * Coordinates translation across the local archive, the hosted RTDB
- * archive, and the underlying [TranslationService].
+ * Coordinates translation across the local archive, the hosted
+ * RTDB archive, and the underlying [TranslationService].
  *
- * A [translate] call short-circuits on idempotent pairs, local-archive
- * hits, and text already in the target language; otherwise it consults
- * the hosted archive, falls back to a live web/API translation, and
- * writes the result to both archives.
+ * A [translate] call short-circuits on idempotent pairs,
+ * local-archive hits, and text already in the target language;
+ * otherwise it consults the hosted archive, falls back to a live
+ * web/API translation, and writes the result to both archives.
  */
 @Suppress("LargeClass", "TooManyFunctions")
 class HostedTranslationService private constructor() : HostedTranslationDelegate {

@@ -70,13 +70,17 @@ object ChatPageViewService {
         get() = AudioMessagePlaybackService
 
     /**
-     * Whether the most recent load of older messages was triggered by
-     * scrolling to the top of the list. The page scrolls to the topmost
-     * message when this becomes `true`, then clears it.
+     * Whether the most recent load of older messages was
+     * triggered by scrolling to the top of the list. The page
+     * scrolls to the topmost message when this becomes `true`,
+     * then clears it.
      */
     val didLoadMoreMessagesFromScrollToTop: StateFlow<Boolean> = mutableDidLoadMoreMessagesFromScrollToTop.asStateFlow()
 
-    /** The navigation title the page resolved, or `null` before it resolves. */
+    /**
+     * The navigation title the page resolved, or `null` before it
+     * resolves.
+     */
     val navigationTitle: StateFlow<String?> = mutableNavigationTitle.asStateFlow()
 
     // MARK: - Set Configuration
@@ -95,14 +99,16 @@ object ChatPageViewService {
     /**
      * Loads older messages into the message list.
      *
-     * This method has no effect while a message send is in flight, or
-     * when no older messages remain.
+     * This method has no effect while a message send is in
+     * flight, or when no older messages remain.
      *
      * @param fromScrollToTop Whether the load was triggered by
-     *   scrolling to the top of the list, in which case the caller
-     *   scrolls to the topmost message once the list reloads.
+     *   scrolling to the top of the list, in which case the
+     *   caller scrolls to the topmost message once the list
+     *   reloads.
      *
-     * @return `true` if older messages were loaded; otherwise, `false`.
+     * @return `true` if older messages were loaded; otherwise,
+     *   `false`.
      */
     fun loadMoreMessages(fromScrollToTop: Boolean): Boolean {
         if (MessageDeliveryService.isSendingMessage.value) return false
@@ -117,10 +123,11 @@ object ChatPageViewService {
     // MARK: - Present Failed Message Action Sheet
 
     /**
-     * Presents an action sheet for a failed outbox message, offering to
-     * delete it or try sending it again.
+     * Presents an action sheet for a failed outbox message,
+     * offering to delete it or try sending it again.
      *
-     * @param forMessageID The identifier of the failed outbox message.
+     * @param forMessageID The identifier of the failed outbox
+     *   message.
      */
     suspend fun presentFailedMessageActionSheet(forMessageID: String) {
         ActionSheet(
@@ -156,7 +163,10 @@ object ChatPageViewService {
 
     // MARK: - Did Scroll To Top After Loading
 
-    /** Acknowledges the scroll to the topmost message after a scroll-to-top load. */
+    /**
+     * Acknowledges the scroll to the topmost message after a
+     * scroll-to-top load.
+     */
     fun didScrollToTopAfterLoading() {
         mutableDidLoadMoreMessagesFromScrollToTop.value = false
     }

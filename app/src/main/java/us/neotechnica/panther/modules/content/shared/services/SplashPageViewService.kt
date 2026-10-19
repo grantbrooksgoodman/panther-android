@@ -30,6 +30,7 @@ import us.neotechnica.panther.Application
 import us.neotechnica.panther.bundle.LocalizedStringKey
 import us.neotechnica.panther.bundle.clientSession
 import us.neotechnica.panther.bundle.currentUserIDNotSet
+import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.dependencies.alertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ErrorAlert
 import us.neotechnica.panther.modules.common.extensions.isEmulator
@@ -45,6 +46,7 @@ import us.neotechnica.panther.modules.content.user.dependencies.uiCacheInvalidat
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.syncIfNeeded
 import us.neotechnica.panther.modules.content.user.extensions.updateDeviceIDIfNeeded
+import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
 import us.neotechnica.panther.modules.networking.sources.common.extensions.populateTemporaryCaches
 import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.session.ClientSession
@@ -76,24 +78,27 @@ import kotlin.time.Duration.Companion.seconds
 // This splash orchestration is large; the suppressions below cover
 // its size and complexity.
 
+// The counterpart service carries `// swiftlint:disable cyclomatic_complexity file_length function_body_length type_body_length`.
+
 /**
- * The service that initializes the app's data bundle behind the splash
- * page.
+ * The service that initializes the app's data bundle behind the
+ * splash page.
  *
- * Use [SplashPageViewService] to bring the app from launch – or from a
- * completed sign-in or sign-up – to a presentable state. The splash
- * page's reducer calls [initializeBundle] when the page appears,
- * racing it against [resolveCachedUserIfPoorNetwork]; whichever
- * settles first determines how the app loads, and the other is
- * cancelled. The service reports progress through
- * [initializationProgress] and publishes the loading indicator the
- * splash page displays.
+ * Use [SplashPageViewService] to bring the app from launch – or
+ * from a completed sign-in or sign-up – to a presentable state.
+ * The splash page's reducer calls [initializeBundle] when the
+ * page appears, racing it against
+ * [resolveCachedUserIfPoorNetwork]; whichever settles first
+ * determines how the app loads, and the other is cancelled. The
+ * service reports progress through [initializationProgress] and
+ * publishes the loading indicator the splash page displays.
  *
- * If initialization fails, the splash page's reducer drives a recovery
- * sequence through this service: the first failure retries
- * automatically – attempting recovery through [performRetryHandler]
- * when the failure warrants one – and subsequent failures present
- * [presentErrorAlert] so the user can retry manually.
+ * If initialization fails, the splash page's reducer drives a
+ * recovery sequence through this service: the first failure
+ * retries automatically – attempting recovery through
+ * [performRetryHandler] when the failure warrants one – and
+ * subsequent failures present [presentErrorAlert] so the user can
+ * retry manually.
  *
  * **Important:** Because initialization races
  * [resolveCachedUserIfPoorNetwork], both methods check for
@@ -103,9 +108,15 @@ import kotlin.time.Duration.Companion.seconds
 object SplashPageViewService {
     // MARK: - Types
 
-    /** The loading indicator shown behind the splash page while the bundle initializes. */
+    /**
+     * The loading indicator shown behind the splash page while
+     * the bundle initializes.
+     */
     enum class LoadingIndicatorStyle {
-        /** A determinate progress bar, shown for heavy loads: a poor network or a cold cache. */
+        /**
+         * A determinate progress bar, shown for heavy loads: a
+         * poor network or a cold cache.
+         */
         BAR,
 
         /** No indicator, shown for the first second of loading. */
@@ -131,10 +142,12 @@ object SplashPageViewService {
 
     // MARK: - Dependencies
 
+    private val alertKitConfig: AlertKitConfig by Dependency { it.alertKitConfig }
     private val clientSession: ClientSession by Dependency { it.clientSession }
     private val contactService: ContactService by Dependency { it.commonServices.contact }
     private val networking: NetworkServices by Dependency { it.networking }
     private val services: CommonServices by Dependency { it.commonServices }
+    private val uiCacheInvalidationService: UICacheInvalidationService by Dependency { it.uiCacheInvalidationService }
 
     // MARK: - Properties
 
@@ -155,28 +168,30 @@ object SplashPageViewService {
     // MARK: - Computed Properties
 
     /**
-     * The fraction of bundle initialization that has completed, from
-     * `0` to `1`.
+     * The fraction of bundle initialization that has completed,
+     * from `0` to `1`.
      *
-     * When the value reaches `1`, it resets itself to `0` after a brief
-     * delay unless a new initialization has since begun.
+     * When the value reaches `1`, it resets itself to `0` after
+     * a brief delay unless a new initialization has since begun.
      */
     val initializationProgress: StateFlow<Float> = initializationProgressState.asStateFlow()
 
     /**
      * The loading indicator shown behind the splash page, or
-     * [LoadingIndicatorStyle.HIDDEN] for the first second of a fresh
-     * load. Resolved once, one second in, from network and cache state.
+     * [LoadingIndicatorStyle.HIDDEN] for the first second of a
+     * fresh load. Resolved once, one second in, from network and
+     * cache state.
      */
     val loadingIndicatorStyle: StateFlow<LoadingIndicatorStyle> = loadingIndicatorStyleState.asStateFlow()
 
     // MARK: - Set Initialization Progress
 
     /**
-     * Sets the fraction of bundle initialization that has completed.
+     * Sets the fraction of bundle initialization that has
+     * completed.
      *
-     * When the value reaches `1`, it resets itself to `0` after a brief
-     * delay unless a new initialization has since begun.
+     * When the value reaches `1`, it resets itself to `0` after
+     * a brief delay unless a new initialization has since begun.
      *
      * @param value The new progress value, from `0` to `1`.
      */
@@ -192,22 +207,23 @@ object SplashPageViewService {
     // MARK: - Initialize Bundle
 
     /**
-     * Initializes the app's data bundle, preparing every service the
-     * app requires.
+     * Initializes the app's data bundle, preparing every service
+     * the app requires.
      *
      * The splash page's reducer calls this method when the page
      * appears, and again – passing `true` – when retrying after a
-     * failure. Progress is reported through [initializationProgress],
-     * reaching `1` when initialization completes.
+     * failure. Progress is reported through
+     * [initializationProgress], reaching `1` when initialization
+     * completes.
      *
-     * @param fromRetry Whether this call retries a previous attempt.
-     *   Passing `true` preserves the existing progress and timeout
-     *   state.
+     * @param fromRetry Whether this call retries a previous
+     *   attempt. Passing `true` preserves the existing progress
+     *   and timeout state.
      *
-     * @throws Exception If a required startup step fails. Failing to
-     *   resolve the current user because no user is signed in is not an
-     *   error; in that case, progress completes so the user can proceed
-     *   to onboarding.
+     * @throws Exception If a required startup step fails. Failing
+     *   to resolve the current user because no user is signed in
+     *   is not an error; in that case, progress completes so the
+     *   user can proceed to onboarding.
      */
     @Suppress("LongMethod", "CyclomaticComplexMethod")
     suspend fun initializeBundle(fromRetry: Boolean) {
@@ -244,14 +260,14 @@ object SplashPageViewService {
 
         // AlertKit Delegate Setup
 
-        DependencyValues.current.alertKitConfig.registerReportDelegate(ErrorReportingService)
-        DependencyValues.current.alertKitConfig.registerTranslationDelegate(AlertKitTranslationService)
+        alertKitConfig.registerReportDelegate(ErrorReportingService)
+        alertKitConfig.registerTranslationDelegate(AlertKitTranslationService)
 
         // Breadcrumbs capture: not provided.
 
         // Store Observation Setup
 
-        DependencyValues.current.uiCacheInvalidationService.startObserving()
+        uiCacheInvalidationService.startObserving()
 
         // Offline User Setup
 
@@ -335,12 +351,12 @@ object SplashPageViewService {
     /**
      * Attempts to recover from a failed initialization.
      *
-     * The first call attempts a database repair; a subsequent call
-     * after another failure resets the application entirely.
+     * The first call attempts a database repair; a subsequent
+     * call after another failure resets the application entirely.
      *
-     * **Note:** `IntegrityService.repairDatabase()` and the forced-update
-     * branch that follows it are not provided, so the first call
-     * performs no repair.
+     * **Note:** `IntegrityService.repairDatabase()` and the
+     * forced-update branch that follows it are not provided, so
+     * the first call performs no repair.
      */
     @Suppress("RedundantSuspendModifier")
     suspend fun performRetryHandler() {
@@ -355,14 +371,14 @@ object SplashPageViewService {
     // MARK: - Present Error Alert
 
     /**
-     * Presents an error alert for the given exception, offering to try
-     * again.
+     * Presents an error alert for the given exception, offering
+     * to try again.
      *
-     * The alert's error description is translated when the exception
-     * carries a specific user-facing descriptor; generic and timed-out
-     * descriptors are presented without translation. When the exception
-     * is reportable, the alert includes an option to send an error
-     * report.
+     * The alert's error description is translated when the
+     * exception carries a specific user-facing descriptor;
+     * generic and timed-out descriptors are presented without
+     * translation. When the exception is reportable, the alert
+     * includes an option to send an error report.
      *
      * @param exception The exception to present.
      */
@@ -389,20 +405,21 @@ object SplashPageViewService {
     // MARK: - Resolve Cached User If Poor Network
 
     /**
-     * Falls back to the cached user when the network is too poor for
-     * full initialization.
+     * Falls back to the cached user when the network is too poor
+     * for full initialization.
      *
-     * Call this method concurrently with [initializeBundle]. If a
-     * complete cached user – one whose conversations all have their
-     * messages and users present – is available, the method waits for
-     * the network health to degrade to poor, or for a fallback deadline
-     * to elapse on a network that has produced no health evidence. It
-     * then reports progress as nearly complete, applies the cached
-     * user's language, and schedules a delayed resolution of the
-     * user's data for when the network health recovers.
+     * Call this method concurrently with [initializeBundle]. If
+     * a complete cached user – one whose conversations all have
+     * their messages and users present – is available, the method
+     * waits for the network health to degrade to poor, or for a
+     * fallback deadline to elapse on a network that has produced
+     * no health evidence. It then reports progress as nearly
+     * complete, applies the cached user's language, and schedules
+     * a delayed resolution of the user's data for when the
+     * network health recovers.
      *
-     * @return `true` if the app loaded from the cached user; otherwise,
-     *   `false`.
+     * @return `true` if the app loaded from the cached user;
+     *   otherwise, `false`.
      */
     suspend fun resolveCachedUserIfPoorNetwork(): Boolean {
         val currentUser = clientSession.entity.user.currentUser
@@ -572,7 +589,10 @@ object SplashPageViewService {
         return true
     }
 
-    /** Replaces the resolutions the parallel initialization launches. */
+    /**
+     * Replaces the resolutions the parallel initialization
+     * launches.
+     */
     internal fun setDependencies(dependencies: Dependencies?) {
         this.dependencies = dependencies
     }

@@ -17,6 +17,7 @@ import org.json.JSONObject
 import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ErrorAlert
 import us.neotechnica.panther.designsystem.modules.foundation.extensions.leafViewDescriptor
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestampDateFormatter
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -24,6 +25,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetad
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
+import us.neotechnica.panther.subsystem.modules.foundation.services.TimestampDateFormatter
 import us.neotechnica.panther.subsystem.modules.localization.models.Localized
 import us.neotechnica.panther.subsystem.modules.localization.models.SubsystemStringKey
 import us.neotechnica.panther.subsystem.modules.shared.models.SharedState
@@ -39,14 +41,14 @@ import us.neotechnica.panther.designsystem.modules.alertkit.interfaces.ReportDel
  * [ReportDelegate] conforms to the AlertKit report delegate
  * interface and serves as the bridge between the subsystem's
  * error-handling infrastructure and the device's mail app. When
- * the user triggers a "Send Feedback" or "Report Bug" action –
- * or when an error report is filed before the app registers its
- * own report delegate – this delegate assembles an e-mail with
+ * the user triggers a "Send Feedback" or "Report Bug" action – or
+ * when an error report is filed before the app registers its own
+ * report delegate – this delegate assembles an e-mail with
  * diagnostic attachments and hands it to the mail app.
  *
  * Call [registerWithDependencies] during app setup to install the
- * delegate with AlertKit. You can also access the delegate through
- * the dependency system:
+ * delegate with AlertKit. You can also access the delegate
+ * through the dependency system:
  *
  * ```kotlin
  * private val reportDelegate: ReportDelegate by Dependency { it.reportDelegate }
@@ -65,6 +67,10 @@ import us.neotechnica.panther.designsystem.modules.alertkit.interfaces.ReportDel
  * composing a message.
  */
 object ReportDelegate : AlertKitReportDelegate {
+    // MARK: - Dependencies
+
+    private val timestampDateFormatter: TimestampDateFormatter by Dependency { it.timestampDateFormatter }
+
     // MARK: - Properties
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -84,18 +90,6 @@ object ReportDelegate : AlertKitReportDelegate {
                 mimeType = "text/plain",
             )
         }
-
-    // MARK: - Register with Dependencies
-
-    /**
-     * Registers the report delegate with AlertKit's configuration.
-     *
-     * Call this method once during app setup so that AlertKit can
-     * present error-report prompts through this delegate.
-     */
-    fun registerWithDependencies() {
-        AlertKitConfig.registerReportDelegate(this)
-    }
 
     // MARK: - AlertKit ReportDelegate Conformance
 
@@ -118,6 +112,18 @@ object ReportDelegate : AlertKitReportDelegate {
                 exception = exception,
             )
         }
+    }
+
+    // MARK: - Register with Dependencies
+
+    /**
+     * Registers the report delegate with AlertKit's configuration.
+     *
+     * Call this method once during app setup so that AlertKit can
+     * present error-report prompts through this delegate.
+     */
+    fun registerWithDependencies() {
+        AlertKitConfig.registerReportDelegate(this)
     }
 
     // MARK: - Report Bug
@@ -261,7 +267,7 @@ object ReportDelegate : AlertKitReportDelegate {
                 "language_code" to RuntimeStorage.languageCode,
                 "os_version" to SystemInformation.osVersion.lowercase(),
                 "project_id" to Build.projectID,
-                "timestamp" to DependencyValues.current.timestampDateFormatter.format(Date()),
+                "timestamp" to timestampDateFormatter.format(Date()),
             )
 
         SharedState { it.leafViewDescriptor }.wrappedValue?.let { sections["view_id"] = it }

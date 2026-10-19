@@ -50,21 +50,24 @@ import us.neotechnica.panther.translator.models.TranslationInput
 import us.neotechnica.panther.translator.models.TranslationPlatform
 import kotlin.coroutines.resume
 
+// The counterpart translator runs to 470 lines in a package without a file-length rule.
+
 /**
- * The web-view scraping harness shared by the translators that have no
- * HTTP API.
+ * The web-view scraping harness shared by the translators that
+ * have no HTTP API.
  *
- * [translate] loads a platform's translation page in an off-screen,
- * hardened [WebView] attached to the current activity's window (a
- * window-less web view does not reliably run timers or observers),
- * waits for the result to render – signaled by a result-observer web
- * message or page load – then extracts it with the platform's
- * JavaScript selector, retrying against the alternate selector. If
- * the web view's renderer process crashes or is killed to reclaim
- * memory, the translation fails instead of taking the app down with it.
+ * [translate] loads a platform's translation page in an
+ * off-screen, hardened [WebView] attached to the current
+ * activity's window (a window-less web view does not reliably run
+ * timers or observers), waits for the result to render – signaled
+ * by a result-observer web message or page load – then extracts
+ * it with the platform's JavaScript selector, retrying against
+ * the alternate selector. If the web view's renderer process
+ * crashes or is killed to reclaim memory, the translation fails
+ * instead of taking the app down with it.
  *
- * Subclasses override [configureWebView] to inject extra scripts and
- * [extractOutput] to customize result extraction.
+ * Subclasses override [configureWebView] to inject extra scripts
+ * and [extractOutput] to customize result extraction.
  */
 internal open class BaseTranslator(
     override val platform: TranslationPlatform,
@@ -111,7 +114,10 @@ internal open class BaseTranslator(
 
     // MARK: - Overridable Hooks
 
-    /** A hook for subclasses to inject additional document-start scripts. */
+    /**
+     * A hook for subclasses to inject additional document-start
+     * scripts.
+     */
     protected open fun configureWebView(webView: WebView) {}
 
     /**

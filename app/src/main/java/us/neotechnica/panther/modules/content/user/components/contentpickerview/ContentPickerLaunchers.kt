@@ -31,14 +31,15 @@ import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.Dep
 import java.io.File
 
 /**
- * Registers the activity result launchers that present the content
- * pickers and the document export picker for the duration of the
- * composition.
+ * Registers the activity result launchers that present the
+ * content pickers and the document export picker for the duration
+ * of the composition.
  *
- * Maps photo and video selection to the system Photo Picker, camera
- * capture to a `FileProvider`-backed capture intent, document selection
- * to the Storage Access Framework restricted to the supported types,
- * and document export to the system document creator.
+ * Maps photo and video selection to the system Photo Picker,
+ * camera capture to a `FileProvider` -backed capture intent,
+ * document selection to the Storage Access Framework restricted
+ * to the supported types, and document export to the system
+ * document creator.
  */
 @Composable
 fun RegisterContentPickerLaunchers() {

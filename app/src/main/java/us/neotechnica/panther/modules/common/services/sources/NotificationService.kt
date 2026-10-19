@@ -34,6 +34,7 @@ import us.neotechnica.panther.modules.networking.sources.user.models.DeviceID
 import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.modules.session.clientSession
+import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.PendingChatNavigation
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.RootNavigatorState
@@ -74,6 +75,7 @@ object NotificationService {
     // MARK: - Dependencies
 
     private val clientSession: ClientSession by Dependency { it.clientSession }
+    private val navigation: Navigation by Dependency { it.navigation }
     private val networking: NetworkServices by Dependency { it.networking }
     private val services: CommonServices by Dependency { it.commonServices }
 
@@ -111,23 +113,24 @@ object NotificationService {
      * Sends a push notification about the given message – or a
      * reaction to it – to each of the given users.
      *
-     * Notification content is localized to each recipient's language,
-     * and each recipient's hosted badge number is incremented
-     * atomically. Recipients who have not registered for push
-     * notifications are skipped; stale push tokens are erased. Each
-     * recipient's push tokens are read from the database at send time,
-     * not taken from the given users, whose copies may predate a
-     * reinstall or a new sign-in.
+     * Notification content is localized to each recipient's
+     * language, and each recipient's hosted badge number is
+     * incremented atomically. Recipients who have not registered
+     * for push notifications are skipped; stale push tokens are
+     * erased. Each recipient's push tokens are read from the
+     * database at send time, not taken from the given users,
+     * whose copies may predate a reinstall or a new sign-in.
      *
      * @param users The users to notify.
-     * @param ofReaction The reaction the notification describes; pass
-     *   `null` to describe the message itself. The default is `null`.
+     * @param ofReaction The reaction the notification describes;
+     *   pass `null` to describe the message itself. The default
+     *   is `null`.
      * @param message The message the notification describes.
-     * @param conversationIDKey The identifier key of the conversation
-     *   containing the message.
+     * @param conversationIDKey The identifier key of the
+     *   conversation containing the message.
      *
-     * @throws Exception if the current user has not been set, or if
-     *   delivery fails.
+     * @throws Exception if the current user has not been set, or
+     *   if delivery fails.
      */
     suspend fun notify(
         users: List<User>,
@@ -194,7 +197,6 @@ object NotificationService {
      *   the notification names.
      */
     fun respondToNotificationTap(conversationIDKey: String) {
-        val navigation = DependencyValues.current.navigation
         val isSignedIn = User.currentUserID != null && clientSession.entity.user.currentUser != null
         if (!isSignedIn || navigation.state.value.modal != RootNavigatorState.ModalPaths.UserContent) {
             return PendingChatNavigation.set(conversationIDKey)
@@ -431,11 +433,11 @@ object NotificationService {
     /**
      * Builds the FCM message for one recipient token.
      *
-     * A recipient whose device identifier carries the Android prefix
-     * receives a data-only message – the title and body travel in
-     * `data`, so the app renders the notification itself – at high
-     * priority. Every other recipient receives the `notification` block
-     * and the APNs payload.
+     * A recipient whose device identifier carries the Android
+     * prefix receives a data-only message – the title and body
+     * travel in `data`, so the app renders the notification
+     * itself – at high priority. Every other recipient receives
+     * the `notification` block and the APNs payload.
      */
     @Suppress("LongParameterList")
     internal fun fcmMessage(

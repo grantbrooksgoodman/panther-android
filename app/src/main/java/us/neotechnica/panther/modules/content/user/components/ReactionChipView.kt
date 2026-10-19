@@ -37,9 +37,9 @@ import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.Dep
 private typealias ChipFloats = ChatPageViewFloats.MessagesDisplayDelegate
 
 /**
- * A reaction chip: the style's emoji and, for more than one reaction of
- * that style, its count. The current user's own reaction is highlighted
- * in the style's color.
+ * A reaction chip: the style's emoji and, for more than one
+ * reaction of that style, its count. The current user's own
+ * reaction is highlighted in the style's color.
  *
  * @param chip The chip to render.
  */
@@ -101,8 +101,8 @@ internal fun reactionChips(reactions: List<Reaction>): List<ReactionChip> =
 
 /**
  * The reaction row choices for a message: every style in display
- * order, with the current user's own styles selected and the love style
- * as the double-tap default.
+ * order, with the current user's own styles selected and the love
+ * style as the double-tap default.
  *
  * Choosing a reaction plays the reaction sound with medium haptic
  * feedback; the double tap gives the haptic feedback alone.

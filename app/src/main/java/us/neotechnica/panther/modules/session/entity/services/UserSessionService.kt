@@ -46,6 +46,7 @@ import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.bangQualifiedEmptyList
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.common.models.NetworkServices
 import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.networking.modules.database.interfaces.observe
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
@@ -63,6 +64,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 
 // This service exceeds the file-length and type-body-length limits.
 
+// The counterpart service carries `// swiftlint:disable file_length type_body_length`.
+
 /**
  * The service that manages the current user and resolves their
  * session data.
@@ -73,6 +76,7 @@ object UserSessionService {
 
     private val conversationObserver: ConversationObserverService by Dependency { it.clientSession.sync.conversationObserver }
     private val database: DatabaseDelegate by Dependency { it.networking.database }
+    private val networking: NetworkServices by Dependency { it.networking }
     private val sessionStore: SessionStore by Dependency { it.clientSession.store }
 
     // MARK: - Properties
@@ -100,13 +104,13 @@ object UserSessionService {
     // MARK: - Resolve Current User
 
     /**
-     * Fetches the current user from the server and upserts it to the
-     * session store, optionally resolving associated data.
+     * Fetches the current user from the server and upserts it to
+     * the session store, optionally resolving associated data.
      *
      * Pass one or more [User.DataType] values to indicate which
-     * associated data to resolve after the user itself is fetched.
-     * Each data type is coalesced independently, so concurrent calls
-     * converge rather than duplicate work.
+     * associated data to resolve after the user itself is
+     * fetched. Each data type is coalesced independently, so
+     * concurrent calls converge rather than duplicate work.
      *
      * ```kotlin
      * userSession.resolveCurrentUser(
@@ -114,11 +118,11 @@ object UserSessionService {
      * )
      * ```
      *
-     * @param data The set of associated data types to resolve. Pass an
-     *   empty set to resolve only the user.
+     * @param data The set of associated data types to resolve.
+     *   Pass an empty set to resolve only the user.
      *
-     * @throws Exception if the current user identifier has not been
-     *   set or any resolution fails.
+     * @throws Exception if the current user identifier has not
+     *   been set or any resolution fails.
      */
     suspend fun resolveCurrentUser(data: Set<User.DataType> = emptySet()) {
         resolveCurrentUser()
@@ -292,18 +296,22 @@ object UserSessionService {
     }
 
     /**
-     * A conversation version is "known" when the session store already
-     * holds it, when this client wrote it and the store is still
-     * settling, or when the conversation-node observer is actively
-     * streaming it (the observer pipeline owns delivery of its
-     * updates). Known versions never require ingestion.
+     * A conversation version is "known" when the session store
+     * already holds it, when this client wrote it and the store
+     * is still settling, or when the conversation-node observer
+     * is actively streaming it (the observer pipeline owns
+     * delivery of its updates). Known versions never require
+     * ingestion.
      */
     private fun isKnownVersion(conversationID: ConversationID): Boolean =
         SelfWriteRegistry.contains(conversationID) ||
             sessionStore.getConversation(conversationID) != null ||
             conversationObserver.isActivelyObserving(conversationID.key)
 
-    /** Fetches the current user from the server and upserts the result to the session store. */
+    /**
+     * Fetches the current user from the server and upserts the
+     * result to the session store.
+     */
     private suspend fun resolveCurrentUser() {
         val currentUserID =
             currentUserID
@@ -317,14 +325,14 @@ object UserSessionService {
     }
 
     /**
-     * Populates conversations for the current user from the archive,
-     * sync service, or network.
+     * Populates conversations for the current user from the
+     * archive, sync service, or network.
      *
-     * Conversations already present in the archive are used directly.
-     * Conversations whose identifier matches an archived entry but
-     * whose hash has changed are synchronized. Remaining conversations
-     * are fetched from the network. The resolved set is committed to
-     * the session store.
+     * Conversations already present in the archive are used
+     * directly. Conversations whose identifier matches an
+     * archived entry but whose hash has changed are synchronized.
+     * Remaining conversations are fetched from the network. The
+     * resolved set is committed to the session store.
      *
      * This method resolves conversation objects only; it does not
      * fetch their associated messages or users.
@@ -397,7 +405,7 @@ object UserSessionService {
 
         currentCoroutineContext().ensureActive()
         val conversations =
-            DependencyValues.current.networking.conversationService
+            networking.conversationService
                 .getConversations(conversationsNeedingFetch.map { it.key })
 
         // Stamp fetched conversations with the user-record
@@ -501,14 +509,14 @@ object UserSessionService {
     }
 
     /**
-     * Resolves the current user and their conversations in response to
-     * an observed change.
+     * Resolves the current user and their conversations in
+     * response to an observed change.
      *
-     * Only one update runs at a time. A call that arrives while an
-     * update is in progress waits for it to finish and then runs once
-     * more, so every observed change is reflected by an update that
-     * began after it. Any number of such calls collapse into a single
-     * rerun.
+     * Only one update runs at a time. A call that arrives while
+     * an update is in progress waits for it to finish and then
+     * runs once more, so every observed change is reflected by an
+     * update that began after it. Any number of such calls
+     * collapse into a single rerun.
      */
     private fun updateCurrentUser() {
         observationScope.launch {

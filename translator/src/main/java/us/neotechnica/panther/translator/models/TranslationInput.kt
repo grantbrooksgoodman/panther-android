@@ -15,10 +15,10 @@ import us.neotechnica.panther.translator.services.DataDetector
 /**
  * The source text for a translation request.
  *
- * A `TranslationInput` supports an optional [alternate] string that,
- * when provided, takes precedence over the [original] during
- * translation, letting a pre-processed variant be translated while
- * the unmodified original is retained.
+ * A `TranslationInput` supports an optional [alternate] string
+ * that, when provided, takes precedence over the [original]
+ * during translation, letting a pre-processed variant be
+ * translated while the unmodified original is retained.
  *
  * ```kotlin
  * val input = TranslationInput("Hello, world!")
@@ -28,12 +28,18 @@ import us.neotechnica.panther.translator.services.DataDetector
 data class TranslationInput(
     /** The original source text provided at initialization. */
     val original: String,
-    /** An optional replacement string to translate in place of [original]. */
+    /**
+     * An optional replacement string to translate in place of
+     * [original].
+     */
     val alternate: String? = null,
 ) : Validatable {
     // MARK: - Computed Properties
 
-    /** The string that translation uses: [alternate] if present, else [original]. */
+    /**
+     * The string that translation uses: [alternate] if present,
+     * else [original].
+     */
     val value: String get() = alternate ?: original
 
     override val isWellFormed: Boolean get() = !value.isBlank()

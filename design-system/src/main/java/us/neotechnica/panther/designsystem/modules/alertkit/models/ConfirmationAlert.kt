@@ -44,7 +44,10 @@ class ConfirmationAlert(
 ) {
     // MARK: - Types
 
-    /** A value that identifies a translatable part of a [ConfirmationAlert]. */
+    /**
+     * A value that identifies a translatable part of a
+     * [ConfirmationAlert].
+     */
     sealed interface TranslationOptionKey {
         /** The cancel button's title. */
         data object CancelButtonTitle : TranslationOptionKey

@@ -18,6 +18,9 @@ private object UICacheInvalidationServiceDependency : DependencyKey<UICacheInval
     override fun resolve(dependencies: DependencyValues): UICacheInvalidationService = UICacheInvalidationService()
 }
 
-/** The service that invalidates display caches in response to session store changes. */
+/**
+ * The service that invalidates display caches in response to
+ * session store changes.
+ */
 val DependencyValues.uiCacheInvalidationService: UICacheInvalidationService
     get() = this[UICacheInvalidationServiceDependency]

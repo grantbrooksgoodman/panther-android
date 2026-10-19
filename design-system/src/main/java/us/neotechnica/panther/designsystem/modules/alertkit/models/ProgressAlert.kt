@@ -29,6 +29,8 @@ import us.neotechnica.panther.designsystem.modules.alertkit.services.AlertPresen
 import us.neotechnica.panther.designsystem.modules.alertkit.services.PresentedAlert
 import us.neotechnica.panther.translator.models.TranslationInput
 
+// The counterpart alert runs to 516 lines in a package without a file-length rule.
+
 /**
  * An alert that displays the progress of a long-running operation.
  *
@@ -81,7 +83,10 @@ class ProgressAlert(
 ) {
     // MARK: - Types
 
-    /** A value that identifies a translatable part of a [ProgressAlert]. */
+    /**
+     * A value that identifies a translatable part of a
+     * [ProgressAlert].
+     */
     sealed interface TranslationOptionKey {
         /** The cancel button's title. */
         data object CancelButtonTitle : TranslationOptionKey
@@ -339,7 +344,10 @@ class ProgressAlert(
         result.getOrThrow()
     }
 
-    /** Advances the progress bar to [fractionCompleted], clamped to `0.0...1.0`. */
+    /**
+     * Advances the progress bar to [fractionCompleted], clamped
+     * to `0.0...1.0`.
+     */
     fun updateProgress(fractionCompleted: Double) {
         progress.value = fractionCompleted.coerceIn(0.0, 1.0)
     }

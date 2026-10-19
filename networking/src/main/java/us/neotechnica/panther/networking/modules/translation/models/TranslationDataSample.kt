@@ -13,18 +13,26 @@ import java.util.Date
 import kotlin.math.abs
 
 /**
- * A snapshot of the hosted translation archive tree together with the
- * time it was captured and the duration after which it is stale.
+ * A snapshot of the hosted translation archive tree together with
+ * the time it was captured and the duration after which it is
+ * stale.
  *
- * The [data] maps a language pair's string (`<from>-<to>`) to that
- * pair's archived translations, keyed by the encoded hash of the input.
+ * The [data] maps a language pair's string (`<from>-<to>`) to
+ * that pair's archived translations, keyed by the encoded hash of
+ * the input.
  */
 internal class TranslationDataSample(
     /** The snapshotted archive tree, keyed by language pair. */
     val data: Map<String, Any>,
-    /** The duration after which the snapshot expires, in milliseconds. */
+    /**
+     * The duration after which the snapshot expires, in
+     * milliseconds.
+     */
     val expiryThreshold: Long,
-    /** The epoch-millisecond timestamp at which the snapshot was captured. */
+    /**
+     * The epoch-millisecond timestamp at which the snapshot was
+     * captured.
+     */
     val date: Long = System.currentTimeMillis(),
     /**
      * A Boolean value that indicates whether the snapshot was
@@ -35,11 +43,17 @@ internal class TranslationDataSample(
 ) {
     // MARK: - Computed Properties
 
-    /** A Boolean value that indicates whether the snapshot holds no data. */
+    /**
+     * A Boolean value that indicates whether the snapshot holds
+     * no data.
+     */
     val isEmpty: Boolean
         get() = data.isEmpty()
 
-    /** A Boolean value that indicates whether the snapshot has exceeded its expiry threshold. */
+    /**
+     * A Boolean value that indicates whether the snapshot has
+     * exceeded its expiry threshold.
+     */
     val isExpired: Boolean
         get() = abs(Date().seconds(from = Date(date))) * MILLISECONDS_PER_SECOND > expiryThreshold
 

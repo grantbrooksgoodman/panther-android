@@ -78,15 +78,15 @@ private typealias Floats = ChatInfoPageViewFloats
 /**
  * The chat info page.
  *
- * For a group: a large avatar, the conversation title, a change name
- * and photo button, a segmented control between an expandable
- * participants card and the shared media card, and a leave row. A
- * participant row opens the participant's contact on tap and reveals a
- * delete button on a trailing swipe. For a one-to-one conversation:
- * the other participant's contact card.
+ * For a group: a large avatar, the conversation title, a change
+ * name and photo button, a segmented control between an
+ * expandable participants card and the shared media card, and a
+ * leave row. A participant row opens the participant's contact on
+ * tap and reveals a delete button on a trailing swipe. For a
+ * one-to-one conversation: the other participant's contact card.
  *
- * @param conversationIDKey The identifier key of the conversation the
- *   page describes.
+ * @param conversationIDKey The identifier key of the conversation
+ *   the page describes.
  * @param modifier The modifier for this view.
  */
 @Composable

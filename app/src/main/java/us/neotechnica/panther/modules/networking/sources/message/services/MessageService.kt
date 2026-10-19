@@ -24,6 +24,7 @@ import us.neotechnica.panther.modules.common.models.MediaFile
 import us.neotechnica.panther.modules.networking.sources.common.models.BatchFailureStrategy
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.sources.conversation.models.ConversationMetadata
+import us.neotechnica.panther.modules.networking.sources.conversation.models.copyWith
 import us.neotechnica.panther.modules.networking.sources.message.models.HostedContentType
 import us.neotechnica.panther.modules.networking.sources.message.models.Message
 import us.neotechnica.panther.modules.networking.sources.message.models.RichMessageContent
@@ -46,10 +47,13 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Coalescer
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import us.neotechnica.panther.subsystem.modules.foundation.services.TimestampDateFormatter
 import us.neotechnica.panther.translator.models.Translation
 import java.util.Date
 
 // This service exceeds the file-length and type-body-length limits.
+
+// The counterpart service carries `// swiftlint:disable file_length type_body_length`.
 
 /**
  * The service that creates, retrieves, and deletes messages.
@@ -60,13 +64,23 @@ import java.util.Date
  */
 @Suppress("LargeClass")
 object MessageService {
+    // MARK: - Dependencies
+
+    private val timestampDateFormatter: TimestampDateFormatter by Dependency { it.timestampDateFormatter }
+
     // MARK: - Properties
 
-    /** The service that uploads, downloads, and deletes audio message content. */
+    /**
+     * The service that uploads, downloads, and deletes audio
+     * message content.
+     */
     val audio: AudioMessageService
         get() = AudioMessageService
 
-    /** The service that uploads, downloads, and deletes media message content. */
+    /**
+     * The service that uploads, downloads, and deletes media
+     * message content.
+     */
     val media: MediaMessageService
         get() = MediaMessageService
 
@@ -87,16 +101,16 @@ object MessageService {
      * @param fromAccountID The identifier of the sending account.
      * @param presetID A preset message identifier, or `null` to
      *   generate one.
-     * @param richContent The message's rich content, or `null` for a
-     *   text message.
+     * @param richContent The message's rich content, or `null`
+     *   for a text message.
      * @param sentDate The date the message was sent.
-     * @param translations The message's translations, or `null` for
-     *   a message without text.
+     * @param translations The message's translations, or `null`
+     *   for a message without text.
      *
      * @return The built message.
      *
-     * @throws Exception if the arguments fail validation, an ID cannot
-     *   be generated, or an upload fails.
+     * @throws Exception if the arguments fail validation, an ID
+     *   cannot be generated, or an upload fails.
      */
     suspend fun buildMessage(
         fromAccountID: String,
@@ -321,7 +335,6 @@ object MessageService {
             )
 
         if (updateConversationHash) {
-            val timestampDateFormatter = DependencyValues.current.timestampDateFormatter
             val now = Date()
 
             val updated =

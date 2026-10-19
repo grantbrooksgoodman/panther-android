@@ -37,25 +37,23 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
+import us.neotechnica.panther.subsystem.modules.shared.models.SharedEvents
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Invalidates display caches in response to session store changes.
+ * Invalidates display caches in response to session store
+ * changes.
  *
  * Keeps derived display data – conversation cell view data, read
- * receipts, user display names, and the group conversation name map
- * read by the notification delivery path – consistent with the session
- * store. Changes are handled after a short delay; rapid successive
- * changes coalesce into a single invalidation.
+ * receipts, user display names, and the group conversation name
+ * map read by the notification delivery path – consistent with
+ * the session store. Changes are handled after a short delay;
+ * rapid successive changes coalesce into a single invalidation.
  *
  * Resolve the service through
  * [DependencyValues.uiCacheInvalidationService][us.neotechnica.panther.modules.content.user.dependencies.uiCacheInvalidationService].
  */
 class UICacheInvalidationService {
-    // MARK: - Dependencies
-
-    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
-
     // MARK: - Types
 
     private enum class TaskID(
@@ -67,6 +65,11 @@ class UICacheInvalidationService {
         USER_INVALIDATION("userInvalidation"),
     }
 
+    // MARK: - Dependencies
+
+    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
+    private val sharedEvents: SharedEvents by Dependency { it.sharedEvents }
+
     // MARK: - Properties
 
     private val observationJob = LockIsolated<Job?>(null)
@@ -76,18 +79,24 @@ class UICacheInvalidationService {
 
     // MARK: - Methods
 
-    /** Mirrors the current group conversation names to persistent storage. */
+    /**
+     * Mirrors the current group conversation names to persistent
+     * storage.
+     */
     fun refreshNotificationExtensionNameMap() {
         persistValuesForNotificationExtension()
     }
 
-    /** Begins observing session store changes, if not already observing. */
+    /**
+     * Begins observing session store changes, if not already
+     * observing.
+     */
     fun startObserving() {
         observationJob.withValue {
             if (it.value != null) return@withValue
             it.value =
                 scope.launch {
-                    DependencyValues.current.sharedEvents.sessionStoreDidChange.events.collect { change ->
+                    sharedEvents.sessionStoreDidChange.events.collect { change ->
                         handleChange(change)
                     }
                 }

@@ -18,6 +18,9 @@ private object ConversationCellViewServiceDependency : DependencyKey<Conversatio
     override fun resolve(dependencies: DependencyValues): ConversationCellViewService = ConversationCellViewService()
 }
 
-/** The service that handles conversation cell interactions requiring presentation or session work. */
+/**
+ * The service that handles conversation cell interactions
+ * requiring presentation or session work.
+ */
 val DependencyValues.conversationCellViewService: ConversationCellViewService
     get() = this[ConversationCellViewServiceDependency]

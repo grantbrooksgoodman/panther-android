@@ -50,7 +50,10 @@ fun Message.modifyKey(
 
 // MARK: - Update
 
-/** Writes the value for the given key to the server and returns the updated message. */
+/**
+ * Writes the value for the given key to the server and returns
+ * the updated message.
+ */
 suspend fun Message.update(
     key: MessageUpdatableKey,
     to: Any,
@@ -71,7 +74,10 @@ suspend fun Message.update(
 
 // MARK: - Did Write
 
-/** Applies a completed single-field remote update, upserting the updated message into the session store. */
+/**
+ * Applies a completed single-field remote update, upserting the
+ * updated message into the session store.
+ */
 @Suppress("UnusedParameter") // `key` matches the shared updatable-type write signature.
 fun Message.didWrite(
     updated: Message,

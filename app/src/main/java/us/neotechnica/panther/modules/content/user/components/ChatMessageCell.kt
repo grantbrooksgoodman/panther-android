@@ -68,15 +68,17 @@ private val audioMessagePlaybackService: AudioMessagePlaybackService
     get() = DependencyValues.current.chatPageViewService.audioMessagePlayback
 
 /**
- * A single chat row: an optional day separator, the message bubble
- * (with a long-press context menu), and its bottom label – reaction
- * chips, the alternate-content language, or the delivery status.
- * System messages render as a centered, bubble-less activity cell.
+ * A single chat row: an optional day separator, the message
+ * bubble (with a long-press context menu), and its bottom label –
+ * reaction chips, the alternate-content language, or the delivery
+ * status. System messages render as a centered, bubble-less
+ * activity cell.
  *
  * @param row The row's display inputs.
- * @param onReact Applies the given reaction style to the given message.
- * @param onFailedIndicatorTapped Presents the retry/delete action sheet
- *   for the given failed outbox message ID.
+ * @param onReact Applies the given reaction style to the given
+ *   message.
+ * @param onFailedIndicatorTapped Presents the retry/delete action
+ *   sheet for the given failed outbox message ID.
  */
 @Composable
 fun ChatMessageCell(
@@ -259,11 +261,11 @@ private fun MessageKindContent(
 }
 
 /**
- * The label below a message bubble: its reaction chips (one per style,
- * with a count and the current user's own reaction highlighted) and the
- * bottom label text – the alternate-content language or the delivery
- * status – joined by a separator. Aligns to the message's side with
- * the outgoing or incoming insets.
+ * The label below a message bubble: its reaction chips (one per
+ * style, with a count and the current user's own reaction
+ * highlighted) and the bottom label text – the alternate-content
+ * language or the delivery status – joined by a separator. Aligns
+ * to the message's side with the outgoing or incoming insets.
  */
 @Composable
 private fun BottomLabel(

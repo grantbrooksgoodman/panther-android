@@ -13,6 +13,7 @@ import us.neotechnica.panther.bundle.outbox
 import us.neotechnica.panther.modules.networking.sources.common.extensions.SessionStoreStorageKey
 import us.neotechnica.panther.modules.networking.sources.common.extensions.sessionStore
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
@@ -21,6 +22,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
+import us.neotechnica.panther.subsystem.modules.shared.models.SharedEvents
 import us.neotechnica.panther.subsystem.modules.shared.models.send
 import java.io.File
 import java.util.Date
@@ -35,6 +37,10 @@ import java.util.UUID
  * a change whenever its contents change.
  */
 object MessageOutboxService {
+    // MARK: - Dependencies
+
+    private val sharedEvents: SharedEvents by Dependency { it.sharedEvents }
+
     // MARK: - Properties
 
     /** The outbox entries, keyed by identifier. */
@@ -42,15 +48,6 @@ object MessageOutboxService {
 
     @Volatile
     private var didLoad = false
-
-    // MARK: - Test Support
-
-    /** Clears state and reloads the persisted outbox; for tests only. */
-    internal fun reloadForTesting() {
-        entries.wrappedValue = emptyMap()
-        didLoad = false
-        loadIfNeeded()
-    }
 
     // MARK: - Computed Properties
 
@@ -61,6 +58,18 @@ object MessageOutboxService {
             return entries.wrappedValue.values.sortedBy { it.createdDate.time }
         }
 
+    // MARK: - Test Support
+
+    /**
+     * Clears state and reloads the persisted outbox; for tests
+     * only.
+     */
+    internal fun reloadForTesting() {
+        entries.wrappedValue = emptyMap()
+        didLoad = false
+        loadIfNeeded()
+    }
+
     // MARK: - Query Methods
 
     /**
@@ -69,7 +78,10 @@ object MessageOutboxService {
      */
     fun entries(conversationIDKey: String): List<OutboxEntry> = allEntries.filter { it.conversationIDKey == conversationIDKey }
 
-    /** Returns the outbox entry with the given identifier, or `null`. */
+    /**
+     * Returns the outbox entry with the given identifier, or
+     * `null`.
+     */
     fun entry(id: String): OutboxEntry? {
         loadIfNeeded()
         return entries.wrappedValue[id]
@@ -135,7 +147,10 @@ object MessageOutboxService {
         emit()
     }
 
-    /** Removes the outbox entry with the given identifier, deleting its payload files. */
+    /**
+     * Removes the outbox entry with the given identifier,
+     * deleting its payload files.
+     */
     fun remove(id: String) {
         loadIfNeeded()
         val removed =
@@ -202,7 +217,7 @@ object MessageOutboxService {
     // MARK: - Auxiliary
 
     private fun emit() {
-        DependencyValues.current.sharedEvents.messageOutboxDidChange
+        sharedEvents.messageOutboxDidChange
             .send()
     }
 

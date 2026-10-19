@@ -17,7 +17,9 @@ import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.displayName
 import us.neotechnica.panther.modules.content.user.extensions.uniquedByID
 import us.neotechnica.panther.modules.networking.sources.user.models.User
+import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.modules.session.clientSession
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.capitalized
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
@@ -29,15 +31,16 @@ import java.util.UUID
 /**
  * The reducer that drives the reaction details page.
  *
- * This page lists the reactions on a message, grouped by reaction,
- * showing which participants reacted with each. The message is the one
- * whose context menu the reaction details were opened from.
+ * This page lists the reactions on a message, grouped by
+ * reaction, showing which participants reacted with each. The
+ * message is the one whose context menu the reaction details were
+ * opened from.
  *
  * The page's behavior contract:
  *
  * - On appearance, the page dismisses the keyboard.
- * - The list shows one row per reaction style, each displaying the
- *   names of the participants who reacted with it.
+ * - The list shows one row per reaction style, each displaying
+ *   the names of the participants who reacted with it.
  * - Tapping done dismisses the page.
  */
 class ReactionDetailsPageReducer : Reducer<ReactionDetailsPageReducer.State, ReactionDetailsPageReducer.Action> {
@@ -45,16 +48,25 @@ class ReactionDetailsPageReducer : Reducer<ReactionDetailsPageReducer.State, Rea
 
     /** The actions the reaction details page can process. */
     sealed interface Action {
-        /** An action that indicates the view appeared. Dismisses the keyboard. */
+        /**
+         * An action that indicates the view appeared. Dismisses
+         * the keyboard.
+         */
         data object ViewAppeared : Action
 
         /** An action that indicates the view disappeared. */
         data object ViewDisappeared : Action
 
-        /** An action that indicates the user tapped the done header item. Dismisses the page. */
+        /**
+         * An action that indicates the user tapped the done
+         * header item. Dismisses the page.
+         */
         data object DoneHeaderItemTapped : Action
 
-        /** An action that rebuilds the page's content from the latest values. */
+        /**
+         * An action that rebuilds the page's content from the
+         * latest values.
+         */
         data object UpdateViewID : Action
     }
 
@@ -63,15 +75,19 @@ class ReactionDetailsPageReducer : Reducer<ReactionDetailsPageReducer.State, Rea
     /**
      * The state of the reaction details page.
      *
-     * @property messageID The identifier of the message whose reactions
-     *   are shown.
-     * @property viewID The identity of the page's content. Regenerated
-     *   to rebuild it from the latest values.
+     * @property messageID The identifier of the message whose
+     *   reactions are shown.
+     * @property viewID The identity of the page's content.
+     *   Regenerated to rebuild it from the latest values.
      */
     data class State(
         val messageID: String = "",
         val viewID: UUID = UUID.randomUUID(),
     ) {
+        // MARK: - Dependencies
+
+        private val clientSession: ClientSession by Dependency { it.clientSession }
+
         /**
          * The list rows describing the message's reactions, one per
          * reaction style, each showing the names of the participants
@@ -79,7 +95,6 @@ class ReactionDetailsPageReducer : Reducer<ReactionDetailsPageReducer.State, Rea
          */
         val listItems: List<ListRowView.Configuration>
             get() {
-                val clientSession = DependencyValues.current.clientSession
                 val currentUser = clientSession.entity.user.currentUser ?: return emptyList()
                 val reactions =
                     clientSession.entity.conversation.currentConversation

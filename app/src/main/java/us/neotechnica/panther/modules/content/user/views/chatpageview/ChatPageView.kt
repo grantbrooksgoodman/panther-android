@@ -80,64 +80,75 @@ private typealias PageFloats = ChatPageViewServiceFloats
 /**
  * The chat page for a single conversation.
  *
- * Renders the conversation's messages live, translated for the current
- * user, with a long-press context menu, delivery status, and an input
- * bar that sends through the outbox-backed delivery pipeline.
+ * Renders the conversation's messages live, translated for the
+ * current user, with a long-press context menu, delivery status,
+ * and an input bar that sends through the outbox-backed delivery
+ * pipeline.
  *
- * The page presents in one of three [Configuration]s: the default
- * configuration shows the full page; the new chat configuration renders
- * only the message list between the new chat page's recipient and
- * input bars, which own the page lifecycle; and the preview
- * configuration shows a read-only message list.
+ * The page presents in one of three [Configuration] s: the
+ * default configuration shows the full page; the new chat
+ * configuration renders only the message list between the new
+ * chat page's recipient and input bars, which own the page
+ * lifecycle; and the preview configuration shows a read-only
+ * message list.
  */
 object ChatPageView {
-    // MARK: - Dependencies
-
-    private val connectionStatusService: ConnectionStatusService by Dependency { it.commonServices.connectionStatus }
-
     // MARK: - Types
 
     /** The configurations the chat page presents in. */
     sealed interface Configuration {
-        /** The identifier of a message to reveal and highlight, or `null`. */
+        /**
+         * The identifier of a message to reveal and highlight, or
+         * `null`.
+         */
         val focusedMessageID: String?
 
         /**
-         * The default configuration, displaying an existing conversation
-         * with its header and input bar.
+         * The default configuration, displaying an existing
+         * conversation with its header and input bar.
          *
-         * @property focusedMessageID The identifier of a message to reveal
-         *   and highlight – for example, one navigated to from search – or
-         *   `null`.
+         * @property focusedMessageID The identifier of a message
+         *   to reveal and highlight – for example, one navigated
+         *   to from search – or `null`.
          */
         data class Default(
             override val focusedMessageID: String? = null,
         ) : Configuration
 
-        /** The new chat configuration, previewing the conversation beneath the recipient bar. */
+        /**
+         * The new chat configuration, previewing the conversation
+         * beneath the recipient bar.
+         */
         data object NewChat : Configuration {
             override val focusedMessageID: String? get() = null
         }
 
         /**
-         * The preview configuration, displaying a read-only message list
-         * with the input bar hidden.
+         * The preview configuration, displaying a read-only
+         * message list with the input bar hidden.
          *
-         * @property focusedMessageID The identifier of a message to reveal
-         *   and highlight, or `null`.
+         * @property focusedMessageID The identifier of a message
+         *   to reveal and highlight, or `null`.
          */
         data class Preview(
             override val focusedMessageID: String? = null,
         ) : Configuration
     }
 
+    // MARK: - Dependencies
+
+    private val connectionStatusService: ConnectionStatusService by Dependency { it.commonServices.connectionStatus }
+    private val inputBarService: InputBarService by Dependency { it.inputBarService }
+
     // MARK: - View
 
     /**
      * Presents the chat page for the given conversation.
      *
-     * @param conversationIDKey The identifier key of the conversation.
-     * @param configuration The configuration to present the page in.
+     * @param conversationIDKey The identifier key of the
+     *   conversation.
+     * @param configuration The configuration to present the page
+     *   in.
      * @param modifier The modifier for this view.
      */
     @Composable
@@ -147,7 +158,7 @@ object ChatPageView {
         modifier: Modifier = Modifier,
     ) {
         val viewModel = remember { buildChatPageViewModel() }
-        val inputBarService = remember { DependencyValues.current.inputBarService }
+        val inputBarService = remember { inputBarService }
         val isDefault = configuration is Configuration.Default
 
         val hasAppeared = LocalPageHasAppeared.current

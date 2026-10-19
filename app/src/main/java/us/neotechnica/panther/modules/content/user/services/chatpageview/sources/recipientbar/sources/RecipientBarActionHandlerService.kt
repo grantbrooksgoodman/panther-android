@@ -46,10 +46,10 @@ private typealias ActionHandlerFloats = ChatPageViewServiceFloats.RecipientBarSe
 /**
  * The service that handles the recipient bar's user actions.
  *
- * [RecipientBarActionHandlerService] responds to the recipient bar's
- * interactions: tapping the select-contact button, editing and
- * submitting the text field, and deleting a recipient with a backspace
- * on an empty field.
+ * [RecipientBarActionHandlerService] responds to the recipient
+ * bar's interactions: tapping the select-contact button, editing
+ * and submitting the text field, and deleting a recipient with a
+ * backspace on an empty field.
  *
  * @param dependencies The collaborators the handler reaches. The
  *   default reaches the shared services.
@@ -57,8 +57,6 @@ private typealias ActionHandlerFloats = ChatPageViewServiceFloats.RecipientBarSe
 class RecipientBarActionHandlerService(
     private val dependencies: Dependencies = Dependencies(),
 ) {
-    // MARK: - Dependencies
-
     // MARK: - Types
 
     /**
@@ -71,7 +69,10 @@ class RecipientBarActionHandlerService(
         val contactPermissionStatus: () -> PermissionService.PermissionStatus = {
             DependencyValues.current.commonServices.permission.contactPermissionStatus
         },
-        /** Returns whether the contact pair archive holds contacts besides the current user. */
+        /**
+         * Returns whether the contact pair archive holds contacts
+         * besides the current user.
+         */
         val hasContactsBesidesCurrentUser: () -> Boolean = {
             DependencyValues.current.commonServices.contact.hasContactsBesidesCurrentUser
         },
@@ -95,7 +96,10 @@ class RecipientBarActionHandlerService(
             DependencyValues.current.commonServices.contact
                 .syncContactPairArchive()
         },
-        /** Returns the registered user with the given phone number. */
+        /**
+         * Returns the registered user with the given phone
+         * number.
+         */
         val getUser: suspend (PhoneNumber) -> User = { UserService.getUser(it) },
         /** Navigates to the given route. */
         val navigate: (Route) -> Unit = { DependencyValues.current.navigation.navigate(it) },
@@ -107,14 +111,17 @@ class RecipientBarActionHandlerService(
         val recipientBar: () -> RecipientBarService = { RecipientBarService },
     )
 
+    // MARK: - Dependencies
+
     // MARK: - On Superfluous Backspace
 
     /**
-     * Handles a backspace on the empty text field by highlighting, then
-     * removing, the last recipient.
+     * Handles a backspace on the empty text field by
+     * highlighting, then removing, the last recipient.
      *
-     * The first backspace highlights the trailing-most recipient; a
-     * second backspace removes it and reconfigures the message list.
+     * The first backspace highlights the trailing-most recipient;
+     * a second backspace removes it and reconfigures the message
+     * list.
      */
     fun onSuperflousBackspace() {
         val service = dependencies.recipientBar()
@@ -197,18 +204,19 @@ class RecipientBarActionHandlerService(
     // MARK: - Text Field Should Return
 
     /**
-     * Handles the text field's return by adding the entered text as a
-     * recipient.
+     * Handles the text field's return by adding the entered text
+     * as a recipient.
      *
-     * A phone number resolves to its registered user when one exists;
-     * any other text is added as an unregistered recipient. When the
-     * text is blank, the method instead deselects any provisional
-     * recipients and returns focus to the message input bar.
+     * A phone number resolves to its registered user when one
+     * exists; any other text is added as an unregistered
+     * recipient. When the text is blank, the method instead
+     * deselects any provisional recipients and returns focus to
+     * the message input bar.
      *
      * @param text The text entered in the text field.
-     * @param makeInputBarFirstResponder A Boolean value that determines
-     *   whether to make the message input bar the first responder when
-     *   the text is blank.
+     * @param makeInputBarFirstResponder A Boolean value that
+     *   determines whether to make the message input bar the
+     *   first responder when the text is blank.
      */
     suspend fun textFieldShouldReturn(
         text: String,

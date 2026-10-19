@@ -27,20 +27,21 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * The reducer that drives the region picker presented by [RegionMenu].
+ * The reducer that drives the region picker presented by
+ * [RegionMenu].
  *
- * The picker displays a searchable list of regions and reports its
- * results back to the presenting view through the presentation and
- * selection values it holds in its state.
+ * The picker displays a searchable list of regions and reports
+ * its results back to the presenting view through the
+ * presentation and selection values it holds in its state.
  *
  * The picker's behavior contract:
  *
- * - On appearance, the list scrolls to the currently selected region
- *   after a brief delay.
- * - The list displays the regions whose titles match the search query,
- *   or a no results message when none match.
- * - Selecting a region records its code, then dismisses the picker
- *   after a brief delay.
+ * - On appearance, the list scrolls to the currently selected
+ *   region after a brief delay.
+ * - The list displays the regions whose titles match the search
+ *   query, or a no results message when none match.
+ * - Selecting a region records its code, then dismisses the
+ *   picker after a brief delay.
  */
 class RegionMenuReducer : Reducer<RegionMenuReducer.State, RegionMenuReducer.Action> {
     // MARK: - Dependencies
@@ -52,15 +53,19 @@ class RegionMenuReducer : Reducer<RegionMenuReducer.State, RegionMenuReducer.Act
     /** The actions the region picker can process. */
     sealed interface Action {
         /**
-         * An action that requests a presentation change, carrying whether
-         * the picker should be presented. Triggers [RunIsPresentedEffect]
-         * after a brief delay.
+         * An action that requests a presentation change, carrying
+         * whether the picker should be presented. Triggers
+         * [RunIsPresentedEffect] after a brief delay.
          */
         data class IsPresentedChanged(
             val isPresented: Boolean,
         ) : Action
 
-        /** An action that indicates the region list appeared, carrying the list state used to scroll to the current selection. */
+        /**
+         * An action that indicates the region list appeared,
+         * carrying the list state used to scroll to the current
+         * selection.
+         */
         data class ListViewAppeared(
             val listState: LazyListState,
         ) : Action
@@ -70,15 +75,18 @@ class RegionMenuReducer : Reducer<RegionMenuReducer.State, RegionMenuReducer.Act
             val isPresented: Boolean,
         ) : Action
 
-        /** An action that indicates the search query changed, carrying the new value. */
+        /**
+         * An action that indicates the search query changed,
+         * carrying the new value.
+         */
         data class SearchQueryChanged(
             val searchQuery: String,
         ) : Action
 
         /**
-         * An action that indicates the user selected a region, carrying its
-         * display title. Records the region's code and dismisses the picker
-         * after a brief delay.
+         * An action that indicates the user selected a region,
+         * carrying its display title. Records the region's code
+         * and dismisses the picker after a brief delay.
          */
         data class SelectedRegionTitleChanged(
             val selectedRegionTitle: String,
@@ -89,13 +97,20 @@ class RegionMenuReducer : Reducer<RegionMenuReducer.State, RegionMenuReducer.Act
 
     /** The state of the region picker. */
     data class State(
-        /** A Boolean value that indicates whether the picker is presented. */
+        /**
+         * A Boolean value that indicates whether the picker is
+         * presented.
+         */
         val isPresented: Boolean = false,
         /** The search query the user has entered. */
         val searchQuery: String = "",
         /** The code of the selected region. */
         val selectedRegionCode: String = "",
     ) {
+        // MARK: - Dependencies
+
+        private val regionDetailService: RegionDetailService by Dependency { it.commonServices.regionDetail }
+
         /** The localized text the picker's header displays. */
         val headerLabelText: String
             get() {
@@ -108,14 +123,20 @@ class RegionMenuReducer : Reducer<RegionMenuReducer.State, RegionMenuReducer.Act
         val noResultsLabelText: String
             get() = LocalizedStringKey.NoResults.localized()
 
-        /** The display titles of the regions matching the search query, or `null` if none match. */
+        /**
+         * The display titles of the regions matching the search
+         * query, or `null` if none match.
+         */
         val queriedRegionTitles: List<String>?
             get() =
-                DependencyValues.current.commonServices.regionDetail.regionTitles(
+                regionDetailService.regionTitles(
                     RegionDetailService.QueryStrategy.SearchTerm(searchQuery),
                 )
 
-        /** The display title of the selected region, or `null` if it cannot be determined. */
+        /**
+         * The display title of the selected region, or `null` if
+         * it cannot be determined.
+         */
         val selectedRegionTitle: String?
             get() =
                 RegionDetailService

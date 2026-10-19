@@ -27,6 +27,8 @@ import us.neotechnica.panther.modules.content.user.services.chatpageview.ChatPag
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.AlternateMessageService
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.AudioMessagePlaybackService
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.ReadReceiptService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.contextmenu.sources.ContextMenuActionHandlerService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.inputbar.InputBarService
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Reaction
 import us.neotechnica.panther.modules.networking.sources.message.models.Message
 import us.neotechnica.panther.modules.session.clientSession
@@ -34,6 +36,7 @@ import us.neotechnica.panther.modules.session.entity.services.ConversationSessio
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.modules.session.sync.services.ConversationObserverService
+import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
@@ -66,9 +69,11 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
 
     private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
     private val audioMessagePlaybackService: AudioMessagePlaybackService by Dependency { it.chatPageViewService.audioMessagePlayback }
+    private val contextMenuActionHandlerService: ContextMenuActionHandlerService by Dependency { it.contextMenuActionHandlerService }
     private val conversationObserver: ConversationObserverService by Dependency { it.clientSession.sync.conversationObserver }
     private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
-    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
+    private val inputBarService: InputBarService by Dependency { it.inputBarService }
+    private val navigation: Navigation by Dependency { it.navigation }
     private val textToSpeechService: TextToSpeechService by Dependency { it.commonServices.audio.textToSpeech }
 
     // MARK: - Action
@@ -76,9 +81,10 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
     /** The actions the chat page can process. */
     sealed interface Action {
         /**
-         * An action that indicates the view appeared, carrying the
-         * conversation's ID key and the page's configuration. Sets the
-         * conversation current and begins observing its messages.
+         * An action that indicates the view appeared, carrying
+         * the conversation's ID key and the page's configuration.
+         * Sets the conversation current and begins observing its
+         * messages.
          */
         data class ViewAppeared(
             val conversationIDKey: String,
@@ -99,7 +105,10 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             val messages: List<Message>,
         ) : Action
 
-        /** An action that indicates the input text changed, carrying the text. */
+        /**
+         * An action that indicates the input text changed,
+         * carrying the text.
+         */
         data class TextViewDidChange(
             val text: String,
         ) : Action
@@ -127,33 +136,37 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             val message: Message,
         ) : Action
 
-        /** An action that applies the given reaction style to the given message. */
+        /**
+         * An action that applies the given reaction style to the
+         * given message.
+         */
         data class ReactToSelectedMessage(
             val message: Message,
             val style: Reaction.Style,
         ) : Action
 
         /**
-         * An action that indicates the session store changed, carrying
-         * the change. Schedules a debounced reload when the change
-         * affects the conversation.
+         * An action that indicates the session store changed,
+         * carrying the change. Schedules a debounced reload when
+         * the change affects the conversation.
          */
         data class HandleSessionStoreChange(
             val change: SessionStoreChange,
         ) : Action
 
         /**
-         * An action that indicates whether a message send is in flight
-         * changed, carrying the new value. Toggles the input bar's
-         * sending state.
+         * An action that indicates whether a message send is in
+         * flight changed, carrying the new value. Toggles the
+         * input bar's sending state.
          */
         data class IsSendingMessageChanged(
             val isSendingMessage: Boolean,
         ) : Action
 
         /**
-         * An action that indicates the outbox changed, carrying whether
-         * an entry is being sent. Schedules a debounced reload.
+         * An action that indicates the outbox changed, carrying
+         * whether an entry is being sent. Schedules a debounced
+         * reload.
          */
         data class HandleOutboxChange(
             val isSendingOutboxEntry: Boolean,
@@ -165,7 +178,10 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
          */
         data object ReloadRequested : Action
 
-        /** An action that indicates the conversation no longer exists. Pops the page. */
+        /**
+         * An action that indicates the conversation no longer
+         * exists. Pops the page.
+         */
         data object ConversationUnavailable : Action
 
         /**
@@ -182,21 +198,22 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
     /**
      * The state of the chat page.
      *
-     * @property conversationIDKey The ID key of the conversation the
-     *   page displays.
-     * @property configuration The configuration the page was presented
-     *   with.
+     * @property conversationIDKey The ID key of the conversation
+     *   the page displays.
+     * @property configuration The configuration the page was
+     *   presented with.
      * @property messages The messages the page displays.
-     * @property isSendingMessage A Boolean value that indicates whether
-     *   a message send is in flight.
-     * @property isSendingOutboxEntry A Boolean value that indicates
-     *   whether an outbox entry is being sent.
-     * @property languageCode The app's language code when the page
-     *   appeared.
-     * @property changeToken The identity of the message list's content.
-     *   Regenerated to rebuild it from the latest values.
-     * @property viewState The page's loading state. Remains loading
-     *   until the messages first update.
+     * @property isSendingMessage A Boolean value that indicates
+     *   whether a message send is in flight.
+     * @property isSendingOutboxEntry A Boolean value that
+     *   indicates whether an outbox entry is being sent.
+     * @property languageCode The app's language code when the
+     *   page appeared.
+     * @property changeToken The identity of the message list's
+     *   content. Regenerated to rebuild it from the latest
+     *   values.
+     * @property viewState The page's loading state. Remains
+     *   loading until the messages first update.
      */
     data class State(
         val conversationIDKey: String = "",
@@ -208,7 +225,10 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         val changeToken: UUID = UUID.randomUUID(),
         val viewState: ViewState = ViewState.Loading,
     ) {
-        /** The identifier of the message to reveal and highlight, if any. */
+        /**
+         * The identifier of the message to reveal and highlight,
+         * if any.
+         */
         val focusedMessageID: String?
             get() = configuration.focusedMessageID
     }
@@ -251,12 +271,11 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
                 )
 
             is Action.TextViewDidChange -> {
-                DependencyValues.current.inputBarService.textViewDidChange(action.text)
+                inputBarService.textViewDidChange(action.text)
                 ReduceResult(state)
             }
 
             Action.DidPressSendButton -> {
-                val inputBarService = DependencyValues.current.inputBarService
                 val text = inputBarService.text.value
                 if (state.isSendingMessage || text.isBlank()) {
                     ReduceResult(state)
@@ -288,7 +307,7 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
                 }
 
             is Action.IsSendingMessageChanged -> {
-                DependencyValues.current.inputBarService.toggleSendingUI(on = action.isSendingMessage, clearInputTextViewText = false)
+                inputBarService.toggleSendingUI(on = action.isSendingMessage, clearInputTextViewText = false)
                 ReduceResult(state.copy(isSendingMessage = action.isSendingMessage))
             }
 
@@ -301,7 +320,7 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             Action.ReloadRequested -> ReduceResult(state.copy(changeToken = UUID.randomUUID()))
 
             Action.ConversationUnavailable -> {
-                DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Pop))
+                navigation.navigate(Route.UserContent(UserContentRoute.Pop))
                 ReduceResult(state)
             }
 
@@ -312,46 +331,6 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         }
 
     // MARK: - Auxiliary
-
-    // One identifier for both change sources: a burst of session store
-    // and outbox changes reloads once.
-    private enum class ReloadEffectID {
-        CHAT_PAGE_RELOAD,
-    }
-
-    private fun reloadEffect(
-        debounceMilliseconds: Long,
-        id: ReloadEffectID,
-    ): Effect<Action> =
-        Effect
-            .task<Action>(delay = debounceMilliseconds.milliseconds) { Action.ReloadRequested }
-            .cancellable(id, cancelInFlight = true)
-
-    private fun viewAppearedEffect(
-        conversationIDKey: String,
-        configuration: ChatPageView.Configuration,
-    ): Effect<Action> =
-        Effect.run { send ->
-            val conversation = sessionStore.getConversation(conversationIDKey)
-            if (conversation == null) {
-                send(Action.ConversationUnavailable)
-                return@run
-            }
-
-            ChatPageViewService.setConfiguration(configuration)
-            conversationSession.resetMessageOffset()
-            conversationSession.setCurrentConversation(conversation)
-            // Stored conversations are observed on every appearance.
-            if (!conversation.isEmpty && !conversation.isMock) conversationObserver.startObserving(conversation.id.key)
-            configuration.focusedMessageID?.let { conversationSession.incrementMessageOffset(it) }
-
-            val inputBarService = DependencyValues.current.inputBarService
-            inputBarService.configureInputBar(forceUpdate = true)
-            inputBarService.toggleSendingUI(on = false)
-
-            val navigationTitle = conversation.chatPageHeaderLabelText ?: ConversationCellViewData(conversation)?.titleLabelText
-            navigationTitle?.let { ChatPageViewService.setNavigationTitle(it) }
-        }
 
     // Speech, playback, and alternate content stop on every disappearance;
     // the current-conversation pointer clears only when the page is truly
@@ -364,10 +343,10 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
         conversationObserver.stopObserving()
         textToSpeechService.stopSpeakingIfNeeded()
         audioMessagePlaybackService.stopPlayback()
-        DependencyValues.current.contextMenuActionHandlerService.resetSpeakingMessage()
+        contextMenuActionHandlerService.resetSpeakingMessage()
         AlternateMessageService.restoreAllAlternateTextMessageIDs()
         AlternateMessageService.restoreAllAudioTranscriptionMessageIDs()
-        DependencyValues.current.inputBarService.textViewDidChange("")
+        inputBarService.textViewDidChange("")
 
         // The page counts as presented while its conversation stays on
         // the navigation stack, so a disposal under a sub-page or a
@@ -386,14 +365,4 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
             ChatPageViewService.clearNavigationTitle()
         }
     }
-
-    private fun sendEffect(text: String): Effect<Action> =
-        Effect.run {
-            val inputBarService = DependencyValues.current.inputBarService
-            try {
-                inputBarService.actionHandler.didPressSendButton(text)
-            } catch (exception: Exception) {
-                Logger.log(exception, with = AlertType.toast)
-            }
-        }
 }

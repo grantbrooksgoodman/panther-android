@@ -16,8 +16,11 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import us.neotechnica.panther.bundle.isNewChatPageDoneToolbarButtonEnabled
 import us.neotechnica.panther.modules.content.user.dependencies.inputBarService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.inputbar.InputBarService
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedStates
+import us.neotechnica.panther.subsystem.modules.shared.models.SharedStates
 
 /**
  * The service that describes the recipient bar's subviews.
@@ -40,6 +43,11 @@ class RecipientBarLayoutService {
         TEXT_FIELD,
     }
 
+    // MARK: - Dependencies
+
+    private val inputBarService: InputBarService by Dependency { it.inputBarService }
+    private val sharedStates: SharedStates by Dependency { it.sharedStates }
+
     // MARK: - Properties
 
     private val mutableFirstResponderRequests = MutableSharedFlow<FirstResponder>(extraBufferCapacity = 1)
@@ -59,13 +67,22 @@ class RecipientBarLayoutService {
     /** The message input bar's placeholder, or `null` for none. */
     val inputBarPlaceholder: StateFlow<String?> = mutableInputBarPlaceholder.asStateFlow()
 
-    /** A Boolean value that indicates whether the select-contact button is enabled. */
+    /**
+     * A Boolean value that indicates whether the select-contact
+     * button is enabled.
+     */
     val isSelectContactButtonEnabled: StateFlow<Boolean> = mutableIsSelectContactButtonEnabled.asStateFlow()
 
-    /** A Boolean value that indicates whether the text field is the first responder. */
+    /**
+     * A Boolean value that indicates whether the text field is
+     * the first responder.
+     */
     val isTextFieldFirstResponder: StateFlow<Boolean> = mutableIsTextFieldFirstResponder.asStateFlow()
 
-    /** A Boolean value that indicates whether the recipient bar accepts interaction. */
+    /**
+     * A Boolean value that indicates whether the recipient bar
+     * accepts interaction.
+     */
     val isUserInteractionEnabled: StateFlow<Boolean> = mutableIsUserInteractionEnabled.asStateFlow()
 
     /** The text field's text. */
@@ -78,7 +95,10 @@ class RecipientBarLayoutService {
         mutableFirstResponderRequests.tryEmit(FirstResponder.INPUT_BAR)
     }
 
-    /** Asks the recipient bar's text field to become the first responder. */
+    /**
+     * Asks the recipient bar's text field to become the first
+     * responder.
+     */
     fun textFieldBecomeFirstResponder() {
         mutableFirstResponderRequests.tryEmit(FirstResponder.TEXT_FIELD)
     }
@@ -90,7 +110,7 @@ class RecipientBarLayoutService {
      * re-enabling the new chat page's done button.
      */
     fun removeFromSuperview() {
-        DependencyValues.current.sharedStates.isNewChatPageDoneToolbarButtonEnabled.value = true
+        sharedStates.isNewChatPageDoneToolbarButtonEnabled.value = true
     }
 
     // MARK: - Setters
@@ -98,7 +118,8 @@ class RecipientBarLayoutService {
     /**
      * Records the message input bar's placeholder.
      *
-     * @param placeholder The placeholder to display, or `null` for none.
+     * @param placeholder The placeholder to display, or `null`
+     *   for none.
      */
     fun setInputBarPlaceholder(placeholder: String?) {
         mutableInputBarPlaceholder.value = placeholder
@@ -107,8 +128,8 @@ class RecipientBarLayoutService {
     /**
      * Enables or disables the select-contact button.
      *
-     * @param isEnabled A Boolean value that indicates whether the button
-     *   responds to taps.
+     * @param isEnabled A Boolean value that indicates whether the
+     *   button responds to taps.
      */
     fun setIsSelectContactButtonEnabled(isEnabled: Boolean) {
         mutableIsSelectContactButtonEnabled.value = isEnabled
@@ -117,13 +138,13 @@ class RecipientBarLayoutService {
     /**
      * Records whether the text field is the first responder.
      *
-     * @param isFirstResponder A Boolean value that indicates whether the
-     *   text field has focus.
+     * @param isFirstResponder A Boolean value that indicates
+     *   whether the text field has focus.
      */
     fun setIsTextFieldFirstResponder(isFirstResponder: Boolean) {
         mutableIsTextFieldFirstResponder.value = isFirstResponder
         // The input bar's buttons read this status, so they follow it.
-        DependencyValues.current.inputBarService.configureInputBar()
+        inputBarService.configureInputBar()
     }
 
     /**
@@ -136,7 +157,7 @@ class RecipientBarLayoutService {
      *   whether user interaction is enabled.
      */
     fun setIsUserInteractionEnabled(isUserInteractionEnabled: Boolean) {
-        DependencyValues.current.sharedStates.isNewChatPageDoneToolbarButtonEnabled.value = isUserInteractionEnabled
+        sharedStates.isNewChatPageDoneToolbarButtonEnabled.value = isUserInteractionEnabled
 
         when (isUserInteractionEnabled) {
             true -> {

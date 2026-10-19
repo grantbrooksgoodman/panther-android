@@ -15,11 +15,13 @@ import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.networking.modules.common.interfaces.Serializable
 import us.neotechnica.panther.networking.modules.common.interfaces.SerializableDecoder
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.dependencies.timestampDateFormatter
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
+import us.neotechnica.panther.subsystem.modules.foundation.services.TimestampDateFormatter
 import java.security.MessageDigest
 import java.util.Base64
 import java.util.Date
@@ -28,13 +30,14 @@ import java.util.Date
  * The metadata that describes a conversation.
  *
  * @param name The conversation's name.
- * @param imageData The conversation's image data, or `null` if it has
- *   none.
+ * @param imageData The conversation's image data, or `null` if it
+ *   has none.
  * @param imageHash The hash of the conversation's image data, or
  *   `null` to compute it from `imageData`.
- * @param isPenPalsConversation A Boolean value that indicates whether
- *   the conversation is a PenPals conversation.
- * @param lastModifiedDate The date the conversation was last modified.
+ * @param isPenPalsConversation A Boolean value that indicates
+ *   whether the conversation is a PenPals conversation.
+ * @param lastModifiedDate The date the conversation was last
+ *   modified.
  * @param messageRecipientConsentAcknowledgementData The consent
  *   acknowledgement records for the conversation's participants.
  * @param penPalsSharingData The PenPals sharing records for the
@@ -50,13 +53,22 @@ class ConversationMetadata(
     /** The conversation's image data, or `null` if it has none. */
     val imageData: ByteArray?,
     imageHash: String? = null,
-    /** A Boolean value that indicates whether the conversation is a PenPals conversation. */
+    /**
+     * A Boolean value that indicates whether the conversation is
+     * a PenPals conversation.
+     */
     val isPenPalsConversation: Boolean,
     /** The date the conversation was last modified. */
     val lastModifiedDate: Date,
-    /** The consent acknowledgement records for the conversation's participants. */
+    /**
+     * The consent acknowledgement records for the conversation's
+     * participants.
+     */
     val messageRecipientConsentAcknowledgementData: List<MessageRecipientConsentAcknowledgementData>,
-    /** The PenPals sharing records for the conversation's participants. */
+    /**
+     * The PenPals sharing records for the conversation's
+     * participants.
+     */
     val penPalsSharingData: List<PenPalsSharingData>,
     /**
      * The identifier of the participant whose message-receipt consent
@@ -66,7 +78,10 @@ class ConversationMetadata(
 ) : Serializable<Map<String, Any?>> {
     // MARK: - Types
 
-    /** The serializable keys for encoding and decoding conversation metadata. */
+    /**
+     * The serializable keys for encoding and decoding
+     * conversation metadata.
+     */
     enum class SerializableKey(
         val rawValue: String,
     ) {
@@ -80,9 +95,16 @@ class ConversationMetadata(
         REQUIRES_CONSENT_FROM_INITIATOR("requiresConsentFromInitiator"),
     }
 
+    // MARK: - Dependencies
+
+    private val timestampDateFormatter: TimestampDateFormatter by Dependency { it.timestampDateFormatter }
+
     // MARK: - Properties
 
-    /** The hash of the conversation's image data, or `null` if it has no image. */
+    /**
+     * The hash of the conversation's image data, or `null` if it
+     * has no image.
+     */
     val imageHash: String? = imageHash ?: imageData?.let { computeImageHash(it) }
 
     // MARK: - Computed Properties
@@ -98,7 +120,7 @@ class ConversationMetadata(
                     ),
                     SerializableKey.IS_PEN_PALS_CONVERSATION.rawValue to isPenPalsConversation,
                     SerializableKey.LAST_MODIFIED_DATE.rawValue to
-                        DependencyValues.current.timestampDateFormatter.format(lastModifiedDate),
+                        timestampDateFormatter.format(lastModifiedDate),
                     SerializableKey.MESSAGE_RECIPIENT_CONSENT_ACKNOWLEDGEMENT_DATA.rawValue to
                         messageRecipientConsentAcknowledgementData.map { it.encoded }.sorted(),
                     SerializableKey.NAME.rawValue to name,
@@ -111,90 +133,6 @@ class ConversationMetadata(
             imageHash?.let { result[SerializableKey.IMAGE_HASH.rawValue] = it }
             return result
         }
-
-    // MARK: - Mutation
-
-    /**
-     * Returns a copy of the metadata with the given properties
-     * replaced.
-     *
-     * Only the properties you provide are changed; the rest are
-     * copied unchanged. To clear the image data or the
-     * required-consent value rather than leave it unchanged, pass
-     * [nilImageData] or [nilRequiresConsentFromInitiator].
-     *
-     * @param name The new name, or `null` to keep the current name.
-     * @param imageData The new image data, or an empty value to keep
-     *   the current image data.
-     * @param isPenPalsConversation The new value, or `null` to keep
-     *   the current value.
-     * @param lastModifiedDate The new last-modified date, or `null`
-     *   to keep the current date.
-     * @param messageRecipientConsentAcknowledgementData The new
-     *   consent acknowledgement records, or `null` to keep the current
-     *   records.
-     * @param penPalsSharingData The new PenPals sharing records, or
-     *   `null` to keep the current records.
-     * @param requiresConsentFromInitiator The new value, or an empty
-     *   string to keep the current value.
-     * @param nilImageData A Boolean value that, when `true`, clears
-     *   the image data.
-     * @param nilRequiresConsentFromInitiator A Boolean value that,
-     *   when `true`, clears the required-consent value.
-     *
-     * @return The updated metadata.
-     */
-    @Suppress("LongParameterList")
-    fun copyWith(
-        name: String? = null,
-        imageData: ByteArray = ByteArray(0),
-        isPenPalsConversation: Boolean? = null,
-        lastModifiedDate: Date? = null,
-        messageRecipientConsentAcknowledgementData: List<MessageRecipientConsentAcknowledgementData>? = null,
-        penPalsSharingData: List<PenPalsSharingData>? = null,
-        requiresConsentFromInitiator: String = "",
-        nilImageData: Boolean = false,
-        nilRequiresConsentFromInitiator: Boolean = false,
-    ): ConversationMetadata {
-        if (name == null &&
-            imageData.isEmpty() &&
-            isPenPalsConversation == null &&
-            lastModifiedDate == null &&
-            messageRecipientConsentAcknowledgementData == null &&
-            penPalsSharingData == null &&
-            requiresConsentFromInitiator.isEmpty() &&
-            !nilImageData &&
-            !nilRequiresConsentFromInitiator
-        ) {
-            Logger.log(
-                Exception(
-                    "No arguments passed to mutator method.",
-                    metadata = ExceptionMetadata(this),
-                ),
-            )
-
-            return this
-        }
-
-        val resolvedImageData = if (nilImageData) null else (if (imageData.isEmpty()) this.imageData else imageData)
-        val resolvedRequiresConsentFromInitiator =
-            if (nilRequiresConsentFromInitiator) {
-                null
-            } else {
-                requiresConsentFromInitiator.ifEmpty { this.requiresConsentFromInitiator }
-            }
-
-        return ConversationMetadata(
-            name = name ?: this.name,
-            imageData = resolvedImageData,
-            isPenPalsConversation = isPenPalsConversation ?: this.isPenPalsConversation,
-            lastModifiedDate = lastModifiedDate ?: this.lastModifiedDate,
-            messageRecipientConsentAcknowledgementData =
-                messageRecipientConsentAcknowledgementData ?: this.messageRecipientConsentAcknowledgementData,
-            penPalsSharingData = penPalsSharingData ?: this.penPalsSharingData,
-            requiresConsentFromInitiator = resolvedRequiresConsentFromInitiator,
-        )
-    }
 
     // MARK: - Equatable Conformance
 

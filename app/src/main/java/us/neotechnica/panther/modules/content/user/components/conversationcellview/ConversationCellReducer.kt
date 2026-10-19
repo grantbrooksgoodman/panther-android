@@ -31,6 +31,8 @@ import us.neotechnica.panther.modules.networking.sources.conversation.models.Con
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
+import us.neotechnica.panther.modules.session.state.services.SessionStore
+import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
@@ -47,26 +49,28 @@ import java.util.UUID
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
+// The counterpart reducer carries `// swiftlint:disable file_length`.
+
 /**
  * The reducer that drives
  * [ConversationCellView][us.neotechnica.panther.modules.content.user.components.conversationcellview.ConversationCellView].
  *
  * The cell's behavior contract:
  *
- * - On first appearance, the cell loads its view data, retrying after
- *   a short delay if it is not yet available.
- * - Tapping the cell opens the chat page for the conversation; when a
- *   search query is active, the chat focuses the most recent matching
- *   message.
- * - Deleting the conversation requires confirmation through an action
- *   sheet; success logs an analytics event, and failure surfaces as a
- *   toast.
+ * - On first appearance, the cell loads its view data, retrying
+ *   after a short delay if it is not yet available.
+ * - Tapping the cell opens the chat page for the conversation;
+ *   when a search query is active, the chat focuses the most
+ *   recent matching message.
+ * - Deleting the conversation requires confirmation through an
+ *   action sheet; success logs an analytics event, and failure
+ *   surfaces as a toast.
  * - The cell redacts its content while messages hydrate or the
  *   conversation reloads.
  * - When the session store reports a change affecting the
- *   conversation, its messages, or its participants, the cell reloads
- *   after a short delay; rapid successive changes coalesce into a
- *   single reload.
+ *   conversation, its messages, or its participants, the cell
+ *   reloads after a short delay; rapid successive changes
+ *   coalesce into a single reload.
  */
 class ConversationCellReducer : Reducer<ConversationCellReducer.State, ConversationCellReducer.Action> {
     // MARK: - Dependencies
@@ -74,6 +78,7 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
     private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
     private val conversationCellViewService: ConversationCellViewService by Dependency { it.conversationCellViewService }
     private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
+    private val navigation: Navigation by Dependency { it.navigation }
 
     // MARK: - Properties
 
@@ -87,9 +92,9 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
     /** The actions the conversation cell can process. */
     sealed interface Action {
         /**
-         * An action that indicates the view appeared. Loads the cell's
-         * view data, retrying after a short delay if it is not yet
-         * available.
+         * An action that indicates the view appeared. Loads the
+         * cell's view data, retrying after a short delay if it is
+         * not yet available.
          */
         data object ViewAppeared : Action
 
@@ -101,9 +106,10 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
         data object BlockUsersButtonTapped : Action
 
         /**
-         * An action that indicates the user tapped the cell. Opens the
-         * chat page for the conversation, focusing the most recent
-         * message matching the search query when one is active.
+         * An action that indicates the user tapped the cell.
+         * Opens the chat page for the conversation, focusing the
+         * most recent message matching the search query when one
+         * is active.
          */
         data object CellTapped : Action
 
@@ -113,13 +119,17 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
          */
         data object DeleteConversationButtonTapped : Action
 
-        /** An action that reloads the cell's view data, disregarding any cached value. */
+        /**
+         * An action that reloads the cell's view data,
+         * disregarding any cached value.
+         */
         data object ReloadData : Action
 
         /**
-         * An action that indicates the set of reloading conversations
-         * changed, carrying the affected conversation ID keys. Updates
-         * whether the cell shows redacted content.
+         * An action that indicates the set of reloading
+         * conversations changed, carrying the affected
+         * conversation ID keys. Updates whether the cell shows
+         * redacted content.
          */
         data class ReloadingConversationsChanged(
             val conversationIDKeys: Set<String>,
@@ -142,25 +152,27 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
         ) : Action
 
         /**
-         * An action that indicates the session store changed, carrying
-         * the change. Reloads the cell after a short delay when the
-         * change affects the conversation, its messages, or its
-         * participants.
+         * An action that indicates the session store changed,
+         * carrying the change. Reloads the cell after a short
+         * delay when the change affects the conversation, its
+         * messages, or its participants.
          */
         data class SessionStoreDidChange(
             val change: SessionStoreChange,
         ) : Action
 
         /**
-         * An action that indicates the user tapped the user info badge.
-         * Presents an alert with information about the other user.
+         * An action that indicates the user tapped the user info
+         * badge. Presents an alert with information about the
+         * other user.
          */
         data object UserInfoBadgeTapped : Action
 
         /**
-         * An action that indicates conversation deletion finished,
-         * carrying an [Exception] if it failed. Logs an analytics event
-         * on success; otherwise, surfaces the error as a toast.
+         * An action that indicates conversation deletion
+         * finished, carrying an [Exception] if it failed. Logs an
+         * analytics event on success; otherwise, surfaces the
+         * error as a toast.
          */
         data class DeleteConversationReturned(
             val exception: Exception?,
@@ -181,14 +193,14 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
     /**
      * The state of the conversation cell.
      *
-     * @property conversationIDKey The ID key of the conversation the
-     *   cell describes.
-     * @property searchQuery The search query active when the cell was
-     *   created.
-     * @property cellViewData The view data used to render the cell's
-     *   content.
-     * @property isConversationReloading A Boolean value that indicates
-     *   whether the conversation is being reloaded.
+     * @property conversationIDKey The ID key of the conversation
+     *   the cell describes.
+     * @property searchQuery The search query active when the cell
+     *   was created.
+     * @property cellViewData The view data used to render the
+     *   cell's content.
+     * @property isConversationReloading A Boolean value that
+     *   indicates whether the conversation is being reloaded.
      */
     data class State(
         val conversationIDKey: String,
@@ -196,6 +208,10 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
         val cellViewData: ConversationCellViewData = ConversationCellViewData.empty,
         val isConversationReloading: Boolean = false,
     ) {
+        // MARK: - Dependencies
+
+        private val sessionStore: SessionStore by Dependency { it.clientSession.store }
+
         /** The localized text the block users button displays. */
         val blockUsersButtonText: String get() = LocalizedStringKey.BlockUser.localized()
 
@@ -206,17 +222,18 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
         val reportUsersButtonText: String get() = LocalizedStringKey.ReportUser.localized()
 
         /**
-         * The conversation the cell describes, resolved from the session
-         * store – an empty placeholder if it no longer exists.
+         * The conversation the cell describes, resolved from the
+         * session store – an empty placeholder if it no longer
+         * exists.
          */
         val conversation: Conversation
             get() =
-                DependencyValues.current.clientSession.store
+                sessionStore
                     .getConversation(conversationIDKey) ?: Conversation.empty
 
         /**
-         * The text the date label displays, or a redaction placeholder
-         * while content is redacted.
+         * The text the date label displays, or a redaction
+         * placeholder while content is redacted.
          */
         val dateLabelText: String
             get() {
@@ -228,8 +245,8 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
             }
 
         /**
-         * The ID of the most recent message matching the search query,
-         * or `null` if none match.
+         * The ID of the most recent message matching the search
+         * query, or `null` if none match.
          */
         val focusedMessageID: String?
             get() = conversation.messages?.lastOrNull { it.textContains(searchQuery) }?.id
@@ -316,7 +333,7 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
 
             Action.CellTapped -> {
                 val focusedMessageID = state.searchQuery.takeIf { it.isNotBlank() }?.let { state.focusedMessageID }
-                DependencyValues.current.navigation.navigate(
+                navigation.navigate(
                     Route.UserContent(
                         UserContentRoute.Push(
                             UserContentNavigatorState.SeguePaths.Chat(state.conversationIDKey, focusedMessageID),

@@ -21,20 +21,21 @@ import us.neotechnica.panther.translator.models.TranslationInput
 /**
  * An alert that reports an error to the user.
  *
- * When the error is reportable, automatic error reporting is off, and
- * a report delegate is registered, the alert shows a preferred
- * "Send Error Report" button that files a report through the
+ * When the error is reportable, automatic error reporting is off,
+ * and a report delegate is registered, the alert shows a
+ * preferred "Send Error Report" button that files a report
+ * through the
  * [ReportDelegate][us.neotechnica.panther.designsystem.modules.alertkit.interfaces.ReportDelegate]
- * registered with `AlertKitConfig`, with the error description as the
- * message. Otherwise, it shows the error description as the title and
- * the error identifier in the message.
+ * registered with `AlertKitConfig`, with the error description
+ * as the message. Otherwise, it shows the error description as
+ * the title and the error identifier in the message.
  *
  * ```kotlin
  * ErrorAlert(exception).present()
  * ```
  *
- * Pass translation keys to [present] to translate the alert's content
- * into the user's language before presentation.
+ * Pass translation keys to [present] to translate the alert's
+ * content into the user's language before presentation.
  */
 class ErrorAlert(
     private val exception: Exception,
@@ -44,7 +45,10 @@ class ErrorAlert(
 ) {
     // MARK: - Types
 
-    /** A value that identifies a translatable part of an [ErrorAlert]. */
+    /**
+     * A value that identifies a translatable part of an
+     * [ErrorAlert].
+     */
     sealed interface TranslationOptionKey {
         /** The dismiss button's title. */
         data object DismissButtonTitle : TranslationOptionKey
@@ -79,7 +83,8 @@ class ErrorAlert(
     }
 
     /**
-     * Presents the error alert and suspends until the user dismisses it.
+     * Presents the error alert and suspends until the user
+     * dismisses it.
      */
     suspend fun present(): Unit =
         AlertPresenter.presentAwaitingResult(fallbackValue = Unit) { guard ->

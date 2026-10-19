@@ -64,13 +64,13 @@ class RecipientBarConfigService {
     // MARK: - Reconfigure Collection View
 
     /**
-     * Resolves the current conversation from the selected contacts and
-     * reloads the message list to match.
+     * Resolves the current conversation from the selected
+     * contacts and reloads the message list to match.
      *
-     * When the selected contacts match an existing conversation, that
-     * conversation becomes current; otherwise, an empty or provisional
-     * conversation is set up in its place. Speech and audio playback
-     * stop before the list changes.
+     * When the selected contacts match an existing conversation,
+     * that conversation becomes current; otherwise, an empty or
+     * provisional conversation is set up in its place. Speech and
+     * audio playback stop before the list changes.
      */
     fun reconfigureCollectionView() {
         textToSpeechService.stop()

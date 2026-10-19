@@ -56,33 +56,36 @@ private typealias Strings = SearchBarStrings
 
 /**
  * A search field: a magnifying-glass glyph, a placeholder, a
- * single-line input, and a clear button that appears while the query
- * is non-empty, optionally followed by a Cancel button.
+ * single-line input, and a clear button that appears while the
+ * query is non-empty, optionally followed by a Cancel button.
  *
  * @param query The current query text.
  * @param onQueryChange Invoked as the query changes.
- * @param modifier The modifier for this bar (for outer positioning).
- * @param backgroundColor The colour behind the field, spanning the
- *   bar's full width. Defaults to the navigation bar background.
+ * @param modifier The modifier for this bar (for outer
+ *   positioning).
+ * @param backgroundColor The colour behind the field, spanning
+ *   the bar's full width. Defaults to the navigation bar
+ *   background.
  * @param bottomPadding The padding below the field.
- * @param keyboardType The soft-keyboard type for the input field, or
- *   `null` for the system default.
- * @param autoCorrectEnabled Whether the keyboard offers autocorrection.
- *   The default is `true`.
+ * @param keyboardType The soft-keyboard type for the input field,
+ *   or `null` for the system default.
+ * @param autoCorrectEnabled Whether the keyboard offers
+ *   autocorrection. The default is `true`.
  * @param placeholderText The placeholder shown while the query is
  *   empty. Defaults to the localized search prompt.
- * @param onSubmit The handler to run with the current query when the
- *   user submits, if any.
- * @param onFocusChanged The handler to run when the field gains or
- *   loses focus, if any.
- * @param showsCancelButton A Boolean value that indicates whether the
- *   bar displays a Cancel button beside the field. The button slides
- *   in from the trailing edge as the field narrows, and slides out as
- *   the field widens again. The default is `false`.
- * @param onCancel The handler to run when the user taps the Cancel
- *   button, if any. Tapping the button dismisses the keyboard before
- *   the handler runs; the handler is responsible for clearing the
- *   query and hiding the button.
+ * @param onSubmit The handler to run with the current query when
+ *   the user submits, if any.
+ * @param onFocusChanged The handler to run when the field gains
+ *   or loses focus, if any.
+ * @param showsCancelButton A Boolean value that indicates whether
+ *   the bar displays a Cancel button beside the field. The button
+ *   slides in from the trailing edge as the field narrows, and
+ *   slides out as the field widens again. The default is `false`
+ *   .
+ * @param onCancel The handler to run when the user taps the
+ *   Cancel button, if any. Tapping the button dismisses the
+ *   keyboard before the handler runs; the handler is responsible
+ *   for clearing the query and hiding the button.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -233,20 +236,21 @@ private const val CANCEL_BUTTON_ANIMATION_LABEL = "SearchBarCancelButton"
 // MARK: - View Builder
 
 /**
- * Creates a view that combines a search bar with the given content.
+ * Creates a view that combines a search bar with the given
+ * content.
  *
  * The bar sits above the content.
  *
  * @param query The search query the bar displays and edits.
  * @param onQueryChange Invoked as the query changes.
- * @param keyboardType The keyboard type to display during editing,
- *   or `null` for the system default.
- * @param autoCorrectEnabled Whether the keyboard offers autocorrection.
- *   The default is `true`.
- * @param placeholderText The placeholder string to display while the
- *   query is empty. Defaults to the localized search prompt.
- * @param onSubmit The handler to run with the current query when the
- *   user submits, if any.
+ * @param keyboardType The keyboard type to display during
+ *   editing, or `null` for the system default.
+ * @param autoCorrectEnabled Whether the keyboard offers
+ *   autocorrection. The default is `true`.
+ * @param placeholderText The placeholder string to display while
+ *   the query is empty. Defaults to the localized search prompt.
+ * @param onSubmit The handler to run with the current query when
+ *   the user submits, if any.
  * @param content The content the search bar filters.
  */
 @Composable

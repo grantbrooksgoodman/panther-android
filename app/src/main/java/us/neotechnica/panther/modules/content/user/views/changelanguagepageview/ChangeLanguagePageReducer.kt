@@ -14,6 +14,7 @@ import us.neotechnica.panther.modules.content.onboarding.components.instructionv
 import us.neotechnica.panther.modules.content.user.dependencies.changeLanguagePageViewService
 import us.neotechnica.panther.modules.content.user.dependencies.settingsPageViewService
 import us.neotechnica.panther.modules.content.user.services.ChangeLanguagePageViewService
+import us.neotechnica.panther.modules.content.user.services.SettingsPageViewService
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.translation.extensions.value
 import us.neotechnica.panther.networking.modules.translation.interfaces.HostedTranslationDelegate
@@ -28,28 +29,34 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStora
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
+import us.neotechnica.panther.subsystem.modules.shared.models.SharedEvents
 
 /**
  * The reducer that drives the change-language page.
  *
- * This page lets the user change the language the app's content is
- * translated into from Settings. The user selects a language, and the
- * reducer applies the change through [ChangeLanguagePageViewService].
+ * This page lets the user change the language the app's content
+ * is translated into from Settings. The user selects a language,
+ * and the reducer applies the change through
+ * [ChangeLanguagePageViewService].
  *
  * The page's behavior contract:
  *
- * - On appearance, the page builds its language list from the localized
- *   language-name dictionary, selecting the app's current language by
- *   default, and resolves its translated display strings, remaining in
- *   the loading state until resolution completes. If resolution fails,
- *   the page falls back to its default strings and loads anyway.
- * - The confirm button is enabled only while the selected language
- *   differs from the current language.
+ * - On appearance, the page builds its language list from the
+ *   localized language-name dictionary, selecting the app's
+ *   current language by default, and resolves its translated
+ *   display strings, remaining in the loading state until
+ *   resolution completes. If resolution fails, the page falls
+ *   back to its default strings and loads anyway.
+ * - The confirm button is enabled only while the selected
+ *   language differs from the current language.
  * - Tapping confirm applies the selected language.
  */
 class ChangeLanguagePageReducer : Reducer<ChangeLanguagePageReducer.State, ChangeLanguagePageReducer.Action> {
     // MARK: - Dependencies
 
+    private val changeLanguagePageViewService: ChangeLanguagePageViewService by Dependency { it.changeLanguagePageViewService }
+    private val settingsPageViewService: SettingsPageViewService by Dependency { it.settingsPageViewService }
+    private val sharedEvents: SharedEvents by Dependency { it.sharedEvents }
     private val translator: HostedTranslationDelegate by Dependency { it.networking.hostedTranslation }
 
     // MARK: - Action
@@ -70,15 +77,24 @@ class ChangeLanguagePageReducer : Reducer<ChangeLanguagePageReducer.State, Chang
          */
         data object ViewDisappeared : Action
 
-        /** An action that indicates the user tapped the confirm button. Applies the selected language. */
+        /**
+         * An action that indicates the user tapped the confirm
+         * button. Applies the selected language.
+         */
         data object ConfirmButtonTapped : Action
 
-        /** An action that indicates display string resolution succeeded, carrying the resolved strings. */
+        /**
+         * An action that indicates display string resolution
+         * succeeded, carrying the resolved strings.
+         */
         data class ResolveReturned(
             val strings: List<TranslationOutputMap>,
         ) : Action
 
-        /** An action that indicates display string resolution failed, carrying the resulting [Exception]. */
+        /**
+         * An action that indicates display string resolution
+         * failed, carrying the resulting [Exception].
+         */
         data class ResolveFailed(
             val exception: Exception,
         ) : Action
@@ -137,7 +153,7 @@ class ChangeLanguagePageReducer : Reducer<ChangeLanguagePageReducer.State, Chang
     ): ReduceResult<State, Action> =
         when (action) {
             Action.ViewAppeared -> {
-                DependencyValues.current.settingsPageViewService.isMainPagePresented = false
+                settingsPageViewService.isMainPagePresented = false
                 val languageCodeDictionary =
                     CoreUtilities.localizedLanguageCodeDictionary(RuntimeStorage.languageCode)
                         ?: return ReduceResult(state.copy(viewState = ViewState.Loading))
@@ -155,14 +171,13 @@ class ChangeLanguagePageReducer : Reducer<ChangeLanguagePageReducer.State, Chang
             }
 
             Action.ViewDisappeared -> {
-                DependencyValues.current.settingsPageViewService.isMainPagePresented = true
-                val sharedEvents = DependencyValues.current.sharedEvents
+                settingsPageViewService.isMainPagePresented = true
                 sharedEvents.traitCollectionChanged.send(Unit)
                 ReduceResult(state)
             }
 
             Action.ConfirmButtonTapped -> {
-                DependencyValues.current.changeLanguagePageViewService.confirmButtonTapped(state.selectedLanguageCode)
+                changeLanguagePageViewService.confirmButtonTapped(state.selectedLanguageCode)
                 ReduceResult(state)
             }
 

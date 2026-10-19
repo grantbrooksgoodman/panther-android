@@ -24,6 +24,7 @@ import us.neotechnica.panther.modules.common.models.SystemInformation
 import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.networking.sources.user.models.User
+import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.descriptor
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.Networking
@@ -60,6 +61,7 @@ object ErrorReportingService : ReportDelegate {
     // MARK: - Dependencies
 
     private val metadataService: MetadataService by Dependency { it.commonServices.metadata }
+    private val navigation: Navigation by Dependency { it.navigation }
     private val storage: StorageDelegate by Dependency { it.networking.storage }
     private val timestampDateFormatter: TimestampDateFormatter by Dependency { it.timestampDateFormatter }
 
@@ -81,7 +83,8 @@ object ErrorReportingService : ReportDelegate {
     // MARK: - ReportDelegate Conformance
 
     /**
-     * Files a report for the given exception, showing a success toast.
+     * Files a report for the given exception, showing a success
+     * toast.
      *
      * @param exception The exception to report.
      */
@@ -219,7 +222,7 @@ object ErrorReportingService : ReportDelegate {
             put("Timestamp", timestampDateFormatter.format(date))
             User.currentUserID?.let { put("Current User ID", it) }
 
-            val viewID = DependencyValues.current.navigation.state.value.descriptor
+            val viewID = navigation.state.value.descriptor
             if (viewID != null) put("View ID", viewID)
         }
 

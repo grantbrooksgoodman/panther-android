@@ -36,6 +36,20 @@ import kotlin.coroutines.resumeWithException
  * The Firebase Authentication implementation of [AuthDelegate].
  */
 class Auth : AuthDelegate {
+    // MARK: - Types
+
+    // What the verification callbacks delivered before the request
+    // settled: a code on its way, or a credential verified without one.
+    internal sealed interface VerificationOutcome {
+        data class CodeSent(
+            val verificationID: String,
+        ) : VerificationOutcome
+
+        data class Completed(
+            val signIn: suspend () -> String,
+        ) : VerificationOutcome
+    }
+
     // MARK: - Properties
 
     private val firebaseAuth by lazy { FirebaseAuth.getInstance() }
@@ -129,20 +143,6 @@ class Auth : AuthDelegate {
         } finally {
             Networking.config.activityIndicatorDelegate.hide()
         }
-    }
-
-    // MARK: - Types
-
-    // What the verification callbacks delivered before the request
-    // settled: a code on its way, or a credential verified without one.
-    internal sealed interface VerificationOutcome {
-        data class CodeSent(
-            val verificationID: String,
-        ) : VerificationOutcome
-
-        data class Completed(
-            val signIn: suspend () -> String,
-        ) : VerificationOutcome
     }
 
     // MARK: - Auxiliary

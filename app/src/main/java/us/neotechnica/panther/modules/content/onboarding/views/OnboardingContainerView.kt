@@ -39,12 +39,13 @@ import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.Dep
 /**
  * Hosts the onboarding navigation stack.
  *
- * The top of the coordinator's onboarding stack determines the visible
- * page (an empty stack shows the welcome page); pushing and popping
- * animate on the navigation transition, and the system back gesture
- * pops. Every page keeps its view model – and so its state – for the
- * flow's lifetime: the welcome page persists as the root, and a pushed
- * page keeps its state beneath a push and across a pop and re-push.
+ * The top of the coordinator's onboarding stack determines the
+ * visible page (an empty stack shows the welcome page); pushing
+ * and popping animate on the navigation transition, and the
+ * system back gesture pops. Every page keeps its view model – and
+ * so its state – for the flow's lifetime: the welcome page
+ * persists as the root, and a pushed page keeps its state beneath
+ * a push and across a pop and re-push.
  *
  * @param modifier The modifier for this container.
  */

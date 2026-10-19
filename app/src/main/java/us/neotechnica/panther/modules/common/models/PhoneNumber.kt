@@ -25,26 +25,30 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 
+// The counterpart model carries `// swiftlint:disable file_length`.
+
 /**
- * A phone number decomposed into its calling code, national number,
- * and region.
+ * A phone number decomposed into its calling code, national
+ * number, and region.
  *
- * [PhoneNumber] is the app's canonical phone number representation.
- * Its [compiledNumberString] identifies a number across the app, such
- * as when matching contacts to registered users.
+ * [PhoneNumber] is the app's canonical phone number
+ * representation. Its [compiledNumberString] identifies a number
+ * across the app, such as when matching contacts to registered
+ * users.
  *
  * Create phone numbers from raw components or from a string; the
  * string factory derives the calling code and region using the
  * device's region and number length validation.
  *
- * Every stored property is immutable except the per-region formatted
- * string cache, which is lock-isolated; a phone number can therefore
- * be formatted concurrently from any thread.
+ * Every stored property is immutable except the per-region
+ * formatted string cache, which is lock-isolated; a phone number
+ * can therefore be formatted concurrently from any thread.
  *
- * **Important:** Equality and hashing derive from [hashFactors], which
- * include the number's [label] and [internalFormattedString] in
- * addition to its digits. Two phone numbers with the same digits but
- * different labels are not equal.
+ * **Important:** Equality and hashing derive from [hashFactors],
+ * which include the number's [label] and
+ * [internalFormattedString] in addition to its digits. Two phone
+ * numbers with the same digits but different labels are not
+ * equal.
  */
 class PhoneNumber(
     callingCode: String,
@@ -59,10 +63,6 @@ class PhoneNumber(
     val internalFormattedString: String?,
 ) : Serializable<Map<String, Any?>>,
     EncodedHashable {
-    // MARK: - Dependencies
-
-    private val regionDetailService: RegionDetailService by Dependency { it.commonServices.regionDetail }
-
     // MARK: - Types
 
     private enum class Keys(
@@ -73,18 +73,28 @@ class PhoneNumber(
         REGION_CODE("regionCode"),
     }
 
-    /** A formatted string, cached alongside the code of the region it was formatted for. */
+    /**
+     * A formatted string, cached alongside the code of the region
+     * it was formatted for.
+     */
     private class FormattedStringCacheEntry(
         val formattedString: String,
         val regionCode: String,
     )
+
+    // MARK: - Dependencies
+
+    private val regionDetailService: RegionDetailService by Dependency { it.commonServices.regionDetail }
 
     // MARK: - Properties
 
     /** The number's calling code, containing digits only. */
     val callingCode: String = callingCode.digits
 
-    /** The label associated with the number, such as Home or Mobile, or `null`. */
+    /**
+     * The label associated with the number, such as Home or
+     * Mobile, or `null`.
+     */
     val label: String? = label?.trim()
 
     /** The number's national portion, containing digits only. */
@@ -116,9 +126,10 @@ class PhoneNumber(
             )
 
     /**
-     * The persisted representation of the phone number, carrying every
-     * stored property – the [label] and [internalFormattedString]
-     * included – so an archived number reloads equal to the original.
+     * The persisted representation of the phone number, carrying
+     * every stored property – the [label] and
+     * [internalFormattedString] included – so an archived number
+     * reloads equal to the original.
      */
     val archived: Map<String, Any?>
         get() =
@@ -144,6 +155,12 @@ class PhoneNumber(
                 nationalNumberString,
                 regionCode,
             ).sorted()
+
+    // MARK: - Equatable Conformance
+
+    override fun equals(other: Any?): Boolean = other is PhoneNumber && hashFactors == other.hashFactors
+
+    override fun hashCode(): Int = hashFactors.hashCode()
 
     // MARK: - Formatted Strings
 
@@ -263,12 +280,6 @@ class PhoneNumber(
         }
     }
 
-    // MARK: - Equatable Conformance
-
-    override fun equals(other: Any?): Boolean = other is PhoneNumber && hashFactors == other.hashFactors
-
-    override fun hashCode(): Int = hashFactors.hashCode()
-
     // MARK: - Companion
 
     companion object : SerializableDecoder<PhoneNumber, Map<String, Any?>> {
@@ -303,8 +314,9 @@ class PhoneNumber(
 
         /**
          * Reconstructs a phone number from its stored encoded map
-         * without suspending, or `null` if the map is malformed. Used
-         * by the file-backed archives, whose decode step is synchronous.
+         * without suspending, or `null` if the map is malformed.
+         * Used by the file-backed archives, whose decode step is
+         * synchronous.
          *
          * @param element The stored encoded map.
          */
@@ -326,18 +338,20 @@ class PhoneNumber(
         private const val ARCHIVE_KEY_LABEL = "label"
 
         /**
-         * Creates a phone number from the given string, deriving its
-         * components.
+         * Creates a phone number from the given string, deriving
+         * its components.
          *
-         * The calling code is derived by testing the number's possible
-         * calling codes against the device's, then validating the
-         * remaining digits' length. The region is derived similarly,
-         * preferring the device's region. Components that cannot be
-         * derived fall back to the device's calling code and region.
+         * The calling code is derived by testing the number's
+         * possible calling codes against the device's, then
+         * validating the remaining digits' length. The region is
+         * derived similarly, preferring the device's region.
+         * Components that cannot be derived fall back to the
+         * device's calling code and region.
          *
-         * @param string The phone number string. Non-digit characters
-         *   are ignored.
-         * @param label The label to associate with the number, if any.
+         * @param string The phone number string. Non-digit
+         *   characters are ignored.
+         * @param label The label to associate with the number, if
+         *   any.
          *
          * @return A phone number with the derived components.
          */

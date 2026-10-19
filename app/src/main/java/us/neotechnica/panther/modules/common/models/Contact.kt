@@ -33,7 +33,10 @@ class Contact(
     val lastName: String,
     /** The contact's phone numbers. */
     val phoneNumbers: List<PhoneNumber>,
-    /** The contact's thumbnail image data, or `null` if the contact has no image. */
+    /**
+     * The contact's thumbnail image data, or `null` if the
+     * contact has no image.
+     */
     val imageData: ByteArray? = null,
 ) : Serializable<Map<String, Any?>>,
     EncodedHashable {
@@ -47,12 +50,6 @@ class Contact(
         IMAGE_DATA("imageData"),
         LAST_NAME("lastName"),
         PHONE_NUMBERS("phoneNumbers"),
-    }
-
-    // MARK: - Init
-
-    init {
-        if (imageData != null) ContactImageCache.setImage(decodeImage(imageData), forContactID = id)
     }
 
     // MARK: - Computed Properties
@@ -83,7 +80,10 @@ class Contact(
             return image
         }
 
-    /** The uppercased first letters of each word of the contact's full name. */
+    /**
+     * The uppercased first letters of each word of the contact's
+     * full name.
+     */
     val initials: String
         get() = fullName.split(" ").mapNotNull { it.firstOrNull()?.uppercase() }.joinToString("")
 
@@ -98,11 +98,11 @@ class Contact(
             )
 
     /**
-     * The strings that collectively define this instance's identity
-     * for hashing purposes, sorted alphabetically.
+     * The strings that collectively define this instance's
+     * identity for hashing purposes, sorted alphabetically.
      *
-     * Contains the contact's identifier, name components, phone number
-     * hashes, and encoded image data.
+     * Contains the contact's identifier, name components, phone
+     * number hashes, and encoded image data.
      */
     override val hashFactors: List<String>
         get() =
@@ -114,6 +114,12 @@ class Contact(
                 imageData?.let { Base64.getEncoder().encodeToString(it) } ?: "",
             ).sorted()
 
+    // MARK: - Init
+
+    init {
+        if (imageData != null) ContactImageCache.setImage(decodeImage(imageData), forContactID = id)
+    }
+
     // MARK: - Equatable Conformance
 
     override fun equals(other: Any?): Boolean = other is Contact && hashFactors == other.hashFactors
@@ -124,8 +130,8 @@ class Contact(
 
     companion object {
         /**
-         * Reconstructs a contact from its stored encoded map, or `null`
-         * if the map is malformed.
+         * Reconstructs a contact from its stored encoded map, or
+         * `null` if the map is malformed.
          */
         fun decode(data: Map<String, Any?>): Contact? {
             val id = data[Keys.ID.rawValue] as? String ?: return null

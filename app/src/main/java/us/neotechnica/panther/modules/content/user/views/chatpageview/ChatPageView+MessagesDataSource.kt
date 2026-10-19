@@ -78,12 +78,12 @@ private const val SCROLL_SETTLE_MAX_FRAMES = 8
 /**
  * Keeps the message list pinned to the newest message.
  *
- * The list starts pinned and scrolls to the bottom on initial load, when
- * the user sends a message, or whenever pinned content grows – a
- * reaction landing below the last message. It unpins the moment the
- * user drags the list to read earlier messages and re-pins once the
- * list next rests at the very bottom, so content growth is never
- * mistaken for the user scrolling away.
+ * The list starts pinned and scrolls to the bottom on initial
+ * load, when the user sends a message, or whenever pinned content
+ * grows – a reaction landing below the last message. It unpins
+ * the moment the user drags the list to read earlier messages and
+ * re-pins once the list next rests at the very bottom, so content
+ * growth is never mistaken for the user scrolling away.
  */
 @Composable
 private fun StickToBottomEffect(
@@ -159,9 +159,10 @@ private fun StickToBottomEffect(
  * scrolls toward them, and scrolls to the topmost message after a
  * scroll-to-top load.
  *
- * Older messages load once the list stops decelerating: a load follows
- * a fling toward older messages – wherever it comes to rest – or a
- * release after pulling the list past its topmost message.
+ * Older messages load once the list stops decelerating: a load
+ * follows a fling toward older messages – wherever it comes to
+ * rest – or a release after pulling the list past its topmost
+ * message.
  */
 @Composable
 private fun rememberLoadMoreMessagesConnection(listState: LazyListState): NestedScrollConnection {
@@ -212,14 +213,16 @@ private fun rememberLoadMoreMessagesConnection(listState: LazyListState): Nested
 }
 
 /**
- * The message list: every displayed message as a [ChatMessageCell],
- * pinned to the newest message, loading older messages on an upward
- * drag at the top, and revealing each message's timestamp as the list
- * is dragged toward the leading edge.
+ * The message list: every displayed message as a
+ * [ChatMessageCell], pinned to the newest message, loading older
+ * messages on an upward drag at the top, and revealing each
+ * message's timestamp as the list is dragged toward the leading
+ * edge.
  *
  * @param state The chat page state.
  * @param modifier The modifier for the list.
- * @param onReact Applies the given reaction style to the given message.
+ * @param onReact Applies the given reaction style to the given
+ *   message.
  */
 @Composable
 internal fun MessageList(

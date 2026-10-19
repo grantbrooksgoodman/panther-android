@@ -29,10 +29,11 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * A description of the alert currently requested for presentation.
+ * A description of the alert currently requested for
+ * presentation.
  *
- * The imperative `present()` methods on the alert types set the current
- * value; the
+ * The imperative `present()` methods on the alert types set the
+ * current value; the
  * [AlertHost][us.neotechnica.panther.designsystem.modules.alertkit.views.AlertHost]
  * composable renders it.
  */
@@ -174,16 +175,17 @@ sealed interface PresentedAlert {
      *
      * @property title The alert's title, or `null` for none.
      * @property message The alert's message.
-     * @property cancelButtonTitle The cancel button's title, or `null`
-     *   to omit the button.
+     * @property cancelButtonTitle The cancel button's title, or
+     *   `null` to omit the button.
      * @property cancelButtonStyle The cancel button's style.
-     * @property progress The progress to display, from `0` to `1`.
+     * @property progress The progress to display, from `0` to `1`
+     *   .
      * @property messageAttributes The attributes applied to the
      *   message, or `null` for plain text.
-     * @property titleAttributes The attributes applied to the title,
-     *   or `null` for plain text.
-     * @property onCancel The action performed when the user cancels,
-     *   or `null` when cancellation is not offered.
+     * @property titleAttributes The attributes applied to the
+     *   title, or `null` for plain text.
+     * @property onCancel The action performed when the user
+     *   cancels, or `null` when cancellation is not offered.
      */
     data class Progress(
         val title: String?,
@@ -228,7 +230,10 @@ object AlertPresenter {
     /** The alert currently requested for presentation, or `null`. */
     val current: StateFlow<PresentedAlert?> = mutableCurrent.asStateFlow()
 
-    /** A Boolean value that indicates whether an alert is presented. */
+    /**
+     * A Boolean value that indicates whether an alert is
+     * presented.
+     */
     val isPresenting: Boolean
         get() = mutableCurrent.value != null
 
@@ -237,12 +242,12 @@ object AlertPresenter {
     // MARK: - Methods
 
     /**
-     * Requests presentation of the given alert, queueing it behind any
-     * alert already presented or queued.
+     * Requests presentation of the given alert, queueing it
+     * behind any alert already presented or queued.
      *
      * @param alert The alert to present.
-     * @param onDisplaced A closure invoked if the alert is dismissed
-     *   without one of its actions being selected.
+     * @param onDisplaced A closure invoked if the alert is
+     *   dismissed without one of its actions being selected.
      */
     fun present(
         alert: PresentedAlert,

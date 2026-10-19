@@ -46,7 +46,10 @@ object CommonServices {
     /** The analytics service. */
     val analytics get() = AnalyticsService
 
-    /** The service that handles taps on attributes detected in text. */
+    /**
+     * The service that handles taps on attributes detected in
+     * text.
+     */
     val attributeDetection get() = AttributeDetectionService
 
     /** The umbrella service for audio functionality. */
@@ -61,7 +64,10 @@ object CommonServices {
     /** The service that presents the system content pickers. */
     val contentPicker get() = ContentPickerService
 
-    /** The service that exports documents through the system picker. */
+    /**
+     * The service that exports documents through the system
+     * picker.
+     */
     val documentExport get() = DocumentExportService
 
     /** The haptic feedback service. */

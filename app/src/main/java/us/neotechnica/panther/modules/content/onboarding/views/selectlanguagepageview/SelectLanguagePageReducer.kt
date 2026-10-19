@@ -40,23 +40,24 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
  * The reducer that drives the language selection page of the
  * onboarding flow.
  *
- * This page is the first step of sign-up. The user chooses the language
- * the app's content is translated into, and the reducer commits the
- * choice before phone number verification begins.
+ * This page is the first step of sign-up. The user chooses the
+ * language the app's content is translated into, and the reducer
+ * commits the choice before phone number verification begins.
  *
  * The page's behavior contract:
  *
- * - On appearance, the page resolves its translated display strings,
- *   remaining in the loading state until resolution completes. If
- *   resolution fails, the page falls back to its default strings and
- *   loads anyway.
- * - The page builds its language list from the localized language code
- *   dictionary, selecting the app's current language by default. If the
- *   dictionary is unavailable, the page enters the error state instead.
- * - Tapping continue clears the language-dependent caches, sets the
- *   app's language to the selection, records the choice with
- *   [OnboardingService.setLanguageCode], and pushes the phone number
- *   entry page.
+ * - On appearance, the page resolves its translated display
+ *   strings, remaining in the loading state until resolution
+ *   completes. If resolution fails, the page falls back to its
+ *   default strings and loads anyway.
+ * - The page builds its language list from the localized language
+ *   code dictionary, selecting the app's current language by
+ *   default. If the dictionary is unavailable, the page enters
+ *   the error state instead.
+ * - Tapping continue clears the language-dependent caches, sets
+ *   the app's language to the selection, records the choice with
+ *   [OnboardingService.setLanguageCode], and pushes the phone
+ *   number entry page.
  */
 class SelectLanguagePageReducer : Reducer<SelectLanguagePageReducer.State, SelectLanguagePageReducer.Action> {
     // MARK: - Dependencies
@@ -69,30 +70,45 @@ class SelectLanguagePageReducer : Reducer<SelectLanguagePageReducer.State, Selec
 
     /** The actions the language selection page can process. */
     sealed interface Action {
-        /** An action that indicates the view appeared. Builds the language list and begins display string resolution. */
+        /**
+         * An action that indicates the view appeared. Builds the
+         * language list and begins display string resolution.
+         */
         data object ViewAppeared : Action
 
-        /** An action that indicates the user tapped the back button. Pops the current page. */
+        /**
+         * An action that indicates the user tapped the back
+         * button. Pops the current page.
+         */
         data object BackButtonTapped : Action
 
         /**
-         * An action that indicates the user tapped the continue button.
-         * Commits the selected language and pushes the phone number
-         * entry page.
+         * An action that indicates the user tapped the continue
+         * button. Commits the selected language and pushes the
+         * phone number entry page.
          */
         data object ContinueButtonTapped : Action
 
-        /** An action that indicates display string resolution failed, carrying the resulting [Exception]. */
+        /**
+         * An action that indicates display string resolution
+         * failed, carrying the resulting [Exception].
+         */
         data class ResolveFailed(
             val exception: Exception,
         ) : Action
 
-        /** An action that indicates display string resolution succeeded, carrying the resolved strings. */
+        /**
+         * An action that indicates display string resolution
+         * succeeded, carrying the resolved strings.
+         */
         data class ResolveReturned(
             val strings: List<TranslationOutputMap>,
         ) : Action
 
-        /** An action that indicates the selected language changed, carrying the new language's display name. */
+        /**
+         * An action that indicates the selected language changed,
+         * carrying the new language's display name.
+         */
         data class SelectedLanguageNameChanged(
             val selectedLanguageName: String,
         ) : Action
@@ -102,15 +118,28 @@ class SelectLanguagePageReducer : Reducer<SelectLanguagePageReducer.State, Selec
 
     /** The state of the language selection page. */
     data class State(
-        /** The strings the page's instruction header displays. Populated once display string resolution completes. */
+        /**
+         * The strings the page's instruction header displays.
+         * Populated once display string resolution completes.
+         */
         val instructionViewStrings: InstructionViewStrings = InstructionViewStrings.empty,
-        /** The display names of the selectable languages, sorted alphabetically. */
+        /**
+         * The display names of the selectable languages, sorted
+         * alphabetically.
+         */
         val languages: List<String> = emptyList(),
         /** The display name of the selected language. */
         val selectedLanguageName: String = "",
-        /** The page's translated display strings. Contains the default, untranslated strings until resolution completes. */
+        /**
+         * The page's translated display strings. Contains the
+         * default, untranslated strings until resolution
+         * completes.
+         */
         val strings: List<TranslationOutputMap> = SelectLanguagePageViewStrings.defaultOutputMap,
-        /** The page's loading state. Remains loading until display string resolution completes. */
+        /**
+         * The page's loading state. Remains loading until display
+         * string resolution completes.
+         */
         val viewState: ViewState = ViewState.Loading,
     ) {
         internal val selectedLanguageCode: String

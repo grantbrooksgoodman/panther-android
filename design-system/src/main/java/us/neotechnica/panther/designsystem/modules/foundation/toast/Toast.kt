@@ -89,7 +89,10 @@ data class Toast(
      * button.
      */
     sealed interface ToastType {
-        /** The semantic style, which determines the icon and color. */
+        /**
+         * The semantic style, which determines the icon and
+         * color.
+         */
         val style: ToastStyle
 
         /**
@@ -136,14 +139,20 @@ data class Toast(
         }
     }
 
-    /** The strategy that controls how long a toast remains visible. */
+    /**
+     * The strategy that controls how long a toast remains
+     * visible.
+     */
     sealed interface PerpetuationStrategy {
         /** The toast auto-dismisses after the given duration. */
         data class Ephemeral(
             val duration: Duration,
         ) : PerpetuationStrategy
 
-        /** The toast remains on screen until the user dismisses it. */
+        /**
+         * The toast remains on screen until the user dismisses
+         * it.
+         */
         data object Persistent : PerpetuationStrategy
     }
 
@@ -198,21 +207,22 @@ data class Toast(
         }
 
         /**
-         * Translates the toast's content according to [translating],
-         * then presents it.
+         * Translates the toast's content according to
+         * [translating], then presents it.
          *
-         * When [translating] is empty, or no translation delegate is
-         * registered, the toast is shown immediately with its original
-         * strings. If translation fails, the original untranslated
-         * toast is shown as a fallback and the error is logged.
+         * When [translating] is empty, or no translation delegate
+         * is registered, the toast is shown immediately with its
+         * original strings. If translation fails, the original
+         * untranslated toast is shown as a fallback and the error
+         * is logged.
          *
          * @param toast The toast to present.
          * @param translating The parts of the toast to translate.
-         * @param languagePair The language pair for translation. The
-         *   default translates from the configured source language to
-         *   the configured target language.
-         * @param onTap A closure executed when the user taps the toast,
-         *   or `null` for a non-interactive toast.
+         * @param languagePair The language pair for translation.
+         *   The default translates from the configured source
+         *   language to the configured target language.
+         * @param onTap A closure executed when the user taps the
+         *   toast, or `null` for a non-interactive toast.
          */
         suspend fun show(
             toast: Toast,

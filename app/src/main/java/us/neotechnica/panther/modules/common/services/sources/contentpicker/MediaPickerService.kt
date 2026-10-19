@@ -74,7 +74,10 @@ class MediaPickerService : ContentPickerSource() {
         appContext = context.applicationContext
     }
 
-    /** Replaces the facilities the confirmation and loading flow uses. */
+    /**
+     * Replaces the facilities the confirmation and loading flow
+     * uses.
+     */
     internal fun setDependencies(dependencies: Dependencies?) {
         this.dependencies = dependencies
     }
@@ -82,15 +85,18 @@ class MediaPickerService : ContentPickerSource() {
     // MARK: - Handle Result
 
     /**
-     * Presents a confirmation action sheet for the selected item, then
-     * loads it and delivers the result to the dismissal handler.
+     * Presents a confirmation action sheet for the selected item,
+     * then loads it and delivers the result to the dismissal
+     * handler.
      *
-     * A modal progress indicator appears if loading takes longer than
-     * one second. The system picker has already closed when the
-     * selection arrives, so cancelling the confirmation delivers a
-     * cancellation rather than returning to the picker.
+     * A modal progress indicator appears if loading takes longer
+     * than one second. The system picker has already closed when
+     * the selection arrives, so cancelling the confirmation
+     * delivers a cancellation rather than returning to the
+     * picker.
      *
-     * @param result The selection, or `null` if the user canceled.
+     * @param result The selection, or `null` if the user
+     *   canceled.
      */
     override fun handleResult(result: ContentPickerResult?) {
         val selection = result ?: return deliver(null)

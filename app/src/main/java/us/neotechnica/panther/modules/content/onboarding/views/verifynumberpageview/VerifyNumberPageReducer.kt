@@ -15,6 +15,7 @@ import us.neotechnica.panther.designsystem.modules.foundation.services.KeyboardS
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.common.models.PhoneNumber
 import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.modules.common.services.sources.PhoneNumberService
 import us.neotechnica.panther.modules.common.services.sources.RegionDetailService
 import us.neotechnica.panther.modules.content.onboarding.components.instructionview.InstructionViewStrings
 import us.neotechnica.panther.modules.content.onboarding.dependencies.onboardingService
@@ -46,36 +47,39 @@ import kotlin.time.Duration.Companion.milliseconds
  * The reducer that drives the phone number entry page of the
  * onboarding flow.
  *
- * This page is the first step of phone number verification. The user
- * enters their phone number, and the reducer checks whether an account
- * is already registered with it before sending a verification code.
+ * This page is the first step of phone number verification. The
+ * user enters their phone number, and the reducer checks whether
+ * an account is already registered with it before sending a
+ * verification code.
  *
  * The page's behavior contract:
  *
- * - On appearance, the page resolves its translated display strings,
- *   remaining in the loading state until resolution completes. If
- *   resolution fails, the page falls back to its default strings and
- *   loads anyway. The page restores any phone number and region
- *   previously recorded by [OnboardingService], defaulting to the
- *   device's region.
- * - The continue button is enabled only while the entered phone number
- *   is a valid length for the selected region's calling code.
+ * - On appearance, the page resolves its translated display
+ *   strings, remaining in the loading state until resolution
+ *   completes. If resolution fails, the page falls back to its
+ *   default strings and loads anyway. The page restores any phone
+ *   number and region previously recorded by [OnboardingService]
+ *   , defaulting to the device's region.
+ * - The continue button is enabled only while the entered phone
+ *   number is a valid length for the selected region's calling
+ *   code.
  * - Tapping continue dismisses the keyboard, then – after a brief
- *   delay – disables the page's buttons, presents a dimmed activity
- *   overlay, and begins the account existence check.
- * - If an account is already registered with the phone number, the
- *   reducer offers to sign the user in instead. If the user accepts,
- *   the reducer records the phone number and region with
- *   [OnboardingService] and replaces the navigation stack with the
- *   sign-in page.
+ *   delay – disables the page's buttons, presents a dimmed
+ *   activity overlay, and begins the account existence check.
+ * - If an account is already registered with the phone number,
+ *   the reducer offers to sign the user in instead. If the user
+ *   accepts, the reducer records the phone number and region with
+ *   [OnboardingService] and replaces the navigation stack with
+ *   the sign-in page.
  * - Otherwise, the reducer sends a verification code to the phone
  *   number. When the code is sent, the reducer records the issued
- *   identifier, phone number, and region with [OnboardingService] and
- *   pushes the verification code entry page.
- * - If verification fails, the reducer removes the overlay, re-enables
- *   the buttons, and surfaces the error as a toast. Failures caused by
- *   the user – an invalid phone number, an expired session, or a
- *   cancelled web context – are marked non-reportable before logging.
+ *   identifier, phone number, and region with [OnboardingService]
+ *   and pushes the verification code entry page.
+ * - If verification fails, the reducer removes the overlay,
+ *   re-enables the buttons, and surfaces the error as a toast.
+ *   Failures caused by the user – an invalid phone number, an
+ *   expired session, or a cancelled web context – are marked
+ *   non-reportable before logging.
  */
 class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNumberPageReducer.Action> {
     // MARK: - Dependencies
@@ -83,67 +87,106 @@ class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNum
     private val navigation: Navigation by Dependency { it.navigation }
     private val onboardingService: OnboardingService by Dependency { it.onboardingService }
     private val regionDetailService: RegionDetailService by Dependency { it.commonServices.regionDetail }
-    private val translator: HostedTranslationDelegate by Dependency { it.networking.hostedTranslation }
 
     // MARK: - Actions
 
     /** The actions the phone number entry page can process. */
     sealed interface Action {
-        /** An action that indicates the view appeared. Restores any previously recorded phone number and region, then begins display string resolution. */
+        /**
+         * An action that indicates the view appeared. Restores
+         * any previously recorded phone number and region, then
+         * begins display string resolution.
+         */
         data object ViewAppeared : Action
 
-        /** An action that indicates the user tapped the back button. Pops the current page. */
+        /**
+         * An action that indicates the user tapped the back
+         * button. Pops the current page.
+         */
         data object BackButtonTapped : Action
 
         /**
-         * An action that indicates the user tapped the continue button.
-         * Dismisses the keyboard, then triggers [RunContinueButtonEffect]
-         * after a brief delay.
+         * An action that indicates the user tapped the continue
+         * button. Dismisses the keyboard, then triggers
+         * [RunContinueButtonEffect] after a brief delay.
          */
         data object ContinueButtonTapped : Action
 
-        /** An action that indicates the user swiped down on the page. Dismisses the keyboard. */
+        /**
+         * An action that indicates the user swiped down on the
+         * page. Dismisses the keyboard.
+         */
         data object DidSwipeDown : Action
 
-        /** An action that begins checking whether an account exists for the entered phone number. */
+        /**
+         * An action that begins checking whether an account
+         * exists for the entered phone number.
+         */
         data object RunContinueButtonEffect : Action
 
-        /** An action that indicates the account exists alert was dismissed, carrying whether the user selected the cancel option. */
+        /**
+         * An action that indicates the account exists alert was
+         * dismissed, carrying whether the user selected the
+         * cancel option.
+         */
         data class AccountExistsAlertDismissed(
             val cancelled: Boolean,
         ) : Action
 
-        /** An action that indicates the account existence check resolved, carrying whether an account is registered with the entered phone number. */
+        /**
+         * An action that indicates the account existence check
+         * resolved, carrying whether an account is registered
+         * with the entered phone number.
+         */
         data class AccountExistsReturned(
             val accountExists: Boolean,
         ) : Action
 
-        /** An action that indicates the entered phone number changed, carrying the new value. */
+        /**
+         * An action that indicates the entered phone number
+         * changed, carrying the new value.
+         */
         data class PhoneNumberStringChanged(
             val phoneNumberString: String,
         ) : Action
 
-        /** An action that indicates display string resolution failed, carrying the resulting [Exception]. */
+        /**
+         * An action that indicates display string resolution
+         * failed, carrying the resulting [Exception].
+         */
         data class ResolveFailed(
             val exception: Exception,
         ) : Action
 
-        /** An action that indicates display string resolution succeeded, carrying the resolved strings. */
+        /**
+         * An action that indicates display string resolution
+         * succeeded, carrying the resolved strings.
+         */
         data class ResolveReturned(
             val strings: List<TranslationOutputMap>,
         ) : Action
 
-        /** An action that indicates the selected region changed, carrying the new region code. */
+        /**
+         * An action that indicates the selected region changed,
+         * carrying the new region code.
+         */
         data class SelectedRegionCodeChanged(
             val selectedRegionCode: String,
         ) : Action
 
-        /** An action that indicates phone number verification failed, carrying the resulting [Exception]. */
+        /**
+         * An action that indicates phone number verification
+         * failed, carrying the resulting [Exception].
+         */
         data class VerifyPhoneNumberFailed(
             val exception: Exception,
         ) : Action
 
-        /** An action that indicates a verification code was sent to the entered phone number, carrying the identifier issued for the authentication attempt. */
+        /**
+         * An action that indicates a verification code was sent
+         * to the entered phone number, carrying the identifier
+         * issued for the authentication attempt.
+         */
         data class VerifyPhoneNumberReturned(
             val result: AuthDelegate.PhoneVerificationResult,
         ) : Action
@@ -153,24 +196,49 @@ class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNum
 
     /** The state of the phone number entry page. */
     data class State(
-        /** The strings the page's instruction header displays. Populated once display string resolution completes. */
+        /**
+         * The strings the page's instruction header displays.
+         * Populated once display string resolution completes.
+         */
         val instructionViewStrings: InstructionViewStrings = InstructionViewStrings.empty,
-        /** A Boolean value that indicates whether the back button is enabled. Disabled while phone number verification is in progress. */
+        /**
+         * A Boolean value that indicates whether the back button
+         * is enabled. Disabled while phone number verification is
+         * in progress.
+         */
         val isBackButtonEnabled: Boolean = true,
-        /** A Boolean value that indicates whether the continue button is enabled. */
+        /**
+         * A Boolean value that indicates whether the continue
+         * button is enabled.
+         */
         val isContinueButtonEnabled: Boolean = false,
         /** The phone number the user has entered. */
         val phoneNumberString: String = "",
-        /** The code of the region the entered phone number belongs to. */
+        /**
+         * The code of the region the entered phone number belongs
+         * to.
+         */
         val selectedRegionCode: String = "",
-        /** The page's translated display strings. Contains the default, untranslated strings until resolution completes. */
+        /**
+         * The page's translated display strings. Contains the
+         * default, untranslated strings until resolution
+         * completes.
+         */
         val strings: List<TranslationOutputMap> = VerifyNumberPageViewStrings.defaultOutputMap,
-        /** The page's loading state. Remains loading until display string resolution completes. */
+        /**
+         * The page's loading state. Remains loading until display
+         * string resolution completes.
+         */
         val viewState: ViewState = ViewState.Loading,
     ) {
+        // MARK: - Dependencies
+
+        private val phoneNumberService: PhoneNumberService by Dependency { it.commonServices.phoneNumber }
+        private val regionDetailService: RegionDetailService by Dependency { it.commonServices.regionDetail }
+
         internal val numberIsValidLength: Boolean
             get() =
-                DependencyValues.current.commonServices.phoneNumber.numberIsValidLength(
+                phoneNumberService.numberIsValidLength(
                     phoneNumberString.digits.length,
                     phoneNumber.callingCode,
                 )
@@ -179,9 +247,9 @@ class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNum
             get() =
                 PhoneNumber(
                     callingCode =
-                        DependencyValues.current.commonServices.regionDetail
+                        regionDetailService
                             .callingCode(selectedRegionCode)
-                            ?: DependencyValues.current.commonServices.phoneNumber.deviceCallingCode,
+                            ?: phoneNumberService.deviceCallingCode,
                     nationalNumberString = phoneNumberString.digits,
                     regionCode = selectedRegionCode,
                     label = null,
@@ -310,39 +378,6 @@ class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNum
                 ReduceResult(state.copy(isBackButtonEnabled = true, isContinueButtonEnabled = true))
             }
         }
-
-    // MARK: - Auxiliary
-
-    private fun State.withInstructionViewStrings(strings: List<TranslationOutputMap>): State =
-        copy(
-            instructionViewStrings =
-                InstructionViewStrings(
-                    titleLabelText = strings.value(VerifyNumberPageViewStrings.instructionViewTitleLabelText, VerifyNumberPageViewStrings),
-                    subtitleLabelText = strings.value(VerifyNumberPageViewStrings.instructionViewSubtitleLabelText, VerifyNumberPageViewStrings),
-                ),
-            viewState = ViewState.Loaded,
-        )
-
-    private fun resolveEffect(): Effect<Action> =
-        Effect.run { send ->
-            try {
-                send(
-                    Action.ResolveReturned(
-                        translator.resolve(VerifyNumberPageViewStrings),
-                    ),
-                )
-            } catch (exception: Exception) {
-                send(Action.ResolveFailed(exception))
-            }
-        }
-
-    private fun verifyPhoneNumberEffect(phoneNumber: PhoneNumber): Effect<Action> =
-        Effect.verifyPhoneNumber(
-            phoneNumber,
-            sender = this,
-            returned = Action::VerifyPhoneNumberReturned,
-            failed = Action::VerifyPhoneNumberFailed,
-        )
 
     // MARK: - Companion
 

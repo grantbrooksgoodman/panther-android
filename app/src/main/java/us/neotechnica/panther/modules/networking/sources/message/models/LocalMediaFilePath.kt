@@ -48,10 +48,11 @@ data class LocalMediaFilePath(
         /**
          * Creates a media file path from the given content type.
          *
-         * @param contentType The content type to derive the paths from.
+         * @param contentType The content type to derive the paths
+         *   from.
          *
-         * @return A media file path, or `null` if the content type is not
-         *   media.
+         * @return A media file path, or `null` if the content
+         *   type is not media.
          */
         fun from(contentType: HostedContentType): LocalMediaFilePath? {
             val media = contentType as? HostedContentType.Media ?: return null
@@ -71,8 +72,8 @@ data class LocalMediaFilePath(
          *
          * @param message The message to derive the paths from.
          *
-         * @return A media file path, or `null` if the message is not a
-         *   media message.
+         * @return A media file path, or `null` if the message is
+         *   not a media message.
          */
         fun from(message: Message): LocalMediaFilePath? = from(message.contentType)
     }

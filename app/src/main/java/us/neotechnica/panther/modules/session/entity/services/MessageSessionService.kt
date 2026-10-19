@@ -27,10 +27,12 @@ import us.neotechnica.panther.modules.networking.sources.message.models.Message
 import us.neotechnica.panther.modules.networking.sources.message.models.RichMessageContent
 import us.neotechnica.panther.modules.networking.sources.message.services.MessageService
 import us.neotechnica.panther.modules.networking.sources.user.models.User
+import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.constants.MessageSessionServiceFloats
 import us.neotechnica.panther.modules.session.state.services.PendingTranslationArchive
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
+import us.neotechnica.panther.networking.modules.common.models.NetworkServices
 import us.neotechnica.panther.networking.modules.translation.extensions.reference
 import us.neotechnica.panther.networking.modules.translation.extensions.sanitized
 import us.neotechnica.panther.networking.modules.translation.interfaces.HostedTranslationDelegate
@@ -58,8 +60,11 @@ object MessageSessionService {
     // MARK: - Dependencies
 
     private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
+    private val clientSession: ClientSession by Dependency { it.clientSession }
     private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
+    private val networking: NetworkServices by Dependency { it.networking }
     private val notificationService: NotificationService by Dependency { it.commonServices.notification }
+    private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
 
     // MARK: - Properties
 
@@ -99,7 +104,7 @@ object MessageSessionService {
         isPenPalsConversation: Boolean,
     ): Conversation {
         val currentUser =
-            DependencyValues.current.clientSession.entity.user.currentUser
+            userSession.currentUser
                 ?: throw Exception(
                     "Current user has not been set.",
                     metadata = ExceptionMetadata(this),
@@ -123,22 +128,22 @@ object MessageSessionService {
      * conversation.
      *
      * The text is translated into each recipient's language and
-     * delivered. When no conversation is provided, a new conversation
-     * is created for the message.
+     * delivered. When no conversation is provided, a new
+     * conversation is created for the message.
      *
      * @param text The text to send.
-     * @param presetID A preset identifier to use for the message, or
-     *   `null` to generate one.
+     * @param presetID A preset identifier to use for the message,
+     *   or `null` to generate one.
      * @param toUsers The users to send the message to.
-     * @param inConversation The conversation to send the message in.
-     *   Pass `null` to create a new conversation.
+     * @param inConversation The conversation to send the message
+     *   in. Pass `null` to create a new conversation.
      * @param isPenPalsConversation A Boolean value that indicates
      *   whether the conversation is a PenPals conversation.
      *
      * @return The conversation the message was sent in.
      *
-     * @throws Exception if the current user is unavailable, translation
-     *   fails, or the message cannot be sent.
+     * @throws Exception if the current user is unavailable,
+     *   translation fails, or the message cannot be sent.
      */
     suspend fun sendTextMessage(
         text: String,
@@ -148,7 +153,7 @@ object MessageSessionService {
         isPenPalsConversation: Boolean,
     ): Conversation {
         val currentUser =
-            DependencyValues.current.clientSession.entity.user.currentUser
+            userSession.currentUser
                 ?: throw Exception(
                     "Current user has not been set.",
                     metadata = ExceptionMetadata(this),
@@ -307,7 +312,7 @@ object MessageSessionService {
         )
 
         val createdConversation =
-            DependencyValues.current.networking.conversationService.createConversation(
+            networking.conversationService.createConversation(
                 firstMessage = message,
                 isPenPalsConversation = isPenPalsConversation,
                 participants = participantUsers.map { Participant(userID = it.id) },
@@ -327,7 +332,7 @@ object MessageSessionService {
     ) {
         if (!shouldAnimateDeliveryProgress(inConversation)) return
         mainScope.launch {
-            DependencyValues.current.clientSession.deliveryProgressIndicator
+            clientSession.deliveryProgressIndicator
                 ?.incrementDeliveryProgress(by)
         }
     }
@@ -376,7 +381,7 @@ object MessageSessionService {
     }
 
     private fun shouldAnimateDeliveryProgress(inConversation: Conversation?): Boolean =
-        DependencyValues.current.clientSession.entity.conversation.currentConversation
+        conversationSession.currentConversation
             ?.id
             ?.key == inConversation?.id?.key
 }

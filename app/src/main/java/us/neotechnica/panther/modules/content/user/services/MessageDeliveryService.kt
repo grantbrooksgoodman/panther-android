@@ -29,12 +29,14 @@ import us.neotechnica.panther.modules.content.user.services.chatpageview.sources
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.recipientbar.sources.RecipientBarLayoutService
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.sources.user.models.User
+import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.ConversationSessionService
 import us.neotechnica.panther.modules.session.entity.services.MessageSessionService
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.modules.session.state.models.OutboxEntry
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
+import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
@@ -58,9 +60,11 @@ object MessageDeliveryService {
     // MARK: - Dependencies
 
     private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
+    private val clientSession: ClientSession by Dependency { it.clientSession }
     private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
     private val hapticsService: HapticsService by Dependency { it.commonServices.haptics }
     private val messageSession: MessageSessionService by Dependency { it.clientSession.entity.message }
+    private val navigation: Navigation by Dependency { it.navigation }
     private val outbox: MessageOutboxService by Dependency { it.clientSession.outbox }
     private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
 
@@ -98,7 +102,7 @@ object MessageDeliveryService {
     private val recipientBarLayoutService: RecipientBarLayoutService?
         get() {
             val isNewChatPagePresented =
-                DependencyValues.current.navigation.state.value.userContent.stack
+                navigation.state.value.userContent.stack
                     .lastOrNull() == UserContentNavigatorState.SeguePaths.NewChat
             return if (isNewChatPagePresented) RecipientBarService.layout else null
         }
@@ -297,7 +301,7 @@ object MessageDeliveryService {
     private suspend fun beginSend(): String? {
         setIsSendingMessage(true)
         withContext(Dispatchers.Main) {
-            DependencyValues.current.clientSession
+            clientSession
                 .deliveryProgressIndicator
                 ?.startAnimatingDeliveryProgress()
         }
@@ -315,7 +319,7 @@ object MessageDeliveryService {
         }
 
         withContext(Dispatchers.Main) {
-            DependencyValues.current.clientSession
+            clientSession
                 .deliveryProgressIndicator
                 ?.stopAnimatingDeliveryProgress()
         }

@@ -23,13 +23,14 @@ import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 
 /**
- * The delegate that supplies app-specific actions to the Developer Mode
- * menu.
+ * The delegate that supplies app-specific actions to the
+ * Developer Mode menu.
  *
- * Define [DevModeAction] instances and include them in [appActions] to
- * make them available in the Developer Mode action sheet. Developer
- * Mode actions are available only in prerelease builds; the menu hides
- * them entirely in general-release builds.
+ * Define [DevModeAction] instances and include them in
+ * [appActions] to make them available in the Developer Mode
+ * action sheet. Developer Mode actions are available only in
+ * prerelease builds; the menu hides them entirely in
+ * general-release builds.
  */
 object AppActions : DevModeAppActionDelegate {
     // MARK: - Dependencies
@@ -56,9 +57,9 @@ object AppActions : DevModeAppActionDelegate {
     /**
      * Presents the app-domain Developer Mode action sheet.
      *
-     * The sheet is the service's app-domain list – [appActions] plus the
-     * actions other modules inserted – followed by a `Back` action that
-     * returns to the Developer Mode menu.
+     * The sheet is the service's app-domain list – [appActions]
+     * plus the actions other modules inserted – followed by a
+     * `Back` action that returns to the Developer Mode menu.
      */
     fun presentActionSheet() {
         DevModeService.presentAppDomainActionSheet()

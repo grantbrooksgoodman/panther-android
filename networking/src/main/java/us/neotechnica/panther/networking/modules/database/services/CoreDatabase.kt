@@ -52,6 +52,8 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.time.Duration
 
+// The counterpart service carries `// swiftlint:disable file_length type_body_length`.
+
 /**
  * An in-memory cache for database query results.
  *
@@ -76,7 +78,10 @@ object CoreDatabaseStore {
         store.withValue { it.value = it.value + (key to value) }
     }
 
-    /** Stores multiple data samples in the cache in a single operation. */
+    /**
+     * Stores multiple data samples in the cache in a single
+     * operation.
+     */
     fun addValues(values: Map<String, DataSample>) {
         if (values.isEmpty()) return
         store.withValue { it.value = it.value + values }
@@ -87,7 +92,10 @@ object CoreDatabaseStore {
         store.withValue { it.value = mapOf() }
     }
 
-    /** Removes all data samples that do not satisfy the given predicate. */
+    /**
+     * Removes all data samples that do not satisfy the given
+     * predicate.
+     */
     fun filter(isIncluded: (Map.Entry<String, DataSample>) -> Boolean) {
         store.withValue { it.value = it.value.filter(isIncluded) }
     }
@@ -136,12 +144,6 @@ internal class CoreDatabase {
     private val reference by lazy { FirebaseDatabase.getInstance().reference }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
-    // MARK: - Companion
-
-    private companion object {
-        val coalescer = Coalescer<String, Result<Any?>>()
-    }
 
     // MARK: - ID Key Generation
 
@@ -711,6 +713,12 @@ internal class CoreDatabase {
                 },
             )
         }
+
+    // MARK: - Companion
+
+    private companion object {
+        val coalescer = Coalescer<String, Result<Any?>>()
+    }
 }
 
 private const val CONNECTED_PATH = ".info/connected"

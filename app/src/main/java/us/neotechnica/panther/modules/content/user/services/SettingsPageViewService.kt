@@ -42,6 +42,7 @@ import us.neotechnica.panther.designsystem.modules.developermode.services.DevMod
 import us.neotechnica.panther.designsystem.modules.foundation.components.ListRowView
 import us.neotechnica.panther.designsystem.modules.foundation.dependencies.reportDelegate
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
+import us.neotechnica.panther.designsystem.modules.foundation.services.ReportDelegate
 import us.neotechnica.panther.modules.common.extensions.ApplicationStorageKey
 import us.neotechnica.panther.modules.common.extensions.toException
 import us.neotechnica.panther.modules.common.models.ContactPair
@@ -101,47 +102,39 @@ private typealias SettingsStrings = SettingsPageViewConstants
  *
  * Resolve the service through
  * [DependencyValues.settingsPageViewService][us.neotechnica.panther.modules.content.user.dependencies.settingsPageViewService]
- * and call [initialize] once with the application context before the
- * intent-launching handlers.
+ * and call [initialize] once with the application context before
+ * the intent-launching handlers.
  *
- * @param dependencies The collaborators the service resolves its work
- *   through. The default resolves the live services.
+ * @param dependencies The collaborators the service resolves its
+ *   work through. The default resolves the live services.
  */
 @Suppress("LargeClass")
 class SettingsPageViewService(
     private val dependencies: Dependencies = Dependencies(),
 ) {
-    // MARK: - Dependencies
-
-    private val accountDeletionService: AccountDeletionService by Dependency { it.commonServices.accountDeletion }
-    private val hapticsService: HapticsService by Dependency { it.commonServices.haptics }
-    private val inviteService: InviteService by Dependency { it.commonServices.invite }
-    private val metadataService: MetadataService by Dependency { it.commonServices.metadata }
-    private val moderationSession: ModerationSessionService by Dependency { it.clientSession.entity.moderation }
-
     // MARK: - Types
 
     /**
      * The collaborators the service resolves its work through.
      *
-     * Each property defaults to the live service; a test replaces the
-     * ones it exercises.
+     * Each property defaults to the live service; a test replaces
+     * the ones it exercises.
      *
      * @property currentUser Returns the current user.
      * @property delayed Runs the given operation after the given
      *   delay.
      * @property dismissSheets Dismisses every presented sheet.
-     * @property isDeveloperModeEnabled Returns whether developer mode
-     *   is enabled.
+     * @property isDeveloperModeEnabled Returns whether developer
+     *   mode is enabled.
      * @property logEvent Logs the given analytics event.
      * @property milestone Returns the running build's milestone.
      * @property navigate Navigates to the given route.
-     * @property overriddenLanguageCode Returns the overriding language
-     *   code, or `null` if none is set.
+     * @property overriddenLanguageCode Returns the overriding
+     *   language code, or `null` if none is set.
      * @property promptToToggleDeveloperMode Prompts to toggle
      *   developer mode.
-     * @property removeCurrentPushToken Removes the device's push token
-     *   from the given user.
+     * @property removeCurrentPushToken Removes the device's push
+     *   token from the given user.
      * @property reset Resets the app.
      * @property setBadgeNumber Sets the app's badge number.
      * @property stopObservingCurrentUserChanges Stops observing
@@ -174,6 +167,15 @@ class SettingsPageViewService(
         },
     )
 
+    // MARK: - Dependencies
+
+    private val accountDeletionService: AccountDeletionService by Dependency { it.commonServices.accountDeletion }
+    private val hapticsService: HapticsService by Dependency { it.commonServices.haptics }
+    private val inviteService: InviteService by Dependency { it.commonServices.invite }
+    private val metadataService: MetadataService by Dependency { it.commonServices.metadata }
+    private val moderationSession: ModerationSessionService by Dependency { it.clientSession.entity.moderation }
+    private val reportDelegate: ReportDelegate by Dependency { it.reportDelegate }
+
     // MARK: - Properties
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -181,7 +183,10 @@ class SettingsPageViewService(
     private var appContext: Context? = null
     private var cachedCNContactForCurrentUser: ContactPair? = null
 
-    /** A Boolean value that indicates whether the main settings page is presented. */
+    /**
+     * A Boolean value that indicates whether the main settings
+     * page is presented.
+     */
     var isMainPagePresented = true
 
     // MARK: - Init
@@ -189,8 +194,8 @@ class SettingsPageViewService(
     /**
      * Prepares the service with the application context.
      *
-     * @param context The context whose application context the service
-     *   keeps.
+     * @param context The context whose application context the
+     *   service keeps.
      */
     fun initialize(context: Context) {
         appContext = context.applicationContext
@@ -198,7 +203,10 @@ class SettingsPageViewService(
 
     // MARK: - Reducer Action Handlers
 
-    /** Begins the unblock users flow, surfacing any error as a toast. */
+    /**
+     * Begins the unblock users flow, surfacing any error as a
+     * toast.
+     */
     fun blockedUsersButtonTapped() {
         scope.launch {
             runCatching { moderationSession.unblockUsers() }.onFailure { Logger.log(it.toException(), with = AlertType.toast) }
@@ -206,12 +214,13 @@ class SettingsPageViewService(
     }
 
     /**
-     * Asks the user to confirm clearing all caches, applying it if they
-     * accept.
+     * Asks the user to confirm clearing all caches, applying it
+     * if they accept.
      *
-     * Clearing resets the app – preserving the current user's identifier
-     * – and logs an analytics event. The app must then restart; in
-     * developer mode, an in-place reload is offered instead.
+     * Clearing resets the app – preserving the current user's
+     * identifier – and logs an analytics event. The app must then
+     * restart; in developer mode, an in-place reload is offered
+     * instead.
      */
     fun clearCachesButtonTapped() {
         scope.launch {
@@ -246,8 +255,8 @@ class SettingsPageViewService(
      * Asks the user to confirm account deletion – twice – before
      * deleting their account.
      *
-     * After deletion, the badge number clears, an analytics event logs,
-     * and the app resets and exits.
+     * After deletion, the badge number clears, an analytics event
+     * logs, and the app resets and exits.
      */
     fun deleteAccountButtonTapped() {
         scope.launch {
@@ -277,8 +286,9 @@ class SettingsPageViewService(
     }
 
     /**
-     * Presents an action sheet for inviting friends, offering to share
-     * the invitation to another app or to show the invite QR code.
+     * Presents an action sheet for inviting friends, offering to
+     * share the invitation to another app or to show the invite
+     * QR code.
      */
     fun inviteFriendsButtonTapped() {
         scope.launch {
@@ -324,9 +334,9 @@ class SettingsPageViewService(
      *
      * On general-release builds, entering the correct passphrase
      * switches the build milestone to beta; on prerelease builds,
-     * confirmation clears the override and disables developer mode.
-     * Either change exits the app, which must restart for the change to
-     * take effect.
+     * confirmation clears the override and disables developer
+     * mode. Either change exits the app, which must restart for
+     * the change to take effect.
      */
     fun promptToEnterPrereleaseMode() {
         scope.launch {
@@ -388,12 +398,12 @@ class SettingsPageViewService(
      */
     fun sendFeedbackButtonTapped() {
         scope.launch {
-            val reportBugAction = Action(SettingsStrings.REPORT_BUG) { DependencyValues.current.reportDelegate.reportBug() }
+            val reportBugAction = Action(SettingsStrings.REPORT_BUG) { reportDelegate.reportBug() }
             ActionSheet(
                 title = SettingsStrings.FILE_A_REPORT,
                 actions =
                     listOf(
-                        Action(LocalizedStringKey.SendFeedback.localized()) { DependencyValues.current.reportDelegate.sendFeedback() },
+                        Action(LocalizedStringKey.SendFeedback.localized()) { reportDelegate.sendFeedback() },
                         reportBugAction,
                     ),
                 cancelButtonTitle = LocalizedStringKey.Cancel.localized(),
@@ -421,11 +431,12 @@ class SettingsPageViewService(
     }
 
     /**
-     * Asks the user to confirm signing out, applying it if they accept.
+     * Asks the user to confirm signing out, applying it if they
+     * accept.
      *
-     * Signing out clears the badge number, removes the device's push
-     * token from the user's record, resets the app, logs an analytics
-     * event, and returns to onboarding.
+     * Signing out clears the badge number, removes the device's
+     * push token from the user's record, resets the app, logs an
+     * analytics event, and returns to onboarding.
      */
     fun signOutButtonTapped() {
         scope.launch {
@@ -512,15 +523,15 @@ class SettingsPageViewService(
     // MARK: - Fetch CNContact for Current User
 
     /**
-     * Returns the device contact matching the current user's phone
-     * number.
+     * Returns the device contact matching the current user's
+     * phone number.
      *
      * Results are cached in memory.
      *
      * @return The matching device contact.
      *
-     * @throws Exception if the current user has not been set, or if no
-     *   matching contact can be resolved.
+     * @throws Exception if the current user has not been set, or
+     *   if no matching contact can be resolved.
      */
     fun fetchCNContactForCurrentUser(): ContactPair {
         cachedCNContactForCurrentUser?.let { return it }

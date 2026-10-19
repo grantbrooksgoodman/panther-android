@@ -34,19 +34,20 @@ import kotlin.time.Duration.Companion.milliseconds
 private typealias ContactSelectionUIFloats = ChatPageViewServiceFloats.RecipientBarService.ContactSelectionUI
 
 /**
- * The service that manages the recipient bar's selected-contact views.
+ * The service that manages the recipient bar's selected-contact
+ * views.
  *
  * [RecipientBarContactSelectionUIService] tracks the selected
  * recipients and the view that represents each, highlighting a
- * recipient for deletion and switching the bar between its editable
- * and label representations.
+ * recipient for deletion and switching the bar between its
+ * editable and label representations.
  *
  * @param config The service that reconfigures the message list as
  *   recipients change. The default is the shared service's.
- * @param layout The service that describes the bar's subviews. The
- *   default is the shared service's.
- * @param tableView The service that manages the suggestions table. The
- *   default is the shared service's.
+ * @param layout The service that describes the bar's subviews.
+ *   The default is the shared service's.
+ * @param tableView The service that manages the suggestions
+ *   table. The default is the shared service's.
  */
 class RecipientBarContactSelectionUIService(
     private val config: () -> RecipientBarConfigService = { RecipientBarService.config },
@@ -61,14 +62,17 @@ class RecipientBarContactSelectionUIService(
 
     // MARK: - Computed Properties
 
-    /** The identifier of the recipient view highlighted for deletion, or `null`. */
+    /**
+     * The identifier of the recipient view highlighted for
+     * deletion, or `null`.
+     */
     val highlightedViewID: StateFlow<String?> = mutableHighlightedViewID.asStateFlow()
 
     /**
-     * A Boolean value that indicates whether the recipient bar shows its
-     * label representation: the selected recipients as a single
-     * comma-separated run of names rather than individually selectable
-     * views.
+     * A Boolean value that indicates whether the recipient bar
+     * shows its label representation: the selected recipients as
+     * a single comma-separated run of names rather than
+     * individually selectable views.
      */
     val isLabelRepresentationOn: StateFlow<Boolean> = mutableIsLabelRepresentationOn.asStateFlow()
 
@@ -95,9 +99,9 @@ class RecipientBarContactSelectionUIService(
     }
 
     /**
-     * Removes every unregistered recipient, along with its view, and –
-     * when a registered recipient remains – reconfigures the message
-     * list.
+     * Removes every unregistered recipient, along with its view,
+     * and – when a registered recipient remains – reconfigures
+     * the message list.
      */
     fun deselectMockContactPairs() {
         val mockViewIDs = mutableSelectedContactPairs.value.filter { it.isMock }.map { it.contact.encodedHash }
@@ -109,19 +113,21 @@ class RecipientBarContactSelectionUIService(
     }
 
     /**
-     * Adds the given contact pair as a recipient, creating its view.
+     * Adds the given contact pair as a recipient, creating its
+     * view.
      *
-     * This method has no effect when the contact pair contains a blocked
-     * user or the current user, or when the maximum number of
-     * recipients has been reached. Selecting an already-selected pair
-     * only clears the text field. A highlighted trailing recipient is
-     * replaced by the new selection, and unregistered recipients are
-     * removed.
+     * This method has no effect when the contact pair contains a
+     * blocked user or the current user, or when the maximum
+     * number of recipients has been reached. Selecting an
+     * already-selected pair only clears the text field. A
+     * highlighted trailing recipient is replaced by the new
+     * selection, and unregistered recipients are removed.
      *
      * @param contactPair The contact pair to add as a recipient.
-     * @param performInputBarFix A Boolean value that determines whether
-     *   to force the input bar to reappear after adding the recipient.
-     *   Accepted for signature parity; the input bar is always present.
+     * @param performInputBarFix A Boolean value that determines
+     *   whether to force the input bar to reappear after adding
+     *   the recipient. Accepted for signature compatibility; the
+     *   input bar is always present.
      */
     fun selectContactPair(
         contactPair: ContactPair,
@@ -187,12 +193,13 @@ class RecipientBarContactSelectionUIService(
     /**
      * Shows or hides the recipient bar's label representation.
      *
-     * In its label representation, the selected recipients appear as a
-     * single comma-separated run of names – tappable to resume editing –
-     * rather than as individually selectable views.
+     * In its label representation, the selected recipients appear
+     * as a single comma-separated run of names – tappable to
+     * resume editing – rather than as individually selectable
+     * views.
      *
-     * @param on A Boolean value that indicates whether to show the label
-     *   representation.
+     * @param on A Boolean value that indicates whether to show
+     *   the label representation.
      */
     fun toggleLabelRepresentation(on: Boolean) {
         mutableIsLabelRepresentationOn.value = on
@@ -237,7 +244,10 @@ class RecipientBarContactSelectionUIService(
 
     // MARK: - Reset
 
-    /** Clears every selected recipient, any highlight, and the label representation. */
+    /**
+     * Clears every selected recipient, any highlight, and the
+     * label representation.
+     */
     fun reset() {
         mutableHighlightedViewID.value = null
         mutableIsLabelRepresentationOn.value = false

@@ -31,6 +31,7 @@ import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.common.services.sources.AnalyticsService.AnalyticsEvent
 import us.neotechnica.panther.modules.common.services.sources.contacts.ContactService
 import us.neotechnica.panther.modules.content.onboarding.dependencies.onboardingService
+import us.neotechnica.panther.modules.content.onboarding.services.OnboardingService
 import us.neotechnica.panther.modules.content.user.constants.SettingsPageViewConstants
 import us.neotechnica.panther.modules.content.user.extensions.hasContactsBesidesCurrentUser
 import us.neotechnica.panther.modules.content.user.views.settingspageview.SettingsPageViewStrings
@@ -57,12 +58,12 @@ import kotlin.time.Duration.Companion.seconds
 /**
  * Invites the user's contacts to the app.
  *
- * Use [InviteService] to compose invitation messages – translated into a
- * language of the user's choice – and present the system share sheet for
- * sending them.
+ * Use [InviteService] to compose invitation messages – translated
+ * into a language of the user's choice – and present the system
+ * share sheet for sending them.
  *
- * [initialize] must be called once with the application context before
- * the share-sheet handlers.
+ * [initialize] must be called once with the application context
+ * before the share-sheet handlers.
  */
 object InviteService {
     // MARK: - Dependencies
@@ -70,6 +71,7 @@ object InviteService {
     private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
     private val contactService: ContactService by Dependency { it.commonServices.contact }
     private val metadataService: MetadataService by Dependency { it.commonServices.metadata }
+    private val onboardingService: OnboardingService by Dependency { it.onboardingService }
     private val permissionService: PermissionService by Dependency { it.commonServices.permission }
     private val translator: HostedTranslationDelegate by Dependency { it.networking.hostedTranslation }
     private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
@@ -94,7 +96,7 @@ object InviteService {
             if (hasContactsBesidesCurrentUser()) return false
             if (!(currentUser?.conversations).isNullOrEmpty()) return false
             if (!(currentUser?.conversationIDs).isNullOrEmpty()) return false
-            if (!(DependencyValues.current.onboardingService.createdUserInCurrentAppSession || sufficientAppOpenCount)) return false
+            if (!(onboardingService.createdUserInCurrentAppSession || sufficientAppOpenCount)) return false
 
             return true
         }
@@ -109,19 +111,21 @@ object InviteService {
     // MARK: - Compose Invitation
 
     /**
-     * Composes an app invitation and presents the system share sheet for
-     * sending it.
+     * Composes an app invitation and presents the system share
+     * sheet for sending it.
      *
-     * The invitation contains the app's Play Store share link and a
-     * prompt message translated into the given language. If the Play
-     * Store share link has not yet been resolved, remote metadata is
-     * resolved first.
+     * The invitation contains the app's Play Store share link and
+     * a prompt message translated into the given language. If the
+     * Play Store share link has not yet been resolved, remote
+     * metadata is resolved first.
      *
-     * @param languageCode The language code into which to translate the
-     *   invitation message. Pass `null` to target the system language.
-     *   If the given language code is `en`, the message is not translated.
+     * @param languageCode The language code into which to
+     *   translate the invitation message. Pass `null` to target
+     *   the system language. If the given language code is `en`,
+     *   the message is not translated.
      *
-     * @throws Exception if metadata resolution or translation fails.
+     * @throws Exception if metadata resolution or translation
+     *   fails.
      */
     suspend fun composeInvitation(languageCode: String?) {
         val playStoreShareLink = metadataService.playStoreShareLink
@@ -152,13 +156,14 @@ object InviteService {
     // MARK: - Present Invitation Prompt
 
     /**
-     * Asks the user whether to translate the invitation before composing
-     * it.
+     * Asks the user whether to translate the invitation before
+     * composing it.
      *
-     * If the user declines translation, the invitation is composed
-     * targeting the system language. If the user accepts, all presented
-     * sheets are dismissed and the invite language picker is presented.
-     * Canceling the alert does nothing.
+     * If the user declines translation, the invitation is
+     * composed targeting the system language. If the user
+     * accepts, all presented sheets are dismissed and the invite
+     * language picker is presented. Canceling the alert does
+     * nothing.
      *
      * @throws Exception if composing the invitation fails.
      */
@@ -176,13 +181,13 @@ object InviteService {
     // MARK: - Suggest Invitation If Needed
 
     /**
-     * Presents the invitation suggestion prompt if the user has no
-     * conversations and no registered contacts.
+     * Presents the invitation suggestion prompt if the user has
+     * no conversations and no registered contacts.
      *
-     * The suggestion requires contact permission and is limited to
-     * qualifying app launches. Before presenting, this method syncs the
-     * contacts to confirm that no contact besides the current user has an
-     * account.
+     * The suggestion requires contact permission and is limited
+     * to qualifying app launches. Before presenting, this method
+     * syncs the contacts to confirm that no contact besides the
+     * current user has an account.
      *
      * @return `true` if the invitation suggestion was presented;
      *   otherwise, `false`.
@@ -206,9 +211,9 @@ object InviteService {
     // MARK: - Auxiliary
 
     /**
-     * Presents an alert suggesting that the user invite their contacts
-     * to the app. If the user accepts, the invitation prompt is
-     * presented.
+     * Presents an alert suggesting that the user invite their
+     * contacts to the app. If the user accepts, the invitation
+     * prompt is presented.
      */
     suspend fun presentInvitationSuggestionPrompt() {
         val inviteAction =

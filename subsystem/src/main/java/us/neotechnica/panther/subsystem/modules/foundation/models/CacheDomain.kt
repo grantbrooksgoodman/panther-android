@@ -29,6 +29,12 @@ class CacheDomain(
     /** A closure that removes every cached entry in this domain. */
     val clear: () -> Unit,
 ) {
+    // MARK: - Equatable Conformance
+
+    override fun equals(other: Any?): Boolean = other is CacheDomain && other.rawValue == rawValue
+
+    override fun hashCode(): Int = rawValue.hashCode()
+
     // MARK: - Companion
 
     companion object {
@@ -39,8 +45,8 @@ class CacheDomain(
         val localization = CacheDomain("localization") { LocalizedStringResolver.clearCache() }
 
         /**
-         * The cache domain for the local translation archive, cleared
-         * through the registered
+         * The cache domain for the local translation archive,
+         * cleared through the registered
          * [TranslationArchiverDelegate][us.neotechnica.panther.subsystem.modules.foundation.interfaces.TranslationArchiverDelegate].
          */
         val localTranslationArchive =
@@ -54,16 +60,13 @@ class CacheDomain(
                 localTranslationArchive,
             )
 
-        /** Every registered cache domain, combining app and subsystem domains. */
+        /**
+         * Every registered cache domain, combining app and
+         * subsystem domains.
+         */
         val allCases: List<CacheDomain>
             get() =
                 ((AppSubsystem.delegates.cacheDomainList?.appCacheDomains ?: emptyList()) + subsystemCases)
                     .distinctBy { it.rawValue }
     }
-
-    // MARK: - Equatable Conformance
-
-    override fun equals(other: Any?): Boolean = other is CacheDomain && other.rawValue == rawValue
-
-    override fun hashCode(): Int = rawValue.hashCode()
 }

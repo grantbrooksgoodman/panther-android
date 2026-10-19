@@ -50,6 +50,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 object ReactionSessionService {
     // MARK: - Dependencies
 
+    private val conversationSession: ConversationSessionService by Dependency { it.clientSession.entity.conversation }
     private val notificationService: NotificationService by Dependency { it.commonServices.notification }
 
     // MARK: - Properties
@@ -117,7 +118,6 @@ object ReactionSessionService {
     ) {
         if (message.isMock || message.isOutboxMessage) return
 
-        val conversationSession = DependencyValues.current.clientSession.entity.conversation
         val conversation = conversationSession.currentConversation
         val currentUserID = User.currentUserID
         val messageIndex = conversationSession.displayedMessages.value.indexOfFirst { it.id == message.id }
@@ -174,7 +174,7 @@ object ReactionSessionService {
     ) {
         if (to.fromAccountID == User.currentUserID) return
 
-        val conversation = DependencyValues.current.clientSession.entity.conversation.currentConversation
+        val conversation = conversationSession.currentConversation
         val currentUserID = User.currentUserID
         val user =
             conversation
@@ -198,7 +198,6 @@ object ReactionSessionService {
     }
 
     private suspend fun removeReaction(from: Message) {
-        val conversationSession = DependencyValues.current.clientSession.entity.conversation
         val conversation = conversationSession.currentConversation
         val messageIndex = conversationSession.displayedMessages.value.indexOfFirst { it.id == from.id }
 
@@ -299,7 +298,6 @@ object ReactionSessionService {
         setIsReactingToMessage(false)
         updatedConversation.resolveMessages(ids = setOf(message.id))
 
-        val conversationSession = DependencyValues.current.clientSession.entity.conversation
         if (!ChatPageStateService.isPresented ||
             conversationSession.currentConversation?.id?.key != conversation.id.key
         ) {

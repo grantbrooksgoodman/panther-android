@@ -49,13 +49,22 @@ object ClientSession {
     /** The container for the session's entity services. */
     val entity = EntitySession
 
-    /** The service that queues messages for delivery and retries failed sends. */
+    /**
+     * The service that queues messages for delivery and retries
+     * failed sends.
+     */
     val outbox = MessageOutboxService
 
-    /** The in-memory store of the session's conversations, messages, and users. */
+    /**
+     * The in-memory store of the session's conversations,
+     * messages, and users.
+     */
     val store = SessionStore
 
-    /** The container for the session's conversation synchronization services. */
+    /**
+     * The container for the session's conversation
+     * synchronization services.
+     */
     val sync = SyncSession
 
     private val deliveryProgressIndicatorValue = LockIsolated<DeliveryProgressIndicator?>(null)

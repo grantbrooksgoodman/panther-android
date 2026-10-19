@@ -18,25 +18,31 @@ import us.neotechnica.panther.modules.content.user.components.MediaImageLoader
 import us.neotechnica.panther.modules.content.user.constants.MediaMessageBubbleFloats
 import us.neotechnica.panther.modules.content.user.constants.MediaPreviewOverlayFloats
 import us.neotechnica.panther.modules.content.user.dependencies.inputBarService
+import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.inputbar.InputBarService
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.recipientbar.RecipientBarService
 import us.neotechnica.panther.modules.networking.sources.message.models.Message
+import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 
 /**
  * The service that manages media message previews.
  *
- * [MediaMessagePreviewService] presents a full-screen viewer for a
- * tapped media message, letting the user page through all of the
- * conversation's media. It also caches decoded images and thumbnails
- * for reuse.
+ * [MediaMessagePreviewService] presents a full-screen viewer for
+ * a tapped media message, letting the user page through all of
+ * the conversation's media. It also caches decoded images and
+ * thumbnails for reuse.
  *
- * **Note:** While a preview is presented, [isPreviewingMedia] is `true`;
- * the chat page uses this to distinguish being covered by the preview
- * from being dismissed.
+ * **Note:** While a preview is presented, [isPreviewingMedia] is
+ * `true`; the chat page uses this to distinguish being covered
+ * by the preview from being dismissed.
  */
 object MediaMessagePreviewService {
     // MARK: - Types
+
+    // MARK: - Dependencies
+
+    private val inputBarService: InputBarService by Dependency { it.inputBarService }
 
     // MARK: - Properties
 
@@ -46,11 +52,17 @@ object MediaMessagePreviewService {
     /** The cache of thumbnail images, keyed by local file path. */
     val cachedThumbnails = LockIsolated(mapOf<String, ImageBitmap>())
 
-    /** A Boolean value that indicates whether a media preview is currently presented. */
+    /**
+     * A Boolean value that indicates whether a media preview is
+     * currently presented.
+     */
     var isPreviewingMedia by mutableStateOf(false)
         private set
 
-    /** The identifier of the message whose media is being previewed, or `null`. */
+    /**
+     * The identifier of the message whose media is being
+     * previewed, or `null`.
+     */
     var previewingMessageID by mutableStateOf<String?>(null)
         private set
 
@@ -60,15 +72,16 @@ object MediaMessagePreviewService {
     // MARK: - Did Tap Image
 
     /**
-     * Presents the media preview for the media in the given message.
+     * Presents the media preview for the media in the given
+     * message.
      *
-     * This method dismisses the keyboard and opens a full-screen viewer
-     * showing all of the conversation's media, starting at the tapped
-     * item.
+     * This method dismisses the keyboard and opens a full-screen
+     * viewer showing all of the conversation's media, starting at
+     * the tapped item.
      *
-     * This method has no effect when the message holds no downloaded
-     * media, when a preview is already presented, or when a context
-     * menu is presented.
+     * This method has no effect when the message holds no
+     * downloaded media, when a preview is already presented, or
+     * when a context menu is presented.
      *
      * @param message The message whose media to preview.
      * @param isPresentingContextMenu Whether a context menu is
@@ -82,7 +95,7 @@ object MediaMessagePreviewService {
         val file = message.richContent?.mediaComponent?.localPathFile ?: return
         if (!file.exists() || isPreviewingMedia || isPresentingContextMenu) return
 
-        inputBarWasFirstResponder = DependencyValues.current.inputBarService.isFirstResponder.value
+        inputBarWasFirstResponder = inputBarService.isFirstResponder.value
         recipientBarWasFirstResponder = RecipientBarService.layout.isTextFieldFirstResponder.value
         KeyboardService.resignFirstResponders()
         previewingMessageID = message.id
@@ -92,15 +105,15 @@ object MediaMessagePreviewService {
     // MARK: - Dismiss Preview
 
     /**
-     * Dismisses the presented media preview, if any, restoring the first
-     * responder the preview displaced.
+     * Dismisses the presented media preview, if any, restoring
+     * the first responder the preview displaced.
      */
     fun dismissPreview() {
         previewingMessageID = null
         isPreviewingMedia = false
 
         if (inputBarWasFirstResponder) {
-            DependencyValues.current.inputBarService.becomeFirstResponder()
+            inputBarService.becomeFirstResponder()
         } else if (recipientBarWasFirstResponder) {
             RecipientBarService.layout.textFieldBecomeFirstResponder()
         }
@@ -128,9 +141,9 @@ object MediaMessagePreviewService {
     }
 
     /**
-     * Returns the decoded thumbnail for the given media file, decoding
-     * and caching it on first access. Images without a thumbnail file
-     * decode a reduced copy of the image itself.
+     * Returns the decoded thumbnail for the given media file,
+     * decoding and caching it on first access. Images without a
+     * thumbnail file decode a reduced copy of the image itself.
      *
      * @param mediaFile The media file to decode.
      *

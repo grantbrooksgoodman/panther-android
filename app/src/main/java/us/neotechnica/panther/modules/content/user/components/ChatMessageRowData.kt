@@ -16,22 +16,22 @@ import us.neotechnica.panther.modules.networking.sources.message.models.Message
  * The display inputs for a single chat row.
  *
  * @property message The message to render.
- * @property previousMessage The prior row's message, for day-separator
- *   gaps and sender-run detection.
- * @property isLastConfirmedOwnMessage Whether this is the last confirmed
- *   own message (drives the delivery status label).
+ * @property previousMessage The prior row's message, for
+ *   day-separator gaps and sender-run detection.
+ * @property isLastConfirmedOwnMessage Whether this is the last
+ *   confirmed own message (drives the delivery status label).
  * @property isGroup Whether the conversation has more than two
  *   participants.
  * @property isFailed Whether this is a failed outbox message.
- * @property isLastMessage Whether this is the last message in the list
- *   (with the reactions, gates the delivery status label).
- * @property senderName The sender's display name, shown above the first
- *   message in a run from a group participant, or `null` when it should
- *   be hidden.
- * @property senderImage The sender's contact image, or `null` for the
- *   generic avatar glyph.
- * @property reactions The message's reactions, or empty when it has
- *   none.
+ * @property isLastMessage Whether this is the last message in the
+ *   list (with the reactions, gates the delivery status label).
+ * @property senderName The sender's display name, shown above the
+ *   first message in a run from a group participant, or `null`
+ *   when it should be hidden.
+ * @property senderImage The sender's contact image, or `null` for
+ *   the generic avatar glyph.
+ * @property reactions The message's reactions, or empty when it
+ *   has none.
  */
 data class ChatMessageRowData(
     val message: Message,

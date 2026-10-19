@@ -88,7 +88,10 @@ object HUDPresenter {
     /** The heads-up display currently presented, or `null`. */
     val presentation: StateFlow<Presentation?> = mutablePresentation.asStateFlow()
 
-    /** Whether a modal display is currently blocking user interaction. */
+    /**
+     * Whether a modal display is currently blocking user
+     * interaction.
+     */
     val isBlockingUserInteraction: Boolean
         get() = blockingUserInteraction.wrappedValue
 
@@ -98,10 +101,10 @@ object HUDPresenter {
      * Dismisses the current display, restoring interaction and
      * starting the 0.15-second dismiss animation immediately.
      *
-     * The host's exit animation fades the display out at once; [after]
-     * delays the final teardown of any pending show, never the start of
-     * the dismissal. Interaction stays blocked while a modal overlay
-     * is visible.
+     * The host's exit animation fades the display out at once;
+     * [after] delays the final teardown of any pending show,
+     * never the start of the dismissal. Interaction stays blocked
+     * while a modal overlay is visible.
      */
     fun hide(after: Duration = Duration.ZERO) {
         pendingJob?.cancel()
@@ -127,7 +130,10 @@ object HUDPresenter {
         present(Presentation.Flash(resolvedText, image, System.nanoTime()), isModal = false)
     }
 
-    /** Requests presentation of the progress display, optionally after a delay. */
+    /**
+     * Requests presentation of the progress display, optionally
+     * after a delay.
+     */
     fun showProgress(
         text: String?,
         after: Duration?,

@@ -56,7 +56,10 @@ class TextInputAlert(
 ) {
     // MARK: - Types
 
-    /** A value that identifies a translatable part of a [TextInputAlert]. */
+    /**
+     * A value that identifies a translatable part of a
+     * [TextInputAlert].
+     */
     sealed interface TranslationOptionKey {
         /** The cancel button's title. */
         data object CancelButtonTitle : TranslationOptionKey

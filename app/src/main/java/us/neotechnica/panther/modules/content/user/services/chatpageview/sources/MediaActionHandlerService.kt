@@ -76,17 +76,19 @@ import kotlin.coroutines.resumeWithException
 private typealias Floats = ChatPageViewServiceFloats.MediaActionHandler
 private typealias Strings = ChatPageViewServiceStrings.MediaActionHandler
 
+// The counterpart service carries `// swiftlint:disable file_length type_body_length`.
+
 /**
  * The service that handles media attachment actions.
  *
- * [MediaActionHandlerService] presents the attach-media action sheet,
- * then, based on the user's choice, presents the camera, document, or
- * photo-and-video picker. It processes the selected item – compressing
- * images and videos and generating thumbnails where needed – and sends
- * it as a media message.
+ * [MediaActionHandlerService] presents the attach-media action
+ * sheet, then, based on the user's choice, presents the camera,
+ * document, or photo-and-video picker. It processes the selected
+ * item – compressing images and videos and generating thumbnails
+ * where needed – and sends it as a media message.
  *
- * **Note:** PDF thumbnails are rendered; other document types are sent
- * without one.
+ * **Note:** PDF thumbnails are rendered; other document types are
+ * sent without one.
  */
 object MediaActionHandlerService {
     // MARK: - Types
@@ -107,7 +109,10 @@ object MediaActionHandlerService {
     private var dependencies: Dependencies? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    /** A Boolean value that indicates whether a content picker is currently presented. */
+    /**
+     * A Boolean value that indicates whether a content picker is
+     * currently presented.
+     */
     var isPresentingPickerController = false
         private set
 
@@ -135,9 +140,9 @@ object MediaActionHandlerService {
     /**
      * Presents the attach-media action sheet.
      *
-     * The sheet offers to take a photo, select a document, or select a
-     * photo or video; choosing an option presents the corresponding
-     * picker.
+     * The sheet offers to take a photo, select a document, or
+     * select a photo or video; choosing an option presents the
+     * corresponding picker.
      */
     fun attachMediaButtonTapped() {
         hapticsService.generateFeedback(HapticsService.HapticFeedbackStyle.MEDIUM)
@@ -229,8 +234,8 @@ object MediaActionHandlerService {
     // MARK: - Compress Image
 
     /**
-     * Decodes the image at [uri] and returns its JPEG data compressed to
-     * approximately [targetKB] kilobytes.
+     * Decodes the image at [uri] and returns its JPEG data
+     * compressed to approximately [targetKB] kilobytes.
      *
      * @throws Exception if the image cannot be read.
      */
@@ -319,8 +324,9 @@ object MediaActionHandlerService {
     }
 
     /**
-     * Transcodes the video at [inputUri] to [outputFile] as an H.264/AAC
-     * MP4, scaling the short side to a medium quality target.
+     * Transcodes the video at [inputUri] to [outputFile] as an
+     * H.264/AAC MP4, scaling the short side to a medium quality
+     * target.
      *
      * @throws Exception if the existing output cannot be removed.
      */
@@ -436,11 +442,12 @@ object MediaActionHandlerService {
         }
 
     /**
-     * Returns JPEG data within the tolerated margin of the given size,
-     * lowering the quality step by step.
+     * Returns JPEG data within the tolerated margin of the given
+     * size, lowering the quality step by step.
      *
      * @param targetKB The target size, in kilobytes.
-     * @param compress Encodes the image at the given JPEG quality.
+     * @param compress Encodes the image at the given JPEG
+     *   quality.
      *
      * @throws Exception if no quality meets the target.
      */

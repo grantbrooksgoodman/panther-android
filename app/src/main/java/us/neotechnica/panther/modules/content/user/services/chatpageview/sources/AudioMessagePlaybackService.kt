@@ -37,12 +37,14 @@ import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Depen
 private typealias PlaybackFloats = ChatPageViewServiceFloats.AudioMessagePlayback
 
 /**
- * Manages audio message playback: tap-to-play/pause, playback-progress,
- * and auto-advance to the next audio message when one finishes.
+ * Manages audio message playback: tap-to-play/pause,
+ * playback-progress, and auto-advance to the next audio message
+ * when one finishes.
  *
  * **Note:** Playback uses Android `MediaPlayer` with an
- * `AudioFocusRequest` (see `DEVIATIONS.md`) rather than Media3/ExoPlayer,
- * which would add a dependency without benefit for single-file playback.
+ * `AudioFocusRequest` (see `DEVIATIONS.md`) rather than
+ * Media3/ExoPlayer, which would add a dependency without benefit
+ * for single-file playback.
  */
 object AudioMessagePlaybackService {
     // MARK: - Types
@@ -86,7 +88,10 @@ object AudioMessagePlaybackService {
     val playingMessage: Message?
         get() = mutablePlayingMessageID?.let { id -> conversationSession.displayedMessages.value.firstOrNull { it.id == id } }
 
-    /** The playback progress of the current message, in `0.0...1.0`. */
+    /**
+     * The playback progress of the current message, in
+     * `0.0...1.0`.
+     */
     val progress: Float
         get() = mutableProgress
 
@@ -121,11 +126,11 @@ object AudioMessagePlaybackService {
     // MARK: - Did Tap Play Button
 
     /**
-     * Handles a tap on an audio message's play button, starting or
-     * stopping playback.
+     * Handles a tap on an audio message's play button, starting
+     * or stopping playback.
      *
-     * Tapping a message that is not playing starts its playback; tapping
-     * the playing message stops it.
+     * Tapping a message that is not playing starts its playback;
+     * tapping the playing message stops it.
      *
      * @param message The tapped message.
      * @param audioReference The message's resolved audio.
@@ -201,8 +206,9 @@ object AudioMessagePlaybackService {
     }
 
     /**
-     * Returns the audio message that follows the given one, provided it
-     * is visible and not showing its transcription; otherwise, `null`.
+     * Returns the audio message that follows the given one,
+     * provided it is visible and not showing its transcription;
+     * otherwise, `null`.
      */
     internal fun nextAudioMessage(afterMessageID: String): Message? {
         val dependencies = resolvedDependencies()

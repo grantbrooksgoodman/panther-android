@@ -33,12 +33,13 @@ private typealias DateFloats = UserContentExtensionsFloats.Date
 private typealias DateStrings = UserContentExtensionsStrings.Date
 
 /**
- * The attributed date string shown as a separator between messages
- * sent on different days, or `null` if it cannot be composed.
+ * The attributed date string shown as a separator between
+ * messages sent on different days, or `null` if it cannot be
+ * composed.
  *
- * Formats the date relative to today – as Today, Yesterday, a weekday,
- * or a full date – with the time appended. The day portion renders
- * bold; the caller supplies the color.
+ * Formats the date relative to today – as Today, Yesterday, a
+ * weekday, or a full date – with the time appended. The day
+ * portion renders bold; the caller supplies the color.
  */
 @Suppress("VariableMaxLength")
 val Date.chatPageMessageSeparatorAttributedDateString: AnnotatedString?

@@ -31,7 +31,10 @@ object DeviceID {
 
     // MARK: - Properties
 
-    /** The prefix every identifier minted on this platform carries. */
+    /**
+     * The prefix every identifier minted on this platform
+     * carries.
+     */
     const val PREFIX = "and_"
 
     private const val ACCOUNT = "us.neotechnica.deviceID"
@@ -47,11 +50,11 @@ object DeviceID {
     /**
      * The current device's identifier.
      *
-     * The identifier is generated on first access – from the device's
-     * Android ID, or a new UUID when unavailable – and persisted to
-     * encrypted preferences, mirrored to a plain-preferences backup,
-     * and cached in process so the value stays stable for the lifetime
-     * of an install. The persisted value is returned verbatim.
+     * A persisted identifier is returned verbatim. Otherwise one is
+     * minted with the platform prefix from the device's Android ID,
+     * or a new UUID when unavailable, persisted to encrypted
+     * preferences, mirrored to a plain-preferences backup, and cached
+     * in process.
      */
     val current: String
         get() =
@@ -76,7 +79,10 @@ object DeviceID {
         appContext = context.applicationContext
     }
 
-    /** Replaces the store and source and forgets the cached identifier. */
+    /**
+     * Replaces the store and source and forgets the cached
+     * identifier.
+     */
     internal fun setDependencies(dependencies: Dependencies) {
         this.dependencies = dependencies
         cachedID.wrappedValue = null

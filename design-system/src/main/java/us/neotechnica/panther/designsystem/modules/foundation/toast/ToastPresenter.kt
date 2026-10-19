@@ -28,8 +28,8 @@ import kotlin.time.Duration.Companion.seconds
  * The single source of truth for the toast currently being
  * presented.
  *
- * The [Toast.show] and [Toast.hide] façade methods set the current
- * value; the
+ * The [Toast.show] and [Toast.hide] façade methods set the
+ * current value; the
  * [ToastHost][us.neotechnica.panther.designsystem.modules.foundation.toast.ToastHost]
  * composable renders it. Only one toast is presented at a time;
  * presenting another toast defers it until the current one

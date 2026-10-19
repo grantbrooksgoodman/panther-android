@@ -29,18 +29,21 @@ import kotlin.math.max
 /**
  * A demand-driven, rate-limited network prober.
  *
- * It fires only when asked, never on a timer, and only when every gate
- * passes: probing configured, device online and foregrounded, path
- * permitted, power-save inactive, rate limits satisfied, and no probe
- * already in flight. A successful probe reports its full round-trip
- * duration as latency evidence; a network-level failure reports
- * [NetworkHealthEvent.ProbeFailure]; any other outcome means the server
- * answered and counts as latency evidence.
+ * It fires only when asked, never on a timer, and only when every
+ * gate passes: probing configured, device online and
+ * foregrounded, path permitted, power-save inactive, rate limits
+ * satisfied, and no probe already in flight. A successful probe
+ * reports its full round-trip duration as latency evidence; a
+ * network-level failure reports [NetworkHealthEvent.ProbeFailure];
+ * any other outcome means the server answered and counts as
+ * latency evidence.
  *
  * @param isOnlineProvider Supplies whether the device is online.
  * @param onEvent Receives probe-failure events.
- * @param onLatencySample Receives round-trip latency samples, in seconds.
- * @param pathStateProvider Supplies the current network path state.
+ * @param onLatencySample Receives round-trip latency samples, in
+ *   seconds.
+ * @param pathStateProvider Supplies the current network path
+ *   state.
  */
 internal class NetworkHealthProber(
     private val isOnlineProvider: () -> Boolean,
@@ -63,7 +66,10 @@ internal class NetworkHealthProber(
 
     // MARK: - Computed Properties
 
-    /** A human-readable summary of probe activity for the developer-mode inspection surface. */
+    /**
+     * A human-readable summary of probe activity for the
+     * developer-mode inspection surface.
+     */
     val statsDescription: String
         get() {
             val probeConfiguration = Networking.config.networkHealthConfiguration.probeConfiguration
@@ -86,7 +92,10 @@ internal class NetworkHealthProber(
 
     // MARK: - Methods
 
-    /** Sends a single probe if – and only if – every gate in the guard chain passes. */
+    /**
+     * Sends a single probe if – and only if – every gate in the
+     * guard chain passes.
+     */
     fun maybeProbe() {
         val configuration = Networking.config.networkHealthConfiguration.probeConfiguration ?: return
         if (!isOnlineProvider()) return

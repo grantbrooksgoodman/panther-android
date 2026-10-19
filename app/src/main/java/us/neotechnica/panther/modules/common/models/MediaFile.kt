@@ -20,10 +20,11 @@ import java.security.MessageDigest
 /**
  * A media file stored in the app's documents directory.
  *
- * A media file locates its content by [relativePath], resolved against
- * the documents directory, so values remain valid across app launches
- * even though the directory's absolute location can change. The file's
- * identity derives from its extension and a hash of its content on disk.
+ * A media file locates its content by [relativePath], resolved
+ * against the documents directory, so values remain valid across
+ * app launches even though the directory's absolute location can
+ * change. The file's identity derives from its extension and a
+ * hash of its content on disk.
  */
 data class MediaFile(
     /** The file's path, relative to the documents directory. */
@@ -35,7 +36,10 @@ data class MediaFile(
 ) : EncodedHashable {
     // MARK: - Computed Properties
 
-    /** The absolute file, resolved against the current documents directory. */
+    /**
+     * The absolute file, resolved against the current documents
+     * directory.
+     */
     val localPathFile: File?
         get() = FileStore.resolve(relativePath)
 
@@ -49,14 +53,17 @@ data class MediaFile(
             return FileStore.resolve(thumbnailRelativePath)?.takeIf { it.exists() }
         }
 
-    /** A Boolean value that indicates whether a thumbnail exists on disk for this file. */
+    /**
+     * A Boolean value that indicates whether a thumbnail exists
+     * on disk for this file.
+     */
     val hasThumbnail: Boolean
         get() = thumbnailFile != null
 
     /**
-     * The file extension's raw value and a hash of the file's content,
-     * sorted alphabetically. When the content cannot be read, the content
-     * hash is omitted.
+     * The file extension's raw value and a hash of the file's
+     * content, sorted alphabetically. When the content cannot be
+     * read, the content hash is omitted.
      */
     override val hashFactors: List<String>
         get() {
@@ -98,7 +105,10 @@ data class MediaFile(
     // MARK: - Companion
 
     companion object {
-        /** The suffix appended to a media file's path prefix to form its thumbnail path. */
+        /**
+         * The suffix appended to a media file's path prefix to
+         * form its thumbnail path.
+         */
         const val THUMBNAIL_IMAGE_NAME_SUFFIX = "-thumbnail.jpeg"
 
         private const val DIGEST_BUFFER_SIZE = 8192
@@ -106,15 +116,15 @@ data class MediaFile(
         private val contentHashes = LockIsolated(mapOf<String, String>())
 
         /**
-         * Creates a media file from the given relative path, deriving its
-         * name and extension.
+         * Creates a media file from the given relative path,
+         * deriving its name and extension.
          *
-         * @param relativePath The file's path, relative to the documents
-         *   directory. The path's final component must consist of a name
-         *   and a supported extension.
+         * @param relativePath The file's path, relative to the
+         *   documents directory. The path's final component must
+         *   consist of a name and a supported extension.
          *
-         * @return A media file, or `null` if no file exists at the path or
-         *   its name and extension cannot be derived.
+         * @return A media file, or `null` if no file exists at
+         *   the path or its name and extension cannot be derived.
          */
         fun from(relativePath: String): MediaFile? {
             if (FileStore.resolve(relativePath)?.exists() != true) return null

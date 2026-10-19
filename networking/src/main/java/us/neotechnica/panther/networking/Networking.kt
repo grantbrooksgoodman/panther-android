@@ -146,26 +146,6 @@ object Networking {
         )
     }
 
-    // MARK: - Auxiliary
-
-    /**
-     * Returns the time-to-live, in milliseconds, for a cache
-     * sample whose backing fetch began at `startMillis`, with a
-     * floor of 250 milliseconds: a value is cached for
-     * roughly as long as its fetch took.
-     */
-    internal fun cacheExpiryMilliseconds(startMillis: Long): Long {
-        val elapsed = abs(System.currentTimeMillis() - startMillis)
-        return if (elapsed < FLOOR_MILLIS) FLOOR_MILLIS + elapsed else elapsed
-    }
-
-    internal fun requireContext(): Context =
-        checkNotNull(applicationContext.wrappedValue) {
-            "Networking.initialize() must be called at app launch"
-        }
-
-    private const val FLOOR_MILLIS = 250L
-
     // MARK: - Config
 
     /**
@@ -199,7 +179,10 @@ object Networking {
         val authDelegate: AuthDelegate
             get() = auth.wrappedValue
 
-        /** The delegate that reads, writes, and observes the database. */
+        /**
+         * The delegate that reads, writes, and observes the
+         * database.
+         */
         val databaseDelegate: DatabaseDelegate
             get() = database.wrappedValue
 
@@ -216,7 +199,10 @@ object Networking {
         val healthDelegate: NetworkHealthDelegate
             get() = health.wrappedValue
 
-        /** The delegate that translates against the hosted archive. */
+        /**
+         * The delegate that translates against the hosted
+         * archive.
+         */
         val hostedTranslationDelegate: HostedTranslationDelegate
             get() = hostedTranslation.wrappedValue
 
@@ -342,4 +328,24 @@ object Networking {
                 .string(PersistentStorageKey.networking(NetworkingStorageKey.NETWORK_ENVIRONMENT))
                 ?.let { NetworkEnvironment.from(it) }
     }
+
+    // MARK: - Auxiliary
+
+    /**
+     * Returns the time-to-live, in milliseconds, for a cache
+     * sample whose backing fetch began at `startMillis`, with a
+     * floor of 250 milliseconds: a value is cached for
+     * roughly as long as its fetch took.
+     */
+    internal fun cacheExpiryMilliseconds(startMillis: Long): Long {
+        val elapsed = abs(System.currentTimeMillis() - startMillis)
+        return if (elapsed < FLOOR_MILLIS) FLOOR_MILLIS + elapsed else elapsed
+    }
+
+    internal fun requireContext(): Context =
+        checkNotNull(applicationContext.wrappedValue) {
+            "Networking.initialize() must be called at app launch"
+        }
+
+    private const val FLOOR_MILLIS = 250L
 }

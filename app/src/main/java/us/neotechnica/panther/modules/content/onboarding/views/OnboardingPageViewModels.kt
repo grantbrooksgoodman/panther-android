@@ -18,11 +18,12 @@ import us.neotechnica.panther.modules.content.onboarding.views.welcomepageview.W
 import us.neotechnica.panther.subsystem.modules.reducer.models.ViewModel
 
 /**
- * The onboarding pages' view models, held for the flow's lifetime so a
- * page keeps its state beneath a push and across a pop and re-push.
+ * The onboarding pages' view models, held for the flow's lifetime
+ * so a page keeps its state beneath a push and across a pop and
+ * re-push.
  *
- * Each view model is created on first access and closed when the flow
- * ends; its first appearance is recorded so the page's
+ * Each view model is created on first access and closed when the
+ * flow ends; its first appearance is recorded so the page's
  * first-appearance work runs once per lifetime.
  */
 internal class OnboardingPageViewModels {
@@ -46,7 +47,10 @@ internal class OnboardingPageViewModels {
     val permission: ViewModel<PermissionPageReducer.State, PermissionPageReducer.Action>
         get() = viewModel(OnboardingNavigatorState.SeguePaths.Permission) { ViewModel(PermissionPageReducer.State(), PermissionPageReducer()) }
 
-    /** The select language page's view model, created on first access. */
+    /**
+     * The select language page's view model, created on first
+     * access.
+     */
     val selectLanguage: ViewModel<SelectLanguagePageReducer.State, SelectLanguagePageReducer.Action>
         get() =
             viewModel(OnboardingNavigatorState.SeguePaths.SelectLanguage) {
@@ -57,7 +61,10 @@ internal class OnboardingPageViewModels {
     val signIn: ViewModel<SignInPageReducer.State, SignInPageReducer.Action>
         get() = viewModel(OnboardingNavigatorState.SeguePaths.SignIn) { ViewModel(SignInPageReducer.State(), SignInPageReducer()) }
 
-    /** The verify number page's view model, created on first access. */
+    /**
+     * The verify number page's view model, created on first
+     * access.
+     */
     val verifyNumber: ViewModel<VerifyNumberPageReducer.State, VerifyNumberPageReducer.Action>
         get() =
             viewModel(OnboardingNavigatorState.SeguePaths.VerifyNumber) {
@@ -75,10 +82,12 @@ internal class OnboardingPageViewModels {
     }
 
     /**
-     * Runs the given first-appearance work once per view-model lifetime
-     * for the page at the given path (`null` for the welcome page).
+     * Runs the given first-appearance work once per view-model
+     * lifetime for the page at the given path (`null` for the
+     * welcome page).
      *
-     * @param path The page's path, or `null` for the welcome page.
+     * @param path The page's path, or `null` for the welcome
+     *   page.
      * @param perform The first-appearance work.
      */
     fun onFirstAppear(

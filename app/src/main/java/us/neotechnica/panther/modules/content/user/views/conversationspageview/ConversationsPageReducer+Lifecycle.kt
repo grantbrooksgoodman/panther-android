@@ -14,8 +14,8 @@ import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
 
 /**
  * Returns whether the given pushed page covers the conversations list
- * for lifecycle purposes: only a chat does, as Settings and New Chat
- * are presented as sheets on iOS and leave the list's lifecycle alone.
+ * for lifecycle purposes: only a chat does; Settings and New Chat
+ * behave as sheets and leave the list's lifecycle alone.
  *
  * @param topPath The top of the user-content stack, or `null`.
  */

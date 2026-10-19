@@ -11,12 +11,13 @@ package us.neotechnica.panther.modules.common.services.sources.contentpicker
 import android.content.Context
 
 /**
- * The content pickers available for a media message: camera capture,
- * the document picker, and the system photo and video picker.
+ * The content pickers available for a media message: camera
+ * capture, the document picker, and the system photo and video
+ * picker.
  *
- * A host registers each picker's launcher from its composition through
- * `RegisterContentPickerLaunchers`; the media action handler presents
- * them.
+ * A host registers each picker's launcher from its composition
+ * through `RegisterContentPickerLaunchers`; the media action
+ * handler presents them.
  */
 object ContentPickerService {
     /** The picker that captures a photo with the camera. */

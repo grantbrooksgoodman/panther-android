@@ -50,10 +50,12 @@ import us.neotechnica.panther.modules.session.state.models.SessionStoreChange
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.modules.session.sync.services.ConversationObserverService
+import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.models.NetworkPath
+import us.neotechnica.panther.networking.modules.common.models.NetworkServices
 import us.neotechnica.panther.networking.modules.database.interfaces.DatabaseDelegate
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
@@ -69,8 +71,11 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
+import us.neotechnica.panther.subsystem.modules.shared.models.SharedEvents
 
 // This service exceeds the file-length and type-body-length limits.
+
+// The counterpart service carries `// swiftlint:disable file_length type_body_length`.
 
 /**
  * The service that manages the current conversation and its displayed
@@ -78,12 +83,6 @@ import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
  */
 @Suppress("LargeClass")
 object ConversationSessionService {
-    // MARK: - Dependencies
-
-    private val conversationObserver: ConversationObserverService by Dependency { it.clientSession.sync.conversationObserver }
-    private val outbox: MessageOutboxService by Dependency { it.clientSession.outbox }
-    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
-
     // MARK: - Types
 
     private sealed interface CurrentConversationReference {
@@ -98,6 +97,15 @@ object ConversationSessionService {
         ) : CurrentConversationReference
     }
 
+    // MARK: - Dependencies
+
+    private val conversationObserver: ConversationObserverService by Dependency { it.clientSession.sync.conversationObserver }
+    private val navigation: Navigation by Dependency { it.navigation }
+    private val networking: NetworkServices by Dependency { it.networking }
+    private val outbox: MessageOutboxService by Dependency { it.clientSession.outbox }
+    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
+    private val sharedEvents: SharedEvents by Dependency { it.sharedEvents }
+
     // MARK: - Properties
 
     private val internalDisplayedMessages = MutableStateFlow(emptyList<Message>())
@@ -109,7 +117,6 @@ object ConversationSessionService {
     private val observersStarted = LockIsolated(false)
 
     private val database: DatabaseDelegate by Dependency { it.networking.database }
-    private val sharedEvents get() = DependencyValues.current.sharedEvents
 
     // MARK: - Computed Properties
 
@@ -137,15 +144,17 @@ object ConversationSessionService {
     // MARK: - Add Messages
 
     /**
-     * Appends the given messages to the given conversation and writes
-     * the result.
+     * Appends the given messages to the given conversation and
+     * writes the result.
      *
      * @param messages The messages to append.
-     * @param conversation The conversation to append the messages to.
+     * @param conversation The conversation to append the messages
+     *   to.
      *
      * @return The updated conversation.
      *
-     * @throws Exception if no messages are provided or the write fails.
+     * @throws Exception if no messages are provided or the write
+     *   fails.
      */
     suspend fun addMessages(
         messages: List<Message>,
@@ -171,12 +180,12 @@ object ConversationSessionService {
     /**
      * Sets the current conversation, or clears it when `null`.
      *
-     * Draft conversations, which are empty or mock, are held locally.
-     * Stored conversations are upserted into the session store and
-     * observed for real-time updates.
+     * Draft conversations, which are empty or mock, are held
+     * locally. Stored conversations are upserted into the session
+     * store and observed for real-time updates.
      *
-     * @param conversation The conversation to set as current, or `null`
-     *   to clear it.
+     * @param conversation The conversation to set as current, or
+     *   `null` to clear it.
      */
     fun setCurrentConversation(conversation: Conversation?) {
         if (conversation == null) return clearPointer()
@@ -206,7 +215,10 @@ object ConversationSessionService {
 
     // MARK: - Message Offset
 
-    /** Increases the number of displayed messages by a fixed increment. */
+    /**
+     * Increases the number of displayed messages by a fixed
+     * increment.
+     */
     fun incrementMessageOffset() {
         if (currentConversation == null) return
         messageOffset.withValue { it.value += ConversationSessionServiceFloats.MESSAGE_OFFSET_INCREMENT }
@@ -214,8 +226,8 @@ object ConversationSessionService {
     }
 
     /**
-     * Increases the number of displayed messages until the message with
-     * the given identifier is displayed.
+     * Increases the number of displayed messages until the
+     * message with the given identifier is displayed.
      *
      * @param messageID The identifier of the message to reveal.
      */
@@ -246,9 +258,9 @@ object ConversationSessionService {
      * Recomputes the current conversation's displayed messages,
      * including any outbox entries.
      *
-     * Store-change events are delivered on a later dispatch; a caller
-     * reloading UI in the same job as an upsert can call this first to
-     * refresh immediately.
+     * Store-change events are delivered on a later dispatch; a
+     * caller reloading UI in the same job as an upsert can call
+     * this first to refresh immediately.
      */
     fun updateDisplayedMessages() {
         val messages =
@@ -270,18 +282,18 @@ object ConversationSessionService {
     /**
      * Deletes or hides the given conversation.
      *
-     * When the deletion is not forced and the other participants have
-     * not all deleted the conversation, it is hidden for the current
-     * user instead of deleted for everyone. Otherwise, the
-     * conversation, its messages, and its participants' references to
-     * it are removed.
+     * When the deletion is not forced and the other participants
+     * have not all deleted the conversation, it is hidden for the
+     * current user instead of deleted for everyone. Otherwise,
+     * the conversation, its messages, and its participants'
+     * references to it are removed.
      *
      * @param conversation The conversation to delete.
-     * @param forced A Boolean value that determines whether to delete
-     *   the conversation outright rather than hide it.
+     * @param forced A Boolean value that determines whether to
+     *   delete the conversation outright rather than hide it.
      *
-     * @throws Exception if the current user identifier has not been set
-     *   or the write fails.
+     * @throws Exception if the current user identifier has not
+     *   been set or the write fails.
      */
     suspend fun deleteConversation(
         conversation: Conversation,
@@ -308,7 +320,7 @@ object ConversationSessionService {
             }
         }
 
-        DependencyValues.current.networking.conversationService.removeConversationFromUsers(
+        networking.conversationService.removeConversationFromUsers(
             userIDs = conversation.participants.map { it.userID },
             conversationIDKey = conversation.id.key,
         )
@@ -376,7 +388,7 @@ object ConversationSessionService {
                     // is removed (e.g., deleted remotely by another
                     // participant).
                     observationScope.launch(Dispatchers.Main) {
-                        DependencyValues.current.navigation.navigate(
+                        navigation.navigate(
                             Route.UserContent(UserContentRoute.Stack(emptyList())),
                         )
 
@@ -484,7 +496,10 @@ object ConversationSessionService {
         }
     }
 
-    /** Records (or clears) the open conversation for process-death restoration, avoiding redundant writes. */
+    /**
+     * Records (or clears) the open conversation for process-death
+     * restoration, avoiding redundant writes.
+     */
     private fun persistOpenConversationIDKey(conversationIDKey: String?) {
         if (Persistent.string(PersistentStorageKey.openConversationIDKey) == conversationIDKey) return
         Persistent.setString(PersistentStorageKey.openConversationIDKey, conversationIDKey)

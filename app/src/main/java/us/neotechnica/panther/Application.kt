@@ -26,6 +26,7 @@ import us.neotechnica.panther.bundle.navigators.SettingsRoute
 import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.bundle.populatedTemporaryCaches
 import us.neotechnica.panther.bundle.userSessionService
+import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.dependencies.alertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.HUDConfig
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
@@ -56,6 +57,7 @@ import us.neotechnica.panther.modules.common.services.sources.contacts.ContactSe
 import us.neotechnica.panther.modules.common.services.sources.contentpicker.ContentPickerService
 import us.neotechnica.panther.modules.content.user.dependencies.chatPageViewService
 import us.neotechnica.panther.modules.content.user.dependencies.settingsPageViewService
+import us.neotechnica.panther.modules.content.user.services.SettingsPageViewService
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.AudioMessagePlaybackService
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.MediaActionHandlerService
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.contextmenu.sources.ContextMenuActionHandlerService
@@ -67,6 +69,7 @@ import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.modules.session.state.services.MessageOutboxService
 import us.neotechnica.panther.modules.session.state.services.SessionStore
 import us.neotechnica.panther.modules.session.sync.services.ConversationObserverService
+import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.RootNavigatorState
 import us.neotechnica.panther.navigation.RootRoute
@@ -94,6 +97,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStora
 import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import us.neotechnica.panther.subsystem.modules.localization.services.LocalizedStringResolver
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
+import us.neotechnica.panther.subsystem.modules.shared.models.SharedEvents
 import us.neotechnica.panther.translator.Translator
 import java.util.Date
 import kotlin.time.Duration.Companion.milliseconds
@@ -108,22 +112,6 @@ import kotlin.time.Duration.Companion.seconds
  * state, and to dismiss presented sheets.
  */
 object Application {
-    // MARK: - Dependencies
-
-    private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
-    private val audioMessagePlaybackService: AudioMessagePlaybackService by Dependency { it.chatPageViewService.audioMessagePlayback }
-    private val auth: AuthDelegate by Dependency { it.networking.auth }
-    private val contactService: ContactService by Dependency { it.commonServices.contact }
-    private val conversationObserver: ConversationObserverService by Dependency { it.clientSession.sync.conversationObserver }
-    private val database: DatabaseDelegate by Dependency { it.networking.database }
-    private val inviteService: InviteService by Dependency { it.commonServices.invite }
-    private val outbox: MessageOutboxService by Dependency { it.clientSession.outbox }
-    private val regionDetailService: RegionDetailService by Dependency { it.commonServices.regionDetail }
-    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
-    private val storage: StorageDelegate by Dependency { it.networking.storage }
-    private val textToSpeechService: TextToSpeechService by Dependency { it.commonServices.audio.textToSpeech }
-    private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
-
     // MARK: - Types
 
     /** A follow-up action to perform after a reset completes. */
@@ -134,9 +122,32 @@ object Application {
          */
         EXIT_GRACEFULLY,
 
-        /** Clears the user content navigation stack and presents the splash page. */
+        /**
+         * Clears the user content navigation stack and presents
+         * the splash page.
+         */
         NAVIGATE_TO_SPLASH,
     }
+
+    // MARK: - Dependencies
+
+    private val alertKitConfig: AlertKitConfig by Dependency { it.alertKitConfig }
+    private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
+    private val audioMessagePlaybackService: AudioMessagePlaybackService by Dependency { it.chatPageViewService.audioMessagePlayback }
+    private val auth: AuthDelegate by Dependency { it.networking.auth }
+    private val contactService: ContactService by Dependency { it.commonServices.contact }
+    private val conversationObserver: ConversationObserverService by Dependency { it.clientSession.sync.conversationObserver }
+    private val database: DatabaseDelegate by Dependency { it.networking.database }
+    private val inviteService: InviteService by Dependency { it.commonServices.invite }
+    private val navigation: Navigation by Dependency { it.navigation }
+    private val outbox: MessageOutboxService by Dependency { it.clientSession.outbox }
+    private val regionDetailService: RegionDetailService by Dependency { it.commonServices.regionDetail }
+    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
+    private val settingsPageViewService: SettingsPageViewService by Dependency { it.settingsPageViewService }
+    private val sharedEvents: SharedEvents by Dependency { it.sharedEvents }
+    private val storage: StorageDelegate by Dependency { it.networking.storage }
+    private val textToSpeechService: TextToSpeechService by Dependency { it.commonServices.audio.textToSpeech }
+    private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
 
     // MARK: - Properties
 
@@ -194,7 +205,6 @@ object Application {
     fun dismissSheets() {
         // The chat and settings flows present sheets through their
         // navigators; the root sheet is presented above the modal content.
-        val navigation = DependencyValues.current.navigation
         navigation.navigate(Route.Chat(ChatRoute.Sheet(null)))
         navigation.navigate(Route.Settings(SettingsRoute.Sheet(null)))
         RootSheets.dismiss()
@@ -258,8 +268,8 @@ object Application {
             ResetCompletionProcedure.EXIT_GRACEFULLY -> beginGracefulExit()
 
             ResetCompletionProcedure.NAVIGATE_TO_SPLASH -> {
-                DependencyValues.current.navigation.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
-                DependencyValues.current.navigation.navigate(
+                navigation.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
+                navigation.navigate(
                     Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.Splash)),
                 )
             }
@@ -268,22 +278,41 @@ object Application {
 
     /**
      * Hides the status bar, presents the splash page behind an
-     * activity indicator overlay, then returns to the Home screen and
-     * terminates the app after a one-second delay.
+     * activity indicator overlay, then returns to the Home screen
+     * and terminates the app after a one-second delay.
      *
-     * Use [beginGracefulExit] to complete a flow that requires the app
-     * to restart – such as clearing caches – after the user has been
-     * informed. The reset completion procedure and the settings page's
-     * exit flows share this sequence.
+     * Use [beginGracefulExit] to complete a flow that requires
+     * the app to restart – such as clearing caches – after the
+     * user has been informed. The reset completion procedure and
+     * the settings page's exit flows share this sequence.
      */
     fun beginGracefulExit() {
         setStatusBarHidden()
         Overlay.addOverlay(activityIndicator = Overlay.OverlayActivityIndicatorConfiguration.largeWhite)
-        DependencyValues.current.navigation.navigate(
+        navigation.navigate(
             Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.Splash)),
         )
         Task.delayed(by = GRACEFUL_EXIT_DELAY_SECONDS.seconds) { CoreUtilities.exitGracefully() }
     }
+
+    // MARK: - Constants
+
+    internal const val BUILD_INFO_ASSET = "build_info.properties"
+
+    @Suppress("VariableMaxLength")
+    private const val BUILD_INFO_OVERLAY_SETUP_DELAY_MILLISECONDS = 50L
+
+    private const val GRACEFUL_EXIT_DELAY_SECONDS = 1
+
+    internal const val CODE_NAME = "Panther"
+    internal const val FINAL_NAME = "Hello"
+    internal const val APP_STORE_BUILD_NUMBER = 0
+    internal const val MILLIS_PER_SECOND = 1_000L
+
+    // Whether the app uses its system-style animations, the San Francisco
+    // font, and SF Symbols. Set this to `false` to use Android's default
+    // animations, the Inter font, and Material Symbols instead.
+    private const val USE_IOS_STYLING = true
 
     // MARK: - Auxiliary
 
@@ -300,7 +329,7 @@ object Application {
         inviteService.initialize(context)
         PermissionService.initialize(context)
         AttributeDetectionService.initialize(context)
-        DependencyValues.current.settingsPageViewService.initialize(context)
+        settingsPageViewService.initialize(context)
         textToSpeechService.initialize(context)
         audioMessagePlaybackService.initialize(context)
         ContentPickerService.initialize(context)
@@ -323,7 +352,7 @@ object Application {
         Translator.config.registerLoggerDelegate(TranslationLogger)
         ReportDelegate.registerWithDependencies()
 
-        DependencyValues.current.alertKitConfig.overrideTranslationHUDConfig(
+        alertKitConfig.overrideTranslationHUDConfig(
             HUDConfig(appearsAfter = 500.milliseconds, isModal = true),
         )
     }
@@ -348,7 +377,7 @@ object Application {
     // `dismissSheets` shared event.
     private fun observeSharedEvents() {
         scope.launch {
-            DependencyValues.current.sharedEvents.dismissSheets.events
+            sharedEvents.dismissSheets.events
                 .collect { dismissSheets() }
         }
     }
@@ -361,23 +390,4 @@ object Application {
                 .hide(WindowInsetsCompat.Type.statusBars())
         }
     }
-
-    // MARK: - Constants
-
-    internal const val BUILD_INFO_ASSET = "build_info.properties"
-
-    @Suppress("VariableMaxLength")
-    private const val BUILD_INFO_OVERLAY_SETUP_DELAY_MILLISECONDS = 50L
-
-    private const val GRACEFUL_EXIT_DELAY_SECONDS = 1
-
-    internal const val CODE_NAME = "Panther"
-    internal const val FINAL_NAME = "Hello"
-    internal const val APP_STORE_BUILD_NUMBER = 0
-    internal const val MILLIS_PER_SECOND = 1_000L
-
-    // Whether the app uses its system-style animations, the San Francisco
-    // font, and SF Symbols. Set this to `false` to use Android's default
-    // animations, the Inter font, and Material Symbols instead.
-    private const val USE_IOS_STYLING = true
 }

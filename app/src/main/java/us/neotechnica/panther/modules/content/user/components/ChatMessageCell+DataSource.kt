@@ -126,9 +126,9 @@ internal fun cellTopLabelAttributedText(row: ChatMessageRowData): AnnotatedStrin
 }
 
 /**
- * Returns the attributed text for the message's timestamp label, shown
- * when the user drags the list: the message's sent time in the short
- * style.
+ * Returns the attributed text for the message's timestamp label,
+ * shown when the user drags the list: the message's sent time in
+ * the short style.
  *
  * @param message The message to build the label for.
  */
@@ -145,9 +145,9 @@ internal fun messageTimestampLabelAttributedText(message: Message): AnnotatedStr
     }
 
 /**
- * Returns the attributed text for the message's top label, showing the
- * sender's name in group conversations, or `null` when the row shows
- * none.
+ * Returns the attributed text for the message's top label,
+ * showing the sender's name in group conversations, or `null`
+ * when the row shows none.
  *
  * @param row The row to build the label for.
  */

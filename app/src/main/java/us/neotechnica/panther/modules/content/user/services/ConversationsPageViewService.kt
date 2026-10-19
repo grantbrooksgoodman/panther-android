@@ -70,6 +70,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedStates
+import us.neotechnica.panther.subsystem.modules.shared.models.SharedEvents
+import us.neotechnica.panther.subsystem.modules.shared.models.SharedStates
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
@@ -93,15 +95,6 @@ import kotlin.time.Duration.Companion.seconds
 class ConversationsPageViewService(
     private val dependencies: Dependencies = Dependencies(),
 ) {
-    // MARK: - Dependencies
-
-    private val connectionStatusService: ConnectionStatusService by Dependency { it.commonServices.connectionStatus }
-    private val database: DatabaseDelegate by Dependency { it.networking.database }
-    private val pushTokenService: PushTokenService by Dependency { it.commonServices.pushToken }
-    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
-    private val updateService: UpdateService by Dependency { it.commonServices.update }
-    private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
-
     // MARK: - Types
 
     /**
@@ -211,6 +204,17 @@ class ConversationsPageViewService(
                 }
     }
 
+    // MARK: - Dependencies
+
+    private val connectionStatusService: ConnectionStatusService by Dependency { it.commonServices.connectionStatus }
+    private val database: DatabaseDelegate by Dependency { it.networking.database }
+    private val pushTokenService: PushTokenService by Dependency { it.commonServices.pushToken }
+    private val sessionStore: SessionStore by Dependency { it.clientSession.store }
+    private val sharedEvents: SharedEvents by Dependency { it.sharedEvents }
+    private val sharedStates: SharedStates by Dependency { it.sharedStates }
+    private val updateService: UpdateService by Dependency { it.commonServices.update }
+    private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
+
     // MARK: - Properties
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -254,7 +258,8 @@ class ConversationsPageViewService(
     }
 
     /**
-     * Reapplies the page's appearance after a trait collection change.
+     * Reapplies the page's appearance after a trait collection
+     * change.
      *
      * If the chat page is presented, the update waits until it
      * closes.
@@ -265,7 +270,6 @@ class ConversationsPageViewService(
             state = false,
             id = ChatPageStateServiceEffectID.updateAppearance,
         ) {
-            val sharedEvents = DependencyValues.current.sharedEvents
             sharedEvents.traitCollectionChanged.send(Unit)
         }
     }
@@ -290,15 +294,16 @@ class ConversationsPageViewService(
     }
 
     /**
-     * Keeps the open chat page consistent with a session store change.
+     * Keeps the open chat page consistent with a session store
+     * change.
      *
      * If a message is being sent, handling waits until the send
-     * completes. Otherwise, this method re-fetches the last message
-     * of one-to-one conversations to pick up read receipt changes,
-     * marks unread messages as read – updating the app badge – and
-     * notifies observers that the current conversation's metadata
-     * changed. If the chat page is not presented, this method does
-     * nothing.
+     * completes. Otherwise, this method re-fetches the last
+     * message of one-to-one conversations to pick up read receipt
+     * changes, marks unread messages as read – updating the app
+     * badge – and notifies observers that the current
+     * conversation's metadata changed. If the chat page is not
+     * presented, this method does nothing.
      */
     fun handleChatPageStoreChange() {
         if (!dependencies.isChatPagePresented()) return
@@ -334,7 +339,7 @@ class ConversationsPageViewService(
         try {
             reloadData(currentReloadType)
         } finally {
-            DependencyValues.current.sharedStates.reloadingConversationIDKeys.value = emptySet()
+            sharedStates.reloadingConversationIDKeys.value = emptySet()
         }
     }
 
@@ -432,7 +437,6 @@ class ConversationsPageViewService(
             )
 
             Task.delayed(by = UPDATE_APPEARANCE_DELAY) {
-                val sharedEvents = DependencyValues.current.sharedEvents
                 sharedEvents.traitCollectionChanged.send(Unit)
             }
         }
@@ -483,7 +487,6 @@ class ConversationsPageViewService(
             ConversationCellViewData(currentConversation)?.titleLabelText?.let { ChatPageViewService.setNavigationTitle(it) }
         }
 
-        val sharedEvents = DependencyValues.current.sharedEvents
         sharedEvents.currentConversationMetadataChanged.send(Unit)
     }
 
@@ -508,7 +511,7 @@ class ConversationsPageViewService(
                     }
             }
 
-            DependencyValues.current.sharedStates.reloadingConversationIDKeys.value =
+            sharedStates.reloadingConversationIDKeys.value =
                 conversationsToReload.map { it.id.key }.toSet()
             conversationsToReload.forEach { it.markStaleLocally() }
         }

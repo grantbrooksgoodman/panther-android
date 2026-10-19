@@ -41,98 +41,139 @@ import kotlin.time.Duration.Companion.milliseconds
  * The reducer that drives the permission request page of the
  * onboarding flow.
  *
- * This page is the final step of sign-up. The user requests the contact
- * and notification permissions, agrees to the app's conduct policy,
- * and the reducer finalizes account creation with
+ * This page is the final step of sign-up. The user requests the
+ * contact and notification permissions, agrees to the app's
+ * conduct policy, and the reducer finalizes account creation with
  * [OnboardingService.createUser].
  *
  * The page's behavior contract:
  *
- * - On appearance, the page resolves its translated display strings,
- *   remaining in the loading state until resolution completes. If
- *   resolution fails, the page falls back to its default strings and
- *   loads anyway.
+ * - On appearance, the page resolves its translated display
+ *   strings, remaining in the loading state until resolution
+ *   completes. If resolution fails, the page falls back to its
+ *   default strings and loads anyway.
  * - Each permission button begins a system permission request and
- *   records the result as a tri-state value: `null` until the request
- *   resolves, then `true` or `false`. When a permission is not granted,
- *   the reducer presents a call to action for it after a brief delay.
- * - When the contact permission is granted, the reducer synchronizes
- *   the contact pair archive. Notification delivery registers itself
- *   once the notification permission is granted.
- * - The finish button is enabled once the status of both permissions
- *   has been determined. Tapping it disables the page's buttons,
- *   presents a dimmed activity overlay, and presents the conduct policy
- *   sheet.
- * - If the user agrees to the conduct policy, the reducer creates the
- *   account. If creation succeeds, the reducer presents the splash
- *   page; otherwise, it removes the overlay, re-enables the buttons,
- *   and surfaces the error as a toast. Declining the policy restores
- *   the page without creating an account.
+ *   records the result as a tri-state value: `null` until the
+ *   request resolves, then `true` or `false`. When a permission
+ *   is not granted, the reducer presents a call to action for it
+ *   after a brief delay.
+ * - When the contact permission is granted, the reducer
+ *   synchronizes the contact pair archive. Notification delivery
+ *   registers itself once the notification permission is granted.
+ * - The finish button is enabled once the status of both
+ *   permissions has been determined. Tapping it disables the
+ *   page's buttons, presents a dimmed activity overlay, and
+ *   presents the conduct policy sheet.
+ * - If the user agrees to the conduct policy, the reducer creates
+ *   the account. If creation succeeds, the reducer presents the
+ *   splash page; otherwise, it removes the overlay, re-enables
+ *   the buttons, and surfaces the error as a toast. Declining the
+ *   policy restores the page without creating an account.
  */
 class PermissionPageReducer : Reducer<PermissionPageReducer.State, PermissionPageReducer.Action> {
     // MARK: - Dependencies
 
-    private val contactService: ContactService by Dependency { it.commonServices.contact }
     private val navigation: Navigation by Dependency { it.navigation }
     private val onboardingService: OnboardingService by Dependency { it.onboardingService }
     private val permissionService: PermissionService by Dependency { it.commonServices.permission }
-    private val translator: HostedTranslationDelegate by Dependency { it.networking.hostedTranslation }
 
     // MARK: - Actions
 
     /** The actions the permission page can process. */
     sealed interface Action {
-        /** An action that indicates the view appeared. Begins display string resolution. */
+        /**
+         * An action that indicates the view appeared. Begins
+         * display string resolution.
+         */
         data object ViewAppeared : Action
 
-        /** An action that indicates the user tapped the back button. Pops the current page. */
+        /**
+         * An action that indicates the user tapped the back
+         * button. Pops the current page.
+         */
         data object BackButtonTapped : Action
 
-        /** An action that indicates the user tapped the contact permission button. Begins a contact permission request. */
+        /**
+         * An action that indicates the user tapped the contact
+         * permission button. Begins a contact permission request.
+         */
         data object ContactPermissionCapsuleButtonTapped : Action
 
-        /** An action that indicates the user tapped the finish button. Presents the conduct policy sheet. */
+        /**
+         * An action that indicates the user tapped the finish
+         * button. Presents the conduct policy sheet.
+         */
         data object FinishButtonTapped : Action
 
-        /** An action that indicates the user tapped the notification permission button. Begins a notification permission request. */
+        /**
+         * An action that indicates the user tapped the
+         * notification permission button. Begins a notification
+         * permission request.
+         */
         data object NotificationPermissionCapsuleButtonTapped : Action
 
-        /** An action that indicates account creation finished, carrying `null` if the operation succeeded; otherwise, the resulting [Exception]. */
+        /**
+         * An action that indicates account creation finished,
+         * carrying `null` if the operation succeeded; otherwise,
+         * the resulting [Exception].
+         */
         data class CreateUserReturned(
             val exception: Exception?,
         ) : Action
 
-        /** An action that indicates the conduct policy sheet was dismissed, carrying whether the user declined the agreement. */
+        /**
+         * An action that indicates the conduct policy sheet was
+         * dismissed, carrying whether the user declined the
+         * agreement.
+         */
         data class EulaAlertDismissed(
             val cancelled: Boolean,
         ) : Action
 
-        /** An action that indicates the contact permission request failed, carrying the resulting [Exception]. */
+        /**
+         * An action that indicates the contact permission request
+         * failed, carrying the resulting [Exception].
+         */
         data class RequestContactPermissionFailed(
             val exception: Exception,
         ) : Action
 
-        /** An action that indicates the contact permission request resolved, carrying the resulting status. */
+        /**
+         * An action that indicates the contact permission request
+         * resolved, carrying the resulting status.
+         */
         data class RequestContactPermissionReturned(
             val status: PermissionService.PermissionStatus,
         ) : Action
 
-        /** An action that indicates the notification permission request failed, carrying the resulting [Exception]. */
+        /**
+         * An action that indicates the notification permission
+         * request failed, carrying the resulting [Exception].
+         */
         data class RequestNotificationPermissionFailed(
             val exception: Exception,
         ) : Action
 
-        /** An action that indicates the notification permission request resolved, carrying the resulting status. */
+        /**
+         * An action that indicates the notification permission
+         * request resolved, carrying the resulting status.
+         */
         data class RequestNotificationPermissionReturned(
             val status: PermissionService.PermissionStatus,
         ) : Action
 
-        /** An action that indicates display string resolution failed, carrying the resulting [Exception]. */
+        /**
+         * An action that indicates display string resolution
+         * failed, carrying the resulting [Exception].
+         */
         data class ResolveFailed(
             val exception: Exception,
         ) : Action
 
-        /** An action that indicates display string resolution succeeded, carrying the resolved strings. */
+        /**
+         * An action that indicates display string resolution
+         * succeeded, carrying the resolved strings.
+         */
         data class ResolveReturned(
             val strings: List<TranslationOutputMap>,
         ) : Action
@@ -142,19 +183,44 @@ class PermissionPageReducer : Reducer<PermissionPageReducer.State, PermissionPag
 
     /** The state of the permission page. */
     data class State(
-        /** The strings the page's instruction header displays. Populated once display string resolution completes. */
+        /**
+         * The strings the page's instruction header displays.
+         * Populated once display string resolution completes.
+         */
         val instructionViewStrings: InstructionViewStrings = InstructionViewStrings.empty,
-        /** A Boolean value that indicates whether the back button is enabled. Disabled while account creation is in progress. */
+        /**
+         * A Boolean value that indicates whether the back button
+         * is enabled. Disabled while account creation is in
+         * progress.
+         */
         val isBackButtonEnabled: Boolean = true,
-        /** A Boolean value that indicates whether the contact permission was granted, or `null` if its request has not yet resolved. */
+        /**
+         * A Boolean value that indicates whether the contact
+         * permission was granted, or `null` if its request has
+         * not yet resolved.
+         */
         val isContactPermissionGranted: Boolean? = null,
-        /** A Boolean value that indicates whether the finish button is enabled. */
+        /**
+         * A Boolean value that indicates whether the finish
+         * button is enabled.
+         */
         val isFinishButtonEnabled: Boolean = false,
-        /** A Boolean value that indicates whether the notification permission was granted, or `null` if its request has not yet resolved. */
+        /**
+         * A Boolean value that indicates whether the notification
+         * permission was granted, or `null` if its request has
+         * not yet resolved.
+         */
         val isNotificationPermissionGranted: Boolean? = null,
-        /** The page's translated display strings. Contains the default, untranslated strings until resolution completes. */
+        /**
+         * The page's translated display strings. Contains the
+         * default, untranslated strings until resolution
+         * completes.
+         */
         val strings: List<TranslationOutputMap> = PermissionPageViewStrings.defaultOutputMap,
-        /** The page's loading state. Remains loading until display string resolution completes. */
+        /**
+         * The page's loading state. Remains loading until display
+         * string resolution completes.
+         */
         val viewState: ViewState = ViewState.Loading,
     )
 
@@ -278,79 +344,9 @@ class PermissionPageReducer : Reducer<PermissionPageReducer.State, PermissionPag
                 ReduceResult(state.copy(strings = action.strings).withInstructionViewStrings(action.strings))
         }
 
-    // MARK: - Auxiliary
-
-    private fun reduceRequestContactPermissionFailed(
-        state: State,
-        exception: Exception,
-    ): ReduceResult<State, Action> {
-        if (exception.isEqual(to = AppException.contactAccessDenied)) {
-            return ReduceResult(
-                state.copy(isContactPermissionGranted = false),
-                presentCTAEffect(PermissionService.PermissionType.CONTACTS),
-            )
-        }
-
-        Logger.log(exception, with = AlertType.toast)
-        return ReduceResult(state.copy(isBackButtonEnabled = true, isFinishButtonEnabled = false))
-    }
-
-    private fun reduceRequestContactPermissionReturned(
-        state: State,
-        status: PermissionService.PermissionStatus,
-    ): ReduceResult<State, Action> {
-        val isGranted = status == PermissionService.PermissionStatus.GRANTED
-        if (!isGranted) {
-            return ReduceResult(
-                state.copy(isContactPermissionGranted = false),
-                presentCTAEffect(PermissionService.PermissionType.CONTACTS),
-            )
-        }
-
-        return ReduceResult(
-            state.copy(isContactPermissionGranted = true),
-            Effect.fireAndForget {
-                try {
-                    contactService.syncContactPairArchive()
-                } catch (exception: Exception) {
-                    Logger.log(exception)
-                }
-            },
-        )
-    }
-
-    private fun presentCTAEffect(permissionType: PermissionService.PermissionType): Effect<Action> =
-        Effect.task(delay = CTA_PRESENTATION_DELAY) {
-            permissionService.presentCTA(permissionType)
-            null
-        }
-
-    private fun State.withInstructionViewStrings(strings: List<TranslationOutputMap>): State =
-        copy(
-            instructionViewStrings =
-                InstructionViewStrings(
-                    titleLabelText = strings.value(PermissionPageViewStrings.instructionViewTitleLabelText, PermissionPageViewStrings),
-                    subtitleLabelText = strings.value(PermissionPageViewStrings.instructionViewSubtitleLabelText, PermissionPageViewStrings),
-                ),
-            viewState = ViewState.Loaded,
-        )
-
-    private fun resolveEffect(): Effect<Action> =
-        Effect.run { send ->
-            try {
-                send(
-                    Action.ResolveReturned(
-                        translator.resolve(PermissionPageViewStrings),
-                    ),
-                )
-            } catch (exception: Exception) {
-                send(Action.ResolveFailed(exception))
-            }
-        }
-
     // MARK: - Companion
 
-    private companion object {
+    internal companion object {
         val CTA_PRESENTATION_DELAY = 500.milliseconds
 
         const val OVERLAY_ALPHA = 0.5f

@@ -15,6 +15,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -28,6 +29,7 @@ import us.neotechnica.panther.modules.common.services.sources.NotificationServic
 import us.neotechnica.panther.modules.common.services.sources.PushTokenService
 import us.neotechnica.panther.modules.content.user.dependencies.uiCacheInvalidationService
 import us.neotechnica.panther.modules.content.user.models.ConnectionStatusServiceEffectID
+import us.neotechnica.panther.modules.content.user.services.UICacheInvalidationService
 import us.neotechnica.panther.modules.networking.sources.common.dependencies.firebaseMessaging
 import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.modules.session.state.services.retryAllEligible
@@ -38,6 +40,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
+import us.neotechnica.panther.subsystem.modules.shared.models.SharedEvents
 import us.neotechnica.panther.translator.Translator
 import java.util.concurrent.atomic.AtomicReference
 
@@ -55,8 +58,11 @@ class PantherApplication : Application() {
 
     private val analyticsService: AnalyticsService by Dependency { it.commonServices.analytics }
     private val connectionStatusService: ConnectionStatusService by Dependency { it.commonServices.connectionStatus }
+    private val firebaseMessaging: FirebaseMessaging by Dependency { it.firebaseMessaging }
     private val notificationService: NotificationService by Dependency { it.commonServices.notification }
     private val pushTokenService: PushTokenService by Dependency { it.commonServices.pushToken }
+    private val sharedEvents: SharedEvents by Dependency { it.sharedEvents }
+    private val uiCacheInvalidationService: UICacheInvalidationService by Dependency { it.uiCacheInvalidationService }
 
     // MARK: - Properties
 
@@ -85,14 +91,13 @@ class PantherApplication : Application() {
         ProcessLifecycleOwner.get().lifecycle.addObserver(
             object : DefaultLifecycleObserver {
                 override fun onStart(owner: LifecycleOwner) {
-                    val sharedEvents = DependencyValues.current.sharedEvents
                     sharedEvents.traitCollectionChanged.send(Unit)
                     outboxScope.launch { ClientSession.outbox.retryAllEligible() }
                 }
 
                 override fun onStop(owner: LifecycleOwner) {
                     ClientSession.store.flushNow()
-                    DependencyValues.current.uiCacheInvalidationService.refreshNotificationExtensionNameMap()
+                    uiCacheInvalidationService.refreshNotificationExtensionNameMap()
                     outboxScope.launch {
                         val currentUser = ClientSession.entity.user.currentUser ?: return@launch
                         try {
@@ -118,7 +123,7 @@ class PantherApplication : Application() {
 
     private fun setUpPushNotifications() {
         PantherMessagingService.createChannel(this)
-        DependencyValues.current.firebaseMessaging.token.addOnSuccessListener { token ->
+        firebaseMessaging.token.addOnSuccessListener { token ->
             pushTokenService.setCurrentToken(token)
         }
     }

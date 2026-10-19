@@ -45,6 +45,8 @@ import kotlin.math.pow
 
 // This service exceeds the type-body-length limit.
 
+// The counterpart service runs to 763 lines in a package without a file-length rule.
+
 /**
  * The framework's built-in [NetworkHealthDelegate].
  *

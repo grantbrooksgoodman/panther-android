@@ -58,26 +58,31 @@ private typealias Floats = MessageInputBarFloats
 private typealias Strings = MessageInputBarStrings
 
 /**
- * The message composer bar shared by the chat and new-chat pages: a
- * leading attach button in a fixed-width stack, a bordered rounded text
- * field, and a send button inset inside the field's trailing edge.
+ * The message composer bar shared by the chat and new-chat pages:
+ * a leading attach button in a fixed-width stack, a bordered
+ * rounded text field, and a send button inset inside the field's
+ * trailing edge.
  *
  * @param text The composed text.
  * @param placeholder The placeholder shown when [text] is empty.
- * @param isSending Whether a send is in progress. While `true`, the
- *   send button shows an activity indicator in place of its glyph, the
- *   attach button is disabled, and the text field hides its cursor.
+ * @param isSending Whether a send is in progress. While `true`,
+ *   the send button shows an activity indicator in place of its
+ *   glyph, the attach button is disabled, and the text field
+ *   hides its cursor.
  * @param onTextChange Invoked as the text changes.
  * @param onSend Invoked when the send button is tapped.
- * @param onAttach Invoked when the leading attach button is tapped.
- * @param attachMediaButtonSymbol The name of the symbol the attach
- *   button shows when no [images] are given.
- * @param sendButtonSymbol The name of the symbol the send button shows
- *   when no [images] are given.
+ * @param onAttach Invoked when the leading attach button is
+ *   tapped.
+ * @param attachMediaButtonSymbol The name of the symbol the
+ *   attach button shows when no [images] are given.
+ * @param sendButtonSymbol The name of the symbol the send button
+ *   shows when no [images] are given.
  * @param isSendEnabled Whether the send button responds to taps.
- * @param isAttachEnabled Whether the attach button responds to taps.
- * @param images The images the attach and send buttons display, or
- *   `null` to show [attachMediaButtonSymbol] and [sendButtonSymbol].
+ * @param isAttachEnabled Whether the attach button responds to
+ *   taps.
+ * @param images The images the attach and send buttons display,
+ *   or `null` to show [attachMediaButtonSymbol] and
+ *   [sendButtonSymbol].
  * @param focusRequester A requester that can give the text field
  *   focus, or `null`.
  * @param onFocusChanged Invoked as the text field gains or loses

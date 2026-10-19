@@ -66,63 +66,67 @@ import java.io.File
 private typealias ContextMenuFloats = ChatPageViewServiceFloats.ContextMenu
 private typealias ContextMenuStrings = ChatPageViewServiceStrings.ContextMenu
 
+// The counterpart service carries `// swiftlint:disable file_length type_body_length`.
+
 /**
- * The service that builds context menus and handles their actions.
+ * The service that builds context menus and handles their
+ * actions.
  *
  * [ContextMenuActionHandlerService] composes the menu shown for a
- * message, tailoring the available actions to the message's content and
- * state, and performs each action the user chooses – copying text,
- * saving media, speaking a message aloud, viewing an alternate
- * translation, and reporting a translation. It also tracks the message
- * currently being spoken aloud.
+ * message, tailoring the available actions to the message's
+ * content and state, and performs each action the user chooses –
+ * copying text, saving media, speaking a message aloud, viewing
+ * an alternate translation, and reporting a translation. It also
+ * tracks the message currently being spoken aloud.
  *
- * @param dependencies The collaborators the service acts through; the
- *   defaults resolve the live services.
+ * @param dependencies The collaborators the service acts through;
+ *   the defaults resolve the live services.
  */
 class ContextMenuActionHandlerService(
     private val dependencies: Dependencies = Dependencies(),
 ) {
-    // MARK: - Dependencies
-
     // MARK: - Types
 
     /**
-     * The collaborators the context menu action handler acts through.
+     * The collaborators the context menu action handler acts
+     * through.
      *
-     * @property copyToPasteboard Copies the given text to the system
-     *   pasteboard.
-     * @property currentConversation Returns the current conversation.
+     * @property copyToPasteboard Copies the given text to the
+     *   system pasteboard.
+     * @property currentConversation Returns the current
+     *   conversation.
      * @property currentUser Returns the current user.
      * @property fileReport Files an error report for the given
      *   exception.
-     * @property isDisplayingAlternateText Returns whether the given
-     *   message displays its alternate text.
-     * @property isDisplayingAudioTranscription Returns whether the
-     *   given message displays its audio transcription.
+     * @property isDisplayingAlternateText Returns whether the
+     *   given message displays its alternate text.
+     * @property isDisplayingAudioTranscription Returns whether
+     *   the given message displays its audio transcription.
      * @property isSpeaking Returns whether speech synthesis is in
      *   progress.
-     * @property isTextToSpeechSupported Returns whether the device has
-     *   a voice installed for the given language code.
-     * @property matchConfidence Returns the confidence that the given
-     *   text is in the given language.
-     * @property presentExportController Presents the document export
-     *   picker for the given file.
-     * @property presentReactionDetails Presents the reaction details
-     *   page for the given message identifier.
-     * @property reportedErrorCodes Returns the error codes already
-     *   reported during this session.
-     * @property saveMedia Saves the given media file to the device's
-     *   shared collections.
-     * @property scope The scope on which asynchronous actions run.
+     * @property isTextToSpeechSupported Returns whether the
+     *   device has a voice installed for the given language code.
+     * @property matchConfidence Returns the confidence that the
+     *   given text is in the given language.
+     * @property presentExportController Presents the document
+     *   export picker for the given file.
+     * @property presentReactionDetails Presents the reaction
+     *   details page for the given message identifier.
+     * @property reportedErrorCodes Returns the error codes
+     *   already reported during this session.
+     * @property saveMedia Saves the given media file to the
+     *   device's shared collections.
+     * @property scope The scope on which asynchronous actions
+     *   run.
      * @property showSuccessHUD Shows the success HUD.
-     * @property speak Speaks the given text in the given language for
-     *   the given message identifier, returning whether the utterance
-     *   was queued.
+     * @property speak Speaks the given text in the given language
+     *   for the given message identifier, returning whether the
+     *   utterance was queued.
      * @property stopPlayback Stops audio message playback.
      * @property stopSpeakingIfNeeded Stops speech synthesis if in
      *   progress.
-     * @property toggleAlternate Toggles the given kind of alternate
-     *   content for the given message.
+     * @property toggleAlternate Toggles the given kind of
+     *   alternate content for the given message.
      */
     @Suppress("LongParameterList")
     data class Dependencies(
@@ -165,6 +169,8 @@ class ContextMenuActionHandlerService(
         },
     )
 
+    // MARK: - Dependencies
+
     // MARK: - Properties
 
     /**
@@ -179,19 +185,20 @@ class ContextMenuActionHandlerService(
     /**
      * Returns the context menu actions for the given message.
      *
-     * The available actions depend on the message's content type and
-     * state: media messages offer to save the file; audio messages
-     * offer to view the transcription or audio, copy the transcription,
-     * and speak it aloud; text messages offer to copy or speak the
-     * text, view an alternate translation, and report the translation.
-     * Speaking is offered only when the device has a voice installed
-     * for the message's language. A reaction details action is added
-     * for any message that has reactions.
+     * The available actions depend on the message's content type
+     * and state: media messages offer to save the file; audio
+     * messages offer to view the transcription or audio, copy the
+     * transcription, and speak it aloud; text messages offer to
+     * copy or speak the text, view an alternate translation, and
+     * report the translation. Speaking is offered only when the
+     * device has a voice installed for the message's language. A
+     * reaction details action is added for any message that has
+     * reactions.
      *
      * @param message The message to build the menu for.
      *
-     * @return The context menu actions for the message, or `null` if
-     *   the message is a consent, mock, or outbox message.
+     * @return The context menu actions for the message, or `null`
+     *   if the message is a consent, mock, or outbox message.
      */
     fun menuForMessage(message: Message): List<ContextMenuAction>? {
         if (message.isConsentMessage || message.isMock || message.isOutboxMessage) return null

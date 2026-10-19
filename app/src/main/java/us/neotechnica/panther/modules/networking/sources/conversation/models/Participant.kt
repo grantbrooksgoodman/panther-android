@@ -25,17 +25,17 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetad
 data class Participant(
     /** The identifier of the participating user. */
     val userID: String,
-    /** A Boolean value that indicates whether the user has deleted the conversation. */
+    /**
+     * A Boolean value that indicates whether the user has deleted
+     * the conversation.
+     */
     val hasDeletedConversation: Boolean = false,
-    /** A Boolean value that indicates whether the user is currently typing. */
+    /**
+     * A Boolean value that indicates whether the user is
+     * currently typing.
+     */
     val isTyping: Boolean = false,
 ) : Serializable<Map<String, Any?>> {
-    // MARK: - Computed Properties
-
-    /** Whether the participant is well-formed (has a usable user ID). */
-    val isWellFormed: Boolean
-        get() = userID.isNotBlank() && !userID.isBangQualifiedEmpty
-
     // MARK: - Types
 
     /** The serializable keys for encoding and decoding the model. */
@@ -48,6 +48,13 @@ data class Participant(
     }
 
     // MARK: - Computed Properties
+
+    /**
+     * Whether the participant is well-formed (has a usable user
+     * ID).
+     */
+    val isWellFormed: Boolean
+        get() = userID.isNotBlank() && !userID.isBangQualifiedEmpty
 
     /** The serialized representation of the participant. */
     override val encoded: Map<String, Any?>

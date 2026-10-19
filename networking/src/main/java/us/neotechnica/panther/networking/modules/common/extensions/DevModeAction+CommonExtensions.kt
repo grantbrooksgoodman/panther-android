@@ -37,14 +37,20 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger.Alert
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import kotlin.system.exitProcess
 
-/** The Developer Mode action that inspects the current network health. */
+/**
+ * The Developer Mode action that inspects the current network
+ * health.
+ */
 val DevModeAction.Companion.inspectNetworkHealthAction: DevModeAction
     get() =
         DevModeAction(title = "Inspect Network Health") {
             scope.launch { inspectNetworkHealth() }
         }
 
-/** The Developer Mode action that groups the networking diagnostic options. */
+/**
+ * The Developer Mode action that groups the networking diagnostic
+ * options.
+ */
 val DevModeAction.Companion.networkingOptionsAction: DevModeAction
     get() =
         DevModeAction(title = "Networking Options") {
