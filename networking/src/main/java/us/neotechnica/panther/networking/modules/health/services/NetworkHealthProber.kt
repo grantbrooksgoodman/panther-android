@@ -11,6 +11,8 @@ package us.neotechnica.panther.networking.modules.health.services
 import android.os.PowerManager
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.constants.CommonNetworkingFloats
 import us.neotechnica.panther.networking.modules.health.extensions.isNetworkLevelFailure
@@ -20,8 +22,8 @@ import us.neotechnica.panther.networking.modules.health.models.PathState
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
-import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.TimeUnit
 import kotlin.math.max
 
 /**
@@ -126,21 +128,24 @@ internal class NetworkHealthProber(
     private fun performProbe(configuration: NetworkHealthProbeConfiguration) {
         Logger.log("Probing \"${configuration.url}\" for network health.", domain = LoggerDomain.Networking.health)
 
-        val timeoutMillis = (configuration.timeoutSeconds * CommonNetworkingFloats.MILLIS_PER_SECOND).toInt()
+        val timeoutMillis = (configuration.timeoutSeconds * CommonNetworkingFloats.MILLIS_PER_SECOND).toLong()
         val start = System.currentTimeMillis()
         val outcomeDescription =
             try {
-                val connection = URL(configuration.url).openConnection() as HttpURLConnection
-                connection.requestMethod = configuration.httpMethod
-                connection.connectTimeout = timeoutMillis
-                connection.readTimeout = timeoutMillis
-                val landingHost =
-                    try {
-                        connection.responseCode
-                        connection.url.host
-                    } finally {
-                        connection.disconnect()
-                    }
+                val client =
+                    OkHttpClient
+                        .Builder()
+                        .connectTimeout(timeoutMillis, TimeUnit.MILLISECONDS)
+                        .readTimeout(timeoutMillis, TimeUnit.MILLISECONDS)
+                        .eventListener(HealthEventListener())
+                        .build()
+                val request =
+                    Request
+                        .Builder()
+                        .url(configuration.url)
+                        .method(configuration.httpMethod, null)
+                        .build()
+                val landingHost = client.newCall(request).execute().use { response -> response.request.url.host }
 
                 val elapsed = (System.currentTimeMillis() - start) / CommonNetworkingFloats.MILLIS_PER_SECOND
                 val probeHost = runCatching { URL(configuration.url).host }.getOrNull()

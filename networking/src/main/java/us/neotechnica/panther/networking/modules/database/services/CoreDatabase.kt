@@ -245,9 +245,9 @@ internal class CoreDatabase {
 
     fun isEncodable(value: Any?): Boolean =
         when (value) {
-            null, is String, is Boolean, is Number -> true
+            is String, is Boolean, is Number -> true
             is List<*> -> value.all { isEncodable(it) }
-            is Map<*, *> -> value.keys.all { it is String } && value.values.all { isEncodable(it) }
+            is Map<*, *> -> value.values.all { isEncodable(it) }
             else -> false
         }
 

@@ -76,7 +76,8 @@ interface AuthDelegate {
 
     /**
      * Sends a verification code to the specified phone number via
-     * SMS and returns the verification ID.
+     * SMS and returns the verification ID, or signs the user in at
+     * once when the platform verifies the number instantly.
      *
      * **Note:** Phone verification requires an [Activity] to host
      * the Play Integrity or reCAPTCHA verification flow.
@@ -88,7 +89,10 @@ interface AuthDelegate {
      *   verification SMS. The default is the runtime language
      *   code.
      *
-     * @return The phone-number verification ID.
+     * @return [PhoneVerificationResult.CodeSent] with the
+     *   verification ID once a code is on its way, or
+     *   [PhoneVerificationResult.SignedIn] with the user ID when
+     *   the number was verified without a code.
      *
      * @throws us.neotechnica.panther.subsystem.modules.foundation.models.Exception
      *   if verification fails.
@@ -97,5 +101,30 @@ interface AuthDelegate {
         activity: Activity,
         internationalNumber: String,
         languageCode: String = RuntimeStorage.languageCode,
-    ): String
+    ): PhoneVerificationResult
+
+    // MARK: - Types
+
+    /** The outcome of a phone-number verification request. */
+    sealed interface PhoneVerificationResult {
+        /**
+         * A verification code was sent to the number.
+         *
+         * @property verificationID The identifier to pass to
+         *   [authenticateUser] with the code the user enters.
+         */
+        data class CodeSent(
+            val verificationID: String,
+        ) : PhoneVerificationResult
+
+        /**
+         * The number was verified without a code and the user is
+         * signed in.
+         *
+         * @property userID The signed-in user's identifier.
+         */
+        data class SignedIn(
+            val userID: String,
+        ) : PhoneVerificationResult
+    }
 }

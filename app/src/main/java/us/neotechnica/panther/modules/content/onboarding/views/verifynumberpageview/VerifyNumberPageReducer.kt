@@ -25,6 +25,7 @@ import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.modules.auth.extensions.notReportableForAuthCodes
+import us.neotechnica.panther.networking.modules.auth.interfaces.AuthDelegate
 import us.neotechnica.panther.networking.modules.common.dependencies.networking
 import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.translation.extensions.value
@@ -144,7 +145,7 @@ class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNum
 
         /** An action that indicates a verification code was sent to the entered phone number, carrying the identifier issued for the authentication attempt. */
         data class VerifyPhoneNumberReturned(
-            val authID: String,
+            val result: AuthDelegate.PhoneVerificationResult,
         ) : Action
     }
 
@@ -289,11 +290,23 @@ class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNum
             is Action.VerifyPhoneNumberReturned -> {
                 Overlay.removeOverlay()
 
-                onboardingService.setAuthID(action.authID)
                 onboardingService.setPhoneNumber(state.phoneNumber)
                 onboardingService.setRegionCode(state.selectedRegionCode)
 
-                navigation.navigate(Route.Onboarding(OnboardingRoute.Push(OnboardingNavigatorState.SeguePaths.AuthCode)))
+                when (val result = action.result) {
+                    is AuthDelegate.PhoneVerificationResult.CodeSent -> {
+                        onboardingService.setAuthID(result.verificationID)
+                        navigation.navigate(Route.Onboarding(OnboardingRoute.Push(OnboardingNavigatorState.SeguePaths.AuthCode)))
+                    }
+
+                    // Verified without a code: skip the code page and
+                    // continue as a successful code entry would.
+                    is AuthDelegate.PhoneVerificationResult.SignedIn -> {
+                        onboardingService.setUserID(result.userID)
+                        navigation.navigate(Route.Onboarding(OnboardingRoute.Push(OnboardingNavigatorState.SeguePaths.Permission)))
+                    }
+                }
+
                 ReduceResult(state.copy(isBackButtonEnabled = true, isContinueButtonEnabled = true))
             }
         }

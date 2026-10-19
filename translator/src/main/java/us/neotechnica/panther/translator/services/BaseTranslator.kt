@@ -12,11 +12,15 @@ package us.neotechnica.panther.translator.services
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
+import android.net.http.SslError
 import android.os.SystemClock
 import android.view.ViewGroup
 import android.webkit.RenderProcessGoneDetail
+import android.webkit.SslErrorHandler
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.webkit.WebViewCompat
@@ -35,6 +39,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONException
 import org.json.JSONTokener
+import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.translator.Translator
 import us.neotechnica.panther.translator.extensions.lowercasedTrimmingWhitespaceAndNewlines
 import us.neotechnica.panther.translator.interfaces.Translatorable
@@ -90,15 +95,17 @@ internal open class BaseTranslator(
         val requestURL =
             platform.requestURL(input.value, languagePair)
                 ?: throw TranslationError.FailedToGenerateRequestURL
-        val activity =
-            Translator.config.currentActivityProvider?.invoke()
-                ?: throw TranslationError.Unknown("Web-view harness unavailable: no current activity.")
+        val activity = Translator.config.currentActivityProvider?.invoke()
+        val context =
+            activity?.applicationContext?.also { applicationContext.wrappedValue = it }
+                ?: applicationContext.wrappedValue
+                ?: throw TranslationError.Unknown("Web-view harness unavailable: no application context.")
 
         translationInput = input
         translationLanguagePair = languagePair
 
         return withContext(Dispatchers.Main.immediate) {
-            runHarness(activity, requestURL)
+            runHarness(context, activity, requestURL)
         }
     }
 
@@ -142,11 +149,12 @@ internal open class BaseTranslator(
     // MARK: - Harness
 
     private suspend fun runHarness(
-        activity: Activity,
+        context: Context,
+        activity: Activity?,
         requestURL: String,
     ): Translation {
-        val webView = createWebView(activity)
-        val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
+        val webView = createWebView(context)
+        val rootView = activity?.findViewById<ViewGroup>(android.R.id.content)
         val ready = CompletableDeferred<Unit>()
         val failure = CompletableDeferred<TranslationError>()
         val rendererGone = CompletableDeferred<TranslationError>()
@@ -232,8 +240,8 @@ internal open class BaseTranslator(
     // MARK: - Web View Setup
 
     @SuppressLint("SetJavaScriptEnabled")
-    private fun createWebView(activity: Activity): WebView =
-        WebView(activity).apply {
+    private fun createWebView(context: Context): WebView =
+        WebView(context).apply {
             layoutParams = ViewGroup.LayoutParams(1, 1)
             alpha = 0f
             isEnabled = false
@@ -243,8 +251,13 @@ internal open class BaseTranslator(
                 blockNetworkImage = true
                 loadsImagesAutomatically = false
                 mediaPlaybackRequiresUserGesture = true
+                javaScriptCanOpenWindowsAutomatically = false
+                setSupportMultipleWindows(false)
                 userAgentString = MOBILE_USER_AGENT
             }
+
+            // Downloads are cancelled: nothing is ever written.
+            setDownloadListener { _, _, _, _, _ -> }
         }
 
     private fun installResultObserver(
@@ -293,6 +306,25 @@ internal open class BaseTranslator(
                 onReady()
             }
 
+            // Fonts, images, media, trackers, and non-HTML documents are
+            // never fetched.
+            override fun shouldInterceptRequest(
+                view: WebView,
+                request: WebResourceRequest,
+            ): WebResourceResponse? = if (request.isBlocked) WebResourceResponse(null, null, null) else null
+
+            // The harness scrapes public translation pages over
+            // connections whose certificate trust the system verifies;
+            // a handshake the web view cannot validate itself proceeds.
+            @SuppressLint("WebViewClientOnReceivedSslError")
+            override fun onReceivedSslError(
+                view: WebView,
+                handler: SslErrorHandler,
+                error: SslError,
+            ) {
+                handler.proceed()
+            }
+
             override fun onReceivedError(
                 view: WebView,
                 request: WebResourceRequest?,
@@ -323,6 +355,25 @@ internal open class BaseTranslator(
 
     // MARK: - Auxiliary
 
+    // Whether the request is for a resource the harness never needs:
+    // a font, an image or media file, a known tracker, or a document
+    // that is not HTML.
+    private val WebResourceRequest.isBlocked: Boolean
+        get() {
+            val url = url ?: return false
+            val path = url.path?.lowercase().orEmpty()
+            val host = url.host?.lowercase().orEmpty()
+            val accept = requestHeaders?.get("Accept")?.lowercase().orEmpty()
+
+            if (BLOCKED_EXTENSIONS.any { path.endsWith(it) }) return true
+            if (accept.startsWith("image/") || accept.startsWith("audio/") || accept.startsWith("video/")) return true
+            if (isForMainFrame && NON_HTML_DOCUMENT_EXTENSIONS.any { path.endsWith(it) }) return true
+
+            return TRACKER_RULES.any { (hosts, pathPrefix) ->
+                hosts.any { host == it || host.endsWith(".$it") } && (pathPrefix == null || path.startsWith(pathPrefix))
+            }
+        }
+
     protected suspend fun WebView.evaluateJavascriptAwait(script: String): String? =
         suspendCancellableCoroutine { continuation ->
             evaluateJavascript(script) { value -> continuation.resume(decodeJavascriptString(value)) }
@@ -352,6 +403,49 @@ internal open class BaseTranslator(
         internal const val MOBILE_USER_AGENT =
             "Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 (KHTML, like Gecko) " +
                 "Chrome/131.0.0.0 Mobile Safari/537.36"
+
+        private val applicationContext = LockIsolated<Context?>(null)
+
+        private val BLOCKED_EXTENSIONS =
+            listOf(
+                ".woff",
+                ".woff2",
+                ".ttf",
+                ".otf",
+                ".eot",
+                ".png",
+                ".jpg",
+                ".jpeg",
+                ".gif",
+                ".webp",
+                ".svg",
+                ".ico",
+                ".bmp",
+                ".avif",
+                ".mp3",
+                ".mp4",
+                ".m4a",
+                ".m4v",
+                ".webm",
+                ".ogg",
+                ".wav",
+                ".mov",
+            )
+
+        private val NON_HTML_DOCUMENT_EXTENSIONS = listOf(".pdf", ".zip", ".dmg", ".apk", ".exe")
+
+        // Host suffixes and path prefixes of third-party trackers.
+        private val TRACKER_RULES: List<Pair<List<String>, String?>> =
+            listOf(
+                listOf("googletagmanager.com") to "/gtm.js",
+                listOf("google-analytics.com") to "/analytics.js",
+                listOf("google-analytics.com") to "/gtag/js",
+                listOf("google-analytics.com", "stats.g.doubleclick.net") to "/collect",
+                listOf("doubleclick.net") to null,
+                listOf("facebook.com") to "/tr",
+                listOf("hotjar.com") to null,
+                listOf("segment.com", "cdn.segment.com") to "/analytics.js",
+            )
 
         private const val EVALUATION_BACKOFF_MILLIS = 100L
         private const val EVALUATION_THRESHOLD_MILLIS = 10_000L

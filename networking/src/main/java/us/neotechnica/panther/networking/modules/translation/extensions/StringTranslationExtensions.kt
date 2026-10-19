@@ -11,7 +11,6 @@ package us.neotechnica.panther.networking.modules.translation.extensions
 import android.util.Base64
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHashOf
 import java.io.ByteArrayOutputStream
-import java.util.Locale
 
 // MARK: - Hashing
 
@@ -67,20 +66,12 @@ internal val String.percentDecoded: String?
                 bytes.write(byte)
                 index += 1 + HEX_DIGIT_COUNT
             } else {
-                bytes.write(character.code)
-                index += 1
+                val codePoint = codePointAt(index)
+                bytes.write(String(Character.toChars(codePoint)).toByteArray(Charsets.UTF_8))
+                index += Character.charCount(codePoint)
             }
         }
         return bytes.toByteArray().toString(Charsets.UTF_8)
-    }
-
-// MARK: - Language Names
-
-/** The English display name for this language code, or `null`. */
-internal val String.englishLanguageName: String?
-    get() {
-        val displayLanguage = Locale(this).getDisplayLanguage(Locale.ENGLISH)
-        return displayLanguage.takeUnless { it.isBlank() || it.equals(this, ignoreCase = true) }
     }
 
 // MARK: - Trimming

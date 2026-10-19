@@ -16,7 +16,6 @@ import us.neotechnica.panther.translator.models.Translation
 import us.neotechnica.panther.translator.models.TranslationError
 import us.neotechnica.panther.translator.models.TranslationInput
 import us.neotechnica.panther.translator.models.TranslationPlatform
-import java.net.URLEncoder
 
 /**
  * Translates using Google Translate.
@@ -75,7 +74,13 @@ internal class GoogleTranslator : BaseTranslator(TranslationPlatform.GOOGLE) {
     ): Translation {
         val source = platform.identifier(languagePair.from) ?: throw TranslationError.FailedToGenerateRequestURL
         val target = platform.identifier(languagePair.to) ?: throw TranslationError.FailedToGenerateRequestURL
-        val encoded = URLEncoder.encode(input.value, "UTF-8").replace("+", "%20")
+        // Percent-encode the query manually; characters like "+" would
+        // otherwise be decoded by the endpoint as a space.
+        val encoded =
+            TranslationPlatform.percentEncoded(
+                input.value,
+                allowedCharacters = TranslationPlatform.URL_QUERY_ALLOWED_CHARACTERS.filterNot { it in "+&=?" },
+            )
 
         val url = "$API_BASE_URL?client=gtx&dt=t&sl=$source&tl=$target&q=$encoded"
         val response = NetworkClient.get(url)
@@ -102,8 +107,7 @@ internal class GoogleTranslator : BaseTranslator(TranslationPlatform.GOOGLE) {
     // MARK: - Companion
 
     companion object {
-        internal const val API_WARMUP_URL_STRING = "https://translate.googleapis.com"
-
         private const val API_BASE_URL = "https://translate.googleapis.com/translate_a/single"
+        internal const val API_WARMUP_URL_STRING = "$API_BASE_URL?client=gtx&dt=t&sl=en&tl=es&q=a"
     }
 }

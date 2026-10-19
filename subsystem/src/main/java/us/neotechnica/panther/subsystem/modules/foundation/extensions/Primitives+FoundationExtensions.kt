@@ -61,6 +61,23 @@ val String.languageExonym: String?
     }
 
 /**
+ * The English name of the language this string identifies, or
+ * `null` if the string is not a known language code.
+ *
+ * For example, "Spanish" for devices with Spanish language codes.
+ */
+val String.englishLanguageName: String?
+    get() {
+        if (isEmpty() || lowercasedTrimmingWhitespaceAndNewlines.isEmpty()) return null
+        val languageCodes = RuntimeStorage.languageCodeDictionary ?: return null
+        val name = languageCodes[this] ?: languageCodes[lowercasedTrimmingWhitespaceAndNewlines] ?: return null
+
+        val components = name.split(" (")
+        if (components.isEmpty()) return name.trim()
+        return components[0].trim()
+    }
+
+/**
  * The display name of the language this string identifies, or `null`
  * if the string is not a known language code.
  *

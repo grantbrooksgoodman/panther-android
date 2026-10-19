@@ -8,9 +8,9 @@
 
 package us.neotechnica.panther.translator.models
 
-import android.util.Patterns
 import us.neotechnica.panther.translator.Translator
 import us.neotechnica.panther.translator.interfaces.Validatable
+import us.neotechnica.panther.translator.services.DataDetector
 
 /**
  * The source text for a translation request.
@@ -39,41 +39,32 @@ data class TranslationInput(
     override val isWellFormed: Boolean get() = !value.isBlank()
 
     /**
-     * A copy whose detected email addresses, links, and phone
-     * numbers are wrapped in the processing delimiter, so
-     * translation preserves them.
+     * A copy whose detected addresses, links, and phone numbers are
+     * wrapped in the processing delimiter, so translation preserves
+     * them.
      *
-     * **Note:** postal addresses are not tokenized here, as no
-     * address detector is available.
+     * Detected spans never overlap; a phone number is tokenized only
+     * when it is plausibly formatted. Postal addresses are detected
+     * only when the system text classifier is reachable.
      */
     val withTokenizedDetectorAttributes: TranslationInput
-        get() {
-            val delimiter = Translator.Constants.PROCESSING_DELIMITER
-            var stringValue = value
-
-            for (taggableString in detectedTaggableSubstrings(value)) {
-                stringValue =
-                    stringValue.replace(
-                        taggableString,
-                        "$delimiter$taggableString$delimiter",
-                    )
-            }
-
-            if (stringValue == value) return this
-            return TranslationInput(stringValue)
-        }
+        get() = withTokenizedDetectorAttributes(DataDetector.shared)
 
     // MARK: - Auxiliary
 
-    private fun detectedTaggableSubstrings(string: String): List<String> {
-        val results = mutableListOf<String>()
-        for (pattern in listOf(Patterns.EMAIL_ADDRESS, Patterns.WEB_URL, Patterns.PHONE)) {
-            val matcher = pattern.matcher(string)
-            while (matcher.find()) {
-                val match = matcher.group()
-                if (!match.isNullOrBlank()) results.add(match)
-            }
+    internal fun withTokenizedDetectorAttributes(dataDetector: DataDetector): TranslationInput {
+        val delimiter = Translator.Constants.PROCESSING_DELIMITER
+        var stringValue = value
+
+        for (taggableString in dataDetector.matches(value)) {
+            stringValue =
+                stringValue.replace(
+                    taggableString,
+                    "$delimiter$taggableString$delimiter",
+                )
         }
-        return results
+
+        if (stringValue == value) return this
+        return TranslationInput(stringValue)
     }
 }

@@ -24,7 +24,6 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.HUDConfig
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.translation.extensions.encodedHash
-import us.neotechnica.panther.networking.modules.translation.extensions.englishLanguageName
 import us.neotechnica.panther.networking.modules.translation.extensions.sanitized
 import us.neotechnica.panther.networking.modules.translation.extensions.system
 import us.neotechnica.panther.networking.modules.translation.extensions.trimmingTrailingWhitespace
@@ -34,6 +33,7 @@ import us.neotechnica.panther.networking.modules.translation.models.ArchiveStrat
 import us.neotechnica.panther.networking.modules.translation.models.TranslationOutputMap
 import us.neotechnica.panther.networking.modules.translation.models.TranslationValidator
 import us.neotechnica.panther.subsystem.AppSubsystem
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.englishLanguageName
 import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
@@ -237,34 +237,11 @@ class HostedTranslationService private constructor() : HostedTranslationDelegate
                 domain = LoggerDomain.Networking.hostedTranslation,
             )
 
-            return try {
-                postProcess(
-                    translateWithTranslator(input, languagePair, hudConfig),
-                    archiveTreatment = ArchiveTreatment.ADD_TO_BOTH_ARCHIVES,
-                    archiveStrategy = archiveStrategy,
-                )
-            } catch (exception: Exception) {
-                if (!exception.isEqual(
-                        toAny =
-                            listOf(
-                                AppException.Networking.Translation.exhaustedAvailablePlatforms,
-                                AppException.Networking.Translation.sameTranslationInputOutput,
-                            ),
-                    )
-                ) {
-                    throw exception
-                }
-
-                postProcess(
-                    Translation(
-                        input = input,
-                        output = input.value.sanitized,
-                        languagePair = languagePair,
-                    ),
-                    archiveTreatment = ArchiveTreatment.ADD_TO_BOTH_ARCHIVES,
-                    archiveStrategy = archiveStrategy,
-                )
-            }
+            return postProcess(
+                translateWithTranslator(input, languagePair, hudConfig),
+                archiveTreatment = ArchiveTreatment.ADD_TO_BOTH_ARCHIVES,
+                archiveStrategy = archiveStrategy,
+            )
         } finally {
             Networking.config.activityIndicatorDelegate.hide()
         }

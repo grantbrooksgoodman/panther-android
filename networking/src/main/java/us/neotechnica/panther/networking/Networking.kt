@@ -255,6 +255,20 @@ object Networking {
             hostedTranslationDelegate: HostedTranslationDelegate? = null,
             storageDelegate: StorageDelegate? = null,
         ) {
+            val delegates =
+                listOf(
+                    activityIndicatorDelegate,
+                    authDelegate,
+                    databaseDelegate,
+                    healthDelegate,
+                    hostedTranslationDelegate,
+                    storageDelegate,
+                )
+            if (delegates.all { it == null }) {
+                assert(false) { "No delegates provided in arguments." }
+                return
+            }
+
             activityIndicatorDelegate?.let { activityIndicator.wrappedValue = it }
             authDelegate?.let { auth.wrappedValue = it }
             databaseDelegate?.let { database.wrappedValue = it }

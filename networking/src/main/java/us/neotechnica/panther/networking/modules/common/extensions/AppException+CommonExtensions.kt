@@ -75,15 +75,6 @@ object NetworkingAppExceptions {
 
     /** Catalogued translation exceptions. */
     object TranslationAppExceptions {
-        /**
-         * All available translation platforms have been
-         * exhausted without success.
-         */
-        val exhaustedAvailablePlatforms = AppException("C526")
-
-        /** The translation input and output are identical. */
-        val sameTranslationInputOutput = AppException("6CEB")
-
         /** Derivation of the translation failed. */
         val translationDerivationFailed = AppException("43B4")
     }

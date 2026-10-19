@@ -15,6 +15,7 @@ import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
+import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
 import us.neotechnica.panther.networking.Networking
@@ -24,6 +25,8 @@ import us.neotechnica.panther.networking.modules.common.extensions.digits
 import us.neotechnica.panther.networking.modules.common.models.GuardedOperation
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
@@ -65,10 +68,33 @@ class Auth : AuthDelegate {
     override suspend fun signInAnonymously(): String {
         GuardedOperation.checkPreconditions(sender = this)
 
-        firebaseAuth.currentUser?.let { return it.uid }
+        firebaseAuth.currentUser?.let { currentUser ->
+            Logger.log(
+                Exception(
+                    "Using persisted user ID for anonymous sign-in.",
+                    isReportable = false,
+                    userInfo = mapOf("CurrentUserID" to currentUser.uid),
+                    metadata = ExceptionMetadata(this),
+                ),
+                domain = LoggerDomain.Networking.auth,
+            )
+
+            return currentUser.uid
+        }
 
         return try {
-            checkNotNull(firebaseAuth.signInAnonymously().await().user).uid
+            val userID = checkNotNull(firebaseAuth.signInAnonymously().await().user).uid
+            Logger.log(
+                Exception(
+                    "Signed in as anonymous user.",
+                    isReportable = false,
+                    userInfo = mapOf("AnonymousUserID" to userID),
+                    metadata = ExceptionMetadata(this),
+                ),
+                domain = LoggerDomain.Networking.auth,
+            )
+
+            userID
         } catch (throwable: Throwable) {
             throw wrap(throwable)
         }
@@ -77,6 +103,7 @@ class Auth : AuthDelegate {
     override fun signOut() {
         try {
             firebaseAuth.signOut()
+            Logger.log("Signed out current user.", domain = LoggerDomain.Networking.auth)
         } catch (throwable: Throwable) {
             throw wrap(throwable)
         }
@@ -86,20 +113,36 @@ class Auth : AuthDelegate {
         activity: Activity,
         internationalNumber: String,
         languageCode: String,
-    ): String {
+    ): AuthDelegate.PhoneVerificationResult {
         GuardedOperation.checkPreconditions(sender = this)
 
         firebaseAuth.setLanguageCode(languageCode)
         Networking.config.activityIndicatorDelegate.show()
 
         return try {
-            requestVerificationID(
-                activity,
-                "+${internationalNumber.digits}",
+            resolve(
+                requestVerification(
+                    activity,
+                    "+${internationalNumber.digits}",
+                ),
             )
         } finally {
             Networking.config.activityIndicatorDelegate.hide()
         }
+    }
+
+    // MARK: - Types
+
+    // What the verification callbacks delivered before the request
+    // settled: a code on its way, or a credential verified without one.
+    internal sealed interface VerificationOutcome {
+        data class CodeSent(
+            val verificationID: String,
+        ) : VerificationOutcome
+
+        data class Completed(
+            val signIn: suspend () -> String,
+        ) : VerificationOutcome
     }
 
     // MARK: - Auxiliary
@@ -108,38 +151,12 @@ class Auth : AuthDelegate {
     // number already sent a code passes that code's resending token:
     // without it, Firebase ignores any request for the number until the
     // earlier one times out, reporting neither a code nor a failure.
-    private suspend fun requestVerificationID(
+    private suspend fun requestVerification(
         activity: Activity,
         formattedNumber: String,
-    ): String =
+    ): VerificationOutcome =
         suspendCancellableCoroutine { continuation ->
-            val callbacks =
-                object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
-                    override fun onCodeSent(
-                        verificationID: String,
-                        token: PhoneAuthProvider.ForceResendingToken,
-                    ) {
-                        resendingTokens[formattedNumber] = token
-                        if (continuation.isActive) continuation.resume(verificationID)
-                    }
-
-                    // Should a request still go unanswered, the wait ends once
-                    // the code's auto-retrieval window closes, rather than never.
-                    override fun onCodeAutoRetrievalTimeOut(verificationID: String) {
-                        if (continuation.isActive) continuation.resume(verificationID)
-                    }
-
-                    override fun onVerificationCompleted(credential: PhoneAuthCredential) {
-                        // Instant / auto-retrieval. The verification ID, if
-                        // present, still drives the code-entry flow.
-                        credential.smsCode?.let { return }
-                    }
-
-                    override fun onVerificationFailed(exception: com.google.firebase.FirebaseException) {
-                        if (continuation.isActive) continuation.resumeWithException(wrap(exception))
-                    }
-                }
-
+            val callbacks = verificationCallbacks(formattedNumber, continuation)
             val options =
                 PhoneAuthOptions
                     .newBuilder(firebaseAuth)
@@ -151,6 +168,69 @@ class Auth : AuthDelegate {
             resendingTokens[formattedNumber]?.let { options.setForceResendingToken(it) }
             PhoneAuthProvider.verifyPhoneNumber(options.build())
         }
+
+    // Maps a settled verification to its result, signing in when the
+    // number was verified without a code.
+    internal suspend fun resolve(outcome: VerificationOutcome): AuthDelegate.PhoneVerificationResult =
+        when (outcome) {
+            is VerificationOutcome.CodeSent -> AuthDelegate.PhoneVerificationResult.CodeSent(outcome.verificationID)
+            is VerificationOutcome.Completed -> AuthDelegate.PhoneVerificationResult.SignedIn(outcome.signIn())
+        }
+
+    // Settles a pending verification request from the events the
+    // platform delivers, at most once.
+    internal inner class PhoneVerificationHandler(
+        private val continuation: CancellableContinuation<VerificationOutcome>,
+    ) {
+        fun onCodeSent(verificationID: String) {
+            if (continuation.isActive) continuation.resume(VerificationOutcome.CodeSent(verificationID))
+        }
+
+        // Should a request still go unanswered, the wait ends once the
+        // code's auto-retrieval window closes, rather than never.
+        fun onCodeAutoRetrievalTimeOut(verificationID: String) {
+            if (continuation.isActive) continuation.resume(VerificationOutcome.CodeSent(verificationID))
+        }
+
+        // Instant verification: no code was sent, so the delivered
+        // credential signs the user in. After a code was sent, the
+        // code-entry flow still drives the sign-in.
+        fun onVerificationCompleted(signIn: suspend () -> String) {
+            if (continuation.isActive) continuation.resume(VerificationOutcome.Completed(signIn))
+        }
+
+        fun onVerificationFailed(throwable: Throwable) {
+            if (continuation.isActive) continuation.resumeWithException(wrap(throwable))
+        }
+    }
+
+    private fun verificationCallbacks(
+        formattedNumber: String,
+        continuation: CancellableContinuation<VerificationOutcome>,
+    ): PhoneAuthProvider.OnVerificationStateChangedCallbacks {
+        val handler = PhoneVerificationHandler(continuation)
+        return object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+            override fun onCodeSent(
+                verificationID: String,
+                token: PhoneAuthProvider.ForceResendingToken,
+            ) {
+                resendingTokens[formattedNumber] = token
+                handler.onCodeSent(verificationID)
+            }
+
+            override fun onCodeAutoRetrievalTimeOut(verificationID: String) {
+                handler.onCodeAutoRetrievalTimeOut(verificationID)
+            }
+
+            override fun onVerificationCompleted(credential: PhoneAuthCredential) {
+                handler.onVerificationCompleted { signInOrLink(credential) }
+            }
+
+            override fun onVerificationFailed(exception: com.google.firebase.FirebaseException) {
+                handler.onVerificationFailed(exception)
+            }
+        }
+    }
 
     private suspend fun signInOrLink(credential: PhoneAuthCredential): String {
         val currentUser = firebaseAuth.currentUser

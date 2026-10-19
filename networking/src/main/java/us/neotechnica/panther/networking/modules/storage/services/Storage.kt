@@ -16,6 +16,8 @@ import us.neotechnica.panther.networking.modules.storage.models.HostedItemMetada
 import us.neotechnica.panther.networking.modules.storage.models.HostedItemType
 import us.neotechnica.panther.networking.modules.storage.models.StorageOperation
 import us.neotechnica.panther.networking.modules.storage.models.StorageTransferProgress
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import java.io.File
 import kotlin.time.Duration
 
@@ -188,9 +190,9 @@ class Storage : StorageDelegate {
                 StorageOperation.EnumerateEmptyDirectories(path),
                 prependingEnvironment = prependingEnvironment,
                 timeout = timeout,
-            ) as? Set<*>
+            ) as? Set<*> ?: throw Exception(metadata = ExceptionMetadata(this))
 
-        return result?.filterIsInstance<String>()?.toSet() ?: emptySet()
+        return result.filterIsInstance<String>().toSet()
     }
 
     override suspend fun getDirectoryListing(
@@ -223,7 +225,7 @@ class Storage : StorageDelegate {
             ),
             prependingEnvironment = prependingEnvironment,
             timeout = timeout,
-        ) as? Boolean ?: false
+        ) as? Boolean ?: throw Exception(metadata = ExceptionMetadata(this))
 
     // MARK: - Clear Store
 

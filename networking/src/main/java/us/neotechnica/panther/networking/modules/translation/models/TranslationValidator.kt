@@ -12,6 +12,7 @@ import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.translation.extensions.reference
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import us.neotechnica.panther.translator.extensions.isWellFormed
 import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.Translation
 import us.neotechnica.panther.translator.models.TranslationInput
@@ -46,7 +47,7 @@ object TranslationValidator {
         languagePair?.let { userInfo["LanguagePair"] = it.string }
         translation?.let { userInfo["TranslationReferenceHostingKey"] = it.reference.hostingKey }
 
-        if (inputs != null && !inputs.all { it.isWellFormed }) {
+        if (inputs != null && !inputs.isWellFormed) {
             throw Exception.Networking.inputsFailValidation(userInfo, metadata)
         }
 

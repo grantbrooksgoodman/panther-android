@@ -13,9 +13,11 @@ import kotlinx.coroutines.flow.map
 import us.neotechnica.panther.networking.Networking
 import us.neotechnica.panther.networking.modules.common.extensions.Networking
 import us.neotechnica.panther.networking.modules.common.models.CacheStrategy
+import us.neotechnica.panther.networking.modules.database.extensions.conformsTo
 import us.neotechnica.panther.networking.modules.database.models.QueryStrategy
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
+import kotlin.reflect.typeOf
 import kotlin.time.Duration
 
 /**
@@ -310,7 +312,7 @@ suspend inline fun <reified T> DatabaseDelegate.getValues(
             timeout = timeout,
         )
 
-    return values as? T ?: throw Exception.Networking.typecastFailed(
+    return values.takeIf { it.conformsTo(typeOf<T>()) } as? T ?: throw Exception.Networking.typecastFailed(
         T::class.simpleName,
         metadata = ExceptionMetadata(this),
     )
@@ -340,7 +342,7 @@ inline fun <reified T> DatabaseDelegate.observe(
         path,
         prependingEnvironment = prependingEnvironment,
     ).map { value ->
-        value as? T ?: throw Exception.Networking.typecastFailed(
+        value.takeIf { it.conformsTo(typeOf<T>()) } as? T ?: throw Exception.Networking.typecastFailed(
             T::class.simpleName,
             metadata = ExceptionMetadata(this),
         )
@@ -379,7 +381,7 @@ suspend inline fun <reified T> DatabaseDelegate.queryValues(
             timeout = timeout,
         )
 
-    return values as? T ?: throw Exception.Networking.typecastFailed(
+    return values.takeIf { it.conformsTo(typeOf<T>()) } as? T ?: throw Exception.Networking.typecastFailed(
         T::class.simpleName,
         metadata = ExceptionMetadata(this),
     )

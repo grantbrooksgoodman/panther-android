@@ -21,6 +21,7 @@ import us.neotechnica.panther.designsystem.modules.alertkit.models.TextFieldAttr
 import us.neotechnica.panther.designsystem.modules.alertkit.models.TextInputAlert
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUD
 import us.neotechnica.panther.designsystem.modules.foundation.services.MailComposer
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.englishLanguageName
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.languageName
 import us.neotechnica.panther.subsystem.modules.foundation.extensions.lowercasedTrimmingWhitespaceAndNewlines
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -33,7 +34,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.translator.Translator
-import java.util.Locale
 
 /**
  * The built-in diagnostic actions shown in the subsystem domain of the
@@ -248,11 +248,6 @@ object DevModeSubsystemActions {
         CoreUtilities.restoreDeviceLanguageCode()
         if (showSuccess) HUD.showSuccess()
     }
-
-    // The language's name in English, or `null` when the platform has
-    // no name for the code.
-    private val String.englishLanguageName: String?
-        get() = Locale(this).getDisplayLanguage(Locale.ENGLISH).takeIf { it.isNotBlank() && it != this }
 }
 
 private const val SESSION_RECORD_MIME_TYPE = "text/plain"

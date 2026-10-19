@@ -85,7 +85,7 @@ internal class HostedTranslationArchiver {
     // MARK: - Computed Properties
 
     private val hasFreshTranslationDataSnapshot: Boolean
-        get() = state.wrappedValue.translationDataSample.let { !it.isEmpty && !it.isExpired }
+        get() = state.wrappedValue.translationDataSample.let { it.isPopulated && !it.isExpired }
 
     // MARK: - Init
 
@@ -320,7 +320,7 @@ internal class HostedTranslationArchiver {
             state.withValue { ref ->
                 val sample = ref.value.translationDataSample
                 val isStale =
-                    sample.isEmpty ||
+                    !sample.isPopulated ||
                         sample.isExpired ||
                         (System.currentTimeMillis() - sample.date) >= REFRESH_INTERVAL_MILLIS
                 if (ref.value.isPopulating || !isStale) {
@@ -333,9 +333,9 @@ internal class HostedTranslationArchiver {
 
         if (!shouldProceed) return
 
-        val translationData: Map<String, Any> =
+        val translationData: Map<String, Map<String, Any>> =
             try {
-                database.getValues<Map<String, Any>>(NetworkPath.translations.rawValue)
+                database.getValues<Map<String, Map<String, Any>>>(NetworkPath.translations.rawValue)
             } catch (exception: Exception) {
                 state.withValue { it.value = it.value.copy(isPopulating = false) }
                 throw exception
@@ -394,7 +394,7 @@ internal class HostedTranslationArchiver {
         }
     }
 
-    private suspend fun refreshTranslationDataSnapshot() {
+    internal suspend fun refreshTranslationDataSnapshot() {
         try {
             populateTranslationDataSnapshot()
         } catch (cancellation: CancellationException) {

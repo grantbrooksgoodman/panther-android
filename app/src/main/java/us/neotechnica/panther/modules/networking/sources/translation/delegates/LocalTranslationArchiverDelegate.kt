@@ -191,21 +191,29 @@ class LocalTranslationArchiverDelegate :
 
     private fun encode(translation: Translation): Map<String, Any?> =
         buildMap {
-            put(KEY_ORIGINAL, translation.input.original)
-            translation.input.alternate?.let { put(KEY_ALTERNATE, it) }
+            put(
+                KEY_INPUT,
+                buildMap {
+                    put(KEY_ORIGINAL, translation.input.original)
+                    translation.input.alternate?.let { put(KEY_ALTERNATE, it) }
+                },
+            )
+            put(KEY_LANGUAGE_PAIR, mapOf(KEY_FROM to translation.languagePair.from, KEY_TO to translation.languagePair.to))
             put(KEY_OUTPUT, translation.output)
-            put(KEY_FROM, translation.languagePair.from)
-            put(KEY_TO, translation.languagePair.to)
         }
 
+    // Reads the nested shape, falling back to the flat shape earlier
+    // archives were written in.
     private fun decode(map: Map<String, Any?>): Translation? {
-        val original = map[KEY_ORIGINAL] as? String ?: return null
+        val input = map[KEY_INPUT] as? Map<*, *> ?: map
+        val languagePair = map[KEY_LANGUAGE_PAIR] as? Map<*, *> ?: map
+        val original = input[KEY_ORIGINAL] as? String ?: return null
         val output = map[KEY_OUTPUT] as? String ?: return null
-        val from = map[KEY_FROM] as? String ?: return null
-        val to = map[KEY_TO] as? String ?: return null
+        val from = languagePair[KEY_FROM] as? String ?: return null
+        val to = languagePair[KEY_TO] as? String ?: return null
 
         return Translation(
-            input = TranslationInput(original, alternate = map[KEY_ALTERNATE] as? String),
+            input = TranslationInput(original, alternate = input[KEY_ALTERNATE] as? String),
             output = output,
             languagePair = LanguagePair(from = from, to = to),
         )
@@ -237,8 +245,10 @@ class LocalTranslationArchiverDelegate :
             AppSubsystem.delegates.registerTranslationArchiverDelegate(archiver)
         }
 
+        private const val KEY_INPUT = "input"
         private const val KEY_ORIGINAL = "original"
         private const val KEY_ALTERNATE = "alternate"
+        private const val KEY_LANGUAGE_PAIR = "languagePair"
         private const val KEY_OUTPUT = "output"
         private const val KEY_FROM = "from"
         private const val KEY_TO = "to"

@@ -26,6 +26,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -249,9 +250,14 @@ internal class CoreStorage {
     private fun transferProgressStream(
         timeout: Duration,
         transfer: suspend (onProgress: (StorageTransferProgress) -> Unit) -> Unit,
-    ): Flow<StorageTransferProgress> =
-        channelFlow {
-            GuardedOperation.checkPreconditions(sender = this@CoreStorage)
+    ): Flow<StorageTransferProgress> {
+        try {
+            GuardedOperation.checkPreconditions(sender = this)
+        } catch (exception: Exception) {
+            return flow { throw exception }
+        }
+
+        return channelFlow {
             Networking.config.activityIndicatorDelegate.show()
 
             val timeoutJob =
@@ -272,6 +278,7 @@ internal class CoreStorage {
             }
         }.buffer(Channel.UNLIMITED)
             .onCompletion { Networking.config.activityIndicatorDelegate.hide() }
+    }
 
     // MARK: - Data Upload
 

@@ -24,6 +24,7 @@ import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.RootNavigatorState
 import us.neotechnica.panther.navigation.RootRoute
 import us.neotechnica.panther.navigation.navigation
+import us.neotechnica.panther.networking.modules.auth.interfaces.AuthDelegate
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.StoredItemKey
 import us.neotechnica.panther.subsystem.modules.foundation.models.languageCode
@@ -119,12 +120,29 @@ class SignInPageReducerTest {
         val result =
             reducer.reduce(
                 SignInPageReducer.State(),
-                SignInPageReducer.Action.VerifyPhoneNumberReturned("auth-id"),
+                SignInPageReducer.Action.VerifyPhoneNumberReturned(AuthDelegate.PhoneVerificationResult.CodeSent("auth-id")),
             )
 
         assertEquals(SignInPageReducer.State.Configuration.VERIFICATION_CODE, result.state.configuration)
         assertEquals("auth-id", result.state.authID)
         assertFalse(Overlay.isVisible.value)
+    }
+
+    @Test
+    fun `an instant verification signs in without the code page`() {
+        DependencyValues.current.navigation.navigate(
+            Route.Onboarding(OnboardingRoute.Stack(listOf(OnboardingNavigatorState.SeguePaths.SignIn))),
+        )
+        DependencyValues.current.navigation.navigate(Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.Onboarding)))
+
+        val result =
+            reducer.reduce(
+                SignInPageReducer.State(),
+                SignInPageReducer.Action.VerifyPhoneNumberReturned(AuthDelegate.PhoneVerificationResult.SignedIn("user-id")),
+            )
+
+        assertEquals(SignInPageReducer.State.Configuration.PHONE_NUMBER, result.state.configuration)
+        assertEquals(RootNavigatorState.ModalPaths.Splash, DependencyValues.current.navigation.state.value.modal)
     }
 
     // MARK: - Authentication

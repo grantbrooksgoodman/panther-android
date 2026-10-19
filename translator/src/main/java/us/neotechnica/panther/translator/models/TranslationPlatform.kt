@@ -246,18 +246,37 @@ enum class TranslationPlatform {
                 "zh" to "chi",
             )
 
-        // Percent-encode for a URL query:
-        // URLEncoder is form-encoding (space → "+"), so restore the URL-query
-        // conventions the translation hosts expect.
-        private fun urlQueryEncoded(text: String): String =
-            URLEncoder
-                .encode(text, "UTF-8")
-                .replace("+", "%20")
-                .replace("%21", "!")
-                .replace("%27", "'")
-                .replace("%28", "(")
-                .replace("%29", ")")
-                .replace("%7E", "~")
-                .replace("*", "%2A")
+        /**
+         * The characters allowed unescaped in a URL query component:
+         * unreserved characters plus `!$&'()*+,-./:;=?@_~`.
+         */
+        internal const val URL_QUERY_ALLOWED_CHARACTERS = "!$&'()*+,-./:;=?@_~"
+
+        /**
+         * Percent-encodes [text] for a URL query, escaping every byte
+         * outside the alphanumerics and [allowedCharacters].
+         */
+        internal fun percentEncoded(
+            text: String,
+            allowedCharacters: String = URL_QUERY_ALLOWED_CHARACTERS,
+        ): String =
+            buildString {
+                for (byte in text.toByteArray(Charsets.UTF_8)) {
+                    val character = byte.toInt().toChar()
+                    if (byte >= 0 && (character.isLetterOrDigit() || character in allowedCharacters)) {
+                        append(character)
+                    } else {
+                        append('%')
+                        append(HEX_DIGITS[(byte.toInt() shr HEX_SHIFT) and HEX_MASK])
+                        append(HEX_DIGITS[byte.toInt() and HEX_MASK])
+                    }
+                }
+            }
+
+        private fun urlQueryEncoded(text: String): String = percentEncoded(text)
+
+        private const val HEX_DIGITS = "0123456789ABCDEF"
+        private const val HEX_MASK = 0x0F
+        private const val HEX_SHIFT = 4
     }
 }

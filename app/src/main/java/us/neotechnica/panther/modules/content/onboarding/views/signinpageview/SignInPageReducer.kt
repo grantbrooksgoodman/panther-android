@@ -197,7 +197,7 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
 
         /** An action that indicates a verification code was sent to the entered phone number, carrying the identifier issued for the authentication attempt. */
         data class VerifyPhoneNumberReturned(
-            val authID: String,
+            val result: AuthDelegate.PhoneVerificationResult,
         ) : Action
     }
 
@@ -391,18 +391,26 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
                 )
             }
 
-            is Action.VerifyPhoneNumberReturned -> {
-                Overlay.removeOverlay()
+            is Action.VerifyPhoneNumberReturned ->
+                when (val result = action.result) {
+                    is AuthDelegate.PhoneVerificationResult.CodeSent -> {
+                        Overlay.removeOverlay()
 
-                ReduceResult(
-                    state.copy(
-                        authID = action.authID,
-                        configuration = State.Configuration.VERIFICATION_CODE,
-                        isBackButtonEnabled = true,
-                        isContinueButtonEnabled = state.isDeveloperModeEnabled,
-                    ),
-                )
-            }
+                        ReduceResult(
+                            state.copy(
+                                authID = result.verificationID,
+                                configuration = State.Configuration.VERIFICATION_CODE,
+                                isBackButtonEnabled = true,
+                                isContinueButtonEnabled = state.isDeveloperModeEnabled,
+                            ),
+                        )
+                    }
+
+                    // Verified without a code: continue as a successful
+                    // code entry would.
+                    is AuthDelegate.PhoneVerificationResult.SignedIn ->
+                        reduce(state, Action.AuthenticateUserReturned(result.userID))
+                }
         }
 
     // MARK: - Auxiliary

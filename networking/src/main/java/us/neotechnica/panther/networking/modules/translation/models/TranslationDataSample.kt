@@ -8,6 +8,10 @@
 
 package us.neotechnica.panther.networking.modules.translation.models
 
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.seconds
+import java.util.Date
+import kotlin.math.abs
+
 /**
  * A snapshot of the hosted translation archive tree together with the
  * time it was captured and the duration after which it is stale.
@@ -22,6 +26,12 @@ internal class TranslationDataSample(
     val expiryThreshold: Long,
     /** The epoch-millisecond timestamp at which the snapshot was captured. */
     val date: Long = System.currentTimeMillis(),
+    /**
+     * A Boolean value that indicates whether the snapshot was
+     * captured from the archive, as opposed to the placeholder
+     * [empty] snapshot that precedes the first capture.
+     */
+    val isPopulated: Boolean = true,
 ) {
     // MARK: - Computed Properties
 
@@ -31,12 +41,14 @@ internal class TranslationDataSample(
 
     /** A Boolean value that indicates whether the snapshot has exceeded its expiry threshold. */
     val isExpired: Boolean
-        get() = System.currentTimeMillis() - date > expiryThreshold
+        get() = abs(Date().seconds(from = Date(date))) * MILLISECONDS_PER_SECOND > expiryThreshold
 
     // MARK: - Companion
 
     companion object {
         /** An empty snapshot. */
-        val empty = TranslationDataSample(emptyMap(), 0L)
+        val empty = TranslationDataSample(emptyMap(), 0L, date = 0L, isPopulated = false)
     }
 }
+
+private const val MILLISECONDS_PER_SECOND = 1_000L

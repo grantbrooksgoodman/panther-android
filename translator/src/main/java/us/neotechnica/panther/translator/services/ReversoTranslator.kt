@@ -176,7 +176,7 @@ internal class ReversoTranslator : BaseTranslator(TranslationPlatform.REVERSO) {
     // MARK: - Companion
 
     companion object {
-        internal const val API_WARMUP_URL_STRING = "https://api.reverso.net"
+        internal const val API_WARMUP_URL_STRING = "https://api.reverso.net/translate/v1/translation"
 
         private const val API_URL = "https://api.reverso.net/translate/v1/translation"
         private const val RESTORE_SETTLE_DELAY_MILLIS = 500L
