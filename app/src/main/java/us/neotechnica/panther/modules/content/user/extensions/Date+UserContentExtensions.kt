@@ -116,10 +116,7 @@ private fun Calendar.startOfDay(date: Date): Date {
     return time
 }
 
-// Day words live in the app table with a subsystem fallback.
-private fun dayWord(key: LocalizedStringKey): String {
-    val appValue = key.localized(LocalizationSource.APP)
-    return if (appValue != LocalizedStringResolver.MISSING) appValue else key.localized(LocalizationSource.SUBSYSTEM)
-}
+// Each day word resolves from its key's own table.
+private fun dayWord(key: LocalizedStringKey): String = key.localized()
 
 private const val MILLISECONDS_PER_SECOND = 1000L

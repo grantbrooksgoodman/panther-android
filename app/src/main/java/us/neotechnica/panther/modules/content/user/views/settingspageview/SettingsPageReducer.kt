@@ -240,7 +240,7 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
                         DependencyValues.current.clientSession.entity.user.currentUser
                             ?.blockedUserIDs ?: emptyList()
                     ).count { !it.isBangQualifiedEmpty }
-                return "${strings.value(SettingsPageViewStrings.blockedUsersButtonText)} ($count)"
+                return "${strings.value(SettingsPageViewStrings.blockedUsersButtonText, SettingsPageViewStrings)} ($count)"
             }
 
         /** The build info button's image for dark backgrounds. */

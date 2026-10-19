@@ -8,6 +8,11 @@
 
 package us.neotechnica.panther.modules.content.user.views.conversationspageview
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -23,6 +28,7 @@ import us.neotechnica.panther.navigation.RootNavigatorState
 import us.neotechnica.panther.navigation.RootRoute
 import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
+import us.neotechnica.panther.subsystem.modules.foundation.services.Task
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedStates
 
 /**
@@ -36,9 +42,20 @@ class ConversationsPageReducerTest {
     private val environment = MessageDecodeEnvironment()
     private val reducer = ConversationsPageReducer()
 
+    // The seconds-to-load toast is debounced on the task scope; cancelling
+    // the scope keeps it from firing into a later test.
+    private val taskScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+
     @Before
     fun setUp() {
         environment.install("conversations-page-reducer-test")
+        Task.setScope(taskScope)
+    }
+
+    @After
+    fun tearDown() {
+        taskScope.cancel()
+        Task.resetScope()
     }
 
     // MARK: - Searching

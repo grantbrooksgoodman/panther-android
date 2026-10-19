@@ -150,7 +150,7 @@ class ContactSelectorPageReducer : Reducer<ContactSelectorPageReducer.State, Con
         val navigationTitle: String
             get() =
                 if (entryPoint == ContactSelectorPageView.EntryPoint.CHAT_INFO_PAGE_VIEW) {
-                    strings.value(ContactSelectorPageViewStrings.navigationTitle)
+                    strings.value(ContactSelectorPageViewStrings.navigationTitle, ContactSelectorPageViewStrings)
                 } else {
                     LocalizedStringKey.Contacts.localized()
                 }
@@ -160,7 +160,7 @@ class ContactSelectorPageReducer : Reducer<ContactSelectorPageReducer.State, Con
             get() {
                 val isPhoneNumberQuery = searchQuery.isNotBlank() && searchQuery == searchQuery.digits
                 if (entryPoint == ContactSelectorPageView.EntryPoint.CHAT_INFO_PAGE_VIEW && isPhoneNumberQuery) {
-                    return strings.value(ContactSelectorPageViewStrings.noResultsLabelText)
+                    return strings.value(ContactSelectorPageViewStrings.noResultsLabelText, ContactSelectorPageViewStrings)
                 }
                 return LocalizedStringKey.NoResults.localized()
             }
@@ -173,7 +173,7 @@ class ContactSelectorPageReducer : Reducer<ContactSelectorPageReducer.State, Con
         val searchBarPlaceholderText: String
             get() =
                 if (entryPoint == ContactSelectorPageView.EntryPoint.CHAT_INFO_PAGE_VIEW) {
-                    strings.value(ContactSelectorPageViewStrings.searchBarPlaceholderText)
+                    strings.value(ContactSelectorPageViewStrings.searchBarPlaceholderText, ContactSelectorPageViewStrings)
                 } else {
                     LocalizedStringKey.Search.localized()
                 }

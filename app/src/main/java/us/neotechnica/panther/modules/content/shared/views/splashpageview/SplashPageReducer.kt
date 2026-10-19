@@ -243,7 +243,7 @@ class SplashPageReducer : Reducer<SplashPageReducer.State, SplashPageReducer.Act
                         if (viewService.resolveCachedUserIfPoorNetwork()) {
                             Logger.log(
                                 "Loading from cached user; network is poor or initialization stalled.",
-                                domain = LoggerDomain.clientSession,
+                                domain = LoggerDomain.general,
                             )
                             Action.InitializedBundle(null)
                         } else {

@@ -19,6 +19,7 @@ import us.neotechnica.panther.modules.content.shared.constants.RegionMenuFloats
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.effect.Effect
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.capitalized
 import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStorage
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
@@ -100,7 +101,7 @@ class RegionMenuReducer : Reducer<RegionMenuReducer.State, RegionMenuReducer.Act
             get() {
                 val localizedString = LocalizedStringKey.SelectCallingCode.localized()
                 if (RuntimeStorage.languageCode != "en") return localizedString
-                return localizedString.split(" ").joinToString(" ") { word -> word.replaceFirstChar { it.uppercaseChar() } }
+                return localizedString.capitalized
             }
 
         /** The localized text the no results label displays. */

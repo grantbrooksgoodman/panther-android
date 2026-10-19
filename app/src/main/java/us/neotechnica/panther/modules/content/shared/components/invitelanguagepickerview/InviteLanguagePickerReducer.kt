@@ -13,6 +13,7 @@ import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootShee
 import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.common.services.sources.InviteService
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.capitalized
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.services.CoreUtilities
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
@@ -80,7 +81,7 @@ class InviteLanguagePickerReducer : Reducer<InviteLanguagePickerReducer.State, I
         /** The localized text the cancel button displays. */
         val cancelHeaderItemText: String = LocalizedStringKey.Cancel.localized(),
         /** The localized text the done button displays. */
-        val doneHeaderItemText: String = LocalizedStringKey.Done.localized(LocalizationSource.SUBSYSTEM),
+        val doneHeaderItemText: String = LocalizedStringKey.Done.localized(),
         /** A Boolean value that indicates whether the done button is enabled. Enabled once a language has been selected. */
         val isDoneHeaderItemEnabled: Boolean = false,
         /** The localized text the no results label displays. */
@@ -102,7 +103,7 @@ class InviteLanguagePickerReducer : Reducer<InviteLanguagePickerReducer.State, I
             get() {
                 val localizedString = LocalizedStringKey.SelectLanguage.localized()
                 if (RuntimeStorage.languageCode != "en") return localizedString
-                return localizedString.split(" ").joinToString(" ") { word -> word.replaceFirstChar { it.uppercaseChar() } }
+                return localizedString.capitalized
             }
 
         /** The languages whose display names match the search query, keyed by language code. */

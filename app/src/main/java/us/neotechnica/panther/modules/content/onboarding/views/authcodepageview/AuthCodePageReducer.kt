@@ -232,8 +232,8 @@ class AuthCodePageReducer : Reducer<AuthCodePageReducer.State, AuthCodePageReduc
         copy(
             instructionViewStrings =
                 InstructionViewStrings(
-                    titleLabelText = strings.value(AuthCodePageViewStrings.instructionViewTitleLabelText),
-                    subtitleLabelText = strings.value(AuthCodePageViewStrings.instructionViewSubtitleLabelText),
+                    titleLabelText = strings.value(AuthCodePageViewStrings.instructionViewTitleLabelText, AuthCodePageViewStrings),
+                    subtitleLabelText = strings.value(AuthCodePageViewStrings.instructionViewSubtitleLabelText, AuthCodePageViewStrings),
                 ),
             viewState = ViewState.Loaded,
         )

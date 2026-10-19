@@ -60,14 +60,15 @@ private typealias Floats = SignInPageViewFloats
  * The sign-in page, entering an existing account's phone number and
  * verification code, both configurations shown in place.
  *
+ * @param viewModel The page's view model, held by the onboarding
+ *   container.
  * @param modifier The modifier for this view.
  */
 @Composable
-fun SignInPageView(modifier: Modifier = Modifier) {
-    val viewModel = remember { ViewModel(SignInPageReducer.State(), SignInPageReducer()) }
-    DisposableEffect(Unit) { onDispose { viewModel.close() } }
-    LaunchedEffect(Unit) { viewModel.send(SignInPageReducer.Action.ViewAppeared) }
-
+fun SignInPageView(
+    viewModel: ViewModel<SignInPageReducer.State, SignInPageReducer.Action>,
+    modifier: Modifier = Modifier,
+) {
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
     val isDarkModeActive = ThemeService.isDarkModeActive(isSystemInDarkTheme())
@@ -156,7 +157,7 @@ fun SignInPageView(modifier: Modifier = Modifier) {
             )
 
             Components.Button(
-                text = state.strings.value(SignInPageViewStrings.backButtonText),
+                text = state.strings.value(SignInPageViewStrings.backButtonText, SignInPageViewStrings),
                 foregroundColor = if (state.isBackButtonEnabled) colors.accent else colors.disabled,
                 onClick = { if (state.isBackButtonEnabled) viewModel.send(SignInPageReducer.Action.BackButtonTapped) },
                 font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),

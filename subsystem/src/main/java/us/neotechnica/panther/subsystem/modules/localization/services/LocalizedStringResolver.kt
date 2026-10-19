@@ -148,15 +148,6 @@ object LocalizedStringResolver {
     ): String {
         resolve(key, source, language)?.let { return it }
 
-        // A key filed under a different table than the one requested – for
-        // example, a subsystem string ("cancel", "done") resolved with the
-        // default app source – still resolves here from the other table
-        // instead of showing the MISSING placeholder.
-        for (other in LocalizationSource.entries) {
-            if (other == source) continue
-            resolve(key, other, language)?.let { return it }
-        }
-
         return MISSING
     }
 

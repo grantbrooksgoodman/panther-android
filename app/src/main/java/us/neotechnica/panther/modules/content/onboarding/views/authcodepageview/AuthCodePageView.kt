@@ -48,14 +48,15 @@ private typealias Floats = AuthCodePageViewFloats
  * The onboarding page for entering the verification code during
  * sign-up.
  *
+ * @param viewModel The page's view model, held by the onboarding
+ *   container.
  * @param modifier The modifier for this view.
  */
 @Composable
-fun AuthCodePageView(modifier: Modifier = Modifier) {
-    val viewModel = remember { ViewModel(AuthCodePageReducer.State(), AuthCodePageReducer()) }
-    DisposableEffect(Unit) { onDispose { viewModel.close() } }
-    LaunchedEffect(Unit) { viewModel.send(AuthCodePageReducer.Action.ViewAppeared) }
-
+fun AuthCodePageView(
+    viewModel: ViewModel<AuthCodePageReducer.State, AuthCodePageReducer.Action>,
+    modifier: Modifier = Modifier,
+) {
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
 
@@ -71,7 +72,7 @@ fun AuthCodePageView(modifier: Modifier = Modifier) {
                 modifier = Modifier.fillMaxWidth().padding(bottom = Floats.innerVStackBottomPadding),
             ) {
                 Components.Text(
-                    state.strings.value(AuthCodePageViewStrings.instructionLabelText),
+                    state.strings.value(AuthCodePageViewStrings.instructionLabelText, AuthCodePageViewStrings),
                     foregroundColor = Colors.instructionLabelForeground,
                     font = Font.systemSemibold(),
                     modifier = Modifier.padding(vertical = Floats.instructionLabelVerticalPadding),
@@ -90,7 +91,7 @@ fun AuthCodePageView(modifier: Modifier = Modifier) {
                 )
 
                 Components.CapsuleButton(
-                    text = state.strings.value(AuthCodePageViewStrings.continueButtonText),
+                    text = state.strings.value(AuthCodePageViewStrings.continueButtonText, AuthCodePageViewStrings),
                     foregroundColor = if (state.isContinueButtonEnabled) colors.background else colors.disabled,
                     isEnabled = state.isContinueButtonEnabled,
                     action = { viewModel.send(AuthCodePageReducer.Action.ContinueButtonTapped) },
@@ -98,7 +99,7 @@ fun AuthCodePageView(modifier: Modifier = Modifier) {
                 )
 
                 Components.Button(
-                    text = state.strings.value(AuthCodePageViewStrings.backButtonText),
+                    text = state.strings.value(AuthCodePageViewStrings.backButtonText, AuthCodePageViewStrings),
                     foregroundColor = if (state.isBackButtonEnabled) colors.accent else colors.disabled,
                     onClick = { if (state.isBackButtonEnabled) viewModel.send(AuthCodePageReducer.Action.BackButtonTapped) },
                     font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),

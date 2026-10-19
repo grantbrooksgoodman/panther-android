@@ -112,7 +112,7 @@ internal fun changeLanguageListItem(
         ListRowView.Interaction.Destination {
             navigation.navigate(Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePaths.ChangeLanguage)))
         },
-        innerText = state.strings.value(SettingsPageViewStrings.changeLanguage),
+        innerText = state.strings.value(SettingsPageViewStrings.changeLanguage, SettingsPageViewStrings),
         imageView = {
             SquareIconImage(
                 SquareIconViewConfiguration(
@@ -137,7 +137,7 @@ internal fun clearCachesListItem(
 ): ListRowView.Configuration =
     ListRowView.Configuration(
         ListRowView.Interaction.Button { send(SettingsPageReducer.Action.ClearCachesButtonTapped) },
-        innerText = state.strings.value(SettingsPageViewStrings.clearCachesButtonText),
+        innerText = state.strings.value(SettingsPageViewStrings.clearCachesButtonText, SettingsPageViewStrings),
         imageView = {
             SquareIconImage(
                 SquareIconViewConfiguration.symbol(
@@ -158,7 +158,7 @@ internal fun deleteAccountListItem(
 ): ListRowView.Configuration =
     ListRowView.Configuration(
         ListRowView.Interaction.Button { send(SettingsPageReducer.Action.DeleteAccountButtonTapped) },
-        innerText = state.strings.value(SettingsPageViewStrings.deleteAccountButtonText),
+        innerText = state.strings.value(SettingsPageViewStrings.deleteAccountButtonText, SettingsPageViewStrings),
         imageView = {
             SquareIconImage(
                 SquareIconViewConfiguration.symbol(
@@ -177,7 +177,7 @@ internal fun inviteFriendsListItem(
 ): ListRowView.Configuration =
     ListRowView.Configuration(
         ListRowView.Interaction.Button { send(SettingsPageReducer.Action.InviteFriendsButtonTapped) },
-        innerText = state.strings.value(SettingsPageViewStrings.inviteFriendsButtonText),
+        innerText = state.strings.value(SettingsPageViewStrings.inviteFriendsButtonText, SettingsPageViewStrings),
         imageView = {
             SquareIconImage(
                 SquareIconViewConfiguration.symbol(
@@ -196,7 +196,7 @@ internal fun leaveReviewListItem(
 ): ListRowView.Configuration =
     ListRowView.Configuration(
         ListRowView.Interaction.Button { send(SettingsPageReducer.Action.LeaveReviewButtonTapped) },
-        innerText = state.strings.value(SettingsPageViewStrings.leaveReviewButtonText),
+        innerText = state.strings.value(SettingsPageViewStrings.leaveReviewButtonText, SettingsPageViewStrings),
         imageView = {
             SquareIconImage(
                 SquareIconViewConfiguration.symbol(
@@ -236,7 +236,7 @@ internal fun signOutListItem(
 ): ListRowView.Configuration =
     ListRowView.Configuration(
         ListRowView.Interaction.Button { send(SettingsPageReducer.Action.SignOutButtonTapped) },
-        innerText = state.strings.value(SettingsPageViewStrings.signOutButtonText),
+        innerText = state.strings.value(SettingsPageViewStrings.signOutButtonText, SettingsPageViewStrings),
         imageView = {
             SquareIconImage(
                 SquareIconViewConfiguration.symbol(

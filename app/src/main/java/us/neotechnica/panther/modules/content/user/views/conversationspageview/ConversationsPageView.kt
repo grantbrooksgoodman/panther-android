@@ -137,7 +137,7 @@ fun ConversationsPageView(
                         toolbar = { Toolbar(state = state, viewModel = viewModel) },
                         title = {
                             Components.Text(
-                                state.strings.value(ConversationsPageViewStrings.navigationTitle),
+                                state.strings.value(ConversationsPageViewStrings.navigationTitle, ConversationsPageViewStrings),
                                 foregroundColor = colors.titleText,
                                 font = Font.systemBold(FontScale.Large),
                                 modifier =

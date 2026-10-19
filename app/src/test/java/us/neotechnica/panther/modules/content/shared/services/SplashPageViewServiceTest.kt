@@ -9,11 +9,15 @@
 package us.neotechnica.panther.modules.content.shared.services
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
@@ -37,8 +41,55 @@ class SplashPageViewServiceTest {
     @After
     fun tearDown() {
         SplashPageViewService.setInitializationProgress(0f)
+        SplashPageViewService.setDependencies(null)
         Task.resetScope()
     }
+
+    // MARK: - Parallel Resolution
+
+    @Test
+    fun `the signed-out path cancels the language-code job and resolves no cache status`() =
+        runTest {
+            var languageCodeResolutions = 0
+            SplashPageViewService.setDependencies(
+                SplashPageViewService.Dependencies(
+                    resolveAndSetLanguageCode = {
+                        languageCodeResolutions += 1
+                        awaitCancellation()
+                    },
+                    resolveCacheStatus = { null },
+                    resolveCurrentUser = {},
+                ),
+            )
+
+            val resolution = with(SplashPageViewService) { startParallelResolution(currentUserID = null) }
+            advanceUntilIdle()
+
+            assertTrue(resolution.languageCode.isCancelled)
+            assertNull(resolution.cacheStatus.await().getOrNull())
+            assertNull(resolution.currentUser.await())
+            assertTrue(languageCodeResolutions <= 1)
+        }
+
+    @Test
+    fun `the signed-in path awaits the language code`() =
+        runTest {
+            var languageCodeResolved = false
+            SplashPageViewService.setDependencies(
+                SplashPageViewService.Dependencies(
+                    resolveAndSetLanguageCode = { languageCodeResolved = true },
+                    resolveCacheStatus = { null },
+                    resolveCurrentUser = {},
+                ),
+            )
+
+            val resolution = with(SplashPageViewService) { startParallelResolution(currentUserID = "me") }
+            advanceUntilIdle()
+
+            assertFalse(resolution.languageCode.isCancelled)
+            assertNull(resolution.languageCode.await())
+            assertTrue(languageCodeResolved)
+        }
 
     // MARK: - Tests
 

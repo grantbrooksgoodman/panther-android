@@ -333,7 +333,7 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
 
         /** The chat info cell's title: the participant count followed by a localized label. */
         val chatInfoCellTitleLabelText: String
-            get() = "${chatParticipants.size} ${strings.value(ChatInfoPageViewStrings.participantCountLabelText)}"
+            get() = "${chatParticipants.size} ${strings.value(ChatInfoPageViewStrings.participantCountLabelText, ChatInfoPageViewStrings)}"
 
         /** The conversation's title. */
         val chatTitleLabelText: String
@@ -377,8 +377,8 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
         val segmentedControlOptionTitles: List<String>
             get() =
                 listOf(
-                    strings.value(ChatInfoPageViewStrings.segmentedControlParticipantsOptionText),
-                    strings.value(ChatInfoPageViewStrings.segmentedControlMediaOptionText),
+                    strings.value(ChatInfoPageViewStrings.segmentedControlParticipantsOptionText, ChatInfoPageViewStrings),
+                    strings.value(ChatInfoPageViewStrings.segmentedControlMediaOptionText, ChatInfoPageViewStrings),
                 )
 
         /**

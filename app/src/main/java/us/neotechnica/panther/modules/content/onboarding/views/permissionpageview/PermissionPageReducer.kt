@@ -329,8 +329,8 @@ class PermissionPageReducer : Reducer<PermissionPageReducer.State, PermissionPag
         copy(
             instructionViewStrings =
                 InstructionViewStrings(
-                    titleLabelText = strings.value(PermissionPageViewStrings.instructionViewTitleLabelText),
-                    subtitleLabelText = strings.value(PermissionPageViewStrings.instructionViewSubtitleLabelText),
+                    titleLabelText = strings.value(PermissionPageViewStrings.instructionViewTitleLabelText, PermissionPageViewStrings),
+                    subtitleLabelText = strings.value(PermissionPageViewStrings.instructionViewSubtitleLabelText, PermissionPageViewStrings),
                 ),
             viewState = ViewState.Loaded,
         )

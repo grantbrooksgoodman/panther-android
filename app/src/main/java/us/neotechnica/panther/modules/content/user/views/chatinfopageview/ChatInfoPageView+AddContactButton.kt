@@ -99,7 +99,7 @@ internal fun AddContactButton(
         }
 
         Components.Text(
-            state.strings.value(ChatInfoPageViewStrings.addContactButtonText),
+            state.strings.value(ChatInfoPageViewStrings.addContactButtonText, ChatInfoPageViewStrings),
             foregroundColor = labelColor,
         )
     }

@@ -272,7 +272,7 @@ object InviteService {
             runCatching {
                 translator
                     .resolve(SettingsPageViewStrings)
-                    .value(SettingsPageViewStrings.inviteFriendsButtonText)
+                    .value(SettingsPageViewStrings.inviteFriendsButtonText, SettingsPageViewStrings)
             }.getOrDefault(SettingsPageViewConstants.INVITE_FRIENDS_BUTTON_TEXT)
 
         val shareIntent =

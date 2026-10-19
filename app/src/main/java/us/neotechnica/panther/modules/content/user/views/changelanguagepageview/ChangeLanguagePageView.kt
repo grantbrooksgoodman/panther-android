@@ -101,7 +101,7 @@ fun ChangeLanguagePageView(modifier: Modifier = Modifier) {
                 )
 
                 Components.CapsuleButton(
-                    text = state.strings.value(ChangeLanguagePageViewStrings.confirmButtonText),
+                    text = state.strings.value(ChangeLanguagePageViewStrings.confirmButtonText, ChangeLanguagePageViewStrings),
                     action = { viewModel.send(ChangeLanguagePageReducer.Action.ConfirmButtonTapped) },
                     isEnabled = state.isConfirmButtonEnabled,
                 )

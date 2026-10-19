@@ -200,8 +200,8 @@ class SelectLanguagePageReducer : Reducer<SelectLanguagePageReducer.State, Selec
         copy(
             instructionViewStrings =
                 InstructionViewStrings(
-                    titleLabelText = strings.value(SelectLanguagePageViewStrings.instructionViewTitleLabelText),
-                    subtitleLabelText = strings.value(SelectLanguagePageViewStrings.instructionViewSubtitleLabelText),
+                    titleLabelText = strings.value(SelectLanguagePageViewStrings.instructionViewTitleLabelText, SelectLanguagePageViewStrings),
+                    subtitleLabelText = strings.value(SelectLanguagePageViewStrings.instructionViewSubtitleLabelText, SelectLanguagePageViewStrings),
                 ),
             viewState = ViewState.Loaded,
         )

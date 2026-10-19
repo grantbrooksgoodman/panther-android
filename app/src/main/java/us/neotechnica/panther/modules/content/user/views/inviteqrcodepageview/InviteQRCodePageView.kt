@@ -77,7 +77,7 @@ fun InviteQRCodePageView(modifier: Modifier = Modifier) {
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Components.Text(
-                        state.strings.value(InviteQRCodePageViewStrings.instructionLabelText),
+                        state.strings.value(InviteQRCodePageViewStrings.instructionLabelText, InviteQRCodePageViewStrings),
                         foregroundColor = colors.titleText,
                         font = Font.systemSemibold(FontScale.Large),
                         textAlign = TextAlign.Center,

@@ -37,4 +37,8 @@ enum class SubsystemStringKey(
     TIMED_OUT("timed_out"),
     TRY_AGAIN("try_again"),
     YESTERDAY("yesterday"),
+    ;
+
+    override val source: LocalizationSource
+        get() = LocalizationSource.SUBSYSTEM
 }

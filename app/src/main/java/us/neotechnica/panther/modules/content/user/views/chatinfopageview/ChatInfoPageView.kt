@@ -217,7 +217,7 @@ private fun ChangeMetadataButton(
     viewModel: ViewModel<ChatInfoPageReducer.State, ChatInfoPageReducer.Action>,
 ) {
     Components.CapsuleButton(
-        state.strings.value(ChatInfoPageViewStrings.changeMetadataButtonText),
+        state.strings.value(ChatInfoPageViewStrings.changeMetadataButtonText, ChatInfoPageViewStrings),
         font = Font.systemSemibold(FontScale.Custom(Floats.CHANGE_METADATA_BUTTON_LABEL_FONT_SIZE)),
         usesShadow = false,
         isEnabled = state.isChangeMetadataButtonEnabled,
@@ -239,7 +239,7 @@ private fun LeaveConversationListRowView(
         ListRowView(
             ListRowView.Configuration(
                 ListRowView.Interaction.Button { viewModel.send(ChatInfoPageReducer.Action.LeaveConversationButtonTapped) },
-                innerText = state.strings.value(ChatInfoPageViewStrings.leaveConversation),
+                innerText = state.strings.value(ChatInfoPageViewStrings.leaveConversation, ChatInfoPageViewStrings),
                 innerTextColor = Colors.leaveConversationListRowViewForeground,
                 isEnabled = state.isLeaveConversationButtonEnabled,
             ),

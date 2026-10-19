@@ -46,10 +46,10 @@ class Localized(
  * Resolves for the user's current language, falling back to English
  * and then to [LocalizedStringResolver.MISSING].
  *
- * @param source The table to resolve from; defaults to
- *   [LocalizationSource.APP].
+ * @param source The table to resolve from; defaults to the key's own
+ *   [source][LocalizedStringKeyRepresentable.source].
  */
-fun LocalizedStringKeyRepresentable.localized(source: LocalizationSource = LocalizationSource.APP): String =
+fun LocalizedStringKeyRepresentable.localized(source: LocalizationSource = this.source): String =
     LocalizedStringResolver.string(this, source)
 
 /**
@@ -61,10 +61,10 @@ fun LocalizedStringKeyRepresentable.localized(source: LocalizationSource = Local
  * language, such as a push notification's body.
  *
  * @param languageCode The language to resolve for.
- * @param source The table to resolve from; defaults to
- *   [LocalizationSource.APP].
+ * @param source The table to resolve from; defaults to the key's own
+ *   [source][LocalizedStringKeyRepresentable.source].
  */
 fun LocalizedStringKeyRepresentable.localized(
     languageCode: String,
-    source: LocalizationSource = LocalizationSource.APP,
+    source: LocalizationSource = this.source,
 ): String = LocalizedStringResolver.string(this, source, languageCode)

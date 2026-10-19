@@ -9,6 +9,7 @@
 package us.neotechnica.panther.bundle
 
 import us.neotechnica.panther.subsystem.modules.localization.interfaces.LocalizedStringKeyRepresentable
+import us.neotechnica.panther.subsystem.modules.localization.models.LocalizationSource
 
 /**
  * The app's localization key type.
@@ -102,4 +103,13 @@ enum class LocalizedStringKey(
     Settings("settings"),
     TryAgain("try_again"),
     Yesterday("yesterday"),
+    ;
+
+    // The keys the subsystem table carries.
+    override val source: LocalizationSource
+        get() =
+            when (this) {
+                Cancel, Dismiss, Done, SendFeedback, Settings, TryAgain, Yesterday -> LocalizationSource.SUBSYSTEM
+                else -> LocalizationSource.APP
+            }
 }

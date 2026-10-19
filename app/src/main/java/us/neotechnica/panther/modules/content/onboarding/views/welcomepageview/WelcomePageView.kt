@@ -58,18 +58,15 @@ private typealias Floats = WelcomePageViewFloats
  * The onboarding welcome page: the wordmark, the cycling greeting,
  * "Get Started", and "Sign In".
  *
+ * @param viewModel The page's view model, held by the onboarding
+ *   container.
  * @param modifier The modifier for this view.
  */
 @Composable
-fun WelcomePageView(modifier: Modifier = Modifier) {
-    val viewModel = remember { ViewModel(WelcomePageReducer.State(), WelcomePageReducer()) }
-    DisposableEffect(Unit) { onDispose { viewModel.close() } }
-
-    LaunchedEffect(Unit) {
-        viewModel.send(WelcomePageReducer.Action.ViewAppeared)
-        viewModel.send(WelcomePageReducer.Action.ViewFirstAppeared)
-    }
-
+fun WelcomePageView(
+    viewModel: ViewModel<WelcomePageReducer.State, WelcomePageReducer.Action>,
+    modifier: Modifier = Modifier,
+) {
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
     val isDarkModeActive = ThemeService.isDarkModeActive(isSystemInDarkTheme())
@@ -118,13 +115,13 @@ fun WelcomePageView(modifier: Modifier = Modifier) {
             }
 
             Components.CapsuleButton(
-                text = state.strings.value(WelcomePageViewStrings.continueButtonText),
+                text = state.strings.value(WelcomePageViewStrings.continueButtonText, WelcomePageViewStrings),
                 action = { viewModel.send(WelcomePageReducer.Action.ContinueButtonTapped) },
                 modifier = Modifier.padding(vertical = Floats.continueButtonVerticalPadding),
             )
 
             Components.Button(
-                text = state.strings.value(WelcomePageViewStrings.signInButtonText),
+                text = state.strings.value(WelcomePageViewStrings.signInButtonText, WelcomePageViewStrings),
                 foregroundColor = colors.accent,
                 onClick = { viewModel.send(WelcomePageReducer.Action.SignInButtonTapped) },
                 font = Font.system(FontScale.Custom(Floats.SIGN_IN_BUTTON_LABEL_FONT_SIZE)),

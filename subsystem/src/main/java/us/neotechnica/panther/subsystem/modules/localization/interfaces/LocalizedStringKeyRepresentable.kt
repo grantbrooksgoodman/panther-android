@@ -7,6 +7,7 @@
 //
 
 package us.neotechnica.panther.subsystem.modules.localization.interfaces
+import us.neotechnica.panther.subsystem.modules.localization.models.LocalizationSource
 
 /**
  * A type that can identify a localized string by a stable key.
@@ -18,4 +19,8 @@ package us.neotechnica.panther.subsystem.modules.localization.interfaces
 interface LocalizedStringKeyRepresentable {
     /** The key used to resolve this string in a localized-strings table. */
     val referent: String
+
+    /** The table this key resolves from by default. */
+    val source: LocalizationSource
+        get() = LocalizationSource.APP
 }

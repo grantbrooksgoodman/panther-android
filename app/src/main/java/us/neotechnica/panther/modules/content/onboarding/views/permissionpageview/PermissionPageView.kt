@@ -42,14 +42,15 @@ private typealias Floats = PermissionsViewFloats
  * The final onboarding page: granting the contact and notification
  * permissions, then finishing to create the account.
  *
+ * @param viewModel The page's view model, held by the onboarding
+ *   container.
  * @param modifier The modifier for this view.
  */
 @Composable
-fun PermissionPageView(modifier: Modifier = Modifier) {
-    val viewModel = remember { ViewModel(PermissionPageReducer.State(), PermissionPageReducer()) }
-    DisposableEffect(Unit) { onDispose { viewModel.close() } }
-    LaunchedEffect(Unit) { viewModel.send(PermissionPageReducer.Action.ViewAppeared) }
-
+fun PermissionPageView(
+    viewModel: ViewModel<PermissionPageReducer.State, PermissionPageReducer.Action>,
+    modifier: Modifier = Modifier,
+) {
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
 
@@ -70,14 +71,14 @@ fun PermissionPageView(modifier: Modifier = Modifier) {
                     modifier = Modifier.padding(bottom = Floats.buttonVStackBottomPadding),
                 ) {
                     StatusIndicatorButton(
-                        text = state.strings.value(PermissionPageViewStrings.contactPermissionCapsuleButtonText),
+                        text = state.strings.value(PermissionPageViewStrings.contactPermissionCapsuleButtonText, PermissionPageViewStrings),
                         isCompleted = state.isContactPermissionGranted,
                     ) {
                         viewModel.send(PermissionPageReducer.Action.ContactPermissionCapsuleButtonTapped)
                     }
 
                     StatusIndicatorButton(
-                        text = state.strings.value(PermissionPageViewStrings.notificationPermissionCapsuleButtonText),
+                        text = state.strings.value(PermissionPageViewStrings.notificationPermissionCapsuleButtonText, PermissionPageViewStrings),
                         isCompleted = state.isNotificationPermissionGranted,
                     ) {
                         viewModel.send(PermissionPageReducer.Action.NotificationPermissionCapsuleButtonTapped)
@@ -85,7 +86,7 @@ fun PermissionPageView(modifier: Modifier = Modifier) {
                 }
 
                 Components.CapsuleButton(
-                    text = state.strings.value(PermissionPageViewStrings.finishButtonText),
+                    text = state.strings.value(PermissionPageViewStrings.finishButtonText, PermissionPageViewStrings),
                     foregroundColor = if (state.isFinishButtonEnabled) colors.background else colors.disabled,
                     isEnabled = state.isFinishButtonEnabled,
                     action = { viewModel.send(PermissionPageReducer.Action.FinishButtonTapped) },
@@ -93,7 +94,7 @@ fun PermissionPageView(modifier: Modifier = Modifier) {
                 )
 
                 Components.Button(
-                    text = state.strings.value(PermissionPageViewStrings.backButtonText),
+                    text = state.strings.value(PermissionPageViewStrings.backButtonText, PermissionPageViewStrings),
                     foregroundColor = if (state.isBackButtonEnabled) colors.accent else colors.disabled,
                     onClick = { if (state.isBackButtonEnabled) viewModel.send(PermissionPageReducer.Action.BackButtonTapped) },
                     font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),

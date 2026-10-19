@@ -186,8 +186,8 @@ class ChangeLanguagePageReducer : Reducer<ChangeLanguagePageReducer.State, Chang
         copy(
             instructionViewStrings =
                 InstructionViewStrings(
-                    titleLabelText = strings.value(ChangeLanguagePageViewStrings.instructionViewTitleLabelText),
-                    subtitleLabelText = strings.value(ChangeLanguagePageViewStrings.instructionViewSubtitleLabelText),
+                    titleLabelText = strings.value(ChangeLanguagePageViewStrings.instructionViewTitleLabelText, ChangeLanguagePageViewStrings),
+                    subtitleLabelText = strings.value(ChangeLanguagePageViewStrings.instructionViewSubtitleLabelText, ChangeLanguagePageViewStrings),
                 ),
             viewState = ViewState.Loaded,
         )

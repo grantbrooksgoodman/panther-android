@@ -11,6 +11,7 @@
 package us.neotechnica.panther.modules.content.shared.services
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -114,6 +115,20 @@ object SplashPageViewService {
         SPINNER,
     }
 
+    /** The resolutions the parallel initialization launches. */
+    internal class Dependencies(
+        val resolveAndSetLanguageCode: suspend () -> Unit = { clientSession.resolveAndSetLanguageCode() },
+        val resolveCacheStatus: suspend (String?) -> RemoteCacheStatus? = ::resolveCacheStatus,
+        val resolveCurrentUser: suspend () -> Unit = { clientSession.entity.user.resolveCurrentUser() },
+    )
+
+    /** The deferred results of the parallel initialization. */
+    internal class ParallelResolution(
+        val cacheStatus: Deferred<Result<RemoteCacheStatus?>>,
+        val currentUser: Deferred<Exception?>,
+        val languageCode: Deferred<Exception?>,
+    )
+
     // MARK: - Dependencies
 
     private val clientSession: ClientSession by Dependency { it.clientSession }
@@ -127,6 +142,7 @@ object SplashPageViewService {
     private val loadingIndicatorStyleState = MutableStateFlow(LoadingIndicatorStyle.HIDDEN)
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var dependencies: Dependencies? = null
     private val loadingIndicatorStyleJob = LockIsolated<Job?>(null)
     private val networkHealth = SharedState { it.networkHealth }
     private val quickLoadTimeoutJob = LockIsolated<Job?>(null)
@@ -275,9 +291,10 @@ object SplashPageViewService {
         val currentUserID = User.currentUserID
         val needsRestart =
             coroutineScope {
-                val resolveCurrentUserResult = async { runCatchingException { clientSession.entity.user.resolveCurrentUser() } }
-                val resolveLanguageCodeResult = async { runCatchingException { clientSession.resolveAndSetLanguageCode() } }
-                val cacheStatusResult = async { resolveCacheStatusResult(currentUserID) }
+                val resolution = startParallelResolution(currentUserID)
+                val resolveCurrentUserResult = resolution.currentUser
+                val resolveLanguageCodeResult = resolution.languageCode
+                val cacheStatusResult = resolution.cacheStatus
 
                 // Revalidate hosted metadata in the background: consumers
                 // read the persisted snapshot until it lands.
@@ -422,7 +439,7 @@ object SplashPageViewService {
     // MARK: - Auxiliary
 
     private suspend fun handleCacheStatus(
-        cacheStatusResult: kotlinx.coroutines.Deferred<Result<RemoteCacheStatus?>>,
+        cacheStatusResult: Deferred<Result<RemoteCacheStatus?>>,
         currentUserID: String?,
     ): Boolean {
         try {
@@ -445,7 +462,7 @@ object SplashPageViewService {
         return false
     }
 
-    private suspend fun resolveCurrentUserAndFinish(resolveCurrentUserResult: kotlinx.coroutines.Deferred<Exception?>) {
+    private suspend fun resolveCurrentUserAndFinish(resolveCurrentUserResult: Deferred<Exception?>) {
         // User resolution likely completed during the metadata + update
         // + cache gates above.
         try {
@@ -555,9 +572,36 @@ object SplashPageViewService {
         return true
     }
 
-    private suspend fun resolveCacheStatusResult(userID: String?): Result<RemoteCacheStatus?> =
+    /** Replaces the resolutions the parallel initialization launches. */
+    internal fun setDependencies(dependencies: Dependencies?) {
+        this.dependencies = dependencies
+    }
+
+    /**
+     * Launches the current-user, language-code, and cache-status
+     * resolutions concurrently.
+     *
+     * Signed out, nothing awaits the language code, so its job is
+     * cancelled at once; the cache status resolves to `null` for a
+     * missing user and is awaited regardless.
+     */
+    internal fun CoroutineScope.startParallelResolution(currentUserID: String?): ParallelResolution {
+        val dependencies = resolvedDependencies()
+        val currentUser = async { runCatchingException { dependencies.resolveCurrentUser() } }
+        val languageCode = async { runCatchingException { dependencies.resolveAndSetLanguageCode() } }
+        val cacheStatus = async { resolveCacheStatusResult(currentUserID, dependencies) }
+        if (currentUserID == null) languageCode.cancel()
+        return ParallelResolution(cacheStatus = cacheStatus, currentUser = currentUser, languageCode = languageCode)
+    }
+
+    private fun resolvedDependencies(): Dependencies = dependencies ?: Dependencies().also { dependencies = it }
+
+    private suspend fun resolveCacheStatusResult(
+        userID: String?,
+        dependencies: Dependencies,
+    ): Result<RemoteCacheStatus?> =
         try {
-            Result.success(resolveCacheStatus(userID))
+            Result.success(dependencies.resolveCacheStatus(userID))
         } catch (exception: Exception) {
             Result.failure(exception)
         }
@@ -588,7 +632,7 @@ object SplashPageViewService {
                 clientSession.entity.user.resolveCurrentUser(User.DataType.entries.toSet())
                 return Logger.log(
                     "Deferred resolution of current user data was successful.",
-                    domain = LoggerDomain.clientSession,
+                    domain = LoggerDomain.general,
                 )
             } catch (error: Exception) {
                 Logger.log(error)

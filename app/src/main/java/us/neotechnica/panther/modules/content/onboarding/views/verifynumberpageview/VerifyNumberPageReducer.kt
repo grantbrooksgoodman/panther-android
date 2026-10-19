@@ -317,8 +317,8 @@ class VerifyNumberPageReducer : Reducer<VerifyNumberPageReducer.State, VerifyNum
         copy(
             instructionViewStrings =
                 InstructionViewStrings(
-                    titleLabelText = strings.value(VerifyNumberPageViewStrings.instructionViewTitleLabelText),
-                    subtitleLabelText = strings.value(VerifyNumberPageViewStrings.instructionViewSubtitleLabelText),
+                    titleLabelText = strings.value(VerifyNumberPageViewStrings.instructionViewTitleLabelText, VerifyNumberPageViewStrings),
+                    subtitleLabelText = strings.value(VerifyNumberPageViewStrings.instructionViewSubtitleLabelText, VerifyNumberPageViewStrings),
                 ),
             viewState = ViewState.Loaded,
         )

@@ -47,14 +47,15 @@ private typealias Floats = VerifyNumberPageViewFloats
 /**
  * The onboarding page for entering a phone number during sign-up.
  *
+ * @param viewModel The page's view model, held by the onboarding
+ *   container.
  * @param modifier The modifier for this view.
  */
 @Composable
-fun VerifyNumberPageView(modifier: Modifier = Modifier) {
-    val viewModel = remember { ViewModel(VerifyNumberPageReducer.State(), VerifyNumberPageReducer()) }
-    DisposableEffect(Unit) { onDispose { viewModel.close() } }
-    LaunchedEffect(Unit) { viewModel.send(VerifyNumberPageReducer.Action.ViewAppeared) }
-
+fun VerifyNumberPageView(
+    viewModel: ViewModel<VerifyNumberPageReducer.State, VerifyNumberPageReducer.Action>,
+    modifier: Modifier = Modifier,
+) {
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
 
@@ -72,7 +73,7 @@ fun VerifyNumberPageView(modifier: Modifier = Modifier) {
                 modifier = Modifier.fillMaxWidth().padding(bottom = Floats.innerVStackBottomPadding),
             ) {
                 Components.Text(
-                    state.strings.value(VerifyNumberPageViewStrings.instructionLabelText),
+                    state.strings.value(VerifyNumberPageViewStrings.instructionLabelText, VerifyNumberPageViewStrings),
                     foregroundColor = Colors.instructionLabelForeground,
                     font = Font.systemSemibold(),
                     modifier = Modifier.padding(vertical = Floats.instructionLabelVerticalPadding),
@@ -108,7 +109,7 @@ fun VerifyNumberPageView(modifier: Modifier = Modifier) {
                 }
 
                 Components.CapsuleButton(
-                    text = state.strings.value(VerifyNumberPageViewStrings.continueButtonText),
+                    text = state.strings.value(VerifyNumberPageViewStrings.continueButtonText, VerifyNumberPageViewStrings),
                     foregroundColor = if (state.isContinueButtonEnabled) colors.background else colors.disabled,
                     isEnabled = state.isContinueButtonEnabled,
                     action = { viewModel.send(VerifyNumberPageReducer.Action.ContinueButtonTapped) },
@@ -116,7 +117,7 @@ fun VerifyNumberPageView(modifier: Modifier = Modifier) {
                 )
 
                 Components.Button(
-                    text = state.strings.value(VerifyNumberPageViewStrings.backButtonText),
+                    text = state.strings.value(VerifyNumberPageViewStrings.backButtonText, VerifyNumberPageViewStrings),
                     foregroundColor = if (state.isBackButtonEnabled) colors.accent else colors.disabled,
                     onClick = { if (state.isBackButtonEnabled) viewModel.send(VerifyNumberPageReducer.Action.BackButtonTapped) },
                     font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),

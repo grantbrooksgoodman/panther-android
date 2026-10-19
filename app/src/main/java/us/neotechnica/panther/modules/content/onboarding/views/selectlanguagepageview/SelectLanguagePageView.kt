@@ -45,29 +45,17 @@ private typealias Floats = SelectLanguagePageViewFloats
 /**
  * The onboarding page for selecting the user's native language.
  *
+ * @param viewModel The page's view model, held by the onboarding
+ *   container.
  * @param modifier The modifier for this view.
  */
 @Composable
-fun SelectLanguagePageView(modifier: Modifier = Modifier) {
-    val viewModel = remember { ViewModel(SelectLanguagePageReducer.State(), SelectLanguagePageReducer()) }
-    DisposableEffect(Unit) { onDispose { viewModel.close() } }
-
-    // The wheel's selection survives a pop and push of this page.
-    val savedSelectedLanguageName = rememberSaveable { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(Unit) {
-        viewModel.send(SelectLanguagePageReducer.Action.ViewAppeared)
-        savedSelectedLanguageName.value?.let {
-            viewModel.send(SelectLanguagePageReducer.Action.SelectedLanguageNameChanged(it))
-        }
-    }
-
+fun SelectLanguagePageView(
+    viewModel: ViewModel<SelectLanguagePageReducer.State, SelectLanguagePageReducer.Action>,
+    modifier: Modifier = Modifier,
+) {
     val state by viewModel.state.collectAsState()
     val colors = LocalPantherColors.current
-
-    LaunchedEffect(state.selectedLanguageName) {
-        if (state.selectedLanguageName.isNotEmpty()) savedSelectedLanguageName.value = state.selectedLanguageName
-    }
 
     StatefulView(state = state.viewState, modifier = modifier) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -81,7 +69,7 @@ fun SelectLanguagePageView(modifier: Modifier = Modifier) {
                 modifier = Modifier.fillMaxWidth().padding(bottom = Floats.innerVStackBottomPadding),
             ) {
                 Components.Text(
-                    state.strings.value(SelectLanguagePageViewStrings.instructionLabelText),
+                    state.strings.value(SelectLanguagePageViewStrings.instructionLabelText, SelectLanguagePageViewStrings),
                     foregroundColor = Colors.instructionLabelForeground,
                     font = Font.systemSemibold(),
                     modifier = Modifier.padding(vertical = Floats.instructionLabelVerticalPadding),
@@ -99,13 +87,13 @@ fun SelectLanguagePageView(modifier: Modifier = Modifier) {
                 )
 
                 Components.CapsuleButton(
-                    text = state.strings.value(SelectLanguagePageViewStrings.continueButtonText),
+                    text = state.strings.value(SelectLanguagePageViewStrings.continueButtonText, SelectLanguagePageViewStrings),
                     action = { viewModel.send(SelectLanguagePageReducer.Action.ContinueButtonTapped) },
                     modifier = Modifier.padding(top = Floats.continueButtonTopPadding),
                 )
 
                 Components.Button(
-                    text = state.strings.value(SelectLanguagePageViewStrings.backButtonText),
+                    text = state.strings.value(SelectLanguagePageViewStrings.backButtonText, SelectLanguagePageViewStrings),
                     foregroundColor = colors.accent,
                     onClick = { viewModel.send(SelectLanguagePageReducer.Action.BackButtonTapped) },
                     font = Font.system(FontScale.Custom(Floats.BACK_BUTTON_LABEL_FONT_SIZE)),

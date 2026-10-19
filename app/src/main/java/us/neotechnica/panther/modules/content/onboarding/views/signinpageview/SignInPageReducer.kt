@@ -249,6 +249,7 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
                     } else {
                         SignInPageViewStrings.verificationCodeContinueButtonText
                     },
+                    SignInPageViewStrings,
                 )
 
         /** The instruction label's text for the current configuration. */
@@ -260,6 +261,7 @@ class SignInPageReducer : Reducer<SignInPageReducer.State, SignInPageReducer.Act
                     } else {
                         SignInPageViewStrings.verificationCodeInstructionLabelText
                     },
+                    SignInPageViewStrings,
                 )
 
         internal val isDeveloperModeEnabled: Boolean
