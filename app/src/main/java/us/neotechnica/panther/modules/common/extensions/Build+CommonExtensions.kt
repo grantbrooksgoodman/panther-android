@@ -8,8 +8,6 @@
 
 package us.neotechnica.panther.modules.common.extensions
 
-import us.neotechnica.panther.modules.common.services.commonServices
-import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 
 /**
@@ -38,7 +36,3 @@ val Build.isEmulator: Boolean
                 .contains("ranchu") ||
             android.os.Build.PRODUCT
                 .contains("sdk")
-
-/** A Boolean value that indicates whether the device is online. */
-val Build.isOnline: Boolean
-    get() = DependencyValues.current.commonServices.connectionStatus.isOnline

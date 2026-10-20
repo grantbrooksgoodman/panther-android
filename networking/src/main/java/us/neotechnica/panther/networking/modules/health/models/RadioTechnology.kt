@@ -50,8 +50,11 @@ internal enum class RadioTechnology(
 
         // READ_BASIC_PHONE_STATE, a normal permission granted at
         // install, covers this call on API 33 and later; `current`
-        // still reports UNKNOWN if the call throws.
+        // still reports UNKNOWN if the call throws. The CDMA and iDEN
+        // types are deprecated, but devices running API levels before
+        // their deprecation still report them.
         @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+        @Suppress("DEPRECATION")
         @SuppressLint("MissingPermission")
         private fun fromDataNetworkType(): RadioTechnology {
             val telephonyManager =

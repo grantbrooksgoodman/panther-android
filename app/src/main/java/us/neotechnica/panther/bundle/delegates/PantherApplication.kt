@@ -21,7 +21,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.bundle.traitCollectionChanged
-import us.neotechnica.panther.modules.common.extensions.isOnline
 import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.common.services.sources.AnalyticsService
 import us.neotechnica.panther.modules.common.services.sources.ConnectionStatusService
@@ -121,6 +120,9 @@ class PantherApplication : Application() {
 
     // MARK: - Push Notifications
 
+    // Senders address devices by registration token, so this keeps
+    // the token API rather than installation-ID registration.
+    @Suppress("DEPRECATION")
     private fun setUpPushNotifications() {
         PantherMessagingService.createChannel(this)
         firebaseMessaging.token.addOnSuccessListener { token ->

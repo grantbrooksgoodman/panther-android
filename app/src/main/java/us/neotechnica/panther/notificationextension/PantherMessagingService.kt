@@ -87,6 +87,7 @@ class PantherMessagingService : FirebaseMessagingService() {
 
     // MARK: - Token
 
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun onNewToken(token: String) {
         pushTokenService.setCurrentToken(token)
         if (User.currentUserID == null) return

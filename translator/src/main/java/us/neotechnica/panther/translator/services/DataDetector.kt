@@ -8,6 +8,8 @@
 
 package us.neotechnica.panther.translator.services
 
+import android.os.Build.VERSION
+import android.os.Build.VERSION_CODES
 import android.telephony.PhoneNumberUtils
 import android.util.Patterns
 import android.view.textclassifier.TextClassificationManager
@@ -88,9 +90,8 @@ private fun classifiedAddressRanges(string: String): List<IntRange> {
         val request =
             TextLinks.Request
                 .Builder(string)
-                .setEntityConfig(
-                    TextClassifier.EntityConfig.createWithExplicitEntityList(listOf(TextClassifier.TYPE_ADDRESS)),
-                ).build()
+                .setEntityConfig(explicitEntityConfig(listOf(TextClassifier.TYPE_ADDRESS)))
+                .build()
 
         manager.textClassifier
             .generateLinks(request)
@@ -99,3 +100,17 @@ private fun classifiedAddressRanges(string: String): List<IntRange> {
             .map { it.start until it.end }
     }.getOrDefault(emptyList())
 }
+
+// A classifier configuration that finds exactly the given entity
+// types.
+private fun explicitEntityConfig(entityTypes: List<String>): TextClassifier.EntityConfig =
+    if (VERSION.SDK_INT >= VERSION_CODES.Q) {
+        TextClassifier.EntityConfig
+            .Builder()
+            .setIncludedTypes(entityTypes)
+            .includeTypesFromTextClassifier(false)
+            .build()
+    } else {
+        @Suppress("DEPRECATION")
+        TextClassifier.EntityConfig.createWithExplicitEntityList(entityTypes)
+    }

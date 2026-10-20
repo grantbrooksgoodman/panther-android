@@ -12,6 +12,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
@@ -184,6 +185,7 @@ class Coalescer<Key : Any, Output>(
         return settlement
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private suspend fun handleCompletion(
         key: Key,
         id: UUID,

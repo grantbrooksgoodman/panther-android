@@ -17,17 +17,17 @@ class LocaleTest {
 
     @Test
     fun `legacy hebrew code resolves to he`() {
-        assertEquals("he", systemLanguageCode(tags(Locale("iw")), setOf("he")))
+        assertEquals("he", systemLanguageCode(tags(Locale.forLanguageTag("iw")), setOf("he")))
     }
 
     @Test
     fun `legacy indonesian code resolves to id`() {
-        assertEquals("id", systemLanguageCode(tags(Locale("in")), setOf("id")))
+        assertEquals("id", systemLanguageCode(tags(Locale.forLanguageTag("in")), setOf("id")))
     }
 
     @Test
     fun `legacy yiddish code resolves to yi`() {
-        assertEquals("yi", systemLanguageCode(tags(Locale("ji")), setOf("yi")))
+        assertEquals("yi", systemLanguageCode(tags(Locale.forLanguageTag("ji")), setOf("yi")))
     }
 
     @Test

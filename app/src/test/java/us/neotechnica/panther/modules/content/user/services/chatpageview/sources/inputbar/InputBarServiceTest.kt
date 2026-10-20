@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.content.user.services.chatpageview.sources.inputbar
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -25,6 +26,7 @@ import us.neotechnica.panther.modules.networking.sources.support.SessionTestEnvi
  * rules, the text change path, the sending state toggle, and the
  * editing signal, each through injected collaborators.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class InputBarServiceTest {
     // MARK: - Setup
 

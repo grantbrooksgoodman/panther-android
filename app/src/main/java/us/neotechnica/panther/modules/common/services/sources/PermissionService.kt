@@ -178,7 +178,7 @@ object PermissionService {
                         launcher?.unregister()
                         continuation.resume(if (isGranted) PermissionStatus.GRANTED else PermissionStatus.DENIED)
                     }
-                continuation.invokeOnCancellation { launcher?.unregister() }
+                continuation.invokeOnCancellation { launcher.unregister() }
                 launcher.launch(permission)
             }
         }

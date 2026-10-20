@@ -105,8 +105,7 @@ private suspend fun presentChangeNameAlert(conversation: Conversation?): ChatInf
         }
     }
 
-    val name = textInputAlert.present(translating = listOf(TextInputAlert.TranslationOptionKey.Message))
-    if (conversation == null || name == null) return null
+    val name = textInputAlert.present(translating = listOf(TextInputAlert.TranslationOptionKey.Message)) ?: return null
     if (name == conversation.metadata.name) return null
     if (name.isBangQualifiedEmpty && conversation.metadata.name.isBangQualifiedEmpty) return null
 

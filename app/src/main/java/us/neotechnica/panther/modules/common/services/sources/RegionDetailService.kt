@@ -95,7 +95,7 @@ object RegionDetailService {
         get() = CommonPropertyLists.callingCodes
 
     private val systemLocalizedLocale: Locale
-        get() = Locale(RuntimeStorage.languageCode)
+        get() = Locale.forLanguageTag(RuntimeStorage.languageCode)
 
     // MARK: - Init
 
@@ -188,7 +188,7 @@ object RegionDetailService {
                 }
             }
 
-            is QueryStrategy.RegionTitle -> regionCodesForRegionTitle(regionTitle = strategy.regionTitle)?.firstOrNull()
+            is QueryStrategy.RegionTitle -> regionCodesForRegionTitle(regionTitle = strategy.regionTitle).firstOrNull()
 
             is QueryStrategy.RegionCode,
             is QueryStrategy.SearchTerm,
@@ -255,7 +255,7 @@ object RegionDetailService {
 
         if (callingCodes[regionCode] == null) return regionCode
 
-        val locale = languageCode?.let { Locale(it) } ?: systemLocalizedLocale
+        val locale = languageCode?.let { Locale.forLanguageTag(it) } ?: systemLocalizedLocale
         val regionName =
             locale.localizedString(regionCode = regionCode.uppercase())
                 ?: LocalizedStringKey.Multiple.localized()

@@ -6,11 +6,13 @@ plugins {
 }
 
 // detekt loads these rules into its own Kotlin 2.0 runtime, so they compile
-// against that language version and standard library.
+// against that language version and standard library, without the
+// compiler's warning that the version is deprecated.
 kotlin {
     coreLibrariesVersion = "2.0.21"
     compilerOptions {
         apiVersion.set(KotlinVersion.KOTLIN_2_0)
+        freeCompilerArgs.add("-Xsuppress-version-warnings")
         jvmTarget.set(JvmTarget.JVM_17)
         languageVersion.set(KotlinVersion.KOTLIN_2_0)
     }

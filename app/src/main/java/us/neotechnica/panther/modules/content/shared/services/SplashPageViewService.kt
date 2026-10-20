@@ -34,7 +34,6 @@ import us.neotechnica.panther.designsystem.modules.alertkit.AlertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.dependencies.alertKitConfig
 import us.neotechnica.panther.designsystem.modules.alertkit.models.ErrorAlert
 import us.neotechnica.panther.modules.common.extensions.isEmulator
-import us.neotechnica.panther.modules.common.extensions.isOnline
 import us.neotechnica.panther.modules.common.extensions.runCatchingException
 import us.neotechnica.panther.modules.common.models.RemoteCacheStatus
 import us.neotechnica.panther.modules.common.services.CommonServices

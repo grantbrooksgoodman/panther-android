@@ -127,7 +127,7 @@ private fun ZoomableImage(mediaFile: MediaFile) {
     var scale by remember { mutableFloatStateOf(MediaPreviewOverlayFloats.MIN_ZOOM) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     val transformableState =
-        rememberTransformableState { zoomChange, panChange, _ ->
+        rememberTransformableState { _, zoomChange, panChange, _ ->
             scale = (scale * zoomChange).coerceIn(MediaPreviewOverlayFloats.MIN_ZOOM, MediaPreviewOverlayFloats.MAX_ZOOM)
             offset = if (scale > MediaPreviewOverlayFloats.MIN_ZOOM) offset + panChange else Offset.Zero
         }

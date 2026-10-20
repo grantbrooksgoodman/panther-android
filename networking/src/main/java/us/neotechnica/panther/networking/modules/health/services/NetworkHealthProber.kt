@@ -158,7 +158,7 @@ internal class NetworkHealthProber(
 
                 val elapsed = (System.currentTimeMillis() - start) / CommonNetworkingFloats.MILLIS_PER_SECOND
                 val probeHost = runCatching { URL(configuration.url).host }.getOrNull()
-                if (landingHost != null && probeHost != null && !landingHost.equals(probeHost, ignoreCase = true)) {
+                if (probeHost != null && !landingHost.equals(probeHost, ignoreCase = true)) {
                     // A redirect off the operator's host is not evidence about their endpoint.
                     "cross-host redirect, discarded"
                 } else {

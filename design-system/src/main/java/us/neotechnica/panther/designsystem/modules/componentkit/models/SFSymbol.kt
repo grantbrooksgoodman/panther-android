@@ -14,6 +14,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircle
@@ -55,9 +57,8 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.TextFields
-import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
@@ -212,11 +213,11 @@ object SFSymbol {
             "text.bubble" to Icons.AutoMirrored.Filled.Message,
             "text.bubble.fill" to Icons.AutoMirrored.Filled.Message,
             "arrow.clockwise" to Icons.Filled.Refresh,
-            "speaker.wave.2" to Icons.Filled.VolumeUp,
-            "speaker.wave.2.fill" to Icons.Filled.VolumeUp,
-            "speaker.wave.2.circle" to Icons.Filled.VolumeUp,
-            "speaker.wave.2.bubble" to Icons.Filled.VolumeUp,
-            "speaker.slash.circle" to Icons.Filled.VolumeOff,
+            "speaker.wave.2" to Icons.AutoMirrored.Filled.VolumeUp,
+            "speaker.wave.2.fill" to Icons.AutoMirrored.Filled.VolumeUp,
+            "speaker.wave.2.circle" to Icons.AutoMirrored.Filled.VolumeUp,
+            "speaker.wave.2.bubble" to Icons.AutoMirrored.Filled.VolumeUp,
+            "speaker.slash.circle" to Icons.AutoMirrored.Filled.VolumeOff,
             "chevron.forward" to Icons.AutoMirrored.Filled.KeyboardArrowRight,
             "chevron.backward" to Icons.AutoMirrored.Filled.KeyboardArrowLeft,
             "chevron.compact.right" to Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -224,7 +225,7 @@ object SFSymbol {
             "chevron.down.circle" to Icons.Filled.KeyboardArrowDown,
             "person.2.circle.fill" to Icons.Filled.Group,
             "doc.circle.fill" to Icons.Filled.Description,
-            "wifi.slash" to Icons.Filled.VolumeOff,
+            "wifi.slash" to Icons.Filled.WifiOff,
             "externaldrive.trianglebadge.exclamationmark" to Icons.Filled.Warning,
             "exclamationmark.triangle" to Icons.Filled.Warning,
             "exclamationmark.triangle.fill" to Icons.Filled.Warning,

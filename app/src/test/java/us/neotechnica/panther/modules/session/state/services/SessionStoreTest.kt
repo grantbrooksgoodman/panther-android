@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.session.state.services
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -40,6 +41,7 @@ import us.neotechnica.panther.translator.models.Translation
 import us.neotechnica.panther.translator.models.TranslationInput
 import java.io.File
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class SessionStoreTest {
     // MARK: - Setup
 

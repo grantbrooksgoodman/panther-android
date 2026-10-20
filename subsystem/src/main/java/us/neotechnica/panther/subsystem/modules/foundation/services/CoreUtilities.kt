@@ -108,9 +108,9 @@ object CoreUtilities {
      */
     fun localizedLanguageCodeDictionary(languageCode: String): Map<String, String>? {
         val languageCodeDictionary = RuntimeStorage.languageCodeDictionary ?: return null
-        val locale = Locale(languageCode)
+        val locale = Locale.forLanguageTag(languageCode)
         return languageCodeDictionary.entries.associate { (code, name) ->
-            val localizedName = Locale(code).getDisplayLanguage(locale).takeIf { it.isNotBlank() && it != code }
+            val localizedName = Locale.forLanguageTag(code).getDisplayLanguage(locale).takeIf { it.isNotBlank() && it != code }
             if (localizedName == null) {
                 code to name.trim()
             } else {

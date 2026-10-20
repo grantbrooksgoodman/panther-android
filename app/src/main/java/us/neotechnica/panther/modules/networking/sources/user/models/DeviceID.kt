@@ -99,6 +99,9 @@ object DeviceID {
 
     private fun backupPreferences(): SharedPreferences? = appContext?.getSharedPreferences(BACKUP_PREFERENCES_NAME, Context.MODE_PRIVATE)
 
+    // Identifiers already stored here are encrypted with this
+    // deprecated library, so it stays to read them.
+    @Suppress("DEPRECATION")
     private fun encryptedPreferences(): SharedPreferences? {
         val context = appContext ?: return null
         return try {

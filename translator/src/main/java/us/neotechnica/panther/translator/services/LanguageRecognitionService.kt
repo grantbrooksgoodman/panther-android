@@ -247,7 +247,7 @@ private object SystemSpellChecker : LanguageRecognitionService.SpellChecker {
                     session =
                         manager.newSpellCheckerSession(
                             null,
-                            Locale(languageCode),
+                            Locale.forLanguageTag(languageCode),
                             listener,
                             false,
                         )

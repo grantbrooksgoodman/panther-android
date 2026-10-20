@@ -26,7 +26,6 @@ import us.neotechnica.panther.bundle.notAuthorizedForContacts
 import us.neotechnica.panther.bundle.reloadingConversationIDKeys
 import us.neotechnica.panther.bundle.traitCollectionChanged
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
-import us.neotechnica.panther.modules.common.extensions.isOnline
 import us.neotechnica.panther.modules.common.extensions.roundedString
 import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.common.services.sources.ConnectionStatusService

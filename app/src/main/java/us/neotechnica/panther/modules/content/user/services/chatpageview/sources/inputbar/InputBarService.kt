@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
-import us.neotechnica.panther.modules.common.extensions.isOnline
 import us.neotechnica.panther.modules.content.user.extensions.isEmpty
 import us.neotechnica.panther.modules.content.user.services.MessageDeliveryService
 import us.neotechnica.panther.modules.content.user.services.chatpageview.sources.inputbar.sources.InputBarActionHandlerService

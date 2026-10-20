@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.nativePaint
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
@@ -152,7 +153,7 @@ private fun Modifier.shadow(cornerRadius: Dp): Modifier =
         val cornerRadius = cornerRadius.toPx()
         val yOffset = SquareIconFloats.shadowYOffset.toPx()
         val paint =
-            Paint().asFrameworkPaint().apply {
+            Paint().nativePaint.apply {
                 isAntiAlias = true
                 color = SquareIconColors.shadow.copy(alpha = SquareIconFloats.SHADOW_COLOR_OPACITY).toArgb()
                 maskFilter = BlurMaskFilter(SquareIconFloats.shadowRadius.toPx(), BlurMaskFilter.Blur.NORMAL)

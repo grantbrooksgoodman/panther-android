@@ -9,6 +9,7 @@
 package us.neotechnica.panther.subsystem.kernel
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -109,6 +110,7 @@ private class CounterReducer : Reducer<CounterReducer.State, CounterReducer.Acti
         }
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ViewModelTest {
     // MARK: - Properties
 

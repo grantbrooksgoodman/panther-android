@@ -9,6 +9,8 @@
 package us.neotechnica.panther.modules.common.services.sources
 
 import android.content.Context
+import android.os.Build.VERSION
+import android.os.Build.VERSION_CODES
 import android.telephony.PhoneNumberUtils
 import android.util.Patterns
 import android.view.textclassifier.TextClassificationManager
@@ -230,7 +232,7 @@ object AttributeDetectionService {
                 TextLinks.Request
                     .Builder(text)
                     .setEntityConfig(
-                        TextClassifier.EntityConfig.createWithExplicitEntityList(
+                        explicitEntityConfig(
                             listOf(
                                 TextClassifier.TYPE_DATE,
                                 TextClassifier.TYPE_DATE_TIME,
@@ -259,6 +261,20 @@ object AttributeDetectionService {
                 }
         }.getOrDefault(emptyList())
     }
+
+    // A classifier configuration that finds exactly the given entity
+    // types.
+    private fun explicitEntityConfig(entityTypes: List<String>): TextClassifier.EntityConfig =
+        if (VERSION.SDK_INT >= VERSION_CODES.Q) {
+            TextClassifier.EntityConfig
+                .Builder()
+                .setIncludedTypes(entityTypes)
+                .includeTypesFromTextClassifier(false)
+                .build()
+        } else {
+            @Suppress("DEPRECATION")
+            TextClassifier.EntityConfig.createWithExplicitEntityList(entityTypes)
+        }
 
     /**
      * Parses a date the classifier found, trying the device
