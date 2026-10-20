@@ -225,9 +225,8 @@ private object SystemSpellChecker : LanguageRecognitionService.SpellChecker {
                 ?.applicationContext ?: return null
         val manager = context.getSystemService(Context.TEXT_SERVICES_MANAGER_SERVICE) as? TextServicesManager ?: return null
 
-        // A session whose service never answers would otherwise hold
-        // the translation forever; an unanswered check counts as no
-        // checker.
+        // An unanswered check counts as no checker, so a session whose
+        // service never answers cannot hold the translation.
         return withTimeoutOrNull(SPELL_CHECK_TIMEOUT_MILLIS) {
             withContext(Dispatchers.Main) {
                 suspendCancellableCoroutine { continuation ->

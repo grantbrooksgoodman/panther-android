@@ -18,9 +18,8 @@ import java.util.TimeZone
  * Formats and parses wire-format timestamps.
  *
  * All serialized dates share one format –
- * `yyyy-MM-dd HH:mm:ss zzz` in the POSIX locale, pinned to UTC –
- * in a fixed serialized form. Formatted
- * output always renders the zone token as `GMT`:
+ * `yyyy-MM-dd HH:mm:ss zzz` in the POSIX locale, pinned to UTC.
+ * Formatted output always renders the zone token as `GMT`:
  *
  * ```
  * 2026-08-19 21:30:00 GMT
@@ -28,19 +27,15 @@ import java.util.TimeZone
  *
  * Parsing accepts any zone the platform recognizes (`GMT`,
  * `UTC`, `GMT+2`, named zones) and rejects strings without a
- * zone token. The
- * golden fixtures in
- * `timestamp_vectors.json` and
- * `timestamp_parse_vectors.json` pin both behaviors.
+ * zone token.
  *
  * All methods are thread-safe.
  */
 class TimestampDateFormatter {
     // MARK: - Properties
 
-    // Formatting writes the zone as a literal; always emitting
-    // "GMT" for the pinned UTC zone, and rendering zzz through
-    // the platform would emit "UTC" on some JVM versions.
+    // The zone token is written as the literal "GMT"; the
+    // platform's `zzz` rendering of UTC varies by JVM version.
     private val formatFormatter =
         SimpleDateFormat(
             "yyyy-MM-dd HH:mm:ss 'GMT'",
@@ -89,8 +84,8 @@ class TimestampDateFormatter {
 
     // MARK: - Auxiliary
 
-    // Foundation accepts compact GMT offsets ("GMT+2") that
-    // SimpleDateFormat rejects; normalize and retry.
+    // Accepts compact GMT offsets ("GMT+2"), which
+    // `SimpleDateFormat` rejects, by normalizing and reparsing.
     private fun parseCompactOffset(string: String): Date? {
         val match = COMPACT_OFFSET_REGEX.matchEntire(string) ?: return null
         val (dateTime, offsetToken) = match.destructured

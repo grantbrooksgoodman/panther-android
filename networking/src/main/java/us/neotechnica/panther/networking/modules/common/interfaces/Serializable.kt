@@ -33,9 +33,9 @@ package us.neotechnica.panther.networking.modules.common.interfaces
  * Use [SerializableDecoder.canDecode] to check whether a given
  * payload is structurally valid before attempting decoding.
  *
- * **Note:** In Kotlin the decode side lives on a companion
- * [SerializableDecoder] rather than an initializer, because
- * interfaces cannot declare constructors.
+ * **Note:** The decode side lives on a companion
+ * [SerializableDecoder], since an interface cannot declare a
+ * constructor.
  */
 interface Serializable<out Representation> {
     // MARK: - Properties

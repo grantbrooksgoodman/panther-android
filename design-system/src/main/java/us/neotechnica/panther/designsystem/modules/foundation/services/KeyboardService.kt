@@ -22,11 +22,11 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * Dismisses the keyboard from anywhere in the app.
  *
- * [KeyboardService] requests resignation of the active first responder,
- * which the root view fulfills by clearing focus and hiding the soft
- * keyboard. Call it from reducers and services wherever the keyboard
- * should give way – when an overlay appears, a page dismisses, a list
- * scrolls, or a selection is made.
+ * [KeyboardService] requests that the focused view give up focus,
+ * which the root view fulfills by clearing focus and hiding the
+ * soft keyboard. Call it from reducers and services wherever the
+ * keyboard should give way – when an overlay appears, a page
+ * dismisses, a list scrolls, or a selection is made.
  */
 object KeyboardService {
     // MARK: - Properties

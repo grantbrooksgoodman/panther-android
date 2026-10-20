@@ -46,8 +46,6 @@ private typealias Floats = SessionStoreFloats
 
 // This store exceeds the file-length and type-body-length limits.
 
-// The counterpart store carries `// swiftlint:disable file_length type_body_length`.
-
 /**
  * The in-memory store of the session's conversations, messages, and
  * users.
@@ -98,10 +96,12 @@ object SessionStore {
     /** The users in the store, keyed by identifier. */
     val users: Map<String, User> get() = storeState.wrappedValue.users
 
+    // The archive is decoded while the client session initializes, so
+    // decoding must not read session state.
     private var persistedConversationArchive: Set<Conversation>?
         get() =
             Persistent.archive(PersistentStorageKey.sessionStore(SessionStoreStorageKey.CONVERSATION_ARCHIVE)) { it }?.let { maps ->
-                maps.mapNotNull { runCatching { Conversation.decode(it) }.getOrNull() }.toSet()
+                maps.mapNotNull { runCatching { Conversation.fromArchive(it) }.getOrNull() }.toSet()
             }
         set(value) {
             Persistent.setArchive(PersistentStorageKey.sessionStore(SessionStoreStorageKey.CONVERSATION_ARCHIVE), value?.map { it.encoded })

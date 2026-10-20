@@ -54,8 +54,8 @@ private typealias CellFloats = ContactPairCellViewFloats
  *
  * @param contactPair The contact pair the cell describes.
  * @param isInspectable A Boolean value that indicates whether the
- *   cell's name labels include a hidden inspection marker. Accepted
- *   for signature compatibility; Compose has no inspection marker.
+ *   cell's name labels include a hidden inspection marker. The
+ *   value has no effect; Compose has no inspection marker.
  * @param modifier The modifier for this view.
  * @param contentPadding The padding between the cell's edges and its
  *   content. The padding responds to taps along with the content, so

@@ -40,8 +40,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import java.util.Date
 
-// The counterpart extension carries `// swiftlint:disable file_length`.
-
 // MARK: - Types
 
 /** The remotely updatable keys of a conversation. */
@@ -75,8 +73,9 @@ fun Conversation.modifyKey(
 
         ConversationUpdatableKey.MESSAGES -> {
             val messages = value.asList<Message>() ?: return null
-            // The session store never stores system messages; filter them
-            // here too so hydrated display arrays can't leak their IDs.
+            // The session store never stores system messages; they are
+            // filtered out so hydrated display arrays carry no system
+            // message IDs.
             val filtered = messages.uniquedByID.filteringSystemMessages
             // Messages set via updateValues bypass Message.didWrite.
             DependencyValues.current.clientSession.store

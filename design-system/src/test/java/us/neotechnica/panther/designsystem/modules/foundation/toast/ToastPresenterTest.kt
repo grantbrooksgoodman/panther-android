@@ -38,9 +38,6 @@ class ToastPresenterTest {
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         Persistent.initializeForTesting()
-        // Hide the build-info overlay so presentation does not defer
-        // behind the overlay-hide delay.
-        BuildInfoOverlay.hide()
         ToastPresenter.hide()
     }
 
@@ -72,19 +69,34 @@ class ToastPresenterTest {
         }
 
     @Test
-    fun `dismissing a toast frees the slot at once and restores the overlay a second later`() =
+    fun `a toast shows at once and leaves the visible overlay visible`() =
+        runTest(dispatcher) {
+            BuildInfoOverlay.show()
+            val toast = Toast(message = "Beside the overlay")
+
+            ToastPresenter.show(toast, onTap = null)
+            assertEquals(toast, ToastPresenter.current.value?.toast)
+            assertFalse(BuildInfoOverlay.isHidden.value)
+
+            ToastPresenter.hide()
+            advanceTimeBy(1_100)
+            assertEquals(null, ToastPresenter.current.value)
+            assertFalse(BuildInfoOverlay.isHidden.value)
+            BuildInfoOverlay.hide()
+        }
+
+    @Test
+    fun `hiding a toast leaves a hidden overlay hidden`() =
         runTest(dispatcher) {
             Persistent.setBoolean(PersistentStorageKey.hidesBuildInfoOverlay, false)
             BuildInfoOverlay.hide(persistSetting = false)
 
             ToastPresenter.show(Toast(message = "Shown"), onTap = null)
-            ToastPresenter.dismiss()
+            ToastPresenter.hide()
+            advanceTimeBy(1_100)
 
             assertEquals(null, ToastPresenter.current.value)
             assertTrue(BuildInfoOverlay.isHidden.value)
-
-            advanceTimeBy(1_100)
-            assertFalse(BuildInfoOverlay.isHidden.value)
             BuildInfoOverlay.hide()
         }
 

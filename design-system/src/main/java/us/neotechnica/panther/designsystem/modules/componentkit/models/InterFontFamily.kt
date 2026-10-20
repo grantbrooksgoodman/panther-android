@@ -18,13 +18,11 @@ import us.neotechnica.panther.designsystem.R
 
 /**
  * The Inter typeface, used as the system font in place of San
- * Francisco while [Font.usesSanFrancisco] is `false`. Inter is chosen
- * for its close metric compatibility with San Francisco.
+ * Francisco while [Font.usesSanFrancisco] is `false`. Inter's
+ * metrics closely match San Francisco's.
  *
- * The family is backed by two variable fonts (upright and italic); each
- * declared weight selects the corresponding weight axis. On API levels
- * below 26, where variable weight axes are not honored, the closest
- * static rendering is used.
+ * The family is backed by two variable fonts (upright and italic);
+ * each declared weight selects the corresponding weight axis.
  */
 val InterFontFamily: FontFamily by lazy {
     FontFamily(

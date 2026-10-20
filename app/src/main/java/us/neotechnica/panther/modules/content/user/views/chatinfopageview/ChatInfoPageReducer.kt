@@ -14,11 +14,13 @@ import android.content.res.Resources
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.bundle.currentConversationMetadataChanged
 import us.neotechnica.panther.bundle.navigators.ChatNavigatorState
 import us.neotechnica.panther.bundle.navigators.ChatRoute
 import us.neotechnica.panther.bundle.navigators.UserContentRoute
+import us.neotechnica.panther.designsystem.modules.foundation.components.compatibilityFrameWidth
 import us.neotechnica.panther.designsystem.modules.foundation.views.ViewState
 import us.neotechnica.panther.modules.content.user.constants.ChatInfoPageViewFloats
 import us.neotechnica.panther.modules.content.user.dependencies.chatInfoPageViewService
@@ -65,8 +67,6 @@ import us.neotechnica.panther.subsystem.modules.reducer.interfaces.Reducer
 import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 import java.util.UUID
-
-// The counterpart reducer carries `// swiftlint:disable file_length type_body_length`.
 
 /**
  * The reducer that drives the chat info page.
@@ -408,12 +408,19 @@ class ChatInfoPageReducer : Reducer<ChatInfoPageReducer.State, ChatInfoPageReduc
 
         /**
          * The maximum width of the segmented control, two-thirds
-         * of the screen's width.
+         * of the screen's width – or, on a large screen, of the
+         * width of the compatibility frame.
          */
         val segmentedControlMaxWidth: Dp
             get() {
                 val displayMetrics = Resources.getSystem().displayMetrics
-                return (displayMetrics.widthPixels / displayMetrics.density).dp *
+                val screenSize =
+                    DpSize(
+                        width = (displayMetrics.widthPixels / displayMetrics.density).dp,
+                        height = (displayMetrics.heightPixels / displayMetrics.density).dp,
+                    )
+
+                return (compatibilityFrameWidth(screenSize) ?: screenSize.width) *
                     ChatInfoPageViewFloats.SEGMENTED_CONTROL_MAX_WIDTH_FRACTION
             }
 

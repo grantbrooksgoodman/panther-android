@@ -283,8 +283,8 @@ class SettingsPageReducer : Reducer<SettingsPageReducer.State, SettingsPageReduc
 
     // MARK: - Reduce
 
-    // The counterpart reducer carries `// swiftlint:disable function_body_length`; the
-    // cyclomatic suppression covers the action `when`, whose branches STYLE_RULES §16 exempts.
+    // The reduce dispatch handles every action; the suppressions below
+    // cover its size and complexity.
     @Suppress("CyclomaticComplexMethod", "LongMethod")
     override fun reduce(
         state: State,

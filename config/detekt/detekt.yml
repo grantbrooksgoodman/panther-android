@@ -1,49 +1,44 @@
-# Baseline detekt overlay. buildUponDefaultConfig = true is set in the root
-# build script, so this file only records intentional deviations from detekt's
-# defaults, encoding STYLE_RULES_ANDROID.md §14 and §16. Where a rule has
-# an iOS SwiftLint counterpart, its options mirror the iOS .swiftlint.yml.
+# detekt overlay. buildUponDefaultConfig = true is set in the root
+# build script, so this file records only the deviations from detekt's
+# defaults.
 
 build:
   weights:
-    # SwiftLint's todo rule is a warning on iOS, so TODO and FIXME
-    # comments are still reported but don't fail the build.
+    # TODO and FIXME comments are reported without failing the build.
     ForbiddenComment: 0
 
 complexity:
   ComplexCondition:
-    # §14.1 permits multi-condition guards; the Kotlin equivalent is a
-    # `&&` chain, as in the serializers' structural `canDecode` checks.
+    # Multi-condition guards are `&&` chains, as in the serializers'
+    # structural `canDecode` checks.
     threshold: 12
   CyclomaticComplexMethod:
     threshold: 20
-    # SwiftLint ignores_case_statements. detekt can only skip `when`
-    # entries without braces.
+    # `when` entries without braces are not counted.
     ignoreSimpleWhenEntries: true
-    # SwiftLint doesn't count closures; detekt would count each `let`,
-    # `apply`, `forEach`, and similar call.
+    # Nested `let`, `apply`, `forEach`, and similar calls are not
+    # counted.
     ignoreNestingFunctions: true
   LargeClass:
     threshold: 250
   LongMethod:
     threshold: 100
   LongParameterList:
-    # Kotlin data-class constructors are the analog of Swift's
-    # compiler-generated memberwise initializers, which the iOS
-    # linter does not count; only functions enforce the limit.
-    # §16 allows up to five parameters, so six-or-more triggers.
+    # Data-class constructors are exempt in practice; functions take
+    # at most five parameters.
     constructorThreshold: 20
     functionThreshold: 6
-    # SwiftLint ignores_default_parameters.
+    # Parameters with default values are not counted.
     ignoreDefaultParameters: true
   TooManyFunctions:
-    # §16 governs type size by body length (LargeClass), not by
-    # function count; the delegate interfaces mirror iOS surfaces.
+    # Type size is governed by body length (LargeClass), not by
+    # function count.
     active: false
 
 exceptions:
   TooGenericExceptionCaught:
-    # The domain error currency is a type named `Exception` (iOS
-    # parity), so catching it is idiomatic here, not a smell.
+    # The domain error currency is a type named `Exception`, so
+    # catching it is idiomatic here.
     active: false
   TooGenericExceptionThrown:
     # As above: `Exception` is the app's structured error type.
@@ -51,24 +46,24 @@ exceptions:
 
 naming:
   ClassNaming:
-    # §16 and SwiftLint type_name: at most 40 characters.
+    # Type names are at most 40 characters.
     classPattern: '[A-Z][a-zA-Z0-9]{0,39}'
   FunctionMaxLength:
-    # §16 and SwiftLint identifier_name: at most 40 characters. Tests are
-    # exempt because their names are backticked sentences.
+    # Identifiers are at most 40 characters. Tests are exempt because
+    # their names are backticked sentences.
     active: true
     maximumFunctionNameLength: 40
     excludes: ['**/test/**', '**/androidTest/**']
   FunctionNaming:
-    # Jetpack Compose @Composable functions are conventionally PascalCase.
+    # Composable functions are named in PascalCase.
     ignoreAnnotated: ['Composable']
   MatchingDeclarationName:
-    # Per-consumer constants files use the AppConstants+(Consumer).kt
-    # naming convention (STYLE_RULES_ANDROID §2/§6), so a single top-level
-    # (Consumer)Floats object need not match its file name.
+    # Per-consumer constants files are named AppConstants+(Consumer).kt,
+    # so a single top-level (Consumer)Floats object need not match its
+    # file name.
     active: false
   VariableMaxLength:
-    # §16 and SwiftLint identifier_name: at most 40 characters.
+    # Identifiers are at most 40 characters.
     active: true
     maximumVariableNameLength: 40
 
@@ -76,12 +71,12 @@ naming:
 panther:
   active: true
   FileLength:
-    # §16 and SwiftLint file_length: at most 400 lines, comments included.
+    # Files are at most 400 lines, comments included.
     active: true
     threshold: 400
   MultilineParameters:
-    # §10.2 and SwiftLint multiline_parameters with
-    # max_number_of_single_line_parameters: 1.
+    # A declaration either lists every parameter on one line or puts
+    # each parameter on its own line.
     active: true
     maxSingleLineParameters: 1
 
@@ -90,14 +85,13 @@ style:
     # Design-token property declarations (e.g. Color(0xFF...)) read fine inline.
     ignorePropertyDeclaration: true
   MaxLineLength:
-    # §16: line-length limit is 160, with comments exempt (SwiftLint
-    # ignores_comments).
+    # Lines are at most 160 characters, with comments exempt.
     maxLineLength: 160
     excludeCommentStatements: true
   ReturnCount:
-    # §14 endorses guard-style early returns (`?: return`), which the
-    # structural `canDecode` validators use throughout.
+    # Guard-style early returns (`?: return`) are used throughout, as
+    # in the structural `canDecode` validators.
     active: false
   ThrowsCount:
-    # §14 endorses early throws; the guarded operations use them.
+    # Guarded operations throw early.
     active: false

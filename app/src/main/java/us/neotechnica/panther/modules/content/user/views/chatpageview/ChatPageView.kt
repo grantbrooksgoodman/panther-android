@@ -287,6 +287,7 @@ private fun ChatInputBar(
         isAttachEnabled = isAttachMediaButtonEnabled,
         images = InputBarConfigService.images(),
         onFocusChanged = { inputBarService.setIsFirstResponder(it) },
+        onBeginEditing = { inputBarService.textViewDidBeginEditing() },
         keyboardOptions = KeyboardOptions(hintLocales = LocaleList(Locale(RuntimeStorage.languageCode))),
         focusRequester = focusRequester,
         modifier = Modifier.alpha(alpha),

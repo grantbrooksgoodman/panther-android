@@ -19,10 +19,10 @@ build/
 AGENTS
 local.properties
 
-# Firebase per-environment config — kept local, like the iOS GoogleService-Info.plist
+# Firebase per-environment config, kept local.
 google-services.json
 
-# Release signing — keep secrets local (see keystore.properties.template)
+# Release signing secrets, kept local (see keystore.properties.template).
 keystore.properties
 *.jks
 *.keystore

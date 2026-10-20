@@ -1,12 +1,12 @@
 {
   "generatedAt" : "2026-08-20T01:45:04Z",
-  "generator" : "generate_fixtures.swift (Panther Android port, Phase 1)",
+  "generator" : "generate_fixtures.swift",
   "notes" : [
-    "encoded_hash_vectors: byte parity required – Kotlin must reproduce json\/sha256 exactly.",
-    "timestamp_vectors: byte parity required for `formatted`; reparse must match epochMillis.",
-    "timestamp_parse_vectors: parse tolerance – null epochMillis means the iOS formatter rejects the string.",
-    "user\/conversation\/message: structural parity – decode → re-encode must be structurally equal (RTDB carries structure, not bytes).",
-    "type_hashes: identity-hash parity for the structural fixtures, computed with the real recipe."
+    "encoded_hash_vectors: byte-exact – the encoder reproduces json\/sha256 exactly.",
+    "timestamp_vectors: byte-exact for `formatted`; reparsing yields reparsedEpochMillis.",
+    "timestamp_parse_vectors: parse tolerance – a null epochMillis means the string is rejected.",
+    "user\/conversation\/message: structural – decoding and re-encoding yields a structurally equal value (the database carries structure, not bytes).",
+    "type_hashes: identity hashes for the structural fixtures, computed with the hashing recipe."
   ],
   "swiftVersion" : "run `swift --version` on the generating machine"
 }

@@ -36,10 +36,14 @@
         </intent>
     </queries>
 
+    <!-- Back is delivered through the platform's back callback on
+         every version that offers one, as it is by default on Android
+         16 and later for this target SDK. -->
     <application
         android:name=".bundle.delegates.PantherApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
+        android:enableOnBackInvokedCallback="true"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -62,13 +66,18 @@
             android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@drawable/ic_stat_notification" />
 
-        <!-- The activity handles appearance, size, text size, display
-             size, and input device changes itself; recreating it would
-             re-run the signed-in session's first-appearance work,
-             including network requests, where iOS reloads nothing.
-             Large screens ignore the portrait lock, so rotation counts
-             as a size change there. A language change still recreates
-             the activity, as iOS relaunches the app for one. -->
+        <!-- The activity is portrait-only. On large screens, Android 16
+             and later ignore the portrait lock: rotation counts as a
+             size change there, and CompatibilityFrame keeps the content
+             at a phone's proportions. The activity stays resizable, so
+             a display size change or a fold resizes it rather than
+             putting it in size compatibility mode.
+
+             The activity handles appearance, size, text size, display
+             size, and input device changes itself, so the signed-in
+             session's first-appearance work, including its network
+             requests, runs once. A language change recreates the
+             activity. -->
         <activity
             android:name=".bundle.delegates.MainActivity"
             android:configChanges="colorMode|density|fontScale|fontWeightAdjustment|keyboard|keyboardHidden|mcc|mnc|navigation|orientation|screenLayout|screenSize|smallestScreenSize|touchscreen|uiMode"

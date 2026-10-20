@@ -178,8 +178,7 @@ sealed interface PresentedAlert {
      * @property cancelButtonTitle The cancel button's title, or
      *   `null` to omit the button.
      * @property cancelButtonStyle The cancel button's style.
-     * @property progress The progress to display, from `0` to `1`
-     *   .
+     * @property progress The progress to display, from `0` to `1`.
      * @property messageAttributes The attributes applied to the
      *   message, or `null` for plain text.
      * @property titleAttributes The attributes applied to the

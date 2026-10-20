@@ -104,12 +104,12 @@ fun MessageContextMenu(
             LocalViewConfiguration.current.longPressTimeoutMillis.milliseconds
         }
 
-    // The gesture handler reads these through snapshot state so its
-    // pointer-input coroutine can key on the gesture's stable shape (see
-    // below) instead of restarting on every recomposition. A restart
-    // discards an in-progress long press, so a bubble that recomposes
-    // mid-press (an incoming receipt, speech highlight, audio progress)
-    // would otherwise drop its context menu.
+    // The gesture handler reads these through snapshot state, so its
+    // pointer-input coroutine keys on the gesture's stable shape (see
+    // below) rather than restarting on every recomposition. A restart
+    // discards an in-progress long press; a bubble that recomposes
+    // mid-press – an incoming receipt, a speech highlight, audio
+    // progress – keeps its context menu.
     val currentActions by rememberUpdatedState(actions)
     val currentContent by rememberUpdatedState(content)
     val currentOnTap by rememberUpdatedState(onTap)

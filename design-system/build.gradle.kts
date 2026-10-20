@@ -21,7 +21,7 @@ android {
     }
 
     lint {
-        // Warnings that predate Lint joining the gate. Regenerate with
+        // Baselined Lint warnings. Regenerate with
         // `./gradlew updateLintBaseline` after fixing any of them.
         baseline = file("lint-baseline.xml")
     }
@@ -35,6 +35,7 @@ dependencies {
     api(libs.androidx.compose.material.icons.extended)
     api(libs.androidx.compose.ui)
     api(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     testImplementation(libs.junit)

@@ -49,8 +49,6 @@ import java.util.UUID
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
-// The counterpart reducer carries `// swiftlint:disable file_length`.
-
 /**
  * The reducer that drives
  * [ConversationCellView][us.neotechnica.panther.modules.content.user.components.conversationcellview.ConversationCellView].
@@ -316,9 +314,8 @@ class ConversationCellReducer : Reducer<ConversationCellReducer.State, Conversat
                 if (cellViewData == null) {
                     ReduceResult(state, reloadDataRetryTask(state.conversation))
                 } else if (cellViewData.isAwaitingMessageHydration) {
-                    // Backstop for provisional builds; message hydration may
-                    // have completed before this cell subscribed to session
-                    // store changes.
+                    // Message hydration may have completed before this cell
+                    // subscribed to session store changes.
                     ReduceResult(
                         state.copy(cellViewData = cellViewData),
                         Effect.task(delay = HYDRATION_RELOAD_DELAY) { Action.ReloadData },

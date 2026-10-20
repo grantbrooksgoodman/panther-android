@@ -75,6 +75,6 @@ object AvatarImageViewStrings {
     /** The system name of the badge image. */
     const val BADGE_IMAGE_SYSTEM_NAME = "person.2.circle.fill"
 
-    /** The system name of the  image. */
+    /** The system name of the default image. */
     const val DEFAULT_IMAGE_SYSTEM_NAME = "person.crop.circle.fill"
 }

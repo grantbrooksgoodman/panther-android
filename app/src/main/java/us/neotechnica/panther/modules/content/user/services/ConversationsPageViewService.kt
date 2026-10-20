@@ -91,7 +91,7 @@ import kotlin.time.Duration.Companion.seconds
  * @param dependencies The collaborators the service calls; the
  *   defaults resolve the production services.
  */
-@Suppress("LargeClass") // The counterpart service carries `// swiftlint:disable type_body_length file_length`.
+@Suppress("LargeClass")
 class ConversationsPageViewService(
     private val dependencies: Dependencies = Dependencies(),
 ) {
@@ -105,6 +105,8 @@ class ConversationsPageViewService(
      * @property currentConversation Resolves the session's current
      *   conversation.
      * @property currentUser Resolves the session's current user.
+     * @property downloadVoiceIfNeeded Downloads a speech voice for
+     *   the given language code if none is installed.
      * @property hasContactsBesidesCurrentUser Whether the contact
      *   archive holds anyone besides the current user.
      * @property isChatPagePresented Whether the chat page is
@@ -137,6 +139,10 @@ class ConversationsPageViewService(
         },
         val currentConversation: () -> Conversation? = { DependencyValues.current.clientSession.entity.conversation.currentConversation },
         val currentUser: () -> User? = { DependencyValues.current.clientSession.entity.user.currentUser },
+        val downloadVoiceIfNeeded: (String) -> Unit = {
+            DependencyValues.current.commonServices.audio.textToSpeech
+                .downloadVoiceIfNeeded(it)
+        },
         val hasContactsBesidesCurrentUser: () -> Boolean = {
             DependencyValues.current.commonServices.contact.hasContactsBesidesCurrentUser
         },
@@ -246,13 +252,16 @@ class ConversationsPageViewService(
     /**
      * Responds to the conversations page finishing its initial load.
      *
-     * Clears temporary database caches, evaluates the startup prompt
-     * flow after a short delay, and registers the connection status
-     * effects that check for updates when connectivity is restored
-     * and show an offline toast when it is lost.
+     * Clears temporary database caches, downloads a speech voice for
+     * the current user's language if none is installed, evaluates the
+     * startup prompt flow after a short delay, and registers the
+     * connection status effects that check for updates when
+     * connectivity is restored and show an offline toast when it is
+     * lost.
      */
     fun viewLoaded() {
         dependencies.clearTemporaryCaches()
+        downloadVoiceIfNeeded()
         Task.delayed(by = PROMPT_DELAY) { showPromptsIfNeeded() }
         enableOfflineModeSideEffects()
     }
@@ -371,6 +380,16 @@ class ConversationsPageViewService(
         }
     }
 
+    /**
+     * Downloads a speech voice for the current user's language if
+     * none is installed, so that messages in the language can be
+     * spoken.
+     */
+    internal fun downloadVoiceIfNeeded() {
+        val languageCode = dependencies.currentUser()?.languageCode ?: return
+        dependencies.downloadVoiceIfNeeded(languageCode)
+    }
+
     internal fun secondsToLoadMessage(): String {
         val currentUser = dependencies.currentUser()
         val numberOfConversations =
@@ -428,8 +447,8 @@ class ConversationsPageViewService(
             )
         }
 
-        // Fixes a bug in which an offline startup would fail to properly
-        // set the navigation bar appearance.
+        // An offline startup leaves the navigation bar appearance unset;
+        // this reapplies it.
         fun updateAppearance() {
             Logger.log(
                 "Intercepted offline startup navigation bar appearance bug.",

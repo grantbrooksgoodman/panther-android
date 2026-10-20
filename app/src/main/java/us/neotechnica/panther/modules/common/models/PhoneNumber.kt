@@ -25,8 +25,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 
-// The counterpart model carries `// swiftlint:disable file_length`.
-
 /**
  * A phone number decomposed into its calling code, national
  * number, and region.

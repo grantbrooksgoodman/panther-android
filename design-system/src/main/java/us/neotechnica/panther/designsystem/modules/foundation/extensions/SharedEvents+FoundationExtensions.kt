@@ -16,8 +16,8 @@ val SharedEvents.dismissSheets: EventStream<Unit>
     get() = event("dismissSheets")
 
 /**
- * An event that requests dismissal of the keyboard, resigning any
- * active first responder.
+ * An event that requests dismissal of the keyboard, clearing focus
+ * from the focused view.
  */
 val SharedEvents.resignFirstResponders: EventStream<Unit>
     get() = event("resignFirstResponders")

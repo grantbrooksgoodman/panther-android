@@ -61,8 +61,6 @@ import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.math.max
 
-// The counterpart service carries `// swiftlint:disable file_length type_body_length`.
-
 /**
  * Sends push notifications and responds to notifications received
  * while the app is in the foreground.
@@ -506,9 +504,9 @@ object NotificationService {
 
     // A recipient is fetched into the session store once and never
     // refreshed, so its cached push tokens go stale when the recipient
-    // reinstalls, clears data, or signs in again. Read them from the
-    // database instead, falling back to the cached ones only if the
-    // read fails.
+    // reinstalls, clears data, or signs in again. The tokens are read
+    // from the database, with the cached ones as a fallback only if
+    // the read fails.
     private suspend fun currentPushTokens(user: User): List<String>? {
         val pushTokensPath =
             listOf(

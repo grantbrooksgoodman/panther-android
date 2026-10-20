@@ -52,7 +52,7 @@ private typealias Floats = SystemAnimationFloats
  *
  * While [SystemAnimation.usesAppleAnimations] is `false`, the pages
  * instead slide past one another at their full width, without dimming
- * or a shadow, on the navigation transition's Android counterpart.
+ * or a shadow, on Compose's default curve.
  *
  * Pass [isRootPersistent] to keep [root] composed beneath the stack
  * for its whole lifetime – so that its state survives pushes – rather

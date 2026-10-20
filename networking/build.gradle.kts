@@ -22,7 +22,7 @@ android {
     }
 
     lint {
-        // Warnings that predate Lint joining the gate. Regenerate with
+        // Baselined Lint warnings. Regenerate with
         // `./gradlew updateLintBaseline` after fixing any of them.
         baseline = file("lint-baseline.xml")
     }

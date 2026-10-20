@@ -48,8 +48,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 
-// The counterpart service carries `// swiftlint:disable file_length type_body_length`.
-
 /**
  * The service that synchronizes a conversation with its server state.
  *

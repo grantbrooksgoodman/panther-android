@@ -66,8 +66,6 @@ import java.io.File
 private typealias ContextMenuFloats = ChatPageViewServiceFloats.ContextMenu
 private typealias ContextMenuStrings = ChatPageViewServiceStrings.ContextMenu
 
-// The counterpart service carries `// swiftlint:disable file_length type_body_length`.
-
 /**
  * The service that builds context menus and handles their
  * actions.

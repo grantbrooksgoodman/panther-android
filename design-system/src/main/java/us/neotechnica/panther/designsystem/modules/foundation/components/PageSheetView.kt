@@ -91,8 +91,11 @@ private typealias SheetFloats = PageSheetViewFloats
  * @param onDismissRequest The action performed once the user swipes the
  *   sheet away or taps the dimmed content, and the sheet finishes
  *   animating away.
- * @param containerColor The color behind the sheet's content. The
- *   default is the grouped content background.
+ * @param containerColor The color behind the sheet's content, which
+ *   also fills the area beneath the bottom safe area. If the content
+ *   draws its own background, pass the same color so the background
+ *   extends past the bottom safe area. The default is the grouped
+ *   content background.
  * @param isInteractiveDismissDisabled A Boolean value that indicates
  *   whether swipes and taps on the dimmed content are ignored, so that
  *   the sheet can only be dismissed programmatically. The default is
@@ -138,8 +141,11 @@ fun PageSheetView(
  * @param onDismissRequest The action performed once the user swipes the
  *   sheet away or taps the dimmed content, and the sheet finishes
  *   animating away.
- * @param containerColor The color behind the sheet's content. The
- *   default is the grouped content background.
+ * @param containerColor The color behind the sheet's content, which
+ *   also fills the area beneath the bottom safe area. If the content
+ *   draws its own background, pass the same color so the background
+ *   extends past the bottom safe area. The default is the grouped
+ *   content background.
  * @param isInteractiveDismissDisabled A Boolean value that indicates
  *   whether swipes and taps on the dimmed content are ignored, so that
  *   the sheet can only be dismissed programmatically. The default is
@@ -248,56 +254,60 @@ private fun PageSheetDialog(
             ),
     ) {
         DialogWindowEffect(ThemeService.isDarkModeActive(isSystemInDarkTheme()))
-        Box(modifier = Modifier.fillMaxSize()) {
-            // The dimming follows the sheet as it moves.
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .drawBehind {
-                            drawRect(Color.Black, alpha = dimmingAlpha * sheetState.presentedFraction)
-                        }.pointerInput(sheetState) {
-                            detectTapGestures {
-                                if (!currentIsInteractive) return@detectTapGestures
-                                scope.launch { sheetState.hide() }
-                            }
-                        },
-            )
-
-            Surface(
-                color = containerColor,
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
-                        .padding(top = SheetFloats.TOP_SPACING.dp)
-                        .widthIn(max = BottomSheetDefaults.SheetMaxWidth)
-                        .fillMaxWidth()
-                        .onSizeChanged { sheetState.updateAnchors(it.height.toFloat()) }
-                        .offset { IntOffset(0, sheetState.offset.roundToInt()) }
-                        .nestedScroll(nestedScrollConnection)
-                        .anchoredDraggable(
-                            enabled = isInteractive,
-                            flingBehavior = flingBehavior,
-                            orientation = Orientation.Vertical,
-                            state = sheetState.draggableState,
-                        ),
-                shape = BottomSheetDefaults.ExpandedShape,
-                tonalElevation = BottomSheetDefaults.Elevation,
-            ) {
-                Column(
-                    content = content,
+        CompatibilityFrame {
+            Box(modifier = Modifier.fillMaxSize()) {
+                // The dimming follows the sheet as it moves.
+                Box(
                     modifier =
                         Modifier
-                            .fillMaxWidth()
-                            .then(
-                                if (ignoresBottomSafeArea) {
-                                    Modifier
-                                } else {
-                                    Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
-                                },
-                            ),
+                            .fillMaxSize()
+                            .drawBehind {
+                                drawRect(Color.Black, alpha = dimmingAlpha * sheetState.presentedFraction)
+                            }.pointerInput(sheetState) {
+                                detectTapGestures {
+                                    if (!currentIsInteractive) return@detectTapGestures
+                                    scope.launch { sheetState.hide() }
+                                }
+                            },
                 )
+
+                // The container color fills the area beneath the bottom safe
+                // area untinted, so a content background of the same color
+                // extends past it.
+                Surface(
+                    color = containerColor,
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+                            .padding(top = SheetFloats.TOP_SPACING.dp)
+                            .widthIn(max = BottomSheetDefaults.SheetMaxWidth)
+                            .fillMaxWidth()
+                            .onSizeChanged { sheetState.updateAnchors(it.height.toFloat()) }
+                            .offset { IntOffset(0, sheetState.offset.roundToInt()) }
+                            .nestedScroll(nestedScrollConnection)
+                            .anchoredDraggable(
+                                enabled = isInteractive,
+                                flingBehavior = flingBehavior,
+                                orientation = Orientation.Vertical,
+                                state = sheetState.draggableState,
+                            ),
+                    shape = BottomSheetDefaults.ExpandedShape,
+                ) {
+                    Column(
+                        content = content,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .then(
+                                    if (ignoresBottomSafeArea) {
+                                        Modifier
+                                    } else {
+                                        Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
+                                    },
+                                ),
+                    )
+                }
             }
         }
     }

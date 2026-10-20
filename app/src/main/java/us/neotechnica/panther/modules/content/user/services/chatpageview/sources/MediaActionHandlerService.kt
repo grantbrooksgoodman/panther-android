@@ -76,8 +76,6 @@ import kotlin.coroutines.resumeWithException
 private typealias Floats = ChatPageViewServiceFloats.MediaActionHandler
 private typealias Strings = ChatPageViewServiceStrings.MediaActionHandler
 
-// The counterpart service carries `// swiftlint:disable file_length type_body_length`.
-
 /**
  * The service that handles media attachment actions.
  *

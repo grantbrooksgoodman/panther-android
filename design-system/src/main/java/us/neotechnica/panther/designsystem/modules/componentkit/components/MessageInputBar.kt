@@ -13,14 +13,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -29,8 +33,12 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -87,6 +95,12 @@ private typealias Strings = MessageInputBarStrings
  *   focus, or `null`.
  * @param onFocusChanged Invoked as the text field gains or loses
  *   focus, or `null`.
+ * @param onBeginEditing Invoked as editing begins – as the text
+ *   field gains focus, or as a tap on the focused text field shows
+ *   the hidden keyboard – or `null`. A keyboard that shows again
+ *   without a tap doesn't begin editing.
+ * @param keyboardOptions The software keyboard options for the
+ *   text field.
  * @param modifier The modifier for this bar.
  */
 @Composable
@@ -105,6 +119,7 @@ fun MessageInputBar(
     images: MessageInputBarImages? = null,
     focusRequester: FocusRequester? = null,
     onFocusChanged: ((Boolean) -> Unit)? = null,
+    onBeginEditing: (() -> Unit)? = null,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     modifier: Modifier = Modifier,
 ) {
@@ -158,35 +173,16 @@ fun MessageInputBar(
                             shape = RoundedCornerShape(Floats.layerCornerRadius),
                         ),
             ) {
-                Box(
-                    contentAlignment = Alignment.CenterStart,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(
-                                start = Floats.textContainerInsetLeft,
-                                end = Floats.textContainerInsetRightIncrement + Floats.buttonSizeWidth,
-                                top = Floats.textContainerInsetVertical,
-                                bottom = Floats.textContainerInsetVertical,
-                            ),
-                ) {
-                    if (text.isEmpty()) {
-                        Components.Text(placeholder, foregroundColor = colors.subtitleText)
-                    }
-                    BasicTextField(
-                        value = text,
-                        onValueChange = onTextChange,
-                        textStyle = Font.system.textStyle.copy(color = colors.titleText),
-                        cursorBrush = SolidColor(if (isSending) Colors.inputTextViewAlternateTint else colors.navigationBarButton),
-                        keyboardOptions = keyboardOptions,
-                        maxLines = Floats.FIELD_MAX_LINES,
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-                                .onFocusChanged { onFocusChanged?.invoke(it.isFocused) },
-                    )
-                }
+                InputTextView(
+                    text = text,
+                    placeholder = placeholder,
+                    isSending = isSending,
+                    onTextChange = onTextChange,
+                    focusRequester = focusRequester,
+                    onFocusChanged = onFocusChanged,
+                    onBeginEditing = onBeginEditing,
+                    keyboardOptions = keyboardOptions,
+                )
 
                 InputBarButton(
                     symbol = sendButtonSymbol,
@@ -251,6 +247,76 @@ private fun InputBarButton(
         } else {
             Components.Symbol(symbol, foregroundColor = glyphColor, modifier = Modifier.size(Floats.glyphSize))
         }
+    }
+}
+
+// The text field, inset within the bar's bordered field, and its
+// placeholder while the text is empty. A tap on the focused text field
+// shows the hidden keyboard, which begins editing just as a tap that
+// focuses the field does.
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+@Suppress("LongParameterList")
+private fun InputTextView(
+    text: String,
+    placeholder: String,
+    isSending: Boolean,
+    onTextChange: (String) -> Unit,
+    focusRequester: FocusRequester?,
+    onFocusChanged: ((Boolean) -> Unit)?,
+    onBeginEditing: (() -> Unit)?,
+    keyboardOptions: KeyboardOptions,
+) {
+    val colors = LocalPantherColors.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val currentOnBeginEditing by rememberUpdatedState(onBeginEditing)
+    val isImeVisible by rememberUpdatedState(WindowInsets.isImeVisible)
+    var isFocused by remember { mutableStateOf(false) }
+
+    LaunchedEffect(interactionSource) {
+        var pressShowsKeyboard = false
+        interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> pressShowsKeyboard = isFocused && !isImeVisible
+                is PressInteraction.Release -> if (pressShowsKeyboard) currentOnBeginEditing?.invoke()
+            }
+        }
+    }
+
+    Box(
+        contentAlignment = Alignment.CenterStart,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(
+                    start = Floats.textContainerInsetLeft,
+                    end = Floats.textContainerInsetRightIncrement + Floats.buttonSizeWidth,
+                    top = Floats.textContainerInsetVertical,
+                    bottom = Floats.textContainerInsetVertical,
+                ),
+    ) {
+        if (text.isEmpty()) {
+            Components.Text(placeholder, foregroundColor = colors.subtitleText)
+        }
+        BasicTextField(
+            value = text,
+            onValueChange = onTextChange,
+            textStyle = Font.system.textStyle.copy(color = colors.titleText),
+            cursorBrush = SolidColor(if (isSending) Colors.inputTextViewAlternateTint else colors.navigationBarButton),
+            keyboardOptions = keyboardOptions,
+            maxLines = Floats.FIELD_MAX_LINES,
+            interactionSource = interactionSource,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+                    .onFocusChanged {
+                        val didGainFocus = it.isFocused && !isFocused
+                        isFocused = it.isFocused
+                        onFocusChanged?.invoke(it.isFocused)
+                        if (didGainFocus) onBeginEditing?.invoke()
+                    },
+        )
     }
 }
 

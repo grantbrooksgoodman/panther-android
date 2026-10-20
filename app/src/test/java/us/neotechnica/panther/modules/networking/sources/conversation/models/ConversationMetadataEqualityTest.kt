@@ -20,7 +20,7 @@ import java.util.Date
 
 /**
  * Exercises value equality for conversation metadata: image bytes
- * compare by content, the parity fixture decodes to equal values
+ * compare by content, the conversation fixture decodes to equal values
  * regardless of key order, and the mutator clears the image only
  * when asked.
  */

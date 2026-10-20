@@ -12,7 +12,7 @@ import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.Translation
 
 /**
- * A protocol you adopt to provide translation caching.
+ * An interface you implement to provide translation caching.
  *
  * [TranslationService][us.neotechnica.panther.translator.services.TranslationService]
  * consults the registered archiver before every network request and

@@ -78,8 +78,6 @@ import kotlin.time.Duration.Companion.seconds
 // This splash orchestration is large; the suppressions below cover
 // its size and complexity.
 
-// The counterpart service carries `// swiftlint:disable cyclomatic_complexity file_length function_body_length type_body_length`.
-
 /**
  * The service that initializes the app's data bundle behind the
  * splash page.
@@ -263,8 +261,6 @@ object SplashPageViewService {
         alertKitConfig.registerReportDelegate(ErrorReportingService)
         alertKitConfig.registerTranslationDelegate(AlertKitTranslationService)
 
-        // Breadcrumbs capture: not provided.
-
         // Store Observation Setup
 
         uiCacheInvalidationService.startObserving()
@@ -286,7 +282,7 @@ object SplashPageViewService {
             return
         }
 
-        // Pre-flight Configuration: enhanced-translation configuration is cut.
+        // Pre-flight Configuration
 
         Logger.setReportsErrorsAutomatically(
             !Build.isEmulator && Build.milestone == Build.Milestone.GENERAL_RELEASE,
@@ -351,12 +347,9 @@ object SplashPageViewService {
     /**
      * Attempts to recover from a failed initialization.
      *
-     * The first call attempts a database repair; a subsequent
-     * call after another failure resets the application entirely.
-     *
-     * **Note:** `IntegrityService.repairDatabase()` and the
-     * forced-update branch that follows it are not provided, so
-     * the first call performs no repair.
+     * The first call records the attempt without changing state;
+     * a subsequent call after another failure resets the
+     * application entirely.
      */
     @Suppress("RedundantSuspendModifier")
     suspend fun performRetryHandler() {
@@ -480,8 +473,8 @@ object SplashPageViewService {
     }
 
     private suspend fun resolveCurrentUserAndFinish(resolveCurrentUserResult: Deferred<Exception?>) {
-        // User resolution likely completed during the metadata + update
-        // + cache gates above.
+        // User resolution usually completes during the metadata,
+        // update, and cache gates above.
         try {
             currentCoroutineContext().ensureActive()
             resolveCurrentUserResult.await()?.let { throw it }
@@ -492,8 +485,6 @@ object SplashPageViewService {
                     "Failed to resolve current user.",
                     metadata = ExceptionMetadata(this),
                 )
-
-            // UI Setup: enhanced-translation configuration and prevarication mode are cut.
 
             // Device ID Update
 
@@ -556,15 +547,11 @@ object SplashPageViewService {
                 }
             }
 
-            // Typing indicator reset is cut.
-
             try {
                 services.notification.setBadgeNumber(currentUser.calculateBadgeNumber())
             } catch (exception: Exception) {
                 Logger.log(exception, with = AlertType.toastInPrerelease)
             }
-
-            // PenPals sharing-data update is cut.
         }
     }
 

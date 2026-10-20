@@ -335,10 +335,10 @@ class ChatPageReducer : Reducer<ChatPageReducer.State, ChatPageReducer.Action> {
     // Speech, playback, and alternate content stop on every disappearance;
     // the current-conversation pointer clears only when the page is truly
     // being dismissed – not when covered by a sub-page of the same
-    // conversation, which on Android is a push that disposes the chat, nor
-    // when another chat page has taken over the same conversation. The
-    // outgoing page is disposed only after its exit transition, by which
-    // time the incoming page has already set the pointer.
+    // conversation, a push that disposes the chat, nor when another chat
+    // page has taken over the same conversation. The outgoing page is
+    // disposed only after its exit transition, by which time the incoming
+    // page has already set the pointer.
     private fun viewDisappeared(state: State) {
         conversationObserver.stopObserving()
         textToSpeechService.stopSpeakingIfNeeded()

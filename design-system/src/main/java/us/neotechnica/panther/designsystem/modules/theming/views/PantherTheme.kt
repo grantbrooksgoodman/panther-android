@@ -21,7 +21,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.core.view.WindowCompat
+import us.neotechnica.panther.designsystem.modules.foundation.components.CompatibilityFrame
+import us.neotechnica.panther.designsystem.modules.foundation.components.compatibilityFrameWidth
 import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 
 /**
@@ -42,8 +45,10 @@ val LocalPantherColors =
  * [ThemeService], provides the resulting [PantherColors] through
  * [LocalPantherColors], and installs a matching Material color scheme.
  * It also styles the system bar icons to remain legible against the
- * active appearance. It recomposes automatically when the theme, the
- * appearance override, or the system appearance changes.
+ * active appearance, and the status bar icons against the black area
+ * outside a [CompatibilityFrame] on a large window. It recomposes
+ * automatically when the theme, the appearance override, or the
+ * system appearance changes.
  *
  * @param content The themed content.
  */
@@ -89,7 +94,7 @@ fun PantherTheme(content: @Composable () -> Unit) {
  * A container whose content reflects the active theme.
  *
  * In Compose, theme colors flow from the [PantherTheme] root through
- * [LocalPantherColors], so [ThemedView] simply renders its content.
+ * [LocalPantherColors], so [ThemedView] renders its content.
  *
  * @param content The themed content.
  */
@@ -101,17 +106,20 @@ fun ThemedView(content: @Composable () -> Unit) {
 // MARK: - Auxiliary
 
 // Styles the hosting activity's system bar icons for the given
-// appearance – light icons in dark mode, dark icons otherwise. The
+// appearance – light icons in dark mode, dark icons otherwise. On a
+// large window, the status bar's icons sit over the black area outside
+// the compatibility frame, so they are light in either appearance. The
 // activity handles appearance changes without being recreated, so the
-// icons are restyled here rather than when the activity is created.
+// icons are restyled on each change.
 @Composable
 private fun SystemBarAppearanceEffect(isDarkModeActive: Boolean) {
+    val isFramed = compatibilityFrameWidth(LocalWindowInfo.current.containerDpSize) != null
     val view = LocalView.current
     SideEffect {
         val window = (view.context as? Activity)?.window ?: return@SideEffect
         WindowCompat.getInsetsController(window, view).apply {
             isAppearanceLightNavigationBars = !isDarkModeActive
-            isAppearanceLightStatusBars = !isDarkModeActive
+            isAppearanceLightStatusBars = !isDarkModeActive && !isFramed
         }
     }
 }

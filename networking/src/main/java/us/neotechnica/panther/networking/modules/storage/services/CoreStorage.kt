@@ -63,8 +63,6 @@ import kotlin.time.Duration
 import com.google.firebase.storage.StorageMetadata as FirebaseStorageMetadata
 
 // This service exceeds the file-length and type-body-length limits.
-
-// The counterpart service carries `// swiftlint:disable file_length type_body_length`.
 @Suppress("LargeClass", "TooManyFunctions")
 internal class CoreStorage {
     // MARK: - Properties
@@ -723,8 +721,9 @@ internal class CoreStorage {
         return emptyDirectories
     }
 
-    // The existence check mirrors the storage surface's branch
-    // structure.
+    // CyclomaticComplexMethod suppressed: the existence check
+    // branches on the item type, the failure classification, and the
+    // cache fallback.
     @Suppress("CyclomaticComplexMethod", "FunctionNaming", "ktlint:standard:function-naming")
     private suspend fun _itemExists(
         itemType: HostedItemType,

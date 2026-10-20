@@ -22,9 +22,9 @@ import us.neotechnica.panther.translator.models.TranslationPlatform
  *
  * A lightweight JSON endpoint responds far faster than loading
  * and scraping the full web app, so [translate] uses it alone.
- * The [BaseTranslator] web-view fallback is currently disabled:
- * when the endpoint fails, the error propagates and the next
- * platform is tried.
+ * The [BaseTranslator] web-view fallback is disabled: when the
+ * endpoint fails, the error propagates and the next platform is
+ * tried.
  */
 internal class GoogleTranslator : BaseTranslator(TranslationPlatform.GOOGLE) {
     // MARK: - Translate
@@ -45,9 +45,7 @@ internal class GoogleTranslator : BaseTranslator(TranslationPlatform.GOOGLE) {
             )
 
             // TODO: Restore the web-view fallback, `super.translate(input, languagePair)`, once Google's
-            //  result can be extracted again. The page loads, but evaluation never yields a usable
-            //  result before the harness's 10-second threshold, so the fallback only delayed the
-            //  next platform.
+            //  result can be extracted within the harness's evaluation threshold.
             throw error
         }
 
@@ -75,8 +73,8 @@ internal class GoogleTranslator : BaseTranslator(TranslationPlatform.GOOGLE) {
     ): Translation {
         val source = platform.identifier(languagePair.from) ?: throw TranslationError.FailedToGenerateRequestURL
         val target = platform.identifier(languagePair.to) ?: throw TranslationError.FailedToGenerateRequestURL
-        // Percent-encode the query manually; characters like "+" would
-        // otherwise be decoded by the endpoint as a space.
+        // The query is percent-encoded by hand: the endpoint decodes a
+        // bare "+" as a space.
         val encoded =
             TranslationPlatform.percentEncoded(
                 input.value,

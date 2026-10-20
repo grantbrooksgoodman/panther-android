@@ -186,8 +186,8 @@ class Auth : AuthDelegate {
             if (continuation.isActive) continuation.resume(VerificationOutcome.CodeSent(verificationID))
         }
 
-        // Should a request still go unanswered, the wait ends once the
-        // code's auto-retrieval window closes, rather than never.
+        // A request that goes unanswered ends once the code's
+        // auto-retrieval window closes.
         fun onCodeAutoRetrievalTimeOut(verificationID: String) {
             if (continuation.isActive) continuation.resume(VerificationOutcome.CodeSent(verificationID))
         }

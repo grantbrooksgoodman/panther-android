@@ -115,8 +115,8 @@ fun ConversationsPageView(
         endSearch()
     }
 
-    // A page pushed over the list – a chat opened from the search results,
-    // say – resigns the search bar's first responder, dismissing the
+    // A page pushed over the list – for example, a chat opened from the
+    // search results – clears the search bar's focus, dismissing the
     // keyboard. The search itself stays active for the user's return.
     LaunchedEffect(isCovered) {
         if (isCovered && state.isSearching) focusManager.clearFocus()

@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
@@ -80,10 +81,13 @@ private const val SCROLL_SETTLE_MAX_FRAMES = 8
  *
  * The list starts pinned and scrolls to the bottom on initial
  * load, when the user sends a message, or whenever pinned content
- * grows – a reaction landing below the last message. It unpins
- * the moment the user drags the list to read earlier messages and
- * re-pins once the list next rests at the very bottom, so content
- * growth is never mistaken for the user scrolling away.
+ * grows – a reaction landing below the last message. A pinned list
+ * also stays at the bottom as its height changes – as the keyboard
+ * rises or falls, or the window resizes. It unpins the moment the
+ * user drags the list to read earlier messages and re-pins once
+ * the list next rests at the very bottom, so content growth is
+ * never mistaken for the user scrolling away. Editing in the input
+ * bar scrolls even an unpinned list back to the bottom.
  */
 @Composable
 private fun StickToBottomEffect(
@@ -102,6 +106,22 @@ private fun StickToBottomEffect(
             if (!canScrollForward) stickToBottom = true
         }
     }
+
+    // A shorter list keeps its first visible message in place, which
+    // would leave the newest message below the list's new bottom edge.
+    val currentLastIndex by rememberUpdatedState(messages.lastIndex)
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.layoutInfo.viewportSize.height }.collect {
+            if (!stickToBottom || listState.isScrollInProgress || currentLastIndex < 0) return@collect
+            listState.scrollToItem(currentLastIndex)
+        }
+    }
+
+    InputBarEditingEffect(
+        listState,
+        messages.lastIndex,
+        scrollsToLastItemOnBeginEditing = state.focusedMessageID == null,
+    )
 
     // Keyed on the specific growth signals (including the last message's
     // reaction count) so unrelated store churn never cancels the settle loop.
@@ -245,6 +265,11 @@ internal fun MessageList(
         ) > 2
     val lastConfirmedOwnIndex = messages.indexOfLast { it.isFromCurrentUser && !it.isOutboxMessage }
     val loadMoreConnection = rememberLoadMoreMessagesConnection(listState)
+
+    ContextMenuInteractionEffect(
+        listState,
+        messages.lastIndex,
+    )
 
     StickToBottomEffect(listState, state)
     VisibleMessagesEffect(listState)

@@ -26,6 +26,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import us.neotechnica.panther.designsystem.modules.alertkit.models.AlertKitDialogState
 import us.neotechnica.panther.designsystem.modules.alertkit.models.AlertKitPalette
+import us.neotechnica.panther.designsystem.modules.foundation.components.CompatibilityFrame
 import us.neotechnica.panther.designsystem.modules.foundation.components.DialogWindowEffect
 import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 
@@ -59,32 +60,34 @@ internal fun AlertKitDialog(
             ),
     ) {
         DialogWindowEffect(palette.isDarkModeActive)
-        Box(modifier = Modifier.fillMaxSize()) {
-            transition.AnimatedVisibility(
-                enter = fadeIn(SystemAnimation.alertPresentation()),
-                exit = fadeOut(SystemAnimation.alertDismissal()),
-                visible = { it },
-            ) {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .background(palette.dimming)
-                            .then(
-                                if (onDimmingViewTapped == null) {
-                                    Modifier
-                                } else {
-                                    Modifier.clickable(
-                                        indication = null,
-                                        interactionSource = null,
-                                        onClick = onDimmingViewTapped,
-                                    )
-                                },
-                            ),
-                )
-            }
+        CompatibilityFrame {
+            Box(modifier = Modifier.fillMaxSize()) {
+                transition.AnimatedVisibility(
+                    enter = fadeIn(SystemAnimation.alertPresentation()),
+                    exit = fadeOut(SystemAnimation.alertDismissal()),
+                    visible = { it },
+                ) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .background(palette.dimming)
+                                .then(
+                                    if (onDimmingViewTapped == null) {
+                                        Modifier
+                                    } else {
+                                        Modifier.clickable(
+                                            indication = null,
+                                            interactionSource = null,
+                                            onClick = onDimmingViewTapped,
+                                        )
+                                    },
+                                ),
+                    )
+                }
 
-            content(transition)
+                content(transition)
+            }
         }
     }
 }

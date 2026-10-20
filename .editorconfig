@@ -1,35 +1,28 @@
 root = true
 
 [*.{kt,kts}]
-# Jetpack Compose @Composable functions are conventionally PascalCase, so exempt
-# them from ktlint's function-naming rule (mirrors the detekt config in
-# config/detekt/detekt.yml). See STYLE_RULES_ANDROID.md.
+# Composable functions are named in PascalCase.
 ktlint_function_naming_ignore_when_annotated_with = Composable
 
-# STYLE_RULES_ANDROID.md §2: extension/constants files use iOS-parity names
-# ("String+AppContentExtensions.kt"), which the filename rule rejects.
+# Extension and constants files are named for the type they extend
+# ("String+AppContentExtensions.kt") and for their consumer.
 ktlint_standard_filename = disabled
 
-# STYLE_RULES_ANDROID.md §9: declarations order by access/static/mutability
-# tiers with blank-line separation, which this rule fights.
+# Declarations are ordered by access level, then by static and
+# mutable tiers, with blank lines between the tiers.
 ktlint_standard_property-naming = enabled
 ktlint_standard_no-blank-line-in-list = disabled
 
-# iOS SwiftLint line_length (160). Matches MaxLineLength in
+# Lines are at most 160 characters. Matches MaxLineLength in
 # config/detekt/detekt.yml and sets Android Studio's right margin.
 max_line_length = 160
 
-# iOS SwiftFormat never joins lines that were wrapped by hand. This rule
-# joins wrapped signatures and expression bodies that fit on one line,
-# against the >60-character expansion rule in STYLE_RULES_ANDROID.md §10.
+# Signatures and expression bodies wrapped by hand stay wrapped.
 ktlint_standard_function-signature = disabled
 
-# Swift switch cases take no braces, and iOS SwiftFormat adds none. This rule
-# braces every branch of a `when` once any branch spans several lines.
+# Branches of a `when` take braces only when their bodies need them.
 ktlint_standard_when-entry-bracing = disabled
 
 [**/lzfse/LzfseTables.kt]
-# iOS SwiftFormat keeps several values per row in a list wrapped before its
-# first element. This rule puts every value of these lookup tables on its
-# own line.
+# The lookup tables keep several values per row.
 ktlint_standard_argument-list-wrapping = disabled

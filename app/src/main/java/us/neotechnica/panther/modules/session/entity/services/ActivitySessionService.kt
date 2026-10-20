@@ -156,7 +156,7 @@ object ActivitySessionService {
         val newParticipants = conversation.participants.filter { it.userID != userID }
         val newMetadata =
             conversation.metadata.copyWith(
-                // A group shrinking to two participants clears its name (D-IV-6).
+                // A group shrinking to two participants clears its name.
                 name = if (newParticipants.size == ONE_TO_ONE_PARTICIPANT_COUNT) BANG_QUALIFIED_EMPTY else null,
                 messageRecipientConsentAcknowledgementData =
                     conversation.metadata.messageRecipientConsentAcknowledgementData.filter { it.userID != userID },

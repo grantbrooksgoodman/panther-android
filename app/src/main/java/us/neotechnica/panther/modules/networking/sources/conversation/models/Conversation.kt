@@ -56,8 +56,6 @@ import java.util.Date
 
 // This model exceeds the file-length and type-body-length limits.
 
-// The counterpart model carries `// swiftlint:disable file_length type_body_length`.
-
 /**
  * A conversation between two or more users.
  *
@@ -342,11 +340,10 @@ data class Conversation(
         val updates = mutableMapOf<String, Any?>()
         val updatedMessages = mutableListOf<Message>()
 
-        // Per-message read receipt entries. Array retained:
-        // a message's receipts are small and only ever
-        // written by readers of that message. Group-chat
-        // concurrent-readers remain last-writer-wins at
-        // per-message granularity (accepted residual).
+        // Per-message read receipt entries. A message's receipts
+        // are small and only ever written by readers of that
+        // message. Concurrent readers in a group chat are
+        // last-writer-wins at per-message granularity.
         for (message in unreadMessages) {
             val updatedReceipts =
                 ((message.readReceipts?.filter { it.userID != currentUserID } ?: emptyList()) + readReceipt)
@@ -548,6 +545,43 @@ data class Conversation(
         }
 
         override fun decode(data: Map<String, Any?>): Conversation {
+            val conversation = fromArchive(data)
+            val currentUserParticipant = conversation.participants.firstWithCurrentUserID
+            if (currentUserParticipant == null || currentUserParticipant.hasDeletedConversation) {
+                Logger.log(
+                    Exception(
+                        "Current user is not participating in or has deleted this conversation.",
+                        isReportable = false,
+                        userInfo =
+                            mapOf(
+                                "ConversationIDKey" to conversation.id.key,
+                                "ConversationIDHash" to conversation.id.hash,
+                            ),
+                        metadata = ExceptionMetadata(this),
+                    ),
+                    domain = LoggerDomain.conversation,
+                )
+            }
+
+            return conversation
+        }
+
+        /**
+         * Decodes a conversation from its representation in the
+         * session store's persisted archive.
+         *
+         * Unlike [decode], this method doesn't check whether the
+         * current user participates in the conversation, and so reads
+         * no session state.
+         *
+         * @param data The archived representation of the conversation.
+         *
+         * @return The decoded conversation.
+         *
+         * @throws Exception if the data doesn't describe a valid
+         *   conversation.
+         */
+        fun fromArchive(data: Map<String, Any?>): Conversation {
             val idString = data[SerializableKey.ID.rawValue] as? String
             val encodedActivities = mapList(data, SerializableKey.ACTIVITIES)
             val encodedMetadata = stringKeyMap(data[SerializableKey.METADATA.rawValue])
@@ -591,23 +625,6 @@ data class Conversation(
             // Message resolution is deferred to resolveMessages /
             // resolveMessagesOnCurrentUserConversations; decoding
             // only records the message IDs.
-
-            val currentUserParticipant = participants.firstWithCurrentUserID
-            if (currentUserParticipant == null || currentUserParticipant.hasDeletedConversation) {
-                Logger.log(
-                    Exception(
-                        "Current user is not participating in or has deleted this conversation.",
-                        isReportable = false,
-                        userInfo =
-                            mapOf(
-                                "ConversationIDKey" to conversationID.key,
-                                "ConversationIDHash" to conversationID.hash,
-                            ),
-                        metadata = ExceptionMetadata(this),
-                    ),
-                    domain = LoggerDomain.conversation,
-                )
-            }
 
             return Conversation(
                 id = conversationID,

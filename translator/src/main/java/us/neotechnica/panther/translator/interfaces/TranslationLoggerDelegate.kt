@@ -9,8 +9,8 @@
 package us.neotechnica.panther.translator.interfaces
 
 /**
- * A protocol you adopt to receive diagnostic log messages from the
- * translation pipeline.
+ * An interface you implement to receive diagnostic log messages
+ * from the translation pipeline.
  *
  * Register an implementation through
  * [Translator.config][us.neotechnica.panther.translator.Translator.config]

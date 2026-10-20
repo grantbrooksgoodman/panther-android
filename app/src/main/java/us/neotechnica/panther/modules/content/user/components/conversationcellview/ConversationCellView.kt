@@ -282,7 +282,11 @@ private fun CellView(
             verticalArrangement = Arrangement.spacedBy(StackFloats.defaultSpacing),
             modifier = Modifier.weight(1f).fillMaxHeight(),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(StackFloats.defaultSpacing),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f),
+            ) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(StackFloats.defaultSpacing),
                     verticalAlignment = Alignment.CenterVertically,

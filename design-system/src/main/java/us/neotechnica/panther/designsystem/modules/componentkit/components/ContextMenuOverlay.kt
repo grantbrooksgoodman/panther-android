@@ -102,7 +102,7 @@ internal fun ContextMenuOverlay(
                         transformOrigin = TransformOrigin(originX, 1f)
                     },
             ) {
-                ReactionRow(active.reactionChoices) { choice -> controller.select(choice.onSelect) }
+                ReactionRow(controller)
             }
         }
 

@@ -24,8 +24,6 @@ import java.io.File
 import java.util.UUID
 import kotlin.math.abs
 
-// The counterpart logger carries `// swiftlint:disable file_length type_body_length`.
-
 /**
  * A centralized, thread-safe logging service that writes structured
  * diagnostic output to the console and to an on-disk session record.

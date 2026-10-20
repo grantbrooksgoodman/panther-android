@@ -41,10 +41,7 @@ private typealias PlaybackFloats = ChatPageViewServiceFloats.AudioMessagePlaybac
  * playback-progress, and auto-advance to the next audio message
  * when one finishes.
  *
- * **Note:** Playback uses Android `MediaPlayer` with an
- * `AudioFocusRequest` (see `DEVIATIONS.md`) rather than
- * Media3/ExoPlayer, which would add a dependency without benefit
- * for single-file playback.
+ * **Note:** Playback uses `MediaPlayer` with an `AudioFocusRequest`.
  */
 object AudioMessagePlaybackService {
     // MARK: - Types

@@ -91,8 +91,6 @@ private typealias SettingsColors = SettingsPageViewColors
 private typealias SettingsFloats = SettingsPageViewFloats
 private typealias SettingsStrings = SettingsPageViewConstants
 
-// The counterpart service carries `// swiftlint:disable file_length type_body_length`.
-
 /**
  * The service that handles the settings page's user interactions.
  *

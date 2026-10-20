@@ -38,7 +38,8 @@ import us.neotechnica.panther.modules.networking.sources.user.models.User
  */
 @JvmName("queriedContactPairs")
 fun List<ContactPair>.queried(searchTerm: String): List<ContactPair> {
-    // Captures pure whitespace too, hence isEmpty and not isBlank.
+    // A whitespace-only term still filters; only an empty term returns
+    // the list unfiltered.
     if (searchTerm.isEmpty()) return this
 
     QueriedContactPairCache.cachedValue(searchTerm)?.let { cached ->

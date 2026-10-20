@@ -29,7 +29,7 @@ import us.neotechnica.panther.translator.models.Translation
 import us.neotechnica.panther.translator.models.TranslationInput
 
 /**
- * Exercises the message decoder against the parity decode vectors:
+ * Exercises the message decoder against the decode fixtures:
  * translation selection for sent and received messages, the identity
  * rewrite, nearly-matching previous language codes, validator
  * rejection, and the media and audio content resolution.

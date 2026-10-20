@@ -45,8 +45,6 @@ import kotlin.math.pow
 
 // This service exceeds the type-body-length limit.
 
-// The counterpart service runs to 763 lines in a package without a file-length rule.
-
 /**
  * The framework's built-in [NetworkHealthDelegate].
  *
@@ -268,10 +266,10 @@ internal object NetworkHealthService : NetworkHealthDelegate {
             NetworkInterfaceType.UNKNOWN, null -> "unknown"
         }
 
-    // Lazily attaches the connection stability observer on the
-    // first database latency sample – evidence the app actually
-    // uses the realtime database. An observer attached eagerly
-    // would itself keep the realtime connection alive.
+    // Attaches the connection stability observer on the first
+    // database latency sample, the evidence that the app uses the
+    // realtime database. An observer attached earlier keeps the
+    // realtime connection alive by itself.
     @Suppress("FunctionMaxLength")
     private fun startConnectionStabilityMonitoringIfNeeded() {
         if (!Networking.config.networkHealthConfiguration.isConnectionStabilityMonitoringEnabled) return
@@ -388,9 +386,8 @@ internal object NetworkHealthService : NetworkHealthDelegate {
         }.getOrDefault(false)
 
     /**
-     * Fire-and-forget probe trigger; bails immediately when probing
-     * is unconfigured so unconfigured behavior is identical to
-     * baseline.
+     * Triggers a probe without waiting for it, returning at once
+     * when probing is unconfigured.
      */
     private fun maybeProbe(afterDelayMillis: Long = 0L) {
         Networking.config.networkHealthConfiguration.probeConfiguration ?: return

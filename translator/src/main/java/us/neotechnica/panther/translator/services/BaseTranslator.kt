@@ -50,8 +50,6 @@ import us.neotechnica.panther.translator.models.TranslationInput
 import us.neotechnica.panther.translator.models.TranslationPlatform
 import kotlin.coroutines.resume
 
-// The counterpart translator runs to 470 lines in a package without a file-length rule.
-
 /**
  * The web-view scraping harness shared by the translators that
  * have no HTTP API.

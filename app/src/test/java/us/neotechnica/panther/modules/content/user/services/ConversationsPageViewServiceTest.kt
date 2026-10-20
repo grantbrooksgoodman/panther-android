@@ -32,6 +32,7 @@ import us.neotechnica.panther.modules.common.services.sources.PermissionService
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Conversation
 import us.neotechnica.panther.modules.networking.sources.support.MessageDecodeEnvironment
 import us.neotechnica.panther.modules.networking.sources.support.SessionTestEnvironment
+import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.models.AppException
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
@@ -61,13 +62,16 @@ class ConversationsPageViewServiceTest {
     private var currentConversation: Conversation? = null
     private var resolvedLastMessageIDs = mutableListOf<String>()
     private var hadUnreadMessages = false
+    private var currentUser: User? = null
+    private var downloadedVoiceLanguageCodes = mutableListOf<String>()
 
     private val service =
         ConversationsPageViewService(
             ConversationsPageViewService.Dependencies(
                 clearTemporaryCaches = {},
                 currentConversation = { currentConversation },
-                currentUser = { null },
+                currentUser = { currentUser },
+                downloadVoiceIfNeeded = { downloadedVoiceLanguageCodes.add(it) },
                 hasContactsBesidesCurrentUser = { hasContacts },
                 isChatPagePresented = { true },
                 isSendingMessage = { false },
@@ -208,6 +212,18 @@ class ConversationsPageViewServiceTest {
             assertFalse(announced)
             collector.cancel()
         }
+
+    // MARK: - Voice Download
+
+    @Test
+    fun `a voice downloads for the current user's language, and none without a current user`() {
+        service.downloadVoiceIfNeeded()
+        assertTrue(downloadedVoiceLanguageCodes.isEmpty())
+
+        currentUser = MessageDecodeEnvironment.user("user", languageCode = "it")
+        service.downloadVoiceIfNeeded()
+        assertEquals(listOf("it"), downloadedVoiceLanguageCodes)
+    }
 
     // MARK: - Seconds to Load
 

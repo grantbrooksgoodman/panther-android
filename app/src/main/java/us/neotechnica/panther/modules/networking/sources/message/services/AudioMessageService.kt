@@ -117,7 +117,7 @@ object AudioMessageService {
             throw exception.appending(userInfo = userInfo)
         }
 
-        // Mirror the downloaded audio into the counterpart slot (unless the
+        // Copy the downloaded audio into the other slot (unless the
         // translation is idempotent, when both slots are the same file).
         if (sourceFile.absolutePath != destinationFile.absolutePath) {
             destinationFile.parentFile?.mkdirs()

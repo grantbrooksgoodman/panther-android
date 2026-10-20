@@ -70,8 +70,8 @@ class SchemaRoundTripTest {
             assertEquals(fixture, Message.decode(fixture).encoded)
         }
 
-    // A media message carries its file identifier and extension in the composite
-    // `contentType` string ("<mime> – <id> – <ext>"), covering the R2/R3 media surface.
+    // A media message carries its file identifier and extension in the
+    // composite `contentType` string ("<mime> – <id> – <ext>").
     @Test
     fun `media message decodes and re-encodes structurally identically`() =
         runTest {
@@ -79,7 +79,7 @@ class SchemaRoundTripTest {
             assertEquals(fixture, Message.decode(fixture).encoded)
         }
 
-    // An audio message's `contentType` is its bare MIME string, covering the R4 audio surface.
+    // An audio message's `contentType` is its bare MIME string.
     @Test
     fun `audio message decodes and re-encodes structurally identically`() =
         runTest {

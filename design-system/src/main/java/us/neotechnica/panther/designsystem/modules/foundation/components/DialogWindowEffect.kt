@@ -11,22 +11,25 @@ package us.neotechnica.panther.designsystem.modules.foundation.components
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 
 // Hands dimming and system bar styling to the content of the dialog that
 // calls it: the window's own dim gives way to the content's animated
 // dimming, and the system bars keep the appearance of the content
-// behind the dialog.
+// behind the dialog – including light status bar icons on a large
+// window, where they sit over the area outside the compatibility frame.
 @Composable
 internal fun DialogWindowEffect(isDarkModeActive: Boolean) {
+    val isFramed = compatibilityFrameWidth(LocalWindowInfo.current.containerDpSize) != null
     val view = LocalView.current
     SideEffect {
         val window = (view.parent as? DialogWindowProvider)?.window ?: return@SideEffect
         window.setDimAmount(0f)
         WindowCompat.getInsetsController(window, view).apply {
             isAppearanceLightNavigationBars = !isDarkModeActive
-            isAppearanceLightStatusBars = !isDarkModeActive
+            isAppearanceLightStatusBars = !isDarkModeActive && !isFramed
         }
     }
 }

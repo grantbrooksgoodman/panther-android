@@ -34,7 +34,7 @@ import java.util.Date
  * Exercises the activity description templates: every action in
  * English and Spanish, the lowercased "you"/"someone" object forms,
  * the phone-number and user-identifier forms of a departure, and the
- * parity fixture for the departure activity.
+ * departure activity fixture.
  */
 class ActivityDescriptionTest {
     // MARK: - Setup

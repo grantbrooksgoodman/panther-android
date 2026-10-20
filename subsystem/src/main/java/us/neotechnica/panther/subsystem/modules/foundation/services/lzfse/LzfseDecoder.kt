@@ -6,9 +6,9 @@
 //  Copyright © NEOTechnica Corporation. All rights reserved.
 //
 
-//  Ported from Apple's BSD-licensed LZFSE reference implementation
-//  (`lzfse_decode_base.c`, `lzvn_decode_base.c`). See `Lzfse.kt` for the
-//  full license notice.
+//  Derived from Apple's BSD-licensed LZFSE reference implementation
+//  (`lzfse_decode_base.c`, `lzvn_decode_base.c`). See `Lzfse.kt` for
+//  the license notice.
 
 package us.neotechnica.panther.subsystem.modules.foundation.services.lzfse
 

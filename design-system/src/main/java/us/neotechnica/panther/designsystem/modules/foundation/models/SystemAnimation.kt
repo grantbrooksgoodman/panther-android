@@ -47,7 +47,7 @@ private typealias Floats = SystemAnimationFloats
  * ```
  *
  * Each animation follows [usesAppleAnimations]: while it is `false`,
- * every animation is replaced by its Android counterpart.
+ * every animation is replaced by Compose's or Material's own motion.
  */
 object SystemAnimation {
     // MARK: - Properties
@@ -57,11 +57,11 @@ object SystemAnimation {
      * system-style springs and curves in this namespace.
      *
      * While this is `false`, each animation in this namespace is
-     * replaced by its Android counterpart – Compose's default curve
-     * and spring, and Material's alert, navigation, and bottom sheet
-     * motion – and components that otherwise follow the system-style
-     * motion, such as navigation stacks, page sheets, and context
-     * menus, move and dim as Android does. The default is `true`.
+     * replaced by Compose's default curve and spring or by Material's
+     * alert, navigation, and bottom sheet motion, and components
+     * that otherwise follow the system-style motion, such as
+     * navigation stacks, page sheets, and context menus, move and
+     * dim as Material components do. The default is `true`.
      *
      * **Important:** Set this value once at launch, before any content
      * is composed. Animations already under way, and content already

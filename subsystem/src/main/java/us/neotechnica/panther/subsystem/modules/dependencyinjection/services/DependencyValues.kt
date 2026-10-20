@@ -24,7 +24,7 @@ import kotlin.concurrent.withLock
  * val formatter = DependencyValues.current[TimestampDateFormatterDependency]
  * ```
  *
- * In practice, you rarely use the accessor directly. Instead,
+ * You rarely use the accessor directly. Instead,
  * define an extension property on [DependencyValues] and access
  * it through the [Dependency][us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency]
  * delegate.
@@ -127,13 +127,12 @@ class DependencyValues internal constructor(
 private object ResolverCache {
     // MARK: - Properties
 
-    // The lock guards only the cache map; a key's resolve() runs outside
-    // it. Resolution can trigger lazy class initialization that re-enters
-    // the resolver on another thread, so holding the lock across resolve()
-    // risks a deadlock: that thread blocks acquiring this lock while this
-    // thread blocks on its class-init monitor. Keeping the critical section
-    // to the O(1) map access, and memoizing first-writer-wins, avoids it
-    // (resolution yields the same singleton, so a lost race is harmless).
+    // The lock guards only the cache map; a key's `resolve()` runs
+    // outside it, because resolution can trigger class
+    // initialization that re-enters the resolver on another thread.
+    // The critical section is the O(1) map access, memoized
+    // first-writer-wins; resolution yields the same singleton, so a
+    // lost race is harmless.
     private val cache = mutableMapOf<DependencyKey<*>, Any?>()
     private val lock = ReentrantLock()
 

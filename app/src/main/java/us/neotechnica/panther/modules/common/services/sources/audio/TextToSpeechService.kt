@@ -15,15 +15,19 @@ import android.speech.tts.Voice
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import us.neotechnica.panther.subsystem.modules.foundation.extensions.englishLanguageName
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import java.util.Locale
 
 /**
  * Synthesizes speech from text aloud.
  *
- * Speech uses only voices installed on the device. Voice lookups and
- * positive language support checks are cached in memory per language
- * code; clear them through [TextToSpeechServiceCache.clearCache].
+ * Speech uses only voices installed on the device; use
+ * [downloadVoiceIfNeeded] to install a language's voice ahead of
+ * time. Voice lookups and positive language support checks are cached
+ * in memory per language code; clear them through
+ * [TextToSpeechServiceCache.clearCache].
  */
 object TextToSpeechService {
     // MARK: - Properties
@@ -32,6 +36,7 @@ object TextToSpeechService {
 
     private var engine: TextToSpeech? = null
     private var isInitialized = false
+    private var pendingVoiceDownloadLanguageCode: String? = null
 
     // Backed by observable snapshot state, driven by the utterance
     // callbacks, so the context menu's Speak/Stop-Speaking title rebuilds
@@ -71,6 +76,11 @@ object TextToSpeechService {
         val engine =
             TextToSpeech(context.applicationContext) { status ->
                 isInitialized = status == TextToSpeech.SUCCESS
+
+                // A download requested during initialization begins now.
+                val languageCode = pendingVoiceDownloadLanguageCode ?: return@TextToSpeech
+                pendingVoiceDownloadLanguageCode = null
+                if (isInitialized) downloadVoiceIfNeeded(languageCode)
             }
         engine.setOnUtteranceProgressListener(
             object : UtteranceProgressListener() {
@@ -169,6 +179,49 @@ object TextToSpeechService {
         stop()
     }
 
+    // MARK: - Download Voice
+
+    /**
+     * Downloads a voice for the given language code if none is
+     * installed on the device.
+     *
+     * The speech engine downloads the voice's data in the background,
+     * after which [isTextToSpeechSupported] returns `true` for the
+     * language and text in it can be spoken. A voice for the device's
+     * region is preferred, then the highest quality voice. This method
+     * has no effect when a voice for the language is already installed
+     * or when the speech engine offers none to download.
+     *
+     * **Note:** While the speech engine is still initializing, the
+     * download begins once initialization completes.
+     *
+     * @param languageCode The language code of the voice to download.
+     */
+    fun downloadVoiceIfNeeded(languageCode: String) {
+        val engine = engine ?: return
+        if (!isInitialized) {
+            pendingVoiceDownloadLanguageCode = languageCode
+            return
+        }
+
+        if (isTextToSpeechSupported(languageCode)) return
+        val country = Locale.getDefault().country
+        val voice =
+            offlineVoices(languageCode)
+                ?.filter { it.isNotInstalled }
+                ?.maxWithOrNull(
+                    compareBy(
+                        { it.locale.country == country },
+                        { it.quality },
+                    ),
+                ) ?: return
+
+        // Selecting a voice whose data is not installed starts its
+        // download.
+        Logger.log("Downloading ${languageCode.englishLanguageName ?: languageCode.uppercase()} voice \"${voice.name}\".")
+        engine.setVoice(voice)
+    }
+
     // MARK: - Highest Quality Voice
 
     /**
@@ -241,7 +294,12 @@ object TextToSpeechService {
     // The voices for the given language code that can speak without
     // downloading data or connecting to the network, or null while the
     // speech engine is initializing.
-    private fun installedVoices(languageCode: String): List<Voice>? {
+    private fun installedVoices(languageCode: String): List<Voice>? = offlineVoices(languageCode)?.filterNot { it.isNotInstalled }
+
+    // The voices for the given language code that speak without
+    // connecting to the network, whether or not their data is
+    // installed, or null while the speech engine is initializing.
+    private fun offlineVoices(languageCode: String): List<Voice>? {
         val engine = engine ?: return null
         if (!isInitialized) return null
 
@@ -255,11 +313,14 @@ object TextToSpeechService {
                         voice.locale.toLanguageTag().startsWith(languageCode, ignoreCase = true) ||
                             voice.locale.language.equals(language, ignoreCase = true)
                     ) &&
-                        !voice.isNetworkConnectionRequired &&
-                        voice.features?.contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED) != true
+                        !voice.isNetworkConnectionRequired
                 }.orEmpty()
         }.getOrNull()
     }
+
+    // Whether the voice's data must be downloaded before it can speak.
+    private val Voice.isNotInstalled: Boolean
+        get() = features?.contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED) == true
 
     private fun endSpeaking() {
         speaking = false

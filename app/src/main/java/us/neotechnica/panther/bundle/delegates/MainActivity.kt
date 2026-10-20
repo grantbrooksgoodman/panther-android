@@ -23,6 +23,7 @@ import us.neotechnica.panther.bundle.developermode.ShakeDetector
 import us.neotechnica.panther.bundle.openConversationIDKey
 import us.neotechnica.panther.designsystem.modules.alertkit.views.AlertHost
 import us.neotechnica.panther.designsystem.modules.developermode.services.DevModeService
+import us.neotechnica.panther.designsystem.modules.foundation.components.CompatibilityFrame
 import us.neotechnica.panther.designsystem.modules.foundation.hud.HUDHost
 import us.neotechnica.panther.designsystem.modules.foundation.overlay.OverlayHost
 import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootSheetHost
@@ -71,9 +72,11 @@ class MainActivity : ComponentActivity() {
         installSplashScreen().setOnExitAnimationListener { it.remove() }
         super.onCreate(savedInstanceState)
 
-        // A non-null saved state on the first activity creation of a process means the process was
-        // recreated after death (not a config change, which reuses the process); restore the open
-        // conversation, unless a tapped notification already targets one (R6.2).
+        // A non-null saved state on the first activity creation of a
+        // process means the process was recreated after death (not a
+        // config change, which reuses the process); the open
+        // conversation is restored, unless a tapped notification
+        // already targets one.
         val isProcessRestart = savedInstanceState != null && !hasCreatedInProcess
         hasCreatedInProcess = true
 
@@ -104,21 +107,23 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             PantherTheme {
-                IndicatesNetworkActivity {
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxSize()
-                                .background(LocalPantherColors.current.background),
-                    ) {
-                        RootWindow { RootView() }
-                        RootSheetHost()
-                        AlertHost()
-                        ToastHost()
-                        OverlayHost()
-                        HUDHost()
-                        RootOverlayView()
-                        ShakeDetector { if (Build.isDeveloperModeEnabled) DevModeService.presentActionSheet() }
+                CompatibilityFrame {
+                    IndicatesNetworkActivity {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .background(LocalPantherColors.current.background),
+                        ) {
+                            RootWindow { RootView() }
+                            RootSheetHost()
+                            AlertHost()
+                            OverlayHost()
+                            HUDHost()
+                            RootOverlayView()
+                            ToastHost()
+                            ShakeDetector { if (Build.isDeveloperModeEnabled) DevModeService.presentActionSheet() }
+                        }
                     }
                 }
             }

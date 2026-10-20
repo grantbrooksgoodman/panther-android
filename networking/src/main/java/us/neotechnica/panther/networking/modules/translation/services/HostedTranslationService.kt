@@ -52,8 +52,6 @@ import kotlin.time.Duration.Companion.seconds
 
 // This service exceeds the file-length and type-body-length limits.
 
-// The counterpart service carries `// swiftlint:disable file_length type_body_length`.
-
 /**
  * Coordinates translation across the local archive, the hosted
  * RTDB archive, and the underlying [TranslationService].

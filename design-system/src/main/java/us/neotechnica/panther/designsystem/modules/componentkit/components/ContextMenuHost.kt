@@ -10,12 +10,16 @@ package us.neotechnica.panther.designsystem.modules.componentkit.components
 
 import android.graphics.Bitmap
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -23,6 +27,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -35,6 +40,7 @@ import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import us.neotechnica.panther.designsystem.modules.componentkit.constants.MessageContextMenuFloats
 import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
 
@@ -45,6 +51,10 @@ val LocalContextMenuController = compositionLocalOf<ContextMenuController?> { nu
  * Hosts message context menus in the same composition as [content], so
  * the lifted bubble aligns exactly with its origin over a dimmed,
  * tap-to-dismiss backdrop.
+ *
+ * While a menu is on screen, the host ignores the system back gesture.
+ * A menu that presents while the keyboard is showing hides the
+ * keyboard, which shows again once the menu finishes animating away.
  *
  * @param modifier The modifier for the host.
  * @param canBegin Whether a long press may present a menu; when
@@ -88,6 +98,10 @@ fun ContextMenuHost(
         )
         controller.lastPresented = null
     }
+
+    // While a menu is on screen, the system back gesture is ignored.
+    BackHandler(enabled = controller.isDisplayed) {}
+    KeyboardDisplacementEffect(controller.isDisplayed)
 
     // Modifier.blur is a no-op below API 31, so the pre-31 path captures
     // the host into a graphics layer and draws a software-blurred copy
@@ -133,6 +147,28 @@ fun ContextMenuHost(
 
             ContextMenuOverlay(active = active, progress = progress.value, controller = controller)
         }
+    }
+}
+
+// Hides the keyboard as a menu presents, and shows it again once the
+// menu finishes animating away if the menu hid it. The focused text
+// field keeps its focus throughout, so the keyboard returns to it.
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun KeyboardDisplacementEffect(isMenuDisplayed: Boolean) {
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val isImeVisible by rememberUpdatedState(WindowInsets.isImeVisible)
+    var didHideKeyboard by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isMenuDisplayed) {
+        if (isMenuDisplayed) {
+            didHideKeyboard = isImeVisible
+            if (didHideKeyboard) keyboardController?.hide()
+            return@LaunchedEffect
+        }
+
+        if (didHideKeyboard) keyboardController?.show()
+        didHideKeyboard = false
     }
 }
 

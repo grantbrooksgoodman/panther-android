@@ -41,10 +41,7 @@ import java.security.MessageDigest
  * **Note:** Because the hash is derived from the content of
  * [hashFactors], two instances with the same factors always
  * produce the same [encodedHash], regardless of type. The
- * computation is stable across runs;
- * the golden fixtures in
- * `encoded_hash_vectors.json` pin
- * this behavior.
+ * computation is stable across runs.
  */
 interface EncodedHashable {
     /**
@@ -102,10 +99,12 @@ fun encodedHashOf(hashFactors: List<String>): String {
     val encodedHash =
         digest
             .digest(SwiftJSONEncoder.encode(hashFactors))
-            .joinToString("") { "%02x".format(it) }
+            .toHexString()
 
+    // Stored in place: copying the store on each insertion would make
+    // hashing many values quadratic in the number of stored hashes.
     EncodedHashStore.storedHashes.withValue {
-        it.value = it.value + (compiledString to encodedHash)
+        it.value[compiledString] = encodedHash
     }
 
     return encodedHash
@@ -114,11 +113,11 @@ fun encodedHashOf(hashFactors: List<String>): String {
 internal object EncodedHashStore {
     // MARK: - Properties
 
-    val storedHashes = LockIsolated(mapOf<String, String>())
+    val storedHashes = LockIsolated(mutableMapOf<String, String>())
 
     // MARK: - Methods
 
     fun clearStore() {
-        storedHashes.wrappedValue = mapOf()
+        storedHashes.wrappedValue = mutableMapOf()
     }
 }

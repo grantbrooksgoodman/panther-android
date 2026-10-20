@@ -184,8 +184,8 @@ internal class HealthEventListener(
 
         if (!hasComponent || handshakeSeconds <= 0) return
 
-        // A slow handshake on a successful call is precisely the
-        // evidence wanted; skip absurd values only when the call also
+        // A slow handshake on a successful call is valid evidence;
+        // implausible values are skipped only when the call also
         // failed.
         if (error != null && handshakeSeconds > latencyCeiling()) return
 

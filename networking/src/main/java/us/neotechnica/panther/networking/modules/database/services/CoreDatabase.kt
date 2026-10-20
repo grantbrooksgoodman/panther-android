@@ -52,8 +52,6 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.time.Duration
 
-// The counterpart service carries `// swiftlint:disable file_length type_body_length`.
-
 /**
  * An in-memory cache for database query results.
  *
@@ -206,16 +204,14 @@ internal class CoreDatabase {
             domain = LoggerDomain.Networking.database,
         )
 
-        // Retain a persistent observer on the special .info/connected
+        // Retains a persistent observer on the special .info/connected
         // location until the realtime socket first reports connected,
-        // then detach. A one-shot read fires on the immediate local
-        // "false" and detaches without holding the connection
-        // establishing; a retained observer forces the SDK to open and
+        // then detaches. The retained observer makes the SDK open and
         // keep the authenticated socket from launch, so it is ready
         // sooner for the first writes and for the observers that stream
-        // fresh data. Long-lived connection tracking is owned by the
-        // connection-stability observer, so this releases as soon as the
-        // connection is up.
+        // fresh data. Long-lived connection tracking belongs to the
+        // connection-stability observer, so this releases as soon as
+        // the connection is up.
         val connectedReference = reference.database.getReference(CONNECTED_PATH)
         val listenerHolder = LockIsolated<ValueEventListener?>(null)
         val listener =
@@ -247,7 +243,7 @@ internal class CoreDatabase {
 
     fun isEncodable(value: Any?): Boolean =
         when (value) {
-            is String, is Boolean, is Number -> true
+            null, is String, is Boolean, is Number -> true
             is List<*> -> value.all { isEncodable(it) }
             is Map<*, *> -> value.values.all { isEncodable(it) }
             else -> false
@@ -647,10 +643,10 @@ internal class CoreDatabase {
         }
 
         // When data keys contain "/" the payload is a multi-path
-        // update (e.g. a fan-out anchored at the environment root).
-        // Caching the partial map at the anchor key would poison
-        // reads for the entire subtree. Cache each resolved leaf
-        // path individually instead.
+        // update (for example, a fan-out anchored at the environment
+        // root). Each resolved leaf path is cached individually: a
+        // partial map cached at the anchor key would poison reads for
+        // the entire subtree.
         val expiryMilliseconds = Networking.cacheExpiryMilliseconds(System.currentTimeMillis())
         if (data.keys.any { it.contains("/") }) {
             val resolved = mutableMapOf<String, DataSample>()

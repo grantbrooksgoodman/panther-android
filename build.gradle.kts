@@ -36,8 +36,7 @@ subprojects {
         add("detektPlugins", project(":detekt-rules"))
     }
 
-    // The equivalents of the iOS "Run SwiftFormat" and "Run SwiftLint" build
-    // phases. Every Kotlin compilation first formats the module's sources with
+    // Every Kotlin compilation first formats the module's sources with
     // ktlint, then lints them with ktlint and detekt once it finishes. Lint
     // errors fail the build; findings weighted 0 in detekt.yml are reported
     // without failing it.

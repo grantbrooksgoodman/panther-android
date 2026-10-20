@@ -17,8 +17,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Build
 import us.neotechnica.panther.subsystem.modules.localization.models.Localized
 import us.neotechnica.panther.subsystem.modules.localization.models.SubsystemStringKey
 
-// The counterpart model runs to 404 lines in a package without a file-length rule.
-
 /**
  * A structured error type that captures a human-readable
  * description, a deterministic error code, source-location

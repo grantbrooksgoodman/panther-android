@@ -59,8 +59,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.RuntimeStora
 import us.neotechnica.panther.subsystem.modules.localization.models.localized
 import us.neotechnica.panther.subsystem.modules.shared.extensions.sharedEvents
 
-// The counterpart service carries `// swiftlint:disable file_length`.
-
 /**
  * The service that handles the chat info page's user interactions.
  *

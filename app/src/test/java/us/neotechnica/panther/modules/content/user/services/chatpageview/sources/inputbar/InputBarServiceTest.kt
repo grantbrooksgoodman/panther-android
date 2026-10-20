@@ -8,6 +8,9 @@
 
 package us.neotechnica.panther.modules.content.user.services.chatpageview.sources.inputbar
 
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -19,8 +22,8 @@ import us.neotechnica.panther.modules.networking.sources.support.SessionTestEnvi
 
 /**
  * Exercises the input bar service: the send and attach-media enable
- * rules, the text change path, and the sending state toggle, each
- * through injected collaborators.
+ * rules, the text change path, the sending state toggle, and the
+ * editing signal, each through injected collaborators.
  */
 class InputBarServiceTest {
     // MARK: - Setup
@@ -160,4 +163,18 @@ class InputBarServiceTest {
         service.setIsFirstResponder(false)
         assertFalse(service.isFirstResponder.value)
     }
+
+    // MARK: - Editing
+
+    @Test
+    fun `each beginning of editing is signaled`() =
+        runTest(UnconfinedTestDispatcher()) {
+            var signalCount = 0
+            backgroundScope.launch { service.editingDidBegin.collect { signalCount++ } }
+
+            service.textViewDidBeginEditing()
+            service.textViewDidBeginEditing()
+
+            assertEquals(2, signalCount)
+        }
 }

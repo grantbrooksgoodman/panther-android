@@ -64,8 +64,6 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 
 // This service exceeds the file-length and type-body-length limits.
 
-// The counterpart service carries `// swiftlint:disable file_length type_body_length`.
-
 /**
  * The service that manages the current user and resolves their
  * session data.

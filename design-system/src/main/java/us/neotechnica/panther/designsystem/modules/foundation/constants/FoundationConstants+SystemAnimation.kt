@@ -40,7 +40,10 @@ object SystemAnimationFloats {
     @Suppress("VariableMaxLength")
     const val MATERIAL_ALERT_PRESENTATION_DURATION_MILLISECONDS = 300
 
-    /** The duration, in milliseconds, of a navigation push or pop on Android. */
+    /**
+     * The duration, in milliseconds, of a navigation push or pop on
+     * Compose's default curve.
+     */
     @Suppress("VariableMaxLength")
     const val MATERIAL_NAVIGATION_TRANSITION_DURATION_MILLISECONDS = 250
 

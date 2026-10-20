@@ -49,6 +49,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -66,6 +67,7 @@ import us.neotechnica.panther.designsystem.modules.foundation.constants.ToastVie
 import us.neotechnica.panther.designsystem.modules.foundation.constants.ToastViewFloats
 import us.neotechnica.panther.designsystem.modules.foundation.constants.ToastViewStrings
 import us.neotechnica.panther.designsystem.modules.foundation.models.SystemAnimation
+import us.neotechnica.panther.designsystem.modules.foundation.views.root.RootWindowStatus
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
 
@@ -78,16 +80,23 @@ private typealias Strings = ToastViewStrings
 /**
  * Renders the toast currently requested through [ToastPresenter].
  *
- * Place a single [ToastHost] near the root of the composition,
- * above the app's content, so that toasts presented from anywhere
- * appear over the current screen. Toasts appear from their
+ * Place a single [ToastHost] after every other root host,
+ * including
+ * [RootOverlayView][us.neotechnica.panther.designsystem.modules.foundation.views.root.RootOverlayView],
+ * so that toasts presented from anywhere appear over the current
+ * screen and the build info overlay. Toasts appear from their
  * appearance edge and, unless persistent, dismiss themselves after
  * their duration. A top-edge banner can also be dismissed with an
  * upward swipe.
+ *
+ * The host takes the build info overlay's opacity, so it turns
+ * transparent while a modal overlay or the forced update modal is
+ * presented.
  */
 @Composable
 fun ToastHost() {
     val presented by ToastPresenter.current.collectAsState()
+    val rootOverlayWindowAlpha by RootWindowStatus.rootOverlayWindowAlpha.collectAsState()
     val view = LocalView.current
 
     val ephemeralDuration =
@@ -96,7 +105,7 @@ fun ToastHost() {
         if (presented != null) view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
         val duration = ephemeralDuration ?: return@LaunchedEffect
         delay(duration)
-        ToastPresenter.dismiss()
+        ToastPresenter.hide()
     }
 
     val appearanceEdge =
@@ -112,6 +121,7 @@ fun ToastHost() {
         modifier =
             Modifier
                 .fillMaxSize()
+                .alpha(rootOverlayWindowAlpha)
                 .windowInsetsPadding(WindowInsets.statusBars),
     ) {
         val fromBottom = appearanceEdge == Toast.AppearanceEdge.BOTTOM
@@ -128,13 +138,13 @@ fun ToastHost() {
             visible = presented != null,
         ) {
             presented?.let { current ->
-                val onDismiss = { ToastPresenter.dismiss() }
+                val onDismiss = { ToastPresenter.hide() }
                 val onTap =
                     current.onTap?.let { tap ->
                         {
                             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             tap()
-                            ToastPresenter.dismiss()
+                            ToastPresenter.hide()
                         }
                     }
 

@@ -29,8 +29,6 @@ import us.neotechnica.panther.designsystem.modules.alertkit.services.AlertPresen
 import us.neotechnica.panther.designsystem.modules.alertkit.services.PresentedAlert
 import us.neotechnica.panther.translator.models.TranslationInput
 
-// The counterpart alert runs to 516 lines in a package without a file-length rule.
-
 /**
  * An alert that displays the progress of a long-running operation.
  *

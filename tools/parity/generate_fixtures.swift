@@ -1,13 +1,11 @@
-// Golden fixture generator for the Panther Android port.
+// Golden fixture generator for the wire-format tests.
 //
-// Reproduces the exact primitives the iOS app uses for wire-format
-// identity so the Kotlin port can verify byte parity:
+// Computes the primitives the wire format is built on, so the Kotlin
+// implementations can be checked byte for byte:
 //
 // 1. EncodedHashable: SHA-256 over JSONEncoder().encode([String]),
-//    lowercase hex via %02x.
-//    (app-subsystem/.../EncodedHashable.swift; the encoder is an
-//    unconfigured JSONEncoder per JSONDependencies.swift.)
-// 2. TimestampDateFormatterDependency: DateFormatter with
+//    lowercase hex via %02x, with an unconfigured JSONEncoder.
+// 2. TimestampDateFormatter: DateFormatter with
 //    "yyyy-MM-dd HH:mm:ss zzz", en_US_POSIX, UTC.
 //
 // Run: swift generate_fixtures.swift <output-directory>
@@ -15,7 +13,7 @@
 import CryptoKit
 import Foundation
 
-// MARK: - Primitives (verbatim recipes from the iOS sources)
+// MARK: - Primitives
 
 let jsonEncoder = JSONEncoder()
 
@@ -151,9 +149,8 @@ let parseVectors = parseCases.map { string -> ParseVector in
 
 // MARK: - Fixture: full-type structural vectors
 
-// Fixed inputs chosen to exercise every encoding rule in SCHEMA.md.
-// Hashes are computed with the real recipe so the fixtures are
-// internally consistent.
+// Fixed inputs that exercise every encoding rule. Hashes are computed
+// with the hashing recipe, so the fixtures are internally consistent.
 
 let fixedDate = Date(timeIntervalSince1970: 1_755_642_600)
 let fixedDateString = timestampFormatter.string(from: fixedDate)
@@ -310,13 +307,11 @@ struct Manifest: Codable {
 
 // MARK: - Fixture: translation reference vectors
 
-// Reproduces the Translator + Networking wire format for hosted
-// translations (translator/.../TranslationReference.swift,
-// networking/.../String+TranslationExtensions.swift):
+// The wire format for hosted translations:
 //   - archive path:  translations/<from>-<to>/<encodedHash(input)>
 //   - archive value: "<alphaEncoded(input)>–<alphaEncoded(output)>"
 //     (separator is EN DASH, U+2013)
-//   - alphaEncoded:  addingPercentEncoding(.alphanumerics) — Unicode
+//   - alphaEncoded:  addingPercentEncoding(.alphanumerics) – Unicode
 //     L*/M*/N* left raw, everything else %XX (uppercase, per UTF-8 byte)
 //   - idempotent:    base64(input); hosted archive is skipped
 //   - hostingKey:    "<pair or 'IDEM <from>'> | <key>"
@@ -442,15 +437,15 @@ writeJSON(
 writeEncodable(
     Manifest(
         generatedAt: ISO8601DateFormatter().string(from: Date()),
-        generator: "generate_fixtures.swift (Panther Android port, Phase 1)",
+        generator: "generate_fixtures.swift",
         swiftVersion: "run `swift --version` on the generating machine",
         notes: [
-            "encoded_hash_vectors: byte parity required – Kotlin must reproduce json/sha256 exactly.",
-            "translation_reference_vectors: byte parity required – alphaEncoded (.alphanumerics), the U+2013 archive value, encodedHash keys, hostingKey, and idempotent base64 must match exactly.",
-            "timestamp_vectors: byte parity required for `formatted`; reparse must match epochMillis.",
-            "timestamp_parse_vectors: parse tolerance – null epochMillis means the iOS formatter rejects the string.",
-            "user/conversation/message: structural parity – decode → re-encode must be structurally equal (RTDB carries structure, not bytes).",
-            "type_hashes: identity-hash parity for the structural fixtures, computed with the real recipe.",
+            "encoded_hash_vectors: byte-exact – the encoder reproduces json/sha256 exactly.",
+            "translation_reference_vectors: byte-exact – alphaEncoded (.alphanumerics), the U+2013 archive value, encodedHash keys, hostingKey, and idempotent base64 match exactly.",
+            "timestamp_vectors: byte-exact for `formatted`; reparsing yields reparsedEpochMillis.",
+            "timestamp_parse_vectors: parse tolerance – a null epochMillis means the string is rejected.",
+            "user/conversation/message: structural – decoding and re-encoding yields a structurally equal value (the database carries structure, not bytes).",
+            "type_hashes: identity hashes for the structural fixtures, computed with the hashing recipe.",
         ]
     ),
     to: "manifest.json"

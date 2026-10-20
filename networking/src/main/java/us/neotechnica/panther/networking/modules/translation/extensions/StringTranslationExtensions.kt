@@ -34,10 +34,10 @@ internal const val TRANSLATION_COMPONENT_SEPARATOR = "–"
 /**
  * The string percent-encoded, escaping all but alphanumerics.
  *
- * Empirically – and pinned by `translation_reference_vectors.json` –
- * that character set leaves only ASCII `[0-9A-Za-z]` unescaped and
- * percent-encodes every other byte of the UTF-8 representation as an
- * uppercase `%XX` sequence.
+ * Only ASCII `[0-9A-Za-z]` is left unescaped; every other byte of
+ * the UTF-8 representation is percent-encoded as an uppercase
+ * `%XX` sequence. The encoding is pinned by
+ * `translation_reference_vectors.json`.
  */
 internal val String.alphaEncoded: String
     get() {

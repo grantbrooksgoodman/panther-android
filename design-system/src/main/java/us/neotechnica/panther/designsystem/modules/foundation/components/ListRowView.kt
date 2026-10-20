@@ -13,6 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,6 +40,7 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.FontScale
 import us.neotechnica.panther.designsystem.modules.foundation.constants.ListRowViewColors
 import us.neotechnica.panther.designsystem.modules.foundation.constants.ListRowViewFloats
 import us.neotechnica.panther.designsystem.modules.foundation.constants.ListRowViewStrings
+import us.neotechnica.panther.designsystem.modules.foundation.constants.StackFloats
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 import java.util.UUID
 
@@ -266,6 +268,7 @@ private fun LabelView(
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(StackFloats.defaultSpacing),
         modifier =
             modifier
                 .fillMaxWidth()

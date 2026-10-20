@@ -12,9 +12,6 @@ import androidx.compose.ui.graphics.Color
 
 /**
  * The app's built-in themes.
- *
- * **Note:** the prevarication-mode theme is omitted, as
- * prevarication mode is cut from the MVP.
  */
 object Themes {
     // MARK: - Themes
@@ -91,7 +88,7 @@ object Themes {
         )
 }
 
-// The shared dark-theme greys, hoisted so they read as design tokens.
+// The shared dark-theme greys.
 private val darkThemeBackground = rgb(0x1A1A1A)
 private val darkThemeGroupedBackground = rgb(0x1C1C1E)
 private val darkThemeRowBackground = rgb(0x2A2A2C)

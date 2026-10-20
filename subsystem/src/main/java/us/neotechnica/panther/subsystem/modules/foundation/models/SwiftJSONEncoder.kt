@@ -14,13 +14,10 @@ package us.neotechnica.panther.subsystem.modules.foundation.models
  *
  * Identity hashes are computed over the JSON encoding of a
  * string array (see [EncodedHashable][us.neotechnica.panther.subsystem.modules.foundation.interfaces.EncodedHashable]),
- * so the encoded bytes must match the reference output exactly – a
- * one-byte difference silently diverges every identity hash the
- * two platforms share.
+ * so the encoded bytes must match the `JSONEncoder` output
+ * exactly – a one-byte difference changes every identity hash.
  *
- * The escaping rules below mirror an unconfigured Foundation
- * `JSONEncoder`, pinned by the golden fixtures in
- * `encoded_hash_vectors.json`:
+ * The escaping rules are those of an unconfigured `JSONEncoder`:
  *
  * - Compact output – no whitespace.
  * - Short escapes: `\"`, `\\`, `\/`, `\b`, `\f`, `\n`, `\r`,
@@ -30,16 +27,16 @@ package us.neotechnica.panther.subsystem.modules.foundation.models
  * - All other characters – including U+007F and non-ASCII –
  *   emit as raw UTF-8.
  *
- * **Warning:** Never substitute a general-purpose JSON library
- * for this encoder in hash computations; none reproduce
- * Foundation's escaping (notably `\/`) by default.
+ * **Important:** General-purpose JSON libraries do not reproduce
+ * this escaping (notably `\/`) by default. Use this encoder for
+ * every hash computation.
  */
 object SwiftJSONEncoder {
     // MARK: - Methods
 
     /**
-     * Returns the Foundation-equivalent JSON encoding of the
-     * given string array as UTF-8 bytes.
+     * Returns the JSON encoding of the given string array as
+     * UTF-8 bytes.
      *
      * @param strings The strings to encode.
      *
@@ -48,8 +45,7 @@ object SwiftJSONEncoder {
     fun encode(strings: List<String>): ByteArray = encodeToString(strings).toByteArray(Charsets.UTF_8)
 
     /**
-     * Returns the Foundation-equivalent JSON encoding of the
-     * given string array.
+     * Returns the JSON encoding of the given string array.
      *
      * @param strings The strings to encode.
      *

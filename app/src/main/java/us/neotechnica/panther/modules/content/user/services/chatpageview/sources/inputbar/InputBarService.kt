@@ -8,8 +8,11 @@
 
 package us.neotechnica.panther.modules.content.user.services.chatpageview.sources.inputbar
 
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
 import us.neotechnica.panther.designsystem.modules.alertkit.extensions.sanitized
@@ -30,8 +33,9 @@ import us.neotechnica.panther.subsystem.modules.foundation.services.Build
  * Use [InputBarService] to keep the chat page's input bar in sync with
  * the conversation's state. It enables or disables the send and
  * attach-media buttons, holds the input field's text and first
- * responder status, and presents the sending state while a message is
- * being delivered.
+ * responder status, signals each time editing begins in the input
+ * field, and presents the sending state while a message is being
+ * delivered.
  *
  * @param dependencies The collaborators the service reads from; the
  *   defaults resolve the live services.
@@ -69,6 +73,7 @@ class InputBarService(
     /** The service that handles the input bar's button actions. */
     val actionHandler = InputBarActionHandlerService()
 
+    private val mutableEditingDidBegin = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val mutableIsAttachMediaButtonEnabled = MutableStateFlow(false)
     private val mutableIsFirstResponder = MutableStateFlow(false)
     private val mutableIsSendButtonEnabled = MutableStateFlow(false)
@@ -77,6 +82,9 @@ class InputBarService(
     private val mutableText = MutableStateFlow("")
 
     // MARK: - Computed Properties
+
+    /** Signals each time editing begins in the input field. */
+    val editingDidBegin: SharedFlow<Unit> = mutableEditingDidBegin.asSharedFlow()
 
     /** Whether the attach-media button is enabled. */
     val isAttachMediaButtonEnabled: StateFlow<Boolean> = mutableIsAttachMediaButtonEnabled.asStateFlow()
@@ -177,6 +185,18 @@ class InputBarService(
      */
     fun setSendButtonIsEnabled(isEnabled: Boolean) {
         mutableIsSendButtonEnabled.value = isEnabled
+    }
+
+    // MARK: - Text View Did Begin Editing
+
+    /**
+     * Signals that editing began in the input field.
+     *
+     * Call this method as the input field gains focus, and as a tap
+     * on the focused input field shows the hidden keyboard.
+     */
+    fun textViewDidBeginEditing() {
+        mutableEditingDidBegin.tryEmit(Unit)
     }
 
     // MARK: - Text View Did Change

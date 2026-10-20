@@ -1,4 +1,4 @@
-# Panther ("Hello") — R8/ProGuard keep rules for the release build.
+# Panther ("Hello") – R8/ProGuard keep rules for the release build.
 #
 # The app uses manual encode/decode for all wire models (no reflection),
 # so most classes shrink safely. The rules below protect the few paths
@@ -7,6 +7,13 @@
 # Preserve generic signatures, annotations, and enclosing-method info so
 # reflective/coroutine machinery keeps working after shrinking.
 -keepattributes Signature, *Annotation*, InnerClasses, EnclosingMethod, SourceFile, LineNumberTable
+
+# Keep classes in their packages. With R8 limited to the dependencies,
+# it moves classes out of their package without widening the
+# package-private superclasses they extend – such as the parts of the
+# Kotlin standard library's collection and text facades – which fails
+# at launch with an IllegalAccessError.
+-keeppackagenames
 
 # --- WebView translation harness ---------------------------------------
 # The translator drives a hidden WebView via androidx.webkit and receives

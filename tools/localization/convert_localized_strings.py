@@ -5,37 +5,40 @@
 #  Created by Grant Brooks Goodman.
 #  Copyright © NEOTechnica Corporation. All rights reserved.
 #
-#  Converts the iOS LocalizedStrings.plist files (keyed
-#  snake_case_key -> {language_code: value}) into the JSON assets the
-#  Android LocalizedStringResolver reads. The app's runtime resolves
-#  strings for the user's chosen language, not the device locale, so a
-#  single aggregated JSON per source is the faithful port of the plist —
-#  not per-locale res/values strings.xml.
+#  Converts localized-strings property lists (keyed
+#  snake_case_key -> {language_code: value}) into the JSON assets
+#  LocalizedStringResolver reads. The app resolves strings for the
+#  user's chosen language, not the device locale, so each source
+#  becomes a single aggregated JSON asset rather than per-locale
+#  res/values strings.
 #
-#  Usage: python3 convert_localized_strings.py
+#  Usage: python3 convert_localized_strings.py <app-plist> <subsystem-plist>
 
 import json
 import os
 import plistlib
+import sys
 
-REPOS = os.path.expanduser("~/Documents/Development/Repositories")
-OUT_DIR = os.path.join(
-    REPOS, "panther-android/app/src/main/assets/localization"
+OUT_DIR = os.path.normpath(
+    os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "..", "..", "app", "src", "main", "assets", "localization",
+    )
 )
 
-SOURCES = {
-    "localized_strings_app.json": os.path.join(
-        REPOS, "panther/Sources/Resources/Property Lists/LocalizedStrings.plist"
-    ),
-    "localized_strings_subsystem.json": os.path.join(
-        REPOS, "app-subsystem/Sources/Resources/LocalizedStrings.plist"
-    ),
-}
+OUTPUT_NAMES = [
+    "localized_strings_app.json",
+    "localized_strings_subsystem.json",
+]
 
 
 def main() -> None:
+    if len(sys.argv) != len(OUTPUT_NAMES) + 1:
+        print(f"Usage: {os.path.basename(sys.argv[0])} <app-plist> <subsystem-plist>")
+        sys.exit(1)
+
     os.makedirs(OUT_DIR, exist_ok=True)
-    for out_name, plist_path in SOURCES.items():
+    for out_name, plist_path in zip(OUTPUT_NAMES, sys.argv[1:]):
         with open(plist_path, "rb") as handle:
             data = plistlib.load(handle)
 

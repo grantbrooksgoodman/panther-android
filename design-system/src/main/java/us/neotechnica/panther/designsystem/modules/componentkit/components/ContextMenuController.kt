@@ -55,8 +55,11 @@ internal data class ActiveContextMenu(
  * [ContextMenuHost].
  *
  * A long press that presents a menu carries into it: dragging the
- * held pointer over the menu's elements highlights the one beneath
- * it, and lifting the pointer over an element selects it.
+ * held pointer over the menu's elements or reactions highlights the
+ * one beneath it, and lifting the pointer over an element selects
+ * it, or over a reaction applies it. A touch that begins on the
+ * reaction row once the menu is presented works the same way across
+ * the reactions.
  */
 class ContextMenuController internal constructor() {
     // MARK: - Properties
@@ -70,6 +73,10 @@ class ContextMenuController internal constructor() {
     internal var canBegin: Boolean = true
     internal var hapticFeedback: HapticFeedback? = null
 
+    // How far each reaction's hit area extends to either side, in
+    // pixels: halfway into the spacing beside it.
+    internal var reactionHitSlop: Float = 0f
+
     // The host's layout coordinates, against which lifted bubbles are
     // measured.
     internal var hostCoordinates: LayoutCoordinates? = null
@@ -78,7 +85,12 @@ class ContextMenuController internal constructor() {
     internal var highlightedElementIndex by mutableStateOf<Int?>(null)
         private set
 
+    /** The index of the reaction under a tracked touch, or `null`. */
+    internal var highlightedReactionIndex by mutableStateOf<Int?>(null)
+        private set
+
     private val elementCoordinates = mutableMapOf<Int, LayoutCoordinates>()
+    private val reactionCoordinates = mutableMapOf<Int, LayoutCoordinates>()
     private val registry = mutableMapOf<String, () -> ActiveContextMenu?>()
 
     // The location, in the root coordinate space, at which the held long
@@ -86,6 +98,13 @@ class ContextMenuController internal constructor() {
     private var interactionOrigin: Offset? = null
 
     // MARK: - Computed Properties
+
+    /**
+     * Whether a context menu is on screen, including while it animates
+     * away after dismissal.
+     */
+    val isDisplayed: Boolean
+        get() = displayed != null
 
     /** Whether a context menu is currently presented. */
     val isPresenting: Boolean
@@ -166,11 +185,12 @@ class ContextMenuController internal constructor() {
      * bubble.
      *
      * When the press begins, the bubble's menu is presented. As the
-     * held pointer moves, the menu element beneath it is highlighted.
-     * When the pointer lifts over an element, having travelled more
-     * than [dragThreshold] from where the press began, the menu
-     * dismisses and the element's action runs; lifting anywhere else
-     * leaves the menu presented.
+     * held pointer moves, the menu element or reaction beneath it is
+     * highlighted. When the pointer lifts over an element or reaction,
+     * having travelled more than [dragThreshold] from where the press
+     * began, the menu dismisses and the element's action runs or the
+     * reaction applies; lifting anywhere else leaves the menu
+     * presented.
      *
      * @param state The long press's new state.
      * @param location The pointer's location in the root coordinate
@@ -197,16 +217,23 @@ class ContextMenuController internal constructor() {
                 interactionOrigin = location
             }
 
-            GestureRecognizerState.CHANGED -> if (interactionOrigin != null) highlightElement(location)
+            GestureRecognizerState.CHANGED -> {
+                if (interactionOrigin == null) return
+                highlightElement(location)
+                highlightReaction(location)
+            }
 
             GestureRecognizerState.ENDED -> {
                 val origin = interactionOrigin ?: return
                 interactionOrigin = null
-                val didDragFromOrigin = (location - origin).getDistance() > dragThreshold
-                val element = if (didDragFromOrigin) element(location) else null
-                unhighlightAllElements()
+                if ((location - origin).getDistance() <= dragThreshold) return unhighlightAllElements()
 
-                element?.let { select(it.onSelect) }
+                element(location)?.let { action ->
+                    unhighlightAllElements()
+                    return select(action.onSelect)
+                }
+
+                if (!selectReaction(location)) unhighlightAllElements()
             }
 
             GestureRecognizerState.CANCELLED -> {
@@ -257,10 +284,96 @@ class ContextMenuController internal constructor() {
 
     private fun resetElements() {
         elementCoordinates.clear()
+        reactionCoordinates.clear()
         unhighlightAllElements()
     }
 
     private fun unhighlightAllElements() {
         highlightedElementIndex = null
+        highlightedReactionIndex = null
+    }
+
+    // MARK: - Reactions
+
+    /**
+     * Records the layout coordinates of the presented menu's reaction
+     * at the given index, for hit-testing a tracked touch.
+     *
+     * @param index The reaction's index among the menu's reactions.
+     * @param coordinates The reaction's layout coordinates.
+     */
+    internal fun setReactionCoordinates(
+        index: Int,
+        coordinates: LayoutCoordinates,
+    ) {
+        reactionCoordinates[index] = coordinates
+    }
+
+    /**
+     * Handles a change in the state of a touch that begins on the
+     * reaction row once the menu is presented.
+     *
+     * As the touch moves, the reaction beneath it is highlighted.
+     * When the touch lifts over a reaction, the menu dismisses and the
+     * reaction applies; lifting anywhere else leaves the menu
+     * presented.
+     *
+     * @param state The touch's new state.
+     * @param location The touch's location in the root coordinate
+     *   space.
+     */
+    internal fun trackReactionTouch(
+        state: GestureRecognizerState,
+        location: Offset,
+    ) {
+        when (state) {
+            GestureRecognizerState.BEGAN,
+            GestureRecognizerState.CHANGED,
+            -> highlightReaction(location)
+
+            GestureRecognizerState.ENDED -> if (!selectReaction(location)) unhighlightAllElements()
+
+            GestureRecognizerState.CANCELLED -> unhighlightAllElements()
+        }
+    }
+
+    // Highlights the reaction at the given location, if any, in place of
+    // the current selection, playing a selection haptic as the highlight
+    // moves from one reaction directly to another.
+    private fun highlightReaction(location: Offset) {
+        val newHighlightedReactionIndex = reactionIndex(location)
+        if (newHighlightedReactionIndex == highlightedReactionIndex) return
+
+        if (highlightedReactionIndex != null && newHighlightedReactionIndex != null) {
+            hapticFeedback?.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
+        }
+
+        highlightedReactionIndex = newHighlightedReactionIndex
+    }
+
+    // Returns the index of the presented menu's reaction whose hit area
+    // contains the given location, or `null`.
+    private fun reactionIndex(location: Offset): Int? =
+        reactionCoordinates.entries
+            .firstOrNull { (_, coordinates) ->
+                if (!coordinates.isAttached) return@firstOrNull false
+                val bounds = coordinates.boundsInRoot()
+                Rect(
+                    left = bounds.left - reactionHitSlop,
+                    top = bounds.top,
+                    right = bounds.right + reactionHitSlop,
+                    bottom = bounds.bottom,
+                ).contains(location)
+            }?.key
+
+    // Applies the reaction at the given location, if any, keeping it
+    // highlighted while the menu animates away. Returns whether a
+    // reaction was applied.
+    private fun selectReaction(location: Offset): Boolean {
+        val index = reactionIndex(location) ?: return false
+        val choice = active?.reactionChoices?.getOrNull(index) ?: return false
+        select(choice.onSelect)
+        highlightedReactionIndex = index
+        return true
     }
 }

@@ -39,12 +39,12 @@ import kotlin.time.Duration
  * non-`null`, a single tap is reported only once the double-tap
  * timeout passes without a second press.
  *
- * A long press is continuous, like a `UILongPressGestureRecognizer`:
- * it begins once the press is held for [minimumPressDuration], and
- * from then on [onLongPress] is told each time the held pointer
- * moves – wherever it moves, on or off the bubble – and when the
- * pointer lifts or the gesture is cancelled. Every event of a long
- * press is consumed, so nothing beneath it scrolls or swipes.
+ * A long press is continuous: it begins once the press is held for
+ * [minimumPressDuration], and from then on [onLongPress] is told
+ * each time the held pointer moves – wherever it moves, on or off
+ * the bubble – and when the pointer lifts or the gesture is
+ * cancelled. Every event of a long press is consumed, so nothing
+ * beneath it scrolls or swipes.
  *
  * @param minimumPressDuration How long a press must be held to begin
  *   a long press.

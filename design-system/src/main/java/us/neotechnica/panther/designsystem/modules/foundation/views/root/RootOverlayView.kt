@@ -43,8 +43,10 @@ private typealias Floats = RootOverlayViewFloats
  * Displays the build info overlay above the app's content.
  *
  * Place a single [RootOverlayView] above the app's content, after
- * every other root host, so that it remains frontmost. The view
- * renders nothing while the build info overlay is hidden.
+ * every other root host except
+ * [ToastHost][us.neotechnica.panther.designsystem.modules.foundation.toast.ToastHost],
+ * so that only toasts appear over it. The view renders nothing
+ * while the build info overlay is hidden.
  */
 @Composable
 fun RootOverlayView() {

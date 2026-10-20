@@ -226,6 +226,7 @@ private fun NewChatInputBar(
         images = InputBarConfigService.images(),
         focusRequester = focusRequester,
         onFocusChanged = { viewModel.send(Action.InputBarFocusChanged(it)) },
+        onBeginEditing = { inputBarService.textViewDidBeginEditing() },
         keyboardOptions = KeyboardOptions(hintLocales = LocaleList(Locale(RuntimeStorage.languageCode))),
     )
 }

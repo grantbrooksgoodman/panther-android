@@ -227,9 +227,8 @@ object ReactionSessionService {
     private fun setIsReactingToMessage(isReactingToMessage: Boolean) {
         internalIsReactingToMessage.wrappedValue = isReactingToMessage
 
-        // Deferred to the next turn on purpose: the context menu gate
-        // flips after this turn's effects and the caller's continuation
-        // have run, which matches the ordering callers were written for.
+        // Deferred to the next turn: the context menu gate flips after
+        // this turn's effects and the caller's continuation have run.
         mainScope.launch {
             ContextMenuInteraction.setCanBegin(!isReactingToMessage)
         }

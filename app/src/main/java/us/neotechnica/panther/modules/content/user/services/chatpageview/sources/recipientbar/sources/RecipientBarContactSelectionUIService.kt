@@ -126,8 +126,8 @@ class RecipientBarContactSelectionUIService(
      * @param contactPair The contact pair to add as a recipient.
      * @param performInputBarFix A Boolean value that determines
      *   whether to force the input bar to reappear after adding
-     *   the recipient. Accepted for signature compatibility; the
-     *   input bar is always present.
+     *   the recipient. Has no effect; the input bar is always
+     *   present.
      */
     fun selectContactPair(
         contactPair: ContactPair,

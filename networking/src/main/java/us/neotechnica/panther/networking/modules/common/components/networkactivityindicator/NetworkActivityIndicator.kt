@@ -76,11 +76,16 @@ fun NetworkActivityIndicator(
                     viewModel.send(NetworkActivityIndicatorReducer.Action.IndicatorTapped)
                 },
     ) {
-        CircularProgressIndicator(
-            color = state.progressViewTintColor ?: Color.White,
-            strokeWidth = PROGRESS_STROKE_WIDTH.dp,
-            modifier = Modifier.size(PROGRESS_SIZE.dp),
-        )
+        // The progress view redraws on every frame while composed, even
+        // when transparent, so it is composed only while the indicator
+        // shows.
+        if (state.isVisible) {
+            CircularProgressIndicator(
+                color = state.progressViewTintColor ?: Color.White,
+                strokeWidth = PROGRESS_STROKE_WIDTH.dp,
+                modifier = Modifier.size(PROGRESS_SIZE.dp),
+            )
+        }
     }
 }
 

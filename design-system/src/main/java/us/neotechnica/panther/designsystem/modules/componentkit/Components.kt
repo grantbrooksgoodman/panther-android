@@ -90,7 +90,7 @@ object Components {
      *
      * @param text The string to display.
      * @param foregroundColor The color of the text.
-     * @param fit How the text fits its bounds — its line, shrink,
+     * @param fit How the text fits its bounds – its line, shrink,
      *   overflow, and alignment behavior.
      * @param font The font to apply. Defaults to [Font.system].
      * @param modifier The modifier for this component.

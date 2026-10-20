@@ -46,7 +46,7 @@ class SharedEvents internal constructor() {
      *
      * Call this method only from the body of the extension
      * property that declares the event – the key forms the
-     * instance's identity and MUST match the property name:
+     * instance's identity and matches the property name:
      *
      * ```kotlin
      * val SharedEvents.storeDidChange: EventStream<StoreChange>

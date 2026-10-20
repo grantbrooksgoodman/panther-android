@@ -116,7 +116,7 @@ object Task {
         key: Any,
     ) {
         registry.withValue { entries ->
-            // Clear only if we are still the latest job for this key.
+            // Clears the key only when this job is still its latest.
             if (entries.value[key]?.token == token) {
                 entries.value = entries.value - key
             }

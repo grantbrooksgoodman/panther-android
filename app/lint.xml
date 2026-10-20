@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Android Lint configuration for the app module. -->
 <lint>
-    <!-- The region flags are copied verbatim from iOS, where regions that
-         use another country's flag share an identical image by design
-         (fr/mf, bv/no/sj, um/us, and others). -->
+    <!-- Regions that use another country's flag share an identical
+         image by design (fr/mf, bv/no/sj, um/us, and others). -->
     <issue id="IconDuplicates">
         <ignore path="src/main/res/drawable-nodpi/flag_*.png" />
     </issue>

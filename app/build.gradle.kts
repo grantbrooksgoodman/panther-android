@@ -56,6 +56,31 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+
+            // R8 processes the dependencies but not the app's own packages.
+            // Exception metadata reads the file, type, function, and line
+            // from the stack at runtime for session logs, filed reports,
+            // and error IDs, and R8 renames, merges, and renumbers the code
+            // it processes. A dependency outside these packages ships
+            // unshrunk.
+            optimization {
+                packageScope.set(
+                    setOf(
+                        "_COROUTINE.**",
+                        "android.**",
+                        "androidx.**",
+                        "com.**",
+                        "javax.**",
+                        "kotlin.**",
+                        "kotlinx.**",
+                        "okhttp.**",
+                        "okhttp3.**",
+                        "okio.**",
+                        "org.**",
+                    ),
+                )
+            }
+
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }
@@ -88,20 +113,19 @@ android {
     }
 
     lint {
-        // Warnings that predate Lint joining the gate. Regenerate with
+        // Baselined Lint warnings. Regenerate with
         // `./gradlew updateLintBaseline` after fixing any of them.
         baseline = file("lint-baseline.xml")
     }
 }
 
-// --- Per-build build-number stamp (mirrors the iOS Run Script phase) ---
+// --- Per-build build-number stamp ---
 // Once per Gradle invocation, stampBuildInfo increments version.properties
 // and writes build_info.properties, which every variant packages as a
 // generated asset (through its copy<Variant>BuildInfo task) and the app
 // reads at runtime through Build.initialize. The build number, build date,
-// and first-compile date therefore advance exactly as they do on iOS via the
-// Run Script build phase, and every variant's versionCode is that same build
-// number, as the iOS CFBundleVersion is.
+// and first-compile date advance once per invocation, and every variant's
+// versionCode is that same build number.
 abstract class StampBuildInfoTask : DefaultTask() {
     @get:Internal
     abstract val versionPropertiesFile: RegularFileProperty
@@ -127,7 +151,7 @@ abstract class StampBuildInfoTask : DefaultTask() {
         properties.setProperty("buildDate", buildDate.toString())
         properties.setProperty("firstCompileDate", firstCompileDate.toString())
         file.outputStream().use {
-            properties.store(it, "Auto-incremented per compile (mirrors the iOS Run Script build-number bump).")
+            properties.store(it, "Auto-incremented once per build.")
         }
 
         val assetFile = buildInfoFile.get().asFile

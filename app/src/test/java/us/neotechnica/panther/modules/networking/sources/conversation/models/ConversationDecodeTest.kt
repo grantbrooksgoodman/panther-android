@@ -19,8 +19,9 @@ import us.neotechnica.panther.parity.FixtureJson
 import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
 
 /**
- * Exercises the conversation decoders' failure paths: empty
- * collections fail, and image data must be padded Base64.
+ * Exercises the conversation decoders: empty collections fail,
+ * image data must be padded Base64, and the archive decoder agrees
+ * with the serialized decoder.
  */
 class ConversationDecodeTest {
     // MARK: - Setup
@@ -67,6 +68,15 @@ class ConversationDecodeTest {
             "Decoding failed.",
             (runCatching { ConversationMetadata.decode(metadata) }.exceptionOrNull() as Exception).descriptor,
         )
+    }
+
+    @Test
+    fun `the archive decoder agrees with the decoder and round-trips`() {
+        val fixture = FixtureJson.loadObject("conversation.json")
+        val conversation = Conversation.fromArchive(fixture)
+
+        assertEquals(Conversation.decode(fixture), conversation)
+        assertEquals(conversation, Conversation.fromArchive(conversation.encoded))
     }
 
     @Test

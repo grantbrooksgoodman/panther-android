@@ -266,7 +266,8 @@ data class Activity(
     private fun phoneNumberDisplayName(phoneNumberString: String): String {
         val clientSession = DependencyValues.current.clientSession
 
-        // Backward compatibility. Remove in a future update.
+        // A departure recorded against a user identifier rather than a
+        // phone number resolves through the user's display name.
         if (phoneNumberString.any { it.isLetter() }) return userDisplayName(phoneNumberString)
 
         val currentUser = clientSession.entity.user.currentUser

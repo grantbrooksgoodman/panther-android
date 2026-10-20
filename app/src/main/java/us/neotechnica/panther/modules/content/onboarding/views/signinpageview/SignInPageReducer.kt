@@ -55,8 +55,6 @@ import kotlin.time.Duration.Companion.milliseconds
 
 // This reducer exceeds the file-length and type-body-length limits.
 
-// The counterpart reducer carries `// swiftlint:disable file_length function_body_length type_body_length`.
-
 /**
  * The reducer that drives the sign-in page of the onboarding
  * flow.
@@ -75,10 +73,10 @@ import kotlin.time.Duration.Companion.milliseconds
  *   strings, remaining in the loading state until resolution
  *   completes. If resolution fails, the page falls back to its
  *   default strings and loads anyway. The page restores any phone
- *   number and region previously recorded by [OnboardingService]
- *   , defaulting to the device's region. When Developer Mode is
- *   enabled, the page instead prefills a test phone number and
- *   verification code.
+ *   number and region previously recorded by
+ *   [OnboardingService], defaulting to the device's region. When
+ *   Developer Mode is enabled, the page instead prefills a test
+ *   phone number and verification code.
  * - In the phone number configuration, the continue button is
  *   enabled only while the entered phone number is a valid length
  *   for the selected region's calling code. In the verification

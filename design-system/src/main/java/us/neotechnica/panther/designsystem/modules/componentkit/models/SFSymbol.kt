@@ -69,7 +69,6 @@ import androidx.compose.ui.text.font.FontWeight
  * A name resolves to the real SF Symbol while [usesSFSymbols] is
  * `true` and the symbol is bundled. Otherwise, it resolves to its
  * nearest Material Symbol. Unknown names resolve to a warning symbol.
- * Extend the mapping as new symbols are introduced.
  */
 object SFSymbol {
     // MARK: - Types

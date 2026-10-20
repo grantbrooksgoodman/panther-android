@@ -102,8 +102,7 @@ class PantherMessagingService : FirebaseMessagingService() {
         scope.launch(Dispatchers.Main) {
             try {
                 // The `notification` block is absent from Android pushes;
-                // one sent with it (an older sender) still carries the
-                // same data keys.
+                // a push sent with it still carries the same data keys.
                 val received = ReceivedNotification.from(message.data)
                 val lifecycleState = ProcessLifecycleOwner.get().lifecycle.currentState
                 if (!lifecycleState.isAtLeast(Lifecycle.State.STARTED)) {
