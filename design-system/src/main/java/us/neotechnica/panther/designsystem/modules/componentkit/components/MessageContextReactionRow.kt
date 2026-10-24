@@ -107,7 +107,7 @@ internal fun ReactionRow(controller: ContextMenuController) {
                         .semantics(mergeDescendants = true) {
                             role = Role.Button
                             onClick {
-                                controller.select(choice.onSelect)
+                                controller.react(choice)
                                 true
                             }
                         },

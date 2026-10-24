@@ -34,6 +34,12 @@ object HeaderViewFloats {
     @Suppress("VariableMaxLength")
     const val LONG_CENTER_ITEM_TEXT_CHARACTER_COUNT_THRESHOLD = 20f
 
+    /**
+     * The spacing between the left, center, and right items: the
+     * default spacing of a stack.
+     */
+    const val ITEM_SPACING = 8f
+
     /** The line limit of long center text. */
     const val LONG_CENTER_ITEM_TEXT_LINE_LIMIT = 2f
 

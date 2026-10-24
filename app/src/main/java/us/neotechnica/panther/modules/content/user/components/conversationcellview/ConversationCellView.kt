@@ -166,7 +166,7 @@ fun ConversationCellView(
                 liftedBackground = colors.background,
                 minimumPressDuration = LocalViewConfiguration.current.longPressTimeoutMillis.milliseconds,
                 menuLeadingOffset = CellFloats.contextMenuLeadingOffset,
-                actions =
+                actions = {
                     listOf(
                         ContextMenuAction(
                             title = state.deleteConversationButtonText,
@@ -181,7 +181,8 @@ fun ConversationCellView(
                             title = state.reportUsersButtonText,
                             systemImageName = CellStrings.REPORT_USERS_BUTTON_IMAGE_SYSTEM_NAME,
                         ) { viewModel.send(ConversationCellReducer.Action.ReportUsersButtonTapped) },
-                    ),
+                    )
+                },
                 alignment = ContextMenuAlignment.LEADING,
                 reactionChoices = emptyList(),
                 liftScale = 0f,

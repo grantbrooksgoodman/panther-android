@@ -39,15 +39,18 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Wraps a message bubble so a long press lifts it and presents
- * [actions] in a context menu, following the bubble's [alignment],
- * with an optional row of [reactionChoices] above the bubble.
+ * Wraps a message bubble so a long press lifts it and presents a
+ * context menu of the actions [actions] builds at that moment,
+ * following the bubble's [alignment], with an optional row of
+ * [reactionChoices] above the bubble.
  *
  * The long press carries into the menu: without lifting, the user
  * can drag onto an action – highlighting it – and release to
  * select it.
  *
- * @param actions The menu's actions.
+ * @param actions Builds the menu's actions each time the menu is
+ *   presented, so they reflect state that changed after the bubble
+ *   was composed.
  * @param alignment The side the menu anchors to.
  * @param reactionChoices The reaction options shown above the
  *   bubble; the row is omitted when empty.
@@ -80,7 +83,7 @@ import kotlin.time.Duration.Companion.milliseconds
 @Composable
 @Suppress("LongParameterList")
 fun MessageContextMenu(
-    actions: List<ContextMenuAction>,
+    actions: () -> List<ContextMenuAction>,
     alignment: ContextMenuAlignment,
     reactionChoices: List<ReactionChoice> = emptyList(),
     liftScale: Float = MessageContextMenuFloats.LIFT_SCALE_BONUS,
@@ -115,17 +118,18 @@ fun MessageContextMenu(
     val currentOnTap by rememberUpdatedState(onTap)
     val currentReactionChoices by rememberUpdatedState(reactionChoices)
 
-    // The menu as it stands, or `null` when the bubble has neither
-    // actions nor reactions or has not yet been laid out.
+    // The menu as it stands, with its actions built now, or `null` when
+    // the bubble has neither actions nor reactions or has not yet been
+    // laid out.
     fun activeContextMenu(): ActiveContextMenu? {
-        val hasMenu = currentActions.isNotEmpty() || currentReactionChoices.isNotEmpty()
-        val liftedBounds = bubbleCoordinates?.let { controller?.boundsInHost(it) }
-        if (!hasMenu || liftedBounds == null) return null
+        val liftedBounds = bubbleCoordinates?.let { controller?.boundsInHost(it) } ?: return null
+        val menuActions = currentActions()
+        if (menuActions.isEmpty() && currentReactionChoices.isEmpty()) return null
         return ActiveContextMenu(
             originID,
             liftedBounds,
             alignment,
-            currentActions,
+            menuActions,
             currentReactionChoices,
             liftScale,
             liftedBackground,

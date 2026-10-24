@@ -12,6 +12,7 @@ import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -56,6 +57,7 @@ internal fun ContentView(
         }
 
     Row(
+        horizontalArrangement = Arrangement.spacedBy(HeaderViewFloats.ITEM_SPACING.dp),
         verticalAlignment = Alignment.CenterVertically,
         modifier =
             Modifier
@@ -178,16 +180,25 @@ internal fun PeripheralButton(
 
         is HeaderView.PeripheralButtonType.Text -> {
             val textAttributes = buttonType.attributes.text
-            Components.Button(
-                text = textAttributes.string,
+
+            // A title too wide for its side of the header shrinks on one
+            // line rather than wrapping.
+            Components.FittedText(
+                textAttributes.string,
                 foregroundColor =
                     if (buttonType.attributes.isEnabled) {
                         textAttributes.foregroundColor ?: colors.accent
                     } else {
                         colors.disabled
                     },
-                onClick = { if (buttonType.attributes.isEnabled) buttonType.attributes.action() },
+                fit =
+                    TextFit(
+                        maxLines = 1,
+                        minimumScaleFactor = HeaderViewFloats.TEXT_MINIMUM_SCALE_FACTOR,
+                        overflow = TextOverflow.Ellipsis,
+                    ),
                 font = textAttributes.font,
+                modifier = Modifier.clickable { if (buttonType.attributes.isEnabled) buttonType.attributes.action() },
             )
         }
     }

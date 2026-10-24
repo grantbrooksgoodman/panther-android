@@ -15,7 +15,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -26,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import us.neotechnica.panther.designsystem.modules.componentkit.Components
 import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
@@ -95,9 +98,12 @@ private fun SegmentedControl(
     val colors = LocalPantherColors.current
     val isDarkMode = ThemeService.isDarkModeActive(isSystemInDarkTheme())
 
+    // Every segment takes the height of the tallest, so a title that
+    // wraps to two lines does not leave the others shorter.
     Row(
         modifier =
             modifier
+                .height(IntrinsicSize.Min)
                 .clip(RoundedCornerShape(ControlFloats.segmentedControlCornerRadius))
                 .background(ControlColors.segmentedControlTrack)
                 .padding(ControlFloats.segmentedControlTrackPadding),
@@ -109,6 +115,7 @@ private fun SegmentedControl(
                 modifier =
                     Modifier
                         .weight(1f)
+                        .fillMaxHeight()
                         .clip(RoundedCornerShape(ControlFloats.segmentCornerRadius))
                         .background(if (isSelected) (if (isDarkMode) Color.Gray else Color.White) else Color.Transparent)
                         .clickable { onSelect(index) }
@@ -121,6 +128,7 @@ private fun SegmentedControl(
                     title,
                     foregroundColor = if (isSelected) colors.titleText else colors.subtitleText,
                     font = if (isSelected) Font.systemSemibold(FontScale.Small) else Font.system(FontScale.Small),
+                    textAlign = TextAlign.Center,
                 )
             }
         }

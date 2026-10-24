@@ -152,7 +152,7 @@ internal fun ContextMenuOverlay(
                     actions = active.actions,
                     highlightedElementIndex = controller.highlightedElementIndex,
                     onElementPositioned = controller::setElementCoordinates,
-                ) { action -> controller.select(action.onSelect) }
+                ) { action -> controller.select(action) }
             }
         }
     }

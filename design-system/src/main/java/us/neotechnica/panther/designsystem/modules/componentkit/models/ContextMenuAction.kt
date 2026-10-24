@@ -49,7 +49,7 @@ data class ReactionChoice(
  *   icon, drawn as a template in place of the symbol named by
  *   [systemImageName], or `null` to draw the symbol.
  * @property onSelect The closure to run when the action is
- *   chosen.
+ *   chosen, once the menu finishes animating away.
  */
 data class ContextMenuAction(
     val title: String,

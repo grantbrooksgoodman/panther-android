@@ -166,7 +166,7 @@ private fun MessageContent(
     ) {
         if (row.isGroup && !isOwn) SenderAvatar(row)
         MessageContextMenu(
-            actions = if (hasContextMenu) contextMenuActions(message) else emptyList(),
+            actions = { if (hasContextMenu) contextMenuActions(message) else emptyList() },
             alignment = alignment,
             reactionChoices = reactionChoices,
             alignsMenuCardToLeadingEdge = true,

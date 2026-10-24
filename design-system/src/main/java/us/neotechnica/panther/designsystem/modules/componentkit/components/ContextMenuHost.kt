@@ -91,12 +91,18 @@ fun ContextMenuHost(
         }
 
         if (controller.lastPresented == null) return@LaunchedEffect
-        progress.animateTo(
-            targetValue = 0f,
-            animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = stiffness),
-            initialVelocity = -initialVelocity * progress.value,
-        )
-        controller.lastPresented = null
+        try {
+            progress.animateTo(
+                targetValue = 0f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = stiffness),
+                initialVelocity = -initialVelocity * progress.value,
+            )
+            controller.lastPresented = null
+        } finally {
+            // A selected element's action runs once the menu is gone, or as
+            // another menu presents or the host leaves the screen first.
+            controller.performPendingAction()
+        }
     }
 
     // While a menu is on screen, the system back gesture is ignored.

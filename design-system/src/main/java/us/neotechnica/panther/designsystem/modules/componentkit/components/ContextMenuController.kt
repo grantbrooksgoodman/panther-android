@@ -97,6 +97,10 @@ class ContextMenuController internal constructor() {
     // press that presented the current menu began.
     private var interactionOrigin: Offset? = null
 
+    // The selected element's action, performed once the menu finishes
+    // animating away.
+    private var pendingAction: (() -> Unit)? = null
+
     // MARK: - Computed Properties
 
     /**
@@ -163,12 +167,29 @@ class ContextMenuController internal constructor() {
         registry.remove(key)
     }
 
-    // Dismisses the presented menu and performs the given selection – an
-    // action or a reaction – unless the menu is already animating away.
-    internal fun select(selection: () -> Unit) {
+    // Dismisses the presented menu and performs the given element's action
+    // once the menu has animated away – so the lifted bubble never shows
+    // content the action changes – unless it is already animating away.
+    internal fun select(action: ContextMenuAction) {
         if (!isPresenting) return
         dismiss()
-        selection()
+        pendingAction = action.onSelect
+    }
+
+    // Dismisses the presented menu and applies the given reaction at
+    // once, unless the menu is already animating away.
+    internal fun react(choice: ReactionChoice) {
+        if (!isPresenting) return
+        dismiss()
+        choice.onSelect()
+    }
+
+    // Performs the selected element's action, if any, as the menu
+    // finishes animating away or its dismissal is cut short.
+    internal fun performPendingAction() {
+        val action = pendingAction ?: return
+        pendingAction = null
+        action()
     }
 
     /** Dismisses the presented context menu, if any. */
@@ -188,9 +209,9 @@ class ContextMenuController internal constructor() {
      * held pointer moves, the menu element or reaction beneath it is
      * highlighted. When the pointer lifts over an element or reaction,
      * having travelled more than [dragThreshold] from where the press
-     * began, the menu dismisses and the element's action runs or the
-     * reaction applies; lifting anywhere else leaves the menu
-     * presented.
+     * began, the menu dismisses and the reaction applies, or the
+     * element's action runs once the menu has animated away; lifting
+     * anywhere else leaves the menu presented.
      *
      * @param state The long press's new state.
      * @param location The pointer's location in the root coordinate
@@ -230,7 +251,7 @@ class ContextMenuController internal constructor() {
 
                 element(location)?.let { action ->
                     unhighlightAllElements()
-                    return select(action.onSelect)
+                    return select(action)
                 }
 
                 if (!selectReaction(location)) unhighlightAllElements()
@@ -372,7 +393,7 @@ class ContextMenuController internal constructor() {
     private fun selectReaction(location: Offset): Boolean {
         val index = reactionIndex(location) ?: return false
         val choice = active?.reactionChoices?.getOrNull(index) ?: return false
-        select(choice.onSelect)
+        react(choice)
         highlightedReactionIndex = index
         return true
     }

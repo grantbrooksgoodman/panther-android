@@ -91,17 +91,20 @@ fun MediaItemView(
     var rowWidth by remember { mutableIntStateOf(0) }
 
     MessageContextMenu(
-        actions =
+        actions = {
             listOf(
                 ContextMenuAction(
                     title = LocalizedStringKey.SaveFile.localized(),
                     systemImageName = MediaItemStrings.SAVE_ACTION_IMAGE_SYSTEM_NAME,
                 ) { scope.launch { saveFile(metadata) } },
-            ),
+            )
+        },
         alignment = ContextMenuAlignment.LEADING,
         liftScale = 0f,
         liftedBackground = colors.groupedRowBackground,
         minimumPressDuration = LocalViewConfiguration.current.longPressTimeoutMillis.milliseconds,
+        // The menu card's leading edge lines up with the lifted row's.
+        alignsMenuCardToLeadingEdge = true,
         onTap = { action() },
         modifier = Modifier.fillMaxWidth().onSizeChanged { rowWidth = it.width },
     ) {

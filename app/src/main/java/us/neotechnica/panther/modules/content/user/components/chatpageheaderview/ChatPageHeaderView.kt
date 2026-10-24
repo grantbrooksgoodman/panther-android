@@ -171,12 +171,17 @@ private fun ChatInfoButton(
                     .background(colors.groupedContentBackground)
                     .padding(Floats.avatarViewNameLabelGlassEffectPadding),
         ) {
+            // The title takes the width the chevron leaves, wrapping onto more
+            // lines rather than pushing the chevron out of the capsule.
             Components.Text(
                 conversation.chatPageHeaderLabelText ?: cellViewData.titleLabelText,
                 foregroundColor = colors.titleText,
                 font = Font.systemSemibold(FontScale.Custom(Floats.AVATAR_VIEW_NAME_LABEL_FONT_SIZE)),
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = Floats.avatarViewNameLabelTextHorizontalPadding),
+                modifier =
+                    Modifier
+                        .weight(1f, fill = false)
+                        .padding(horizontal = Floats.avatarViewNameLabelTextHorizontalPadding),
             )
 
             Components.Symbol(

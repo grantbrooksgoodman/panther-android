@@ -20,12 +20,3 @@ import us.neotechnica.panther.subsystem.modules.shared.models.StateStream
  */
 val SharedStates.leafViewDescriptor: StateStream<String?>
     get() = state("leafViewDescriptor") { null }
-
-/**
- * The number of views the app currently presents.
- *
- * The build info overlay reports this value in its statistics
- * label. Update it whenever the app's navigation state changes.
- */
-val SharedStates.presentedViewsCount: StateStream<Int>
-    get() = state("presentedViewsCount") { 0 }

@@ -187,10 +187,11 @@ object TextToSpeechService {
      *
      * The speech engine downloads the voice's data in the background,
      * after which [isTextToSpeechSupported] returns `true` for the
-     * language and text in it can be spoken. A voice for the device's
-     * region is preferred, then the highest quality voice. This method
-     * has no effect when a voice for the language is already installed
-     * or when the speech engine offers none to download.
+     * language and text in it can be spoken. The engine chooses the
+     * voice: its default voice for the language, in the device's
+     * region when it offers one. This method has no effect when a
+     * voice for the language is already installed or when the speech
+     * engine offers none to download.
      *
      * **Note:** While the speech engine is still initializing, the
      * download begins once initialization completes.
@@ -205,21 +206,25 @@ object TextToSpeechService {
         }
 
         if (isTextToSpeechSupported(languageCode)) return
-        val country = Locale.getDefault().country
-        val voice =
-            offlineVoices(languageCode)
-                ?.filter { it.isNotInstalled }
-                ?.maxWithOrNull(
-                    compareBy(
-                        { it.locale.country == country },
-                        { it.quality },
-                    ),
-                ) ?: return
+        if (offlineVoices(languageCode)?.any { it.isNotInstalled } != true) return
 
-        // Selecting a voice whose data is not installed starts its
-        // download.
-        Logger.log("Downloading ${languageCode.englishLanguageName ?: languageCode.uppercase()} voice \"${voice.name}\".")
-        engine.setVoice(voice)
+        // Selecting a language whose voice is not installed makes the
+        // engine download its default voice for the language; selecting
+        // one of the language's other voices may not start a download.
+        val requestedLocale = Locale.forLanguageTag(languageCode)
+        val locale =
+            if (requestedLocale.country.isEmpty()) {
+                Locale
+                    .Builder()
+                    .setLocale(requestedLocale)
+                    .setRegion(Locale.getDefault().country)
+                    .build()
+            } else {
+                requestedLocale
+            }
+
+        if (engine.setLanguage(locale) == TextToSpeech.LANG_NOT_SUPPORTED) return
+        Logger.log("Downloading ${languageCode.englishLanguageName ?: languageCode.uppercase()} voice \"${engine.voice?.name ?: locale.toLanguageTag()}\".")
     }
 
     // MARK: - Highest Quality Voice
