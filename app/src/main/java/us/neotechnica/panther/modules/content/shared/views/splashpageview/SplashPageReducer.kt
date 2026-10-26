@@ -15,9 +15,10 @@ import kotlinx.coroutines.selects.select
 import us.neotechnica.panther.bundle.clientSession
 import us.neotechnica.panther.bundle.failedToGenerateMediaFile
 import us.neotechnica.panther.bundle.navigators.OnboardingRoute
-import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
-import us.neotechnica.panther.bundle.navigators.UserContentRoute
+import us.neotechnica.panther.bundle.notifications
 import us.neotechnica.panther.bundle.timedOut
+import us.neotechnica.panther.modules.common.services.commonServices
+import us.neotechnica.panther.modules.common.services.sources.NotificationService
 import us.neotechnica.panther.modules.content.shared.dependencies.splashPageViewService
 import us.neotechnica.panther.modules.content.shared.services.SplashPageViewService
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
@@ -25,7 +26,6 @@ import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.session.clientSession
 import us.neotechnica.panther.modules.session.entity.services.UserSessionService
 import us.neotechnica.panther.navigation.Navigation
-import us.neotechnica.panther.navigation.PendingChatNavigation
 import us.neotechnica.panther.navigation.RootNavigationService.Route
 import us.neotechnica.panther.navigation.RootNavigatorState
 import us.neotechnica.panther.navigation.RootRoute
@@ -58,8 +58,10 @@ import us.neotechnica.panther.subsystem.modules.reducer.models.ReduceResult
  * - Each network activity event nudges the initialization
  *   progress forward until it approaches completion.
  * - If initialization succeeds, the page presents the user
- *   content when a signed-in user resolved; otherwise, it
- *   presents onboarding with an empty navigation stack.
+ *   content when a signed-in user resolved – opening the
+ *   conversation of any notification the user tapped while the
+ *   app was launching – and otherwise presents onboarding with
+ *   an empty navigation stack.
  * - If initialization fails, the first failure attempts recovery
  *   automatically; subsequent failures present an error alert,
  *   and dismissing it retries. In both cases, failures a database
@@ -72,6 +74,7 @@ class SplashPageReducer : Reducer<SplashPageReducer.State, SplashPageReducer.Act
     // MARK: - Dependencies
 
     private val navigation: Navigation by Dependency { it.navigation }
+    private val notificationService: NotificationService by Dependency { it.commonServices.notification }
     private val splashPageViewService: SplashPageViewService by Dependency { it.splashPageViewService }
     private val userSession: UserSessionService by Dependency { it.clientSession.entity.user }
     private val viewService: SplashPageViewService by Dependency { it.splashPageViewService }
@@ -215,11 +218,12 @@ class SplashPageReducer : Reducer<SplashPageReducer.State, SplashPageReducer.Act
     private fun navigateAfterInitialization() {
         if (User.currentUserID != null && userSession.currentUser != null) {
             navigation.navigate(Route.Root(RootRoute.Modal(RootNavigatorState.ModalPaths.UserContent)))
-
-            // Open a conversation deep-linked from a tapped push notification.
-            PendingChatNavigation.consume()?.let { conversationIDKey ->
-                navigation.navigate(
-                    Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePaths.Chat(conversationIDKey))),
+            try {
+                notificationService.openPendingNotificationConversation()
+            } catch (exception: Exception) {
+                Logger.log(
+                    exception,
+                    domain = LoggerDomain.notifications,
                 )
             }
         } else {

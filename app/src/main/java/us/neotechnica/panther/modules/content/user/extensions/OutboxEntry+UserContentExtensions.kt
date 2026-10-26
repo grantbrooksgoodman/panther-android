@@ -102,10 +102,11 @@ val OutboxEntry.asDisplayMessage: Message
             }
 
             is OutboxEntry.Payload.Text -> {
+                val displayText = payload.value.trimEnd()
                 val mockTranslation =
                     Translation(
-                        input = TranslationInput(payload.value),
-                        output = payload.value,
+                        input = TranslationInput(displayText),
+                        output = displayText,
                         languagePair = selfTranslationPair,
                     )
 

@@ -50,21 +50,24 @@ object DeviceID {
     /**
      * The current device's identifier.
      *
-     * A persisted identifier is returned verbatim. Otherwise one is
-     * minted with the platform prefix from the device's Android ID,
-     * or a new UUID when unavailable, persisted to encrypted
-     * preferences, mirrored to a plain-preferences backup, and cached
-     * in process.
+     * A persisted identifier that carries the platform prefix is
+     * returned verbatim. Otherwise one is minted with the platform
+     * prefix from the device's Android ID, or a new UUID when
+     * unavailable, persisted to encrypted preferences, mirrored to a
+     * plain-preferences backup, and cached in process.
      */
     val current: String
         get() =
             cachedID.withValue { reference ->
                 reference.value?.let { return@withValue it }
 
-                dependencies.read()?.let { existingID ->
-                    reference.value = existingID
-                    return@withValue existingID
-                }
+                dependencies
+                    .read()
+                    ?.takeIf { it.startsWith(PREFIX) }
+                    ?.let { existingID ->
+                        reference.value = existingID
+                        return@withValue existingID
+                    }
 
                 val newID = "$PREFIX${dependencies.androidID() ?: UUID.randomUUID()}"
                 dependencies.save(newID)

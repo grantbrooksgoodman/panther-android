@@ -25,6 +25,7 @@ import us.neotechnica.panther.modules.common.extensions.runCatchingException
 import us.neotechnica.panther.modules.common.services.CommonServices
 import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
+import us.neotechnica.panther.modules.content.user.extensions.isVisibleForCurrentUser
 import us.neotechnica.panther.modules.content.user.models.ChatPageStateServiceEffectID
 import us.neotechnica.panther.modules.content.user.services.ChatPageStateService
 import us.neotechnica.panther.modules.networking.sources.conversation.models.Reaction
@@ -62,8 +63,9 @@ import java.net.URL
 import kotlin.math.max
 
 /**
- * Sends push notifications and responds to notifications received
- * while the app is in the foreground.
+ * Sends push notifications, responds to notifications received
+ * while the app is in the foreground, and opens the
+ * conversations of notifications the user taps.
  *
  * Notifications are delivered directly through the push
  * notification backend, localized to each recipient's language.
@@ -184,27 +186,95 @@ object NotificationService {
     // MARK: - Respond to Notification Tap
 
     /**
-     * Opens the conversation a tapped notification names.
+     * Opens the conversation of a notification the user tapped.
      *
-     * On a signed-in activity already showing the user content, the
-     * stack pops to the conversation list and the chat is pushed – an
-     * open chat is dismissed first. Otherwise the key is held for the
-     * splash flow to consume after initialization.
+     * The conversation opens with the reacted-to message focused
+     * if the notification describes a reaction. If the
+     * conversation is already open, this method has no effect.
      *
-     * @param conversationIDKey The identifier key of the conversation
-     *   the notification names.
+     * A tap that arrives before the user content appears for a
+     * signed-in user – while the app is launching, for example –
+     * is held until you call [openPendingNotificationConversation].
+     *
+     * @param conversationIDKey The identifier key of the
+     *   conversation the notification describes.
+     * @param focusedMessageID The identifier of the reacted-to
+     *   message, or `null` if the notification describes a
+     *   message. The default is `null`.
+     * @param recipientUserID The identifier of the user the
+     *   notification is intended for, or `null` to skip the
+     *   recipient check. The default is `null`.
+     *
+     * @throws Exception if the notification is not intended for
+     *   the current user, or references a conversation that is
+     *   not visible.
      */
-    fun respondToNotificationTap(conversationIDKey: String) {
+    fun respondToNotificationTap(
+        conversationIDKey: String,
+        focusedMessageID: String? = null,
+        recipientUserID: String? = null,
+    ) {
+        val pendingChat =
+            PendingChatNavigation.PendingChat(
+                conversationIDKey,
+                focusedMessageID = focusedMessageID,
+                recipientUserID = recipientUserID,
+            )
+
         val isSignedIn = User.currentUserID != null && clientSession.entity.user.currentUser != null
         if (!isSignedIn || navigation.state.value.modal != RootNavigatorState.ModalPaths.UserContent) {
-            return PendingChatNavigation.set(conversationIDKey)
+            return PendingChatNavigation.set(pendingChat)
         }
 
         PendingChatNavigation.consume()
+        openConversation(pendingChat)
+    }
+
+    /**
+     * Opens the conversation of a notification the user tapped
+     * before the user content appeared.
+     *
+     * Call this method once the user content appears. If no tap
+     * is pending, this method has no effect.
+     *
+     * @throws Exception if the notification is not intended for
+     *   the current user, or references a conversation that is
+     *   not visible.
+     */
+    fun openPendingNotificationConversation() {
+        val pendingChat = PendingChatNavigation.consume() ?: return
+        openConversation(pendingChat)
+    }
+
+    // MARK: - Auxiliary
+
+    /**
+     * Pops to the conversation list and pushes the chat for the
+     * conversation with the given key, revealing the message with the
+     * given identifier if one is given.
+     *
+     * Open sheets are dismissed first; an open chat is dismissed
+     * before the new one is pushed.
+     */
+    internal fun navigateToConversation(
+        conversationIDKey: String,
+        focusedMessageID: String?,
+    ) {
         val chatRoute =
-            Route.UserContent(UserContentRoute.Push(UserContentNavigatorState.SeguePaths.Chat(conversationIDKey)))
+            Route.UserContent(
+                UserContentRoute.Push(
+                    UserContentNavigatorState.SeguePaths.Chat(
+                        conversationIDKey,
+                        focusedMessageID = focusedMessageID,
+                    ),
+                ),
+            )
+
         navigation.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
-        if (!ChatPageStateService.isPresented) return navigation.navigate(chatRoute)
+        if (!ChatPageStateService.isPresented) {
+            Application.dismissSheets()
+            return navigation.navigate(chatRoute)
+        }
 
         ChatPageStateService.addEffectUponIsPresented(
             state = false,
@@ -215,7 +285,53 @@ object NotificationService {
         }
     }
 
-    // MARK: - Auxiliary
+    private fun openConversation(pendingChat: PendingChatNavigation.PendingChat) {
+        val currentUser =
+            clientSession.entity.user.currentUser
+                ?: throw Exception(
+                    "No current user – will not respond to notification.",
+                    isReportable = false,
+                    metadata = ExceptionMetadata(this),
+                )
+
+        val recipientUserID = pendingChat.recipientUserID
+        if (recipientUserID != null && recipientUserID != currentUser.id) {
+            throw Exception(
+                "Notification not intended for current user – ignoring.",
+                isReportable = false,
+                metadata = ExceptionMetadata(this),
+            )
+        }
+
+        val conversationIDKey = pendingChat.conversationIDKey
+        val conversation = clientSession.store.getConversation(conversationIDKey)
+        if (conversation == null || !conversation.isVisibleForCurrentUser) {
+            throw Exception(
+                "Conversation associated with this notification is not visible to the current user.",
+                isReportable = false,
+                metadata = ExceptionMetadata(this),
+            )
+        }
+
+        val currentConversationIDKey =
+            clientSession
+                .entity
+                .conversation
+                .currentConversation
+                ?.id
+                ?.key
+
+        if (ChatPageStateService.isPresented &&
+            currentConversationIDKey == conversationIDKey
+        ) {
+            return
+        }
+
+        navigateToConversation(
+            conversationIDKey,
+            focusedMessageID = pendingChat.focusedMessageID,
+        )
+    }
 
     private suspend fun generateAccessToken(): String =
         withContext(Dispatchers.IO) {

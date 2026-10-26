@@ -54,6 +54,21 @@ class DeviceIDTest {
     }
 
     @Test
+    fun `a stored identifier without the prefix is replaced with a prefixed one`() {
+        val saved = mutableListOf<String>()
+        DeviceID.setDependencies(
+            DeviceID.Dependencies(
+                androidID = { "abc123" },
+                read = { "abc123" },
+                save = { saved.add(it) },
+            ),
+        )
+
+        assertEquals("and_abc123", DeviceID.current)
+        assertEquals(listOf("and_abc123"), saved)
+    }
+
+    @Test
     fun `a missing Android ID falls back to a UUID`() {
         DeviceID.setDependencies(
             DeviceID.Dependencies(

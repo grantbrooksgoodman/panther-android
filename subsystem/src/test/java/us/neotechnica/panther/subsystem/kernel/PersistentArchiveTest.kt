@@ -49,6 +49,27 @@ class PersistentArchiveTest {
     }
 
     @Test
+    fun `an archive is stored as a compact JSON array`() {
+        val key = PersistentStorageKey("format")
+        Persistent.setArchive(key, listOf(mapOf("id" to "a"), mapOf("id" to "b", "count" to 2L)))
+
+        assertEquals(
+            """[{"id":"a"},{"id":"b","count":2}]""",
+            FileStore.resolve("persistent/format.json")?.readText(),
+        )
+    }
+
+    @Test
+    fun `archive elements are encoded and decoded one at a time`() {
+        val key = PersistentStorageKey("elements")
+        Persistent.setArchive(key, listOf("a", "b", "c")) { mapOf("id" to it) }
+
+        val decoded = Persistent.archiveElements(key) { map -> (map["id"] as? String)?.takeUnless { it == "b" } }
+
+        assertEquals(listOf("a", "c"), decoded)
+    }
+
+    @Test
     fun `setting a null archive removes it`() {
         val key = PersistentStorageKey("removable")
         Persistent.setArchive(key, listOf(mapOf("id" to "a")))

@@ -9,10 +9,13 @@
 package us.neotechnica.panther.modules.networking.sources.translation.delegates
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHashOf
+import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.FileStore
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.translator.models.LanguagePair
@@ -77,7 +80,42 @@ class LocalTranslationArchiverDelegateTest {
         assertEquals(translation, reopened.getValue(encodedHashOf(listOf("Hello")), pair))
     }
 
+    @Test
+    fun `changes are written together once the write delay passes`() {
+        val archiver = LocalTranslationArchiverDelegate()
+        val pair = LanguagePair("en", "es")
+        archiver.addValue(translation("Hello", "Hola", pair))
+        archiver.addValue(translation("Bye", "Adios", pair))
+
+        // Nothing reaches the disk until the pending write runs.
+        assertFalse(archiveFile().exists())
+
+        archiver.flushForTesting()
+        assertTrue(archiveFile().exists())
+
+        val reopened = LocalTranslationArchiverDelegate()
+        assertEquals("Hola", reopened.getValue(encodedHashOf(listOf("Hello")), pair)?.output)
+        assertEquals("Adios", reopened.getValue(encodedHashOf(listOf("Bye")), pair)?.output)
+    }
+
+    @Test
+    fun `adding a translation the archive already holds writes nothing`() {
+        val archiver = LocalTranslationArchiverDelegate()
+        val translation = translation("Hello", "Hola", LanguagePair("en", "es"))
+        archiver.addValue(translation)
+        archiver.flushForTesting()
+        archiveFile().delete()
+
+        archiver.addValue(translation)
+        archiver.addValues(setOf(translation))
+        archiver.flushForTesting()
+
+        assertFalse(archiveFile().exists())
+    }
+
     // MARK: - Auxiliary
+
+    private fun archiveFile(): File = FileStore.resolve("persistent/${PersistentStorageKey.translationArchive.rawValue}.json")!!
 
     private fun translation(
         input: String,

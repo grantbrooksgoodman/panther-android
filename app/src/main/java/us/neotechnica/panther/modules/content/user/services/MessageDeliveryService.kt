@@ -174,7 +174,7 @@ object MessageDeliveryService {
                     conversationIDKey = currentConversation.id.key,
                     fromAccountID = currentUser.id,
                     recipientUserIDs = recipients.map { it.id },
-                    payload = OutboxEntry.Payload.Text(text.trimEnd()),
+                    payload = OutboxEntry.Payload.Text(text),
                     isPenPalsConversation = currentConversation.metadata.isPenPalsConversation,
                     createdDate = Date(),
                     attemptCount = 1,

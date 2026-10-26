@@ -8,9 +8,16 @@
 
 package us.neotechnica.panther.modules.networking.sources.translation.delegates
 
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
+import us.neotechnica.panther.modules.networking.sources.translation.constants.LocalTranslationArchiverDelegateFloats
 import us.neotechnica.panther.subsystem.AppSubsystem
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.encodedHashOf
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.ExceptionMetadata
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 import us.neotechnica.panther.translator.Translator
 import us.neotechnica.panther.translator.interfaces.TranslationArchiverDelegate
@@ -18,21 +25,31 @@ import us.neotechnica.panther.translator.models.LanguagePair
 import us.neotechnica.panther.translator.models.Translation
 import us.neotechnica.panther.translator.models.TranslationInput
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.TranslationArchiverDelegate as SubsystemTranslationArchiverDelegate
 
+// MARK: - Constants Accessors
+
+private typealias Floats = LocalTranslationArchiverDelegateFloats
+
 /**
  * The persistent translation archive.
  *
- * Lookups and mutations operate on an in-memory archive and its
- * index, while disk writes are serialized onto a background
- * thread off the calling path. The archive is decoded from disk
- * at most once per launch and persisted through [Persistent]
- * under [PersistentStorageKey.translationArchive], so a
- * message's resolved translation survives relaunches and a
- * reopened chat presents its history without re-resolving every
- * message.
+ * Lookups and mutations operate on an in-memory index of the
+ * archive, while disk writes run on a background thread off the
+ * calling path. The archive is decoded from disk at most once per
+ * launch and persisted through [Persistent] under
+ * [PersistentStorageKey.translationArchive], so a message's
+ * resolved translation survives relaunches and a reopened chat
+ * presents its history without re-resolving every message.
+ *
+ * Changes are written to disk together, about a second after the
+ * first of them, and any pending write runs as soon as the app
+ * stops. Adding a translation that the archive already holds
+ * writes nothing.
  *
  * Registered through
  * [Translator.config][us.neotechnica.panther.translator.Translator.config],
@@ -50,23 +67,27 @@ class LocalTranslationArchiverDelegate :
      * mutations operate on the in-memory archive and never wait
      * for the disk.
      */
-    private val persistenceExecutor =
-        Executors.newSingleThreadExecutor { runnable ->
+    private val persistenceExecutor: ScheduledExecutorService =
+        Executors.newSingleThreadScheduledExecutor { runnable ->
             Thread(runnable, "translation-archiver-persistence").apply { isDaemon = true }
         }
 
     /**
      * Maps "<input value hash>|<language pair>" to its
      * translation for constant-time lookups, avoiding a per-entry
-     * hash computation on every query.
+     * hash computation on every query. The index is the archive's
+     * only in-memory copy; writes persist its values.
      */
     private var archiveIndex = mutableMapOf<String, Translation>()
 
     /**
-     * The decoded archive, loaded from disk at most once per
-     * launch.
+     * Whether the archive has been loaded from disk, which happens
+     * at most once per launch.
      */
-    private var cachedArchive: MutableSet<Translation>? = null
+    private var isArchiveLoaded = false
+
+    /** Whether a write of the archive is scheduled and has yet to run. */
+    private var isWritePending = false
 
     // MARK: - Init
 
@@ -80,21 +101,20 @@ class LocalTranslationArchiverDelegate :
 
     override fun addValue(translation: Translation) {
         ioLock.withLock {
-            val archive = loadArchiveIfNeeded()
-            insert(translation, archive)
-
-            cachedArchive = archive
-            persistArchive(archive)
+            loadArchiveIfNeeded()
+            if (insert(translation)) schedulePersistence()
         }
     }
 
     override fun addValues(translations: Set<Translation>) {
         ioLock.withLock {
-            val archive = loadArchiveIfNeeded()
-            for (translation in translations) insert(translation, archive)
+            loadArchiveIfNeeded()
+            var didChangeArchive = false
+            for (translation in translations) {
+                didChangeArchive = insert(translation) || didChangeArchive
+            }
 
-            cachedArchive = archive
-            persistArchive(archive)
+            if (didChangeArchive) schedulePersistence()
         }
     }
 
@@ -116,15 +136,8 @@ class LocalTranslationArchiverDelegate :
         languagePair: LanguagePair,
     ) {
         ioLock.withLock {
-            val key = indexKey(inputValueEncodedHash, languagePair)
-            val value = archiveIndex[key] ?: return@withLock
-
-            val archive = loadArchiveIfNeeded()
-            archive.remove(value)
-            archiveIndex.remove(key)
-
-            cachedArchive = archive
-            persistArchive(archive)
+            loadArchiveIfNeeded()
+            if (archiveIndex.remove(indexKey(inputValueEncodedHash, languagePair)) != null) schedulePersistence()
         }
     }
 
@@ -133,23 +146,21 @@ class LocalTranslationArchiverDelegate :
     override fun clearArchive() {
         ioLock.withLock {
             archiveIndex = mutableMapOf()
-            cachedArchive = mutableSetOf()
-            persistArchive(emptySet())
+            isArchiveLoaded = true
+            schedulePersistence()
         }
     }
 
     // MARK: - Testing
 
     /**
-     * Blocks until every persistence write submitted so far has
-     * completed. For tests only, where the file store's directory
-     * is a shared, reassignable static; production writes run
-     * fire-and-forget.
+     * Runs any pending write at once and blocks until it, and every
+     * write submitted before it, has completed. For tests only,
+     * where the file store's directory is a shared, reassignable
+     * static; production writes run fire-and-forget.
      */
     internal fun flushForTesting() {
-        val latch = java.util.concurrent.CountDownLatch(1)
-        persistenceExecutor.execute { latch.countDown() }
-        latch.await()
+        persistenceExecutor.submit { persistPendingArchive() }.get()
     }
 
     // MARK: - Auxiliary
@@ -163,48 +174,62 @@ class LocalTranslationArchiverDelegate :
         indexKey(encodedHashOf(listOf(translation.input.value)), translation.languagePair)
 
     /**
-     * Inserts the translation into both the archive and the
-     * index, replacing any existing translation for the same
-     * input and language pair.
+     * Inserts the translation into the index, replacing any
+     * existing translation for the same input and language pair.
+     * Returns `false` when the index already holds the
+     * translation.
      */
-    private fun insert(
-        translation: Translation,
-        archive: MutableSet<Translation>,
-    ) {
+    private fun insert(translation: Translation): Boolean {
         val key = indexKey(translation)
-        archiveIndex[key]?.let { archive.remove(it) }
-
-        archive.add(translation)
+        if (archiveIndex[key] == translation) return false
         archiveIndex[key] = translation
+        return true
     }
 
-    private fun loadArchiveIfNeeded(): MutableSet<Translation> {
-        cachedArchive?.let { return it }
+    private fun loadArchiveIfNeeded() {
+        if (isArchiveLoaded) return
+        isArchiveLoaded = true
 
-        val archive =
-            Persistent.archive(PersistentStorageKey.translationArchive) { maps ->
-                maps.mapNotNull { decode(it) }.toMutableSet()
-            } ?: mutableSetOf()
-
-        cachedArchive = archive
-        archiveIndex = archive.associateBy { indexKey(it) }.toMutableMap()
-
-        return archive
+        val archive = Persistent.archiveElements(PersistentStorageKey.translationArchive) { decode(it) }
+        archiveIndex = archive.orEmpty().associateByTo(mutableMapOf()) { indexKey(it) }
     }
 
     /**
-     * Writes the archive on a background thread, keeping disk I/O
-     * off the translation path. Writes are serialized in
-     * submission order, so the last snapshot always wins.
+     * Writes the archive if a write is pending, streaming it to
+     * disk one entry at a time. Runs on the persistence thread.
      */
-    private fun persistArchive(archive: Set<Translation>) {
-        val snapshot = archive.toList()
-        persistenceExecutor.execute {
+    private fun persistPendingArchive() {
+        val snapshot =
+            ioLock.withLock {
+                if (!isWritePending) return
+                isWritePending = false
+                archiveIndex.values.toList()
+            }
+
+        runCatching {
             Persistent.setArchive(
                 PersistentStorageKey.translationArchive,
-                if (snapshot.isEmpty()) null else snapshot.map { encode(it) },
+                snapshot.ifEmpty { null },
+                ::encode,
             )
-        }
+        }.onFailure { Logger.log(Exception.from(it, ExceptionMetadata(this))) }
+    }
+
+    /**
+     * Schedules a write of the archive on the persistence thread.
+     * Every change made before the write runs is coalesced into
+     * it, so a burst of changes encodes the archive once. Call
+     * while holding the I/O lock.
+     */
+    private fun schedulePersistence() {
+        if (isWritePending) return
+        isWritePending = true
+
+        persistenceExecutor.schedule(
+            { persistPendingArchive() },
+            Floats.WRITE_DELAY_MILLISECONDS,
+            TimeUnit.MILLISECONDS,
+        )
     }
 
     private fun encode(translation: Translation): Map<String, Any?> =
@@ -248,6 +273,16 @@ class LocalTranslationArchiverDelegate :
             val archiver = LocalTranslationArchiverDelegate()
             Translator.config.registerArchiverDelegate(archiver)
             AppSubsystem.delegates.registerTranslationArchiverDelegate(archiver)
+
+            // A pending write reaches the disk as soon as the app
+            // stops, before the process can be reclaimed.
+            ProcessLifecycleOwner.get().lifecycle.addObserver(
+                object : DefaultLifecycleObserver {
+                    override fun onStop(owner: LifecycleOwner) {
+                        archiver.persistenceExecutor.execute { archiver.persistPendingArchive() }
+                    }
+                },
+            )
         }
 
         private const val KEY_INPUT = "input"

@@ -14,20 +14,61 @@ import java.util.concurrent.atomic.AtomicReference
  * Holds a conversation the app should open once it reaches the signed-in
  * content, set when a push notification is tapped.
  *
- * The splash flow [consume]s the pending key after resolving the current
- * user and pushes the corresponding chat.
+ * The splash flow opens the pending conversation after resolving the
+ * current user, through
+ * [us.neotechnica.panther.modules.common.services.sources.NotificationService.openPendingNotificationConversation].
  */
 object PendingChatNavigation {
-    /** The key of the conversation to open on the next opportunity. */
+    // MARK: - Types
+
+    /**
+     * A conversation to open, with the message to reveal in it and the
+     * user the tapped notification was intended for.
+     */
+    data class PendingChat(
+        /** The identifier key of the conversation to open. */
+        val conversationIDKey: String,
+        /**
+         * The identifier of the message to reveal, or `null` to open the
+         * conversation at its latest message.
+         */
+        val focusedMessageID: String? = null,
+        /**
+         * The identifier of the user the tapped notification was
+         * intended for, or `null` if the conversation is not opened from
+         * a notification.
+         */
+        val recipientUserID: String? = null,
+    )
+
+    // MARK: - Properties
+
+    /** The intent extra holding the key of the conversation to open. */
     const val CONVERSATION_ID_KEY_EXTRA = "conversationIDKey"
 
-    private val pending = AtomicReference<String?>(null)
+    /** The intent extra holding the identifier of the reacted-to message. */
+    const val REACTION_MESSAGE_ID_EXTRA = "reactionMessageID"
 
-    /** Records [conversationIDKey] as the conversation to open next. */
-    fun set(conversationIDKey: String?) {
-        if (!conversationIDKey.isNullOrBlank()) pending.set(conversationIDKey)
+    /**
+     * The intent extra holding the identifier of the user the
+     * notification was intended for.
+     */
+    const val RECIPIENT_USER_ID_EXTRA = "recipientUserID"
+
+    private val pending = AtomicReference<PendingChat?>(null)
+
+    // MARK: - Methods
+
+    /** Returns and clears the pending conversation, if any. */
+    fun consume(): PendingChat? = pending.getAndSet(null)
+
+    /**
+     * Records [pendingChat] as the conversation to open next.
+     *
+     * A `null` value, or one whose conversation key is blank, has no
+     * effect.
+     */
+    fun set(pendingChat: PendingChat?) {
+        if (pendingChat != null && pendingChat.conversationIDKey.isNotBlank()) pending.set(pendingChat)
     }
-
-    /** Returns and clears the pending conversation key, if any. */
-    fun consume(): String? = pending.getAndSet(null)
 }

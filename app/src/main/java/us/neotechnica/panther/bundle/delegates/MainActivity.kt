@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import us.neotechnica.panther.bundle.developermode.ShakeDetector
+import us.neotechnica.panther.bundle.notifications
 import us.neotechnica.panther.bundle.openConversationIDKey
 import us.neotechnica.panther.designsystem.modules.alertkit.views.AlertHost
 import us.neotechnica.panther.designsystem.modules.developermode.services.DevModeService
@@ -45,8 +46,11 @@ import us.neotechnica.panther.subsystem.AppSubsystem
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
 import us.neotechnica.panther.subsystem.modules.foundation.interfaces.ApplicationSuspensionDelegate
+import us.neotechnica.panther.subsystem.modules.foundation.models.Exception
+import us.neotechnica.panther.subsystem.modules.foundation.models.LoggerDomain
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
 import us.neotechnica.panther.subsystem.modules.foundation.services.Build
+import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
 
 /**
@@ -80,9 +84,11 @@ class MainActivity : ComponentActivity() {
         val isProcessRestart = savedInstanceState != null && !hasCreatedInProcess
         hasCreatedInProcess = true
 
-        capturePendingChat(intent)
+        PendingChatNavigation.set(pendingChat(intent))
         if (isProcessRestart && intent?.getStringExtra(PendingChatNavigation.CONVERSATION_ID_KEY_EXTRA) == null) {
-            PendingChatNavigation.set(Persistent.string(PersistentStorageKey.openConversationIDKey))
+            Persistent.string(PersistentStorageKey.openConversationIDKey)?.let {
+                PendingChatNavigation.set(PendingChatNavigation.PendingChat(it))
+            }
         }
 
         // Back with nothing left to go back to sends the app to the
@@ -133,8 +139,18 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        intent.getStringExtra(PendingChatNavigation.CONVERSATION_ID_KEY_EXTRA)?.let {
-            notificationService.respondToNotificationTap(it)
+        val pendingChat = pendingChat(intent) ?: return
+        try {
+            notificationService.respondToNotificationTap(
+                pendingChat.conversationIDKey,
+                focusedMessageID = pendingChat.focusedMessageID,
+                recipientUserID = pendingChat.recipientUserID,
+            )
+        } catch (exception: Exception) {
+            Logger.log(
+                exception,
+                domain = LoggerDomain.notifications,
+            )
         }
     }
 
@@ -147,8 +163,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun capturePendingChat(intent: Intent?) {
-        PendingChatNavigation.set(intent?.getStringExtra(PendingChatNavigation.CONVERSATION_ID_KEY_EXTRA))
+    private fun pendingChat(intent: Intent?): PendingChatNavigation.PendingChat? {
+        val conversationIDKey = intent?.getStringExtra(PendingChatNavigation.CONVERSATION_ID_KEY_EXTRA) ?: return null
+        return PendingChatNavigation.PendingChat(
+            conversationIDKey,
+            focusedMessageID = intent.getStringExtra(PendingChatNavigation.REACTION_MESSAGE_ID_EXTRA),
+            recipientUserID = intent.getStringExtra(PendingChatNavigation.RECIPIENT_USER_ID_EXTRA),
+        )
     }
 
     private companion object {

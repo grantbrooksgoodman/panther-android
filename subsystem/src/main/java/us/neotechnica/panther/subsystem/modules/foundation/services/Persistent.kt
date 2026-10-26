@@ -9,6 +9,8 @@
 package us.neotechnica.panther.subsystem.modules.foundation.services
 
 import android.content.Context
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.DecodeSequenceMode
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -17,12 +19,16 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.decodeToSequence
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.long
 import kotlinx.serialization.json.longOrNull
 import us.neotechnica.panther.subsystem.AppSubsystem
 import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
 import us.neotechnica.panther.subsystem.modules.foundation.models.PersistentStorageKey
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 /**
  * Values that persist across app launches, keyed by
@@ -151,12 +157,41 @@ object Persistent {
     fun <T> archive(
         key: PersistentStorageKey,
         decode: (List<Map<String, Any?>>) -> T,
-    ): T? {
+    ): T? = archiveElements(key) { it }?.let(decode)
+
+    /**
+     * Returns the elements of the archive for [key], each decoded
+     * from its stored encoded map, or `null` if no archive exists
+     * or it cannot be read.
+     *
+     * The archive is read one element at a time, so memory use
+     * follows the decoded elements rather than the archive's full
+     * text. Elements for which [decode] returns `null` are skipped.
+     *
+     * @param key The key identifying the archive.
+     * @param decode A closure that reconstructs an element from its
+     *   stored encoded map, or returns `null` to skip it.
+     */
+    @OptIn(ExperimentalSerializationApi::class)
+    fun <T : Any> archiveElements(
+        key: PersistentStorageKey,
+        decode: (Map<String, Any?>) -> T?,
+    ): List<T>? {
         val file = FileStore.resolve(archivePath(key)) ?: return null
         if (!file.exists()) return null
-        val json = runCatching { file.readText() }.getOrNull() ?: return null
-        val maps = runCatching { decodeArchive(json) }.getOrNull() ?: return null
-        return decode(maps)
+        return runCatching {
+            file.inputStream().buffered().use { stream ->
+                Json
+                    .decodeToSequence(
+                        stream,
+                        JsonElement.serializer(),
+                        DecodeSequenceMode.ARRAY_WRAPPED,
+                    ).mapNotNull { element ->
+                        @Suppress("UNCHECKED_CAST")
+                        (fromJsonElement(element) as? Map<String, Any?>)?.let(decode)
+                    }.toList()
+            }
+        }.getOrNull()
     }
 
     /**
@@ -174,17 +209,55 @@ object Persistent {
         key: PersistentStorageKey,
         encoded: List<Map<String, Any?>>?,
     ) {
+        setArchive(key, encoded) { it }
+    }
+
+    /**
+     * Stores [values] as the archive for [key], each encoded to a
+     * map by [encode] as it is written, removing the archive when
+     * `null`.
+     *
+     * The archive is written to a temporary file one element at a
+     * time, then moved over the stored archive in a single step.
+     * Memory use therefore follows a single element rather than the
+     * archive's full text, and an interrupted write leaves the
+     * previous archive in place.
+     *
+     * @param key The key identifying the archive.
+     * @param values The values to store, or `null` to remove the
+     *   archive.
+     * @param encode A closure that encodes a value to the map stored
+     *   for it.
+     */
+    fun <T> setArchive(
+        key: PersistentStorageKey,
+        values: Collection<T>?,
+        encode: (T) -> Map<String, Any?>,
+    ) {
         val file = FileStore.resolve(archivePath(key)) ?: return
-        if (encoded == null) {
+        if (values == null) {
             file.delete()
             return
         }
 
         file.parentFile?.mkdirs()
-        val temporaryFile = java.io.File(file.parentFile, "${file.name}.tmp")
-        temporaryFile.writeText(encodeArchive(encoded))
-        if (file.exists()) file.delete()
-        temporaryFile.renameTo(file)
+        val temporaryFile = File(file.parentFile, "${file.name}.tmp")
+        temporaryFile.bufferedWriter().use { writer ->
+            writer.write("[")
+            values.forEachIndexed { index, value ->
+                if (index > 0) writer.write(",")
+                writer.write(toJsonElement(encode(value)).toString())
+            }
+
+            writer.write("]")
+        }
+
+        Files.move(
+            temporaryFile.toPath(),
+            file.toPath(),
+            StandardCopyOption.REPLACE_EXISTING,
+            StandardCopyOption.ATOMIC_MOVE,
+        )
     }
 
     // MARK: - Reset
@@ -279,15 +352,6 @@ object Persistent {
     // MARK: - Auxiliary
 
     private fun archivePath(key: PersistentStorageKey): String = "persistent/${key.rawValue}.json"
-
-    private fun decodeArchive(json: String): List<Map<String, Any?>> {
-        val array = Json.parseToJsonElement(json) as? JsonArray ?: return emptyList()
-        @Suppress("UNCHECKED_CAST")
-        return array.mapNotNull { fromJsonElement(it) as? Map<String, Any?> }
-    }
-
-    private fun encodeArchive(maps: List<Map<String, Any?>>): String =
-        JsonArray(maps.map { toJsonElement(it) }).toString()
 
     private fun fromJsonElement(element: JsonElement): Any? =
         when (element) {

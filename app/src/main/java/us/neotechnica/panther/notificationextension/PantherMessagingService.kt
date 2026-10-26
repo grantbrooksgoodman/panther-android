@@ -32,28 +32,22 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.json.JSONObject
-import us.neotechnica.panther.Application
 import us.neotechnica.panther.R
 import us.neotechnica.panther.bundle.delegates.MainActivity
-import us.neotechnica.panther.bundle.navigators.UserContentNavigatorState
-import us.neotechnica.panther.bundle.navigators.UserContentRoute
 import us.neotechnica.panther.bundle.notifications
 import us.neotechnica.panther.designsystem.modules.foundation.services.SoundPlayer
 import us.neotechnica.panther.designsystem.modules.foundation.toast.Toast
 import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.common.services.sources.HapticsService
+import us.neotechnica.panther.modules.common.services.sources.NotificationService
 import us.neotechnica.panther.modules.common.services.sources.PushTokenService
 import us.neotechnica.panther.modules.content.user.extensions.currentUserID
 import us.neotechnica.panther.modules.content.user.extensions.isVisibleForCurrentUser
-import us.neotechnica.panther.modules.content.user.models.ChatPageStateServiceEffectID
 import us.neotechnica.panther.modules.content.user.services.ChatPageStateService
 import us.neotechnica.panther.modules.networking.sources.user.models.User
 import us.neotechnica.panther.modules.session.ClientSession
 import us.neotechnica.panther.modules.session.clientSession
-import us.neotechnica.panther.navigation.Navigation
 import us.neotechnica.panther.navigation.PendingChatNavigation
-import us.neotechnica.panther.navigation.RootNavigationService.Route
-import us.neotechnica.panther.navigation.navigation
 import us.neotechnica.panther.networking.modules.common.extensions.isBangQualifiedEmpty
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.models.Dependency
 import us.neotechnica.panther.subsystem.modules.dependencyinjection.services.DependencyValues
@@ -78,7 +72,7 @@ class PantherMessagingService : FirebaseMessagingService() {
 
     private val clientSession: ClientSession by Dependency { it.clientSession }
     private val hapticsService: HapticsService by Dependency { it.commonServices.haptics }
-    private val navigation: Navigation by Dependency { it.navigation }
+    private val notificationService: NotificationService by Dependency { it.commonServices.notification }
     private val pushTokenService: PushTokenService by Dependency { it.commonServices.pushToken }
 
     // MARK: - Properties
@@ -181,26 +175,10 @@ class PantherMessagingService : FirebaseMessagingService() {
         // The notification sound plays beside the toast.
         playNotificationSound(this, isReaction = received.isReaction)
         Toast.show(toast) {
-            val chatRoute =
-                Route.UserContent(
-                    UserContentRoute.Push(
-                        UserContentNavigatorState.SeguePaths.Chat(
-                            conversationIDKey,
-                            focusedMessageID = focusedMessageID,
-                        ),
-                    ),
-                )
-
-            if (!ChatPageStateService.isPresented) return@show navigation.navigate(chatRoute)
-
-            navigation.navigate(Route.UserContent(UserContentRoute.Stack(emptyList())))
-            ChatPageStateService.addEffectUponIsPresented(
-                state = false,
-                id = ChatPageStateServiceEffectID.deeplinkToOtherChat,
-            ) {
-                Application.dismissSheets()
-                navigation.navigate(chatRoute)
-            }
+            notificationService.navigateToConversation(
+                conversationIDKey,
+                focusedMessageID = focusedMessageID,
+            )
         }
     }
 
@@ -222,11 +200,10 @@ class PantherMessagingService : FirebaseMessagingService() {
 
         showNotification(
             this,
-            conversationIDKey = conversationIDKey,
+            received = received,
             title = enrichedTitle(message, received),
             body = message.notification?.body ?: received.body,
             subtitle = subtitle,
-            isReaction = received.isReaction,
         )
     }
 
@@ -331,14 +308,12 @@ class PantherMessagingService : FirebaseMessagingService() {
         private fun reactionSoundURI(context: Context): Uri =
             "${ContentResolver.SCHEME_ANDROID_RESOURCE}://${context.packageName}/${R.raw.reaction}".toUri()
 
-        @Suppress("LongParameterList")
         private fun showNotification(
             context: Context,
-            conversationIDKey: String,
+            received: ReceivedNotification,
             title: String,
             body: String,
             subtitle: String?,
-            isReaction: Boolean,
         ) {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
                 PackageManager.PERMISSION_GRANTED
@@ -348,10 +323,15 @@ class PantherMessagingService : FirebaseMessagingService() {
 
             createChannel(context)
 
+            val conversationIDKey = received.conversationIDKey
             val intent =
                 Intent(context, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
                     putExtra(PendingChatNavigation.CONVERSATION_ID_KEY_EXTRA, conversationIDKey)
+                    putExtra(PendingChatNavigation.RECIPIENT_USER_ID_EXTRA, received.recipientUserID)
+                    if (received.isReaction) {
+                        putExtra(PendingChatNavigation.REACTION_MESSAGE_ID_EXTRA, received.reactionMessageID)
+                    }
                 }
             val pendingIntent =
                 PendingIntent.getActivity(
@@ -363,7 +343,7 @@ class PantherMessagingService : FirebaseMessagingService() {
 
             val builder =
                 NotificationCompat
-                    .Builder(context, if (isReaction) REACTIONS_CHANNEL_ID else MESSAGES_CHANNEL_ID)
+                    .Builder(context, if (received.isReaction) REACTIONS_CHANNEL_ID else MESSAGES_CHANNEL_ID)
                     .setSmallIcon(R.drawable.ic_stat_notification)
                     .setContentTitle(title)
                     .setContentText(body)
