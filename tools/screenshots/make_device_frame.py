@@ -157,28 +157,26 @@ def detect_screen_insets(image: Image.Image) -> ScreenInsets:
         (width - 1 - x, x, center_y) for x in range(width - 1, -1, -1)
     )
 
-    # The corner radius is the geometric mean of the gap below the
-    # top-left screen corner and the extent of the corner arc along
-    # the top screen row.
-    outer_gap = 0
-    for y in range(top, height):
-        if opaque(left, y):
-            outer_gap = y - top
-            break
+    # The corner radius comes from two scans that start at the screen's
+    # top-left bounding-box corner and run along its top row and its
+    # left column. Each passes any transparency outside the body and
+    # the bezel, then stops at the first screen pixel; the distance
+    # covered is the corner's extent along that edge. The geometric
+    # mean of the two extents approximates the visual corner radius,
+    # and a square corner, which starts both scans on screen pixels,
+    # measures zero.
+    vertical_extent = scan(
+        (y - top, left, y) for y in range(top, center_y)
+    )
 
-    corner_extent = 0
-    found_bezel = False
-    for x in range(left, width):
-        if opaque(x, top):
-            found_bezel = True
-        elif found_bezel:
-            corner_extent = x - left
-            break
+    horizontal_extent = scan(
+        (x - left, x, top) for x in range(left, center_x)
+    )
 
-    if outer_gap > 0 and corner_extent > 0:
-        corner_radius = math.sqrt(outer_gap * corner_extent)
+    if vertical_extent > 0 and horizontal_extent > 0:
+        corner_radius = math.sqrt(vertical_extent * horizontal_extent)
     else:
-        corner_radius = max(outer_gap, corner_extent)
+        corner_radius = max(vertical_extent, horizontal_extent)
 
     return ScreenInsets(
         bottom=bottom,

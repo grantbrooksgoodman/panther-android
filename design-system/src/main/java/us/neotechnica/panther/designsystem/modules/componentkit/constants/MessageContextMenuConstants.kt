@@ -10,6 +10,8 @@ package us.neotechnica.panther.designsystem.modules.componentkit.constants
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import us.neotechnica.panther.designsystem.modules.foundation.extensions.darker
+import us.neotechnica.panther.designsystem.modules.theming.models.PlatformColors
 import kotlin.time.Duration.Companion.milliseconds
 
 // MARK: - Float
@@ -36,6 +38,7 @@ internal object MessageContextMenuFloats {
 // MARK: - Color
 
 internal object MessageContextMenuColors {
+    val MENU_ELEMENT_BUTTON_HIGHLIGHT = PlatformColors.systemGray2.copy(alpha = 0.5f).darker(by = 6f)
     val MENU_ELEMENT_HIGHLIGHTED_BACKGROUND = Color.Black.copy(alpha = 0.2f)
     val DESTRUCTIVE_COLOR = Color(0xFFFF3B30)
 }

@@ -45,9 +45,11 @@ internal class DeviceContact(
      * contact's phone numbers is the given phone number.
      *
      * A number matches on compiled-number equality – the device number
-     * with or without its leading calling code – or on national-number
+     * with or without its leading calling code – or, for a device
+     * number saved without its calling code, on national-number
      * equality once the number's length validates for the given
-     * number's calling code.
+     * number's calling code. A device number saved with its calling
+     * code matches that calling code only.
      *
      * @param phoneNumber The phone number to match.
      */
@@ -59,7 +61,8 @@ internal class DeviceContact(
         return phoneNumbers.any { number ->
             number.compiledNumberString == compiledNumberString ||
                 (
-                    nationalNumberString.isNotEmpty() &&
+                    !number.hasExplicitCallingCode &&
+                        nationalNumberString.isNotEmpty() &&
                         number.nationalNumberString == nationalNumberString &&
                         phoneNumberService.numberIsValidLength(nationalNumberString.length, phoneNumber.callingCode)
                 )

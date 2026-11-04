@@ -10,6 +10,7 @@ package us.neotechnica.panther.designsystem.modules.theming.views
 
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -44,6 +45,8 @@ val LocalPantherColors =
  * [PantherTheme] resolves the active theme and appearance from
  * [ThemeService], provides the resulting [PantherColors] through
  * [LocalPantherColors], and installs a matching Material color scheme.
+ * While [ThemeService.suppressesRipples] is `true`, it also removes
+ * Material ripples from every component in the hierarchy.
  * It also styles the system bar icons to remain legible against the
  * active appearance, and the status bar icons against the black area
  * outside a [CompatibilityFrame] on a large window. It recomposes
@@ -83,10 +86,16 @@ fun PantherTheme(content: @Composable () -> Unit) {
 
     SystemBarAppearanceEffect(isDark)
     CompositionLocalProvider(LocalPantherColors provides colors) {
-        MaterialTheme(
-            colorScheme = colorScheme,
-            content = content,
-        )
+        MaterialTheme(colorScheme = colorScheme) {
+            if (ThemeService.suppressesRipples) {
+                CompositionLocalProvider(
+                    LocalRippleConfiguration provides null,
+                    content = content,
+                )
+            } else {
+                content()
+            }
+        }
     }
 }
 

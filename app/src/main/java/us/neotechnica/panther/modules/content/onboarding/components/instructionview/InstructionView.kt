@@ -8,6 +8,7 @@
 
 package us.neotechnica.panther.modules.content.onboarding.components.instructionview
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -62,6 +63,7 @@ fun InstructionView(
         Row(modifier = modifier.fillMaxWidth()) {
             Column(
                 horizontalAlignment = Alignment.Start,
+                verticalArrangement = Arrangement.spacedBy(Floats.labelVStackSpacing),
                 modifier =
                     Modifier
                         .width(halfOfScreenWidth)

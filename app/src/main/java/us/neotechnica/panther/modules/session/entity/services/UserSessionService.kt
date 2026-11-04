@@ -18,6 +18,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import us.neotechnica.panther.Application
@@ -61,6 +62,7 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.SingleSlotCoal
 import us.neotechnica.panther.subsystem.modules.foundation.models.ToastStyle
 import us.neotechnica.panther.subsystem.modules.foundation.services.Logger
 import us.neotechnica.panther.subsystem.modules.foundation.services.Persistent
+import kotlin.time.Duration.Companion.milliseconds
 
 // This service exceeds the file-length and type-body-length limits.
 
@@ -493,6 +495,12 @@ object UserSessionService {
 
     private fun signOutToPreserveSingleActiveUser() {
         observationScope.launch(Dispatchers.Main) {
+            Application.reset(onCompletion = Application.ResetCompletionProcedure.NAVIGATE_TO_SPLASH)
+
+            // The splash page hides any toast as its initialization
+            // begins, so the toast follows the page's appearance.
+            delay(SIGNED_OUT_TOAST_DELAY)
+
             Toast.show(
                 Toast(
                     type = Toast.ToastType.Banner(style = ToastStyle.INFO),
@@ -501,8 +509,6 @@ object UserSessionService {
                 ),
                 translating = Toast.TranslationOptionKey.allCases,
             )
-
-            Application.reset(onCompletion = Application.ResetCompletionProcedure.NAVIGATE_TO_SPLASH)
         }
     }
 
@@ -537,4 +543,8 @@ object UserSessionService {
 
     private val String.idKey: String
         get() = split(" ").firstOrNull() ?: this
+
+    // MARK: - Companion
+
+    private val SIGNED_OUT_TOAST_DELAY = 500.milliseconds
 }

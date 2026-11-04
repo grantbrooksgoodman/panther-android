@@ -19,6 +19,7 @@ internal object PlatformColors {
     val gray = rgb(0x808080)
     val lightGray = rgb(0xAAAAAA)
     val systemBlue = rgb(0x007AFF)
+    val systemGray2 = rgb(0xAEAEB2)
     val systemGray3 = rgb(0xC7C7CC)
     val white = Color.White
 }

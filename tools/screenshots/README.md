@@ -2,7 +2,8 @@
 
 Tooling for Google Play listing screenshots composed with
 [MockupKit](https://github.com/grantbrooksgoodman/mockup-kit): a status bar
-override for captures, and a Pixel 8a device frame for the mockups.
+override for captures, and a generator for the device frames the mockups
+are composed in.
 
 ## Status bar
 
@@ -21,27 +22,28 @@ tools/screenshots/status_bar.sh off
 `none`, bars only), and `--serial` when several devices are attached. The
 clock follows the device's 12/24-hour setting. The script runs over adb
 against the emulator or a physical device with USB debugging. `capture`
-saves a PNG through `screencap` – 1080 x 2400 on a Pixel 8a or the Pixel 8a
-AVD.
+saves a PNG through `screencap`.
 
 ## Device frame
 
-`pixel_8a.png` is a MockupKit frame built from the Pixel 8a emulator skin
-with `make_device_frame.py`. The screen opening is transparent and the
-camera cutout is opaque, so MockupKit's throwing `DeviceFrame` initializer
-detects the screen itself (insets 57 top, 57 left, 82 bottom, 61 right;
-corner radius 77) and draws the cutout over the screenshot. The opening is
-exactly 1080 x 2400, so Pixel 8a captures fill it without cropping.
-
-Regenerate it, or build a frame for another device, from the skins the
-Android SDK ships under `$ANDROID_HOME/skins/<device>/`:
+`make_device_frame.py` builds a MockupKit frame from an emulator skin, which
+the Android SDK ships under `$ANDROID_HOME/skins/<device>/`:
 
 ```
-python3 tools/screenshots/make_device_frame.py $ANDROID_HOME/skins/pixel_8a tools/screenshots/pixel_8a.png
+python3 tools/screenshots/make_device_frame.py $ANDROID_HOME/skins/pixel_10_pro_xl ~/Desktop/pixel_10_pro_xl.png
 ```
 
-The script needs Pillow with WebP support and prints the insets MockupKit
-will detect.
+The frame's screen opening is transparent and the camera cutout is opaque,
+so MockupKit's throwing `DeviceFrame` initializer detects the screen itself
+and draws the cutout over the screenshot. The script prints the insets and
+corner radius MockupKit will detect, along with the opening's size. A capture
+from the matching AVD fills the opening exactly; MockupKit scales and crops a
+capture of another size to fill it. On skins whose body is rounded, the
+screen's bounding-box corners lie outside the body, so the corner-radius scans
+pass that transparency before reaching the bezel.
+
+Frames are not kept in the repository; generate one for each device as
+needed. The script needs Pillow with WebP support.
 
 ## Play Store sizes
 

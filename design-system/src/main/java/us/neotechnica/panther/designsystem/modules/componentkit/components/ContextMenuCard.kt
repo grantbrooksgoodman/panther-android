@@ -10,6 +10,8 @@ package us.neotechnica.panther.designsystem.modules.componentkit.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +23,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,9 +41,10 @@ import us.neotechnica.panther.designsystem.modules.componentkit.models.Font
 import us.neotechnica.panther.designsystem.modules.theming.views.LocalPantherColors
 
 // The menu's elements – one row per action – with the element under a
-// held long press highlighted. Each element reports its layout
-// coordinates, including the divider below it, so a held long press
-// can be hit-tested against contiguous elements.
+// held long press highlighted, and a tapped element highlighted while
+// it is pressed. Each element reports its layout coordinates,
+// including the divider below it, so a held long press can be
+// hit-tested against contiguous elements.
 @Composable
 internal fun ContextMenuCard(
     actions: List<ContextMenuAction>,
@@ -57,6 +62,15 @@ internal fun ContextMenuCard(
     ) {
         actions.forEachIndexed { index, action ->
             val contentColor = if (action.isDestructive) MessageContextMenuColors.DESTRUCTIVE_COLOR else colors.titleText
+            val interactionSource = remember { MutableInteractionSource() }
+            val isPressed by interactionSource.collectIsPressedAsState()
+            val background =
+                when {
+                    index == highlightedElementIndex -> MessageContextMenuColors.MENU_ELEMENT_HIGHLIGHTED_BACKGROUND
+                    isPressed -> MessageContextMenuColors.MENU_ELEMENT_BUTTON_HIGHLIGHT
+                    else -> Color.Transparent
+                }
+
             Column(modifier = Modifier.onGloballyPositioned { onElementPositioned(index, it) }) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -64,15 +78,11 @@ internal fun ContextMenuCard(
                         Modifier
                             .fillMaxWidth()
                             .height(MessageContextMenuFloats.MENU_ROW_HEIGHT)
-                            .background(
-                                if (index ==
-                                    highlightedElementIndex
-                                ) {
-                                    MessageContextMenuColors.MENU_ELEMENT_HIGHLIGHTED_BACKGROUND
-                                } else {
-                                    Color.Transparent
-                                },
-                            ).clickable { onSelect(action) }
+                            .background(background)
+                            .clickable(
+                                indication = null,
+                                interactionSource = interactionSource,
+                            ) { onSelect(action) }
                             .padding(start = MessageContextMenuFloats.MENU_ROW_START_PADDING, end = 12.dp),
                 ) {
                     Components.Text(

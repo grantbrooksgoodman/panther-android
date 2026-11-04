@@ -179,6 +179,26 @@ class ContactServiceTest {
     }
 
     @Test
+    fun `a number saved with its calling code matches that calling code only`() {
+        val american = PhoneNumber("5558885555")
+        val british =
+            PhoneNumber(
+                callingCode = "44",
+                nationalNumberString = "5558885555",
+                regionCode = "GB",
+                label = null,
+                internalFormattedString = null,
+            )
+        val explicit = deviceContact(id = "1", givenName = "A", familyName = "", "+445558885555")
+        val implicit = deviceContact(id = "2", givenName = "B", familyName = "", "5558885555")
+
+        assertTrue(explicit.matches(british))
+        assertFalse(explicit.matches(american))
+        assertTrue(implicit.matches(american))
+        assertTrue(implicit.matches(british))
+    }
+
+    @Test
     fun `a number that merely ends with the national number does not match`() {
         val user = PhoneNumber("5558885555")
         val longer = deviceContact(id = "1", givenName = "A", familyName = "", "995558885555")

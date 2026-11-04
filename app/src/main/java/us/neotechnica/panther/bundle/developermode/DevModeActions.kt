@@ -49,6 +49,7 @@ object AppActions : DevModeAppActionDelegate {
             listOf(
                 UIOptions.uiOptionsAction,
                 UserOptions.userOptionsAction,
+                StagingModeOptions.stagingModeOptionsAction,
                 dangerZoneAction,
             )
 

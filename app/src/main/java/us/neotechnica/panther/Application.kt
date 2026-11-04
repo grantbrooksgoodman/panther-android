@@ -40,6 +40,7 @@ import us.neotechnica.panther.designsystem.modules.foundation.rootsheet.RootShee
 import us.neotechnica.panther.designsystem.modules.foundation.services.ReportDelegate
 import us.neotechnica.panther.designsystem.modules.foundation.services.SoundPlayer
 import us.neotechnica.panther.designsystem.modules.foundation.services.TranslationLogger
+import us.neotechnica.panther.designsystem.modules.theming.services.ThemeService
 import us.neotechnica.panther.modules.common.extensions.ApplicationStorageKey
 import us.neotechnica.panther.modules.common.services.commonServices
 import us.neotechnica.panther.modules.common.services.sources.AnalyticsService
@@ -185,6 +186,7 @@ object Application {
         Font.usesSanFrancisco = USE_IOS_STYLING
         SFSymbol.usesSFSymbols = USE_IOS_STYLING
         SystemAnimation.usesAppleAnimations = USE_IOS_STYLING
+        ThemeService.suppressesRipples = USE_IOS_STYLING
 
         initializeServices(context)
         registerDelegates()
@@ -310,8 +312,9 @@ object Application {
     internal const val MILLIS_PER_SECOND = 1_000L
 
     // Whether the app uses its system-style animations, the San Francisco
-    // font, and SF Symbols. Set this to `false` to use Android's default
-    // animations, the Inter font, and Material Symbols instead.
+    // font, and SF Symbols, and suppresses Material ripples. Set this to
+    // `false` to use Android's default animations, the Inter font,
+    // Material Symbols, and ripples instead.
     private const val USE_IOS_STYLING = true
 
     // MARK: - Auxiliary

@@ -10,6 +10,8 @@ package us.neotechnica.panther.modules.common.models
 
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import us.neotechnica.panther.modules.common.services.sources.CommonPropertyLists
@@ -66,6 +68,13 @@ class PhoneNumberTest {
         val phoneNumber = PhoneNumber("020 7946 0958", internalFormattedString = "+44 20 7946 0958")
 
         assertEquals("44", phoneNumber.callingCode)
+    }
+
+    @Test
+    fun `a leading plus marks the calling code as explicit`() {
+        assertTrue(PhoneNumber("+1 (555) 123-4567").hasExplicitCallingCode)
+        assertFalse(PhoneNumber("15551234567").hasExplicitCallingCode)
+        assertFalse(PhoneNumber("5551234567").hasExplicitCallingCode)
     }
 
     @Test

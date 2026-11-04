@@ -36,7 +36,8 @@ import us.neotechnica.panther.subsystem.modules.foundation.models.LockIsolated
  *
  * Create phone numbers from raw components or from a string; the
  * string factory derives the calling code and region using the
- * device's region and number length validation.
+ * device's region and number length validation, and records
+ * whether the string carried its calling code explicitly.
  *
  * Every stored property is immutable except the per-region
  * formatted string cache, which is lock-isolated; a phone number
@@ -59,6 +60,16 @@ class PhoneNumber(
      * `null`. Used as a formatting fallback.
      */
     val internalFormattedString: String?,
+    /**
+     * A Boolean value that indicates whether the number was created
+     * from a string that carried its calling code explicitly, as a
+     * leading `+` does.
+     *
+     * A number saved without its calling code takes the device's,
+     * so the calling code of a number whose value is `false` is
+     * derived rather than given. Not part of the number's identity.
+     */
+    val hasExplicitCallingCode: Boolean = false,
 ) : Serializable<Map<String, Any?>>,
     EncodedHashable {
     // MARK: - Types
@@ -344,7 +355,8 @@ class PhoneNumber(
          * validating the remaining digits' length. The region is
          * derived similarly, preferring the device's region.
          * Components that cannot be derived fall back to the
-         * device's calling code and region.
+         * device's calling code and region. A string beginning
+         * with `+` marks the number's calling code as explicit.
          *
          * @param string The phone number string. Non-digit
          *   characters are ignored.
@@ -413,6 +425,7 @@ class PhoneNumber(
                 regionCode = regionCode ?: deviceRegionCode,
                 label = label,
                 internalFormattedString = internalFormattedString,
+                hasExplicitCallingCode = string.trim().startsWith("+"),
             )
         }
 

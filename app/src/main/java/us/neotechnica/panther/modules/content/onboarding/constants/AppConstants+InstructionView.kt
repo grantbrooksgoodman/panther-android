@@ -19,6 +19,9 @@ object InstructionViewFloats {
     /** The maximum height of the frame. */
     val frameMaxHeight: Dp = 220.dp
 
+    /** The vertical spacing between the title and subtitle labels. */
+    val labelVStackSpacing: Dp = 6.dp
+
     /** The leading padding. */
     val leadingPadding: Dp = 20.dp
 

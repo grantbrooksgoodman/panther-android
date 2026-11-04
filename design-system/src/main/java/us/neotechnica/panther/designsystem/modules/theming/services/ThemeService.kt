@@ -22,8 +22,9 @@ import us.neotechnica.panther.subsystem.modules.shared.models.send
 /**
  * The central point of control for the app's active theme.
  *
- * Use [ThemeService] to read the current theme, apply a new one, or
- * force a light or dark appearance. Changes are published through
+ * Use [ThemeService] to read the current theme, apply a new one,
+ * force a light or dark appearance, or suppress Material ripples.
+ * Theme changes are published through
  * [currentTheme] and [styleOverride], which
  * [PantherTheme][us.neotechnica.panther.designsystem.modules.theming.views.PantherTheme]
  * collects to recompose the themed view tree, and are announced through
@@ -34,6 +35,21 @@ import us.neotechnica.panther.subsystem.modules.shared.models.send
  */
 object ThemeService {
     // MARK: - Properties
+
+    /**
+     * A Boolean value that indicates whether Material ripples are
+     * suppressed throughout the themed view tree.
+     *
+     * While this is `true`, no component shows a ripple when it is
+     * pressed – neither a clickable modifier nor a Material component
+     * such as a switch or a button. Components that draw their own
+     * press feedback are unaffected. The default is `true`.
+     *
+     * **Important:** Set this value once at launch, before any content
+     * is composed. Content already on screen doesn't update when it
+     * changes.
+     */
+    var suppressesRipples = true
 
     private val mutableCurrentTheme = MutableStateFlow(Themes.appDefault)
     private val mutableStyleOverride = MutableStateFlow<ThemeStyle?>(null)
